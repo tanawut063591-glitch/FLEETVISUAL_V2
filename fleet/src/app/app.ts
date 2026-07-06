@@ -1,12 +1,11 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-root',
+  standalone: false,
   templateUrl: './app.html',
-  styleUrl: './app.scss',
-  standalone: false
+  styleUrls: ['./app.scss'],
 })
 export class App {
-  protected readonly title = signal('solaris-app');
+  title = 'solaris-app';
 }
