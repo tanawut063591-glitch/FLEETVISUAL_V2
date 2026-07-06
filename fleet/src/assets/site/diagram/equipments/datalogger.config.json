@@ -1,0 +1,101 @@
+{
+    "Name": "Smart Logger",
+    "Type": "meter",
+    "Parameter": [
+        { "Title": "STATUS", "Name": "STATUS", "Description": "Plant status", "Unit": "-", "Group": "Status" },
+
+        { "Title": "ActivePower", "Name": "WAC", "Description": "Total active power (produce)", "Unit": "kW", "Group": "Major" },
+        { "Title": "ReactivePower", "Name": "VAR", "Description": "Total reactive power (produce)", "Unit": "kVar", "Group": "Major" },
+        { "Title": "PowerFactor", "Name": "PF", "Description": "Power factor", "Unit": "-", "Group": "Major" },
+        { "Title": "InputPowerDC", "Name": "WDC", "Description": "Input power", "Unit": "kW", "Group": "Major" },
+
+        { "Title": "WH", "Name": "WH", "Description": "Total energy yield (produce)", "Unit": "kWh", "Group": "Energy" },
+        { "Title": "WH_TODAY", "Name": "WH_TODAY", "Description": "Daily energy yield (produce)", "Unit": "kWh", "Group": "Energy" },
+
+        { "Title": "PR", "Name": "PR", "Description": "Inverters efficiency", "Unit": "%", "Group": "Performance" },
+        { "Title": "CABON", "Name": "CABON", "Description": "CO2 reduction", "Unit": "kg", "Group": "Environmental" },
+
+        { "Title": "IDC", "Name": "IDC", "Description": "DC current", "Unit": "A", "Group": "DC" },
+
+        { "Title": "IACA", "Name": "IACA", "Description": "Phase A current", "Unit": "A", "Group": "Electrical" },
+        { "Title": "IACB", "Name": "IACB", "Description": "Phase B current", "Unit": "A", "Group": "Electrical" },
+        { "Title": "IACC", "Name": "IACC", "Description": "Phase C current", "Unit": "A", "Group": "Electrical" }
+    ],
+
+    "Historical": [
+        {
+            "Title": "Power Trend",
+            "Name": "x1",
+            "Tags": [
+                {
+                    "Name": "WAC",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#FF9B33",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "WH_TODAY",
+                    "Axis": 1,
+                    "Type": "area",
+                    "Color": "#278EFF",
+                    "Opacity": 0.125
+                }
+            ]
+        },
+        {
+            "Title": "AC Current",
+            "Name": "x2",
+            "Tags": [
+                {
+                    "Name": "IACA",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#F143AA",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "IACB",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#6766FF",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "IACC",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#9945F5",
+                    "Opacity": 0.125
+                }
+            ]
+        },
+        {
+            "Title": "Power Quality",
+            "Name": "x3",
+            "Tags": [
+                {
+                    "Name": "WAC",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#F7F156",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "VAR",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#B2F76D",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "PF",
+                    "Axis": 1,
+                    "Type": "line",
+                    "Color": "#F143AA",
+                    "Opacity": 0.125
+                }
+            ]
+        }
+    ]
+}

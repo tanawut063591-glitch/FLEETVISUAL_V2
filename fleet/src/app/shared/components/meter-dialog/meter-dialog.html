@@ -1,0 +1,142 @@
+<div class="meter-dialog bz">
+
+  <!-- Header -->
+  <div class="dialog-header">
+    <div class="header-left">
+      <div class="device-icon">
+        <i class="material-icons" >electric_meter</i>
+      </div>
+      <div class="header-title">
+        <h2>{{ data.deviceConfig.Name }}</h2>
+        <span class="device-id">{{ data.siteId }} · {{ data.deviceId }}</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <!-- <div class="status-badge"
+           [class.online]="checkStatus(dataRealtime()['STATUS']?.Value) === true"
+           [class.offline]="checkStatus(dataRealtime()['STATUS']?.Value) !== true">
+        <span class="status-dot"></span>
+        {{ checkStatus(dataRealtime()['STATUS']?.Value) === true ? 'Online' : 'Offline' }}
+      </div> -->
+      <button class="btn-close" (click)="onClose()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="dialog-body">
+
+    <!-- Key Metrics (Major group) -->
+    <div class="section-label">Real-time Parameters</div>
+    <div class="realtime-grid">
+      @for (item of filterGroup('Major'); track $index) {
+        <div class="metric-card" >
+          <div class="metric-icon" [ngClass]="getIconClass(item.Title)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              @switch (item.Title) {
+                  @case ('ActivePower') {
+                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                  }
+                  @case ('ReactivePower') {
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  }
+                  @case ('PowerFactor') {
+                      <path d="M12 2v20M2 12h20"/>
+                  }
+                  @case ('Frequency') {
+                      <path d="M2 12h4l3-9 4 18 3-9 4 0"/>
+                  }
+                  @default {
+                      <circle cx="12" cy="12" r="10"/>
+                  }
+              }
+            </svg>
+          </div>
+          <div class="metric-info">
+            <span class="metric-label">{{ item.Description }}</span>
+            <span class="metric-value">
+              {{ dataRealtime()[item.Title]?.Value | numberFomat:'1.2-2' }}
+              <span class="metric-unit">{{ item.Unit }}</span>
+            </span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Dynamic Parameter Groups (exclude Major & Status) -->
+    <div class="param-groups">
+      @for (group of paramGroups; track $index) {
+        <div class="param-group" >
+          <div class="group-title">{{ group }}</div>
+          <table class="param-table">
+            <tbody>
+              @for (item of filterGroup(group); track $index) {
+                <tr>
+                  <td class="p-name">{{ item.Description }}</td>
+                  <td class="p-value">{{ dataRealtime()[item.Title]?.Value | numberFomat:'1.2-2' }}</td>
+                  <td class="p-unit">{{ item.Unit }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- Status group (always last) -->
+      <div class="param-group">
+        <div class="group-title">Status</div>
+        <table class="param-table">
+          <tbody>
+            @for (item of filterGroup('Status'); track $index) {
+              <tr>
+                <td class="p-name">{{ item.Description }}</td>
+                <td class="p-value"
+                    [class.alarm-active]="item.Title === 'ALARM' && dataRealtime()[item.Title]?.Value != 0">
+                  {{ item.Title === 'ALARM'
+                      ? (dataRealtime()[item.Title]?.Value == 0 ? 'No Alarm' : dataRealtime()[item.Title]?.Value)
+                      : dataRealtime()[item.Title]?.Value }}
+                </td>
+                <td class="p-unit">{{ item.Unit }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Historical Charts -->
+    <div class="section-label">Historical Charts</div>
+    <div class="chart-tabs">
+      @for (item of data.deviceConfig.Historical; track $index) {
+        <button
+          class="tab-btn"
+          [class.active]="activeChart === item.Name"
+          (click)="activeChart = item.Name">
+          {{ item.Title }}
+        </button>
+      }
+    </div>
+
+    <div class="chart-container">
+      @for (item of data.deviceConfig.Historical; track $index) {
+        <ng-container >
+          @if (activeChart === item.Name) {
+            <div class="chart-wrapper">
+              @if (!dataChart()[item.Name]) {
+                <div class="chart-loading">
+                  <div class="spinner"></div>
+                  <span>Loading chart...</span>
+                </div>
+              }
+              <app-highchart [chartParameter]="dataChart()[item.Name]"></app-highchart>
+            </div>
+          }
+        </ng-container>
+      }
+    </div>
+
+  </div>
+</div>

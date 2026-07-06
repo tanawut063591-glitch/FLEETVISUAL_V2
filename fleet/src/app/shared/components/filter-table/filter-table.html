@@ -1,0 +1,30 @@
+@if (data && isFilter()) {
+    <div class="grid-container w-100 bz" >
+        <span class="row d-flex-sb w-100 bz" (click)="selectAlias('All')">All</span>
+        @for (item of data; track $index) {
+            <span class="row d-flex-sb w-100 bz" (click)="selectAlias(item)">
+                {{item}}
+                <!-- <label class="containers ">
+                    <input type="checkbox" [value]="false" (change)="selectAlias(item,$event)">
+                    <div class="checkmark"></div>
+                </label> -->
+            </span>
+        }
+    </div>
+}
+@if (!isFilter()) {
+    <div class="grid-container w-100 bz">
+        <span class="row d-flex-sa w-100 bz" (click)="submitSort('asc')">
+            <span>ASCENDING</span>
+            <i class="material-icons " >
+                keyboard_arrow_up
+            </i>
+        </span>
+        <span class="row d-flex-sa w-100 bz" (click)="submitSort('des')" > 
+            <span>DESCENDING</span>
+            <i class="material-icons " >
+                keyboard_arrow_down
+            </i>
+        </span>
+    </div>
+}

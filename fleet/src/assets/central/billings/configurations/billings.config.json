@@ -1,0 +1,10 @@
+﻿[
+  {
+    "name": "Billing",
+    "type": "billing"
+  },
+  {
+    "name": "Report",
+    "type": "report"
+  }
+]

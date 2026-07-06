@@ -1,0 +1,19 @@
+<div class="w-100 h-100 horizontal-content" [ngClass]="{'vertical-content': vertical}">
+    @if (chartOptions) {
+      <div
+        highchartsChart
+        [options]="chartOptions"
+        (chartInstance)="onChartInstance($event)"
+        class="w-100 chart bz"
+      ></div>
+    }
+    <div class="status-list w-100 h-100 bz">
+        @for (status of statusData; track $index) {
+            <div class="status-item">
+                <span class="status-label">{{ status.label }}</span>
+                <span class="status-count" [style.color]="status.color">{{ status.count }}</span>
+                <span class="status-sites">{{ status.unit }}</span>
+            </div>
+        }
+    </div>
+</div>

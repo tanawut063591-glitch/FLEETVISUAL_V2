@@ -1,0 +1,10 @@
+﻿[
+  {
+    "name": "Unsigned",
+    "type": "unsigned"
+  },
+  {
+    "name": "Signed",
+    "type": "signed"
+  }
+]

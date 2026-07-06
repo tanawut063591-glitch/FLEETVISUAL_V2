@@ -1,0 +1,119 @@
+<div cdkDrag class="dialog-container">
+    <!-- Header -->
+    <div class="dialog-header" cdkDragHandle>
+        <!-- <div class="brd">
+            <h4>Tags Browse</h4>
+        </div> -->
+         <div class="logo bz d-flex-ct w-100">
+            <img src="../../../../assets/images/logo.png" height="40" />
+        </div>
+        <button class="close-btn" (click)="close()">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Content -->
+    <div class="dialog-content">
+        <!-- Search Section -->
+        <div class="search-section">
+            <!-- Site Selection -->
+            <div class="form-group">
+                <label for="site-select" class="form-label">Select Site:</label>
+                <select 
+                    id="site-select"
+                    class="form-select"
+                    #site
+                    (change)="searchTag(site.value)">
+                        <option value="">-- Choose Site --</option>
+                        @for (item of siteList(); track $index) {
+                        <option [value]="item.id">{{ item.name }}</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Tag Search Input -->
+            <div class="form-group">
+                <label for="tag-search" class="form-label">Search Tag:</label>
+                <div class="search-input-wrapper">
+                    <input 
+                        id="tag-search"
+                        type="text" 
+                        placeholder="Enter tag name..."
+                        class="form-input"
+                        autocomplete="off"
+                        (input)="updateTagSearchInput($event.target.value)" 
+                    >
+                         <!-- <button class="search-btn" (click)="updateTagSearchInput(searchInput)" [disabled]="!siteSelected()">
+                            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                                <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2"/>
+                                <path d="M14 14L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            Search
+                        </button> -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="results-section" *ngIf="tagList().length > 0">
+            <h4 class="results-title">Found Tags ({{ filteredTags().length }})</h4>
+            <div class="table-wrapper">
+                <table class="tags-table">
+                    <thead>
+                        <tr>
+                            <th class="col-name">Tag Name</th>
+                            <th class="col-description">Description</th>
+                            <th class="col-type">Group</th>
+                            <th class="col-action">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (tag of filteredTags(); track $index) {
+                            <tr>
+                                <td class="col-name">
+                                    <span class="tag-name">{{ tag.Name }}</span>
+                                </td>
+                                <td class="col-description">
+                                    {{ tag.Description || '-' }}
+                                </td>
+                                <td class="col-type">
+                                    <span class="badge">{{ tag.Group || '-' }}</span>
+                                </td>
+                                <td class="col-action">
+                                    <button class="action-btn" title="Copy tag name" (click)="copyToClipboard(tag.Name)">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                            <path d="M9 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V14M9 5H19C20.1 5 21 5.9 21 7V17C21 18.1 20.1 19 19 19H9C7.9 19 7 18.1 7 17V7C7 5.9 7.9 5 9 5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="siteSelected() && tagList().length === 0">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" class="empty-icon">
+                <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                <path d="M21 21L16.35 16.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <p class="empty-text">No tags found. Try searching with different criteria.</p>
+        </div>
+
+        <!-- Initial State -->
+        <div class="initial-state" *ngIf="!siteSelected()">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" class="initial-icon">
+                <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                <path d="M3 9H21" stroke="currentColor" stroke-width="2"/>
+                <path d="M9 3V21" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            <p class="initial-text">Select a site and search for tags to get started</p>
+        </div>
+
+
+    </div>
+</div>
