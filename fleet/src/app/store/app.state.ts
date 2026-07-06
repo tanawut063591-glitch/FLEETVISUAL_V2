@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+/*import { NgModule } from '@angular/core';
 import { StoreModule } from '@ngrx/store';
 import { navReducer } from './reducers/nav.reducer';
 import { siteReducer } from './reducers/site.reducer';
@@ -38,4 +38,4 @@ import { tabularReducer } from '../features/central/store/reducers/tabular.reduc
     // StoreModule.forFeature('nav', navReducer)
   ]
 })
-export class AppStateModule {}
+export class AppStateModule {}*/

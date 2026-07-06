@@ -2,25 +2,23 @@ import { NgModule } from '@angular/core';
 import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
 import { NotFound } from './core/components/not-found/not-found';
 import { Login } from './core/components/login/login';
-import { Navbar } from './core/components/navbar/navbar';
 import { PermissionGuard } from './core/guards/auth.guard';
-import { BillingUpload } from './core/components/billing-upload/billing-upload';
-import { PaymentUpload } from './core/components/payment-upload/payment-upload';
+
 
 export const routes: Routes = [
     {
         path: '',
-        redirectTo: '/main/overview',
+        redirectTo: '/login',
         pathMatch: 'full'
     },
     {
         path: 'login',
         component: Login,
     },
-    {
+    /*{
         path: 'main',
         component: Navbar,
-        children: [
+     children: [
             // Centralize Pages
             {
                 path: 'overview',
@@ -124,22 +122,12 @@ export const routes: Routes = [
                 loadChildren: () => import('./features/sites/pages/report-admin/report-admin-module').then(m => m.ReportAdminModule)
             },
         ]
-    },
+    },*/
     // {
     //     path: 'billing/:id',
     //     canActivate: [PermissionGuard],
     //     loadChildren: () => import('./features/central/pages/billing/billing-module').then(m => m.BillingModule)
     // },
-    {
-        path: 'billing-upload/:id',
-        //canActivate: [PermissionGuard],
-        component: BillingUpload,
-    },
-    {
-        path: 'payment-upload/:id',
-        //canActivate: [PermissionGuard],
-        component: PaymentUpload,
-    },
 
     {
         path: 'notfound',

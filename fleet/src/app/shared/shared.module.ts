@@ -1,5 +1,4 @@
 import { NgModule } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FiltersitePipe } from './pipes/filtersite-pipe';
 import { MaterialModule } from '../core/module/material-module';
 //import { DatePicker, DatePickerModule } from 'primeng/datepicker';
@@ -24,7 +23,7 @@ import { MomentDateAdapter, MAT_MOMENT_DATE_ADAPTER_OPTIONS, provideMomentDateAd
 import { NumberFomatPipe } from './pipes/number-fomat.pipe';
 import { FilterTablePipe } from './pipes/filter-table-pipe';
 import { FilterTable } from './components/filter-table/filter-table';
-import { TagContainer } from './components/tag-container/tag-container';
+
 import { DataTable } from './components/data-table/data-table';
 import { MessageService } from 'primeng/api';
 import { Toast } from 'primeng/toast';
@@ -32,12 +31,13 @@ import { SkeletonBox } from './components/skeleton-box/skeleton-box';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { PortalModule } from '@angular/cdk/portal';
-import { TagDialog } from './components/tag-dialog/tag-dialog';
+
 import { InverterDialog } from './components/inverter-dialog/inverter-dialog';
 import { MeterDialog } from './components/meter-dialog/meter-dialog';
 import { LastseenPipe } from './pipes/lastseen.pipe';
 import { BillingStatusPipe } from './pipes/billing-status-pipe';
 import { MapContainer } from './components/map-container/map-container';
+import { CommonModule } from '@angular/common';
 
 export const MY_DATE_FORMATS = {
   parse: {
@@ -72,10 +72,10 @@ export const MY_DATE_FORMATS = {
     //ChartCard,
     TimeSelectComponent,
     FilterTable,
-    TagContainer,
+
     DataTable,
     SkeletonBox,
-    TagDialog,
+
     MapContainer
     // InverterDialog,
     // MeterDialog
@@ -116,10 +116,10 @@ export const MY_DATE_FORMATS = {
     //ChartCard,
     TimeSelectComponent,
     FilterTable,
-    TagContainer,
+
     DataTable,
     SkeletonBox,
-    TagDialog,
+
     MapContainer
     // InverterDialog,
     // MeterDialog

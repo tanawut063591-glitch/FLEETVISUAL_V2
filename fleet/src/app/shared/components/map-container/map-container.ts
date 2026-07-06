@@ -5,7 +5,7 @@ import { SiteModel } from '../../models/config.model';
 import { Store } from '@ngrx/store';
 import { Observable, Subscription } from 'rxjs';
 import { EventSummaryModel } from '../../../features/sites/models/event.model';
-import { getEventSummary } from '../../../store/selectors/event.selectors';
+//import { getEventSummary } from '../../../store/selectors/event.selectors';
 
 @Component({
   selector: 'app-map-container',
@@ -17,7 +17,7 @@ export class MapContainer implements AfterViewInit, OnDestroy {
 
   private map!: L.Map;
   private markerLayer = L.layerGroup();
-  private eventSummary$: Observable<EventSummaryModel[]>;
+ // private eventSummary$: Observable<EventSummaryModel[]>;
   private eventSub?: Subscription;
   private eventSummaryData: EventSummaryModel[] = [];
 
@@ -28,11 +28,11 @@ export class MapContainer implements AfterViewInit, OnDestroy {
   private store = inject(Store);
 
   constructor() {
-    this.eventSummary$ = this.store.select(getEventSummary);
-    this.eventSub = this.eventSummary$.subscribe(data => {
+    //this.eventSummary$ = this.store.select(getEventSummary);
+    //this.eventSub = this.eventSummary$.subscribe(data => {
       //console.log('Received event summary data:', data);
-      this.eventSummaryData = data;
-    });
+      //this.eventSummaryData = data;
+    //});
 
     effect(() => {
       const sites = this.siteList();
