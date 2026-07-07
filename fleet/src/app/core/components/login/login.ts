@@ -19,7 +19,6 @@ export class Login implements OnInit {
   animate: any;
   animateClass: string = 'valid';
 
-
   private authService = inject(AuthService);
   private appLoadService = inject(AppInitService);
   private router = inject(Router);
