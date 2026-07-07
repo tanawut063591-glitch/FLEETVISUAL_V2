@@ -1,0 +1,50 @@
+[
+	{
+		"title": "ENERGY",
+		"prefix": "TODAY",
+		"minVal": 0,
+		"maxVal": 4500,
+		"activeColor": "#19D6B4",
+		"bgColor": "#3B444D",
+		"bdRadius": "0px",
+		"rangeVal": 25,
+		"verleLabel": true,
+		"legend": false
+	},
+	{
+		"title": "POWER",
+		"prefix": "POWER",
+		"minVal": 0,
+		"maxVal": 1300,
+		"activeColor": "#DEB266",
+		"bgColor": "#3B444D",
+		"bdRadius": "0px",
+		"rangeVal": 25,
+		"verleLabel": true,
+		"legend": false
+	},
+	{
+		"title": "EFFICIENCY",
+		"prefix": "PR",
+		"minVal": 0,
+		"maxVal": 30,
+		"activeColor": "#346AE7",
+		"bgColor": "#3B444D",
+		"bdRadius": "0px",
+		"rangeVal": 25,
+		"verleLabel": true,
+		"legend": false
+	},
+	{
+		"title": "AVAIABILITY",
+		"prefix": "AVAI_TODAY",
+		"minVal": 0,
+		"maxVal": 30,
+		"activeColor": "#FF4F52",
+		"bgColor": "#3B444D",
+		"bdRadius": "0px",
+		"rangeVal": 25,
+		"verleLabel": true,
+		"legend": false
+	}
+]
