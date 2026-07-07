@@ -1,0 +1,75 @@
+<div class="login-wrapper">
+    <header class="top-header">
+        <div class="brand-left">
+            <div class="brand-logo">
+                <img src="assets/images/login/logo.png" alt="Logo">
+            </div>
+            <div class="brand-text">
+                <h2>FLEET VISUAL</h2>
+                <p>Maritime Fleet Monitoring System</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="hero-text">
+        <h1>Navigate Smarter.<br><span class="highlight">Operate Better.</span></h1>
+        <p>Real-time visibility, intelligent tracking,<br>and operational excellence for your fleet.</p>
+    </div>
+
+    <div class="login-form-container">
+        <form class="glass-panel" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+            
+            <div class="logo-circle">
+                <img src="assets/images/login/logo.png" alt="Fleet Visual Logo">
+            </div>
+            
+            <h2>Welcome</h2>
+            <p class="subtitle">Please sign in to continue</p>
+            <div class="divider"></div>
+
+            <div class="input-wrapper">
+                <div class="input-group" [class.input-error]="loginForm.get('username')?.invalid && loginForm.get('username')?.touched">
+                    <i class="fa fa-user-o icon-left"></i>
+                    <input type="text" formControlName="username" (input)="loginChange()" class="input-field" placeholder="Username">
+                </div>
+                <div class="field-error-text" *ngIf="loginForm.get('username')?.invalid && loginForm.get('username')?.touched">
+                    <i class="fa fa-exclamation-circle"></i> Please enter your username.
+                </div>
+            </div>
+
+            <div class="input-wrapper">
+                <div class="input-group" [class.input-error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+                    <i class="fa fa-lock icon-left"></i>
+                    
+                    <input [type]="showPassword ? 'text' : 'password'" 
+                           formControlName="password" 
+                           (input)="loginChange()" 
+                           class="input-field" 
+                           placeholder="Password">
+                           
+                    <i class="fa icon-right" 
+                       [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'" 
+                       (click)="togglePasswordVisibility()"></i>
+                </div>
+                <div class="field-error-text" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+                    <i class="fa fa-exclamation-circle"></i> Please enter your password.
+                </div>
+            </div>
+
+            <div class="login_invalid" [@loginState]="loginValid.toString()">
+                <span *ngIf="!loginValid">
+                    <i class="fa fa-times-circle"></i> The username or password is incorrect.
+                </span>
+            </div>
+
+            <button type="submit" class="login_submit">
+                Log in <i class="fa fa-arrow-right ml-1"></i>
+            </button>
+
+            <div class="login-support">
+                <a href="mailto:support@fleetvisual.com">support@fleetvisual.com</a>
+            </div>
+            
+        </form>
+    </div>
+</div>

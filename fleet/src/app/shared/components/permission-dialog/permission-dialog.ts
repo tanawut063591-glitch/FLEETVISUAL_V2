@@ -1,5 +1,6 @@
 import { Component, Inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogRef } from '@angular/material/dialog';
 
 export interface PermissionDialogData {
   routePath?: string;
@@ -9,17 +10,20 @@ export interface PermissionDialogData {
 
 @Component({
   selector: 'app-permission-dialog',
-  standalone: false,
   templateUrl: './permission-dialog.html',
-  styleUrl: './permission-dialog.scss'
+  styleUrls: ['./permission-dialog.scss'],
+  standalone: false,
 })
 export class PermissionDialog {
   constructor(
+    @Inject(MatDialogRef)
     public dialogRef: MatDialogRef<PermissionDialog>,
-    @Inject(MAT_DIALOG_DATA) public data: PermissionDialogData
+
+    @Inject(MAT_DIALOG_DATA)
+    public data: PermissionDialogData
   ) {}
 
-  onClose(): void {
+  close(): void {
     this.dialogRef.close();
   }
 }

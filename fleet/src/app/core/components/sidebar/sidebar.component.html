@@ -1,0 +1,121 @@
+<button
+    class="sidebar-toggle-btn"
+    type="button"
+    *ngIf="isSm"
+    (click)="toggle()">
+    <i class="fa fa-bars"></i>
+</button>
+
+<div
+    class="sidebar-backdrop"
+    *ngIf="isSm && isShowMenu"
+    (click)="closeMobileSidebar()">
+</div>
+
+<div class="main" [class.is-open]="isShowMenu">
+
+    <aside class="vessel-sidebar">
+
+        <!-- Header -->
+        <div class="sidebar-header">
+            <div>
+                <div class="sidebar-title">SELECT VESSEL</div>
+                <div class="sidebar-subtitle">
+                    {{ visibleVessels.length }} vessels available
+                </div>
+            </div>
+
+            <button
+                class="close-btn"
+                type="button"
+                *ngIf="isSm"
+                (click)="toggle()">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Search -->
+        <div class="search-box">
+            <i class="fa fa-search search-icon"></i>
+
+            <input
+                #searchInput
+                type="text"
+                placeholder="Search vessel..."
+                [value]="keyword"
+                (input)="onSearch(searchInput.value)">
+
+            <i class="fa fa-angle-down search-arrow"></i>
+        </div>
+
+        <!-- Vessel List -->
+        <div class="vessel-list" *ngIf="visibleVessels.length > 0">
+
+            <div
+                class="vessel-card"
+                *ngFor="let vessel of visibleVessels; trackBy: trackByVessel"
+                [class.active]="vessel.isActive"
+                (click)="selectVessel(vessel)">
+
+                <div class="selected-line"></div>
+
+                <!-- Image -->
+                <div class="vessel-image">
+                    <img
+                        [src]="vessel.image"
+                        [alt]="vessel.name">
+                </div>
+
+                <!-- Info -->
+                <div class="vessel-info">
+
+                    <div class="vessel-row top">
+                        <div class="vessel-name">
+                            {{ vessel.name }}
+                        </div>
+
+                        <div
+                            class="status-badge"
+                            [ngClass]="vessel.statusClass">
+                            <span
+                                class="status-dot-small"
+                                *ngIf="vessel.status === 'Idle'">
+                            </span>
+
+                            {{ vessel.status }}
+                        </div>
+                    </div>
+
+                    <div class="vessel-type">
+                        {{ vessel.type }}
+                    </div>
+
+                    <div class="vessel-row bottom">
+                        <div class="vessel-coordinate">
+                            {{ vessel.coordinate }}
+                        </div>
+
+                        <div class="vessel-time">
+                            {{ vessel.lastSeen }}
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="visibleVessels.length === 0">
+            <div class="empty-icon">
+                <i class="fa fa-ship"></i>
+            </div>
+
+            <div class="empty-title">No vessels found</div>
+            <div class="empty-desc">Try another vessel name</div>
+        </div>
+
+    </aside>
+
+</div>

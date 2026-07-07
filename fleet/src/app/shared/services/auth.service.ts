@@ -1,81 +1,217 @@
-import { inject, Injectable } from '@angular/core';
-import { HttpService } from './http.service';
-import { Router } from '@angular/router';
-import { AuthRespondModel } from '../models/auth.model';
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 
-@Injectable({ providedIn: 'root' })
+import { environment } from '../../../environments/environment';
+
+const API_URL = environment.API_URL;
+const API2_URL = environment.API2_URL;
+
+const TOKEN_KEY = 'vesselToken2';
+const OLD_TOKEN_KEY = 'vesselToken';
+const USERNAME_KEY = 'username';
+const PAGES_KEY = 'pages';
+
+interface OldLoginResponse {
+  access_token?: string;
+}
+
+interface NewLoginResponse {
+  Access?: {
+    Token?: string;
+    Pages?: any[];
+    pages?: any[];
+  };
+  Pages?: any[];
+  pages?: any[];
+  Data?: {
+    Pages?: any[];
+    pages?: any[];
+  };
+}
+
+@Injectable({
+  providedIn: 'root',
+})
 export class AuthService {
-    private http = inject(HttpService);
-    private router = inject(Router);
-    private tokenKey = 'token';
+  redirectUrl = '';
 
-    isLoggedIn(): boolean {
-        return !!localStorage.getItem(this.tokenKey);
+  constructor(private http: HttpClient) {}
+
+  async login(username: string, password: string): Promise<boolean> {
+    if (!username?.trim() || !password?.trim()) {
+      return false;
     }
 
-    getToken(): string | null {
-        return localStorage.getItem(this.tokenKey);
+    const body = new URLSearchParams();
+    body.set('grant_type', 'password');
+    body.set('username', username);
+    body.set('password', password);
+
+    try {
+      const res = await firstValueFrom(
+        this.http.post<OldLoginResponse>(`${API_URL}/token`, body.toString(), {
+          headers: new HttpHeaders({
+            'Content-Type': 'application/x-www-form-urlencoded',
+          }),
+        })
+      );
+
+      if (res?.access_token) {
+        localStorage.setItem(OLD_TOKEN_KEY, res.access_token);
+        localStorage.setItem(USERNAME_KEY, username);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
+    }
+  }
+
+  async login2(username: string, password: string): Promise<boolean> {
+    if (!username?.trim() || !password?.trim()) {
+      return false;
     }
 
-    getUser(): string | null {
-        return localStorage.getItem('user');
+    const body = {
+      username,
+      password,
+    };
+
+    try {
+      const res = await firstValueFrom(
+        this.http.post<NewLoginResponse>(`${API2_URL}/authen`, body)
+      );
+
+      const token = res?.Access?.Token;
+
+      if (!token) {
+        return false;
+      }
+
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(USERNAME_KEY, username);
+
+      const pages = this.extractPages(res);
+      if (pages.length > 0) {
+        localStorage.setItem(PAGES_KEY, JSON.stringify(pages));
+      } else {
+        localStorage.setItem(PAGES_KEY, JSON.stringify(['overview', 'main']));
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Login2 error:', error);
+      return false;
+    }
+  }
+
+  async loginAndGetRedirect(
+    username: string,
+    password: string
+  ): Promise<string> {
+    const success = await this.login2(username, password);
+
+    if (!success) {
+      return '';
     }
 
-    getRole(): string | null {
-        return localStorage.getItem('role');
+    return this.redirectUrl || '/main/overview';
+  }
+
+  async tryLogin(): Promise<boolean> {
+    const token = this.getToken();
+
+    if (!token) {
+      return false;
     }
 
-    getSites(): string[] | null {
-        return localStorage.getItem('sites') ? JSON.parse(localStorage.getItem('sites') || '[]') : [];
+    try {
+      const res = await firstValueFrom(
+        this.http.post(`${API_URL}/api/users/trytologin`, null, {
+          headers: this.getAuthHeaders(),
+        })
+      );
+
+      return !!res;
+    } catch (error) {
+      console.error('Try login error:', error);
+      return false;
+    }
+  }
+
+  getToken(): string {
+    return (
+      localStorage.getItem(TOKEN_KEY) ||
+      localStorage.getItem(OLD_TOKEN_KEY) ||
+      ''
+    );
+  }
+
+  getUsername(): string {
+    return localStorage.getItem(USERNAME_KEY) || '';
+  }
+
+  getPages(): string[] {
+    const pageStr = localStorage.getItem(PAGES_KEY);
+
+    if (!pageStr) {
+      return ['overview', 'main'];
     }
 
-    getPages(): string[] | null {
-        return localStorage.getItem('pages') ? JSON.parse(localStorage.getItem('pages') || '[]') : [];
-    }
+    try {
+      const pages = JSON.parse(pageStr);
 
-    async login(username: string, password: string) {
-        try {
-            const result: AuthRespondModel = await this.http.authentication(username, password);
-            if(result && result.Access.Token){
-                localStorage.setItem('token', result.Access.Token);
-                localStorage.setItem('refreshtoken', result?.Access?.RefreshToken??'');
-                localStorage.setItem('role', result?.Access?.Role??'');
-                localStorage.setItem('user', username);
-                // let pageAccess = result.Access.Pages.map(x => {
-                //     const key = Object.keys(x)[0];
-                //     return x[key] ? key.toLowerCase() : null;
-                // }).filter(x => x!=null);
-                let pageAccess = result.Access.Pages??[];
-                localStorage.setItem('pages', JSON.stringify(pageAccess));
-                let siteList = result.Access.Sites??[];
-                localStorage.setItem('sites', JSON.stringify(siteList));
-                return {
-                    success: true,
-                    message: 'login success !'
-                }
-            } else {
-                return {
-                    success: false,
-                    message: 'username or password is incorrect !'
-                }
-            }
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error?.message
-            }
-        }
-    }
+      if (!Array.isArray(pages)) {
+        return ['overview', 'main'];
+      }
 
-    logout() {
-        localStorage.clear();
-        sessionStorage.clear();
-        this.router.navigate(['/login']);
-        //window.location.replace('https://solaris-insight.com/');
-    }
+      return pages
+        .map((page: any) => {
+          if (typeof page === 'string') {
+            return page;
+          }
 
-    hasRole(role: string): boolean {
-        const userRoles = ['administrator', 'user'];
-        return userRoles.includes(role);
+          return page?.path || page?.name || page?.page || '';
+        })
+        .filter((page: string) => !!page);
+    } catch (error) {
+      console.error('Cannot parse pages:', error);
+      return ['overview', 'main'];
     }
+  }
+
+  isLoggedIn(): boolean {
+    return this.getToken().length > 0;
+  }
+
+  getAuthHeaders(): HttpHeaders {
+    const token = this.getToken();
+
+    return new HttpHeaders({
+      Authorization: `Bearer ${token}`,
+    });
+  }
+
+  logout(): void {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(OLD_TOKEN_KEY);
+    localStorage.removeItem(USERNAME_KEY);
+    localStorage.removeItem(PAGES_KEY);
+    sessionStorage.removeItem('navigate');
+  }
+
+  private extractPages(res: NewLoginResponse): any[] {
+    return (
+      res?.Access?.Pages ||
+      res?.Access?.pages ||
+      res?.Pages ||
+      res?.pages ||
+      res?.Data?.Pages ||
+      res?.Data?.pages ||
+      []
+    );
+  }
 }

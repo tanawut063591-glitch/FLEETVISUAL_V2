@@ -1,55 +1,59 @@
 ﻿import { NgModule, Optional, SkipSelf } from '@angular/core';
-import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptors, withInterceptorsFromDi } from '@angular/common/http';
+import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { Login } from './components/login/login';
-//import { Navbar } from './components/navbar/navbar';
-import { NotFound } from './components/not-found/not-found';
-import { MaterialModule } from './module/material-module';
-//import { AppStateModule } from '../store/app.state';
-import { ShareModule } from '../shared/shared.module';
-import { errorInterceptor } from './interceptors/error.interceptor';
-import { tokenInterceptor } from './interceptors/token.interceptor';
+import { HttpClientModule } from '@angular/common/http';
+
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { PortalModule } from '@angular/cdk/portal';
+
+import { MaterialModule } from './module/material-module';
+import { ShareModule } from '../shared/shared.module';
 import { ChartsModule } from '../shared/chart.module';
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 
-
+import { LoginComponent } from './components/login/login.component';
+import { MainComponent } from './components/main/main.component';
+import { HeaderComponent } from './components/header/header.component';
+import { SidebarComponent } from './components/sidebar/sidebar.component';
+import { NotFound } from './components/not-found/not-found';
 
 @NgModule({
-    imports: [
-        DragDropModule,
-        OverlayModule,
-        PortalModule,
-        CommonModule,
-        RouterModule,
-        FormsModule,
-        MaterialModule,
+  imports: [
+    CommonModule,
+    RouterModule,
+    FormsModule,
+    ReactiveFormsModule,
+    HttpClientModule,
 
-        ReactiveFormsModule,
-        ShareModule,
-        ChartsModule
-    ],
-    declarations: [
-        Login,
-        NotFound,
+    DragDropModule,
+    OverlayModule,
+    PortalModule,
 
-    ],
-    providers: [
-        DatePipe,
-        DecimalPipe,
-        provideHttpClient(
-          withInterceptors([tokenInterceptor, errorInterceptor])
-        ),
-    ]
+    MaterialModule,
+    ShareModule,
+    ChartsModule,
+  ],
+
+  declarations: [
+    LoginComponent,
+    MainComponent,
+    HeaderComponent,
+    SidebarComponent,
+    NotFound,
+  ],
+
+  providers: [
+    DatePipe,
+    DecimalPipe,
+  ],
 })
 export class CoreModule {
-  // Prevent re-importing
-  constructor(@Optional() @SkipSelf() parentModule: CoreModule) {
+  constructor(@Optional() @SkipSelf() parentModule: CoreModule | null) {
     if (parentModule) {
-      throw new Error('CoreModule is already loaded. Import it only in AppModule.');
+      throw new Error(
+        'CoreModule is already loaded. Import it only in AppModule.'
+      );
     }
   }
 }

@@ -1,0 +1,309 @@
+/* ==========================================
+   Base & Background
+   ========================================== */
+.login-wrapper {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background-image: url('/assets/images/login/background.png'); 
+    background-size: 100% 100%; 
+    background-position: center;
+    background-repeat: no-repeat;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden; 
+    color: #ffffff;
+}
+
+.ml-1 { margin-left: 8px; }
+
+/* ==========================================
+   Header (Top Left)
+   ========================================== */
+.top-header {
+    position: absolute;
+    top: 40px;
+    left: 40px;
+    right: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    z-index: 10;
+}
+
+.brand-left {
+    display: flex;
+    align-items: center;
+    gap: 20px; 
+}
+
+.brand-logo {
+    width: 70px; 
+    height: 70px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.brand-logo img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.brand-text h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #0f172a; 
+}
+
+.brand-text p {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569; 
+}
+
+/* ==========================================
+   Hero Text (Center Left)
+   ========================================== */
+.hero-text {
+    position: absolute;
+    top: 32%;
+    left: 5%;
+    z-index: 10;
+}
+
+.hero-text h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+    color: #0f172a;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+}
+
+.hero-text .highlight {
+    color: #0056b3;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+}
+
+.hero-text p {
+    font-size: 1.1rem;
+    color: #475569;
+    line-height: 1.6;
+    font-weight: 500;
+}
+
+/* ==========================================
+   Login Form Box (Center Right)
+   ========================================== */
+.login-form-container {
+    position: absolute;
+    top: 50%;
+    right: 12%;
+    transform: translateY(-50%);
+    width: 100%;
+    max-width: 460px;
+    z-index: 20;
+}
+
+.glass-panel {
+    background: rgba(255, 255, 255, 0.85); 
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    padding: 3.5rem 3rem;
+    border-radius: 28px;
+    box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.3),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+    text-align: center;
+    box-sizing: border-box;
+    color: #1e293b;
+}
+
+.logo-circle {
+    width: 80px;       
+    height: 80px;      
+    margin: 0 auto 1.5rem auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; 
+}
+
+.glass-panel h2 {
+    font-size: 2rem;
+    color: #0f172a;
+    margin: 0 0 0.5rem 0;
+    font-weight: 700;
+}
+
+.subtitle {
+    color: #64748b;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+}
+
+.divider {
+    width: 40px;
+    height: 3px;
+    background-color: #2563eb;
+    border-radius: 2px;
+    margin: 0 auto 2.5rem auto;
+}
+
+/* ==========================================
+   Inputs & Field Errors
+   ========================================== */
+.input-wrapper {
+    margin-bottom: 1.2rem;
+}
+
+.input-group {
+    position: relative;
+}
+
+.input-group i.icon-left {
+    position: absolute;
+    left: 1.2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+    font-size: 1.1rem;
+}
+
+.input-group i.icon-right {
+    position: absolute;
+    right: 1.2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+.input-field {
+    width: 100%;
+    padding: 1.2rem 1rem 1.2rem 3.5rem;
+    background-color: #f8fafc; 
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 1rem;
+    color: #334155;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.input-group.input-error .input-field {
+    border-color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.field-error-text {
+    color: #ef4444;
+    font-size: 0.8rem;
+    text-align: left;
+    margin-top: 0.4rem;
+    padding-left: 0.5rem;
+    font-weight: 500;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.field-error-text i {
+    margin-right: 3px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.login_invalid {
+    text-align: left;
+    color: #ef4444;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    min-height: 20px;
+}
+
+.login_submit {
+    width: 100%;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    border: none;
+    padding: 1.2rem;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25);
+}
+
+.login_submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 25px rgba(37, 99, 235, 0.35);
+}
+
+/* ==========================================
+   Support Text (ใต้ปุ่ม Log in)
+   ========================================== */
+.login-support {
+    margin-top: 1.5rem;
+    font-size: 0.85rem;
+    text-align: center;
+    letter-spacing: 0.5px;
+}
+
+/* ตกแต่งลิงก์อีเมล */
+.login-support a {
+    color: #64748b;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+/* เปลี่ยนเป็นสีฟ้าและมีขีดเส้นใต้เมื่อเอาเมาส์ชี้ */
+.login-support a:hover {
+    color: #3b82f6; 
+    text-decoration: underline;
+}
+
+/* ==========================================
+   Responsive
+   ========================================== */
+@media screen and (max-width: 1100px) {
+    .hero-text { display: none; }
+    .login-form-container {
+        position: relative;
+        top: 0;
+        right: 0;
+        transform: none;
+        margin: auto;
+        margin-top: 15vh;
+    }
+    .top-header {
+        position: relative;
+        top: 0; left: 0; right: 0;
+        padding: 20px;
+    }
+    .login-wrapper { overflow-y: auto; }
+}

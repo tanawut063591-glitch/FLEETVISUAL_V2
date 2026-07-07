@@ -1,0 +1,275 @@
+<nav class="fleet-header navbar navbar-expand-lg noselect">
+
+    <!-- LOGO -->
+    <a class="navbar-brand brand-box" routerLink="/main/overview" (click)="closeSettingsMenu()">
+        <img
+            src="/assets/images/vessel/LocationEyeIcon.png"
+            alt="Fleet Visual Logo"
+            class="main-logo">
+    </a>
+
+    <!-- MOBILE TOGGLER -->
+    <button
+        class="navbar-toggler custom-toggler"
+        type="button"
+        data-toggle="collapse"
+        data-target="#navbarNav"
+        aria-controls="navbarNav"
+        aria-expanded="false"
+        aria-label="Toggle navigation">
+
+        <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+
+        <!-- MAIN MENU -->
+        <ul class="navbar-nav main-menu">
+
+            <li
+                class="nav-item noselect"
+                data-toggle="collapse"
+                data-target=".navbar-collapse.show"
+                routerLink="overview"
+                routerLinkActive="active"
+                (click)="closeSettingsMenu()">
+
+                <div class="nav-icon">
+                    <i class="fa fa-map" aria-hidden="true"></i>
+                </div>
+
+                <div class="nav-text">OVERVIEW</div>
+            </li>
+
+            <li
+                class="nav-item noselect"
+                data-toggle="collapse"
+                data-target=".navbar-collapse.show"
+                routerLink="realtime"
+                routerLinkActive="active"
+                (click)="closeSettingsMenu()">
+
+                <div class="nav-icon">
+                    <i class="fa fa-tachometer" aria-hidden="true"></i>
+                </div>
+
+                <div class="nav-text">REALTIME</div>
+            </li>
+
+            <li
+                class="nav-item noselect"
+                data-toggle="collapse"
+                data-target=".navbar-collapse.show"
+                routerLink="datalogger"
+                routerLinkActive="active"
+                (click)="closeSettingsMenu()">
+
+                <div class="nav-icon">
+                    <i class="fa fa-database" aria-hidden="true"></i>
+                </div>
+
+                <div class="nav-text">DATA LOGGER</div>
+            </li>
+
+            <li
+                class="nav-item noselect"
+                data-toggle="collapse"
+                data-target=".navbar-collapse.show"
+                routerLink="chart"
+                routerLinkActive="active"
+                (click)="closeSettingsMenu()">
+
+                <div class="nav-icon">
+                    <i class="fa fa-area-chart" aria-hidden="true"></i>
+                </div>
+
+                <div class="nav-text">CHART</div>
+            </li>
+
+            <li
+                class="nav-item noselect"
+                data-toggle="collapse"
+                data-target=".navbar-collapse.show"
+                *ngIf="username === 'sat'"
+                routerLink="diagram"
+                routerLinkActive="active"
+                (click)="closeSettingsMenu()">
+
+                <div class="nav-icon">
+                    <i class="fa fa-sitemap" aria-hidden="true"></i>
+                </div>
+
+                <div class="nav-text">DIAGRAM</div>
+            </li>
+
+            <li
+                class="nav-item noselect"
+                data-toggle="collapse"
+                data-target=".navbar-collapse.show"
+                routerLink="report"
+                routerLinkActive="active"
+                (click)="closeSettingsMenu()">
+
+                <div class="nav-icon">
+                    <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                </div>
+
+                <div class="nav-text">REPORT</div>
+            </li>
+
+            <!-- ALERTS -->
+            <li
+                class="nav-item alert-menu noselect"
+                data-toggle="collapse"
+                data-target=".navbar-collapse.show"
+                routerLink="alerts"
+                routerLinkActive="active"
+                (click)="closeSettingsMenu()">
+
+                <div class="nav-icon alert-icon-wrap">
+                    <i class="fa fa-bell-o" aria-hidden="true"></i>
+
+                    <span class="alert-count" *ngIf="alertCount > 0">
+                        {{ alertCount }}
+                    </span>
+                </div>
+
+                <div class="nav-text">ALERTS</div>
+            </li>
+
+            <!-- SETTINGS -->
+            <li
+                class="settings-nav-menu noselect"
+                routerLinkActive="active"
+                [class.open]="settingsMenuOpen">
+
+                <button
+                    type="button"
+                    class="settings-nav-btn"
+                    (click)="toggleSettingsMenu($event)">
+
+                    <div class="nav-icon">
+                        <i class="fa fa-cog" aria-hidden="true"></i>
+                    </div>
+
+                    <div class="nav-text">
+                        SETTINGS
+                        <i class="fa fa-angle-down settings-mini-arrow"></i>
+                    </div>
+                </button>
+
+                <div class="settings-dropdown">
+
+                    <div class="dropdown-title">
+                        System Settings
+                    </div>
+
+                    <a
+                        class="dropdown-item"
+                        routerLink="settings"
+                        (click)="closeSettingsMenu()">
+
+                        <span class="dropdown-icon blue">
+                            <i class="fa fa-sliders"></i>
+                        </span>
+
+                        <div>
+                            <strong>General Settings</strong>
+                            <small>System preferences</small>
+                        </div>
+                    </a>
+
+                    <a
+                        class="dropdown-item"
+                        routerLink="settings/vessels"
+                        (click)="closeSettingsMenu()">
+
+                        <span class="dropdown-icon green">
+                            <i class="fa fa-ship"></i>
+                        </span>
+
+                        <div>
+                            <strong>Vessel Management</strong>
+                            <small>Add or edit vessel data</small>
+                        </div>
+                    </a>
+
+                    <a
+                        class="dropdown-item"
+                        routerLink="settings/users"
+                        (click)="closeSettingsMenu()">
+
+                        <span class="dropdown-icon purple">
+                            <i class="fa fa-user-o"></i>
+                        </span>
+
+                        <div>
+                            <strong>User Management</strong>
+                            <small>Roles and permissions</small>
+                        </div>
+                    </a>
+
+                    <a
+                        class="dropdown-item"
+                        routerLink="settings/system"
+                        (click)="closeSettingsMenu()">
+
+                        <span class="dropdown-icon orange">
+                            <i class="fa fa-cogs"></i>
+                        </span>
+
+                        <div>
+                            <strong>System Config</strong>
+                            <small>Advanced configuration</small>
+                        </div>
+                    </a>
+
+                </div>
+            </li>
+
+        </ul>
+
+        <!-- RIGHT MENU -->
+        <ul class="navbar-nav right-menu ml-auto align-items-center">
+
+            <!-- USER PROFILE -->
+            <li class="user-profile-pill noselect">
+
+                <div class="user-avatar">
+                    <img
+                        *ngIf="!avatarError"
+                        [src]="userImage"
+                        alt="User"
+                        (error)="onUserImageError()">
+
+                    <span *ngIf="avatarError" class="user-initial">
+                        {{ userInitial }}
+                    </span>
+                </div>
+
+                <div class="user-info">
+                    <span class="user-label">USER</span>
+                    <strong>{{ username || 'User' }}</strong>
+                </div>
+
+            </li>
+
+            <!-- LOGOUT -->
+            <li
+                class="nav-item logout-item noselect"
+                (click)="logout()">
+
+                <div class="nav-icon logout-icon">
+                    <i class="fa fa-sign-out" aria-hidden="true"></i>
+                </div>
+
+                <div class="nav-text logout">
+                    LOGOUT
+                </div>
+            </li>
+
+        </ul>
+
+    </div>
+
+</nav>
