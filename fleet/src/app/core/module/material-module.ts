@@ -46,7 +46,7 @@ const modules = [
   MatTreeModule,
   MatAccordion,
   MatExpansionModule,
-  MatCheckboxModule,
+  MatCheckboxModule
 ];
 
 @NgModule({

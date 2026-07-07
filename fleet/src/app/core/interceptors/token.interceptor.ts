@@ -40,7 +40,6 @@ function inspectPayload(value: unknown, path: string): string[] {
   return [];
 }
 
-
 export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const token = authService.getToken();
