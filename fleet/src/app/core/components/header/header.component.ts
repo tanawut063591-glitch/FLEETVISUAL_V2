@@ -1,62 +1,67 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 
+import { AuthService } from '../../../shared/services/auth.service';
+
+interface HeaderMenuItem {
+  label: string;
+  icon: string;
+  path: string;
+}
+
 @Component({
   selector: 'app-header',
+  standalone: false,
   templateUrl: './header.component.html',
-  styleUrls: ['./header.component.css']
+  styleUrls: ['./header.component.css'],
 })
 export class HeaderComponent implements OnInit {
+  username = 'sat';
+  alertCount = 0;
+  settingsMenuOpen = false;
+  avatarError = false;
+  userImage = 'assets/images/user-avatar.png';
 
-  // username เดิม ใช้เช็กสิทธิ์เมนู DIAGRAM
-  username: string = 'sat';
+  menuItems: HeaderMenuItem[] = [
+    { label: 'OVERVIEW', icon: 'fa fa-map', path: '/main' },
+    { label: 'REALTIME', icon: 'fa fa-tachometer', path: '/main' },
+    { label: 'DATA LOGGER', icon: 'fa fa-database', path: '/main' },
+    { label: 'CHART', icon: 'fa fa-area-chart', path: '/main' },
+    { label: 'DIAGRAM', icon: 'fa fa-sitemap', path: '/main' },
+    { label: 'REPORT', icon: 'fa fa-file-text-o', path: '/main' },
+  ];
 
-  // จำนวนแจ้งเตือน
-  alertCount: number = 0;
-
-  // สถานะเปิด / ปิด dropdown settings
-  settingsMenuOpen: boolean = false;
-
-  // รูปโปรไฟล์
-  userImage: string = '/assets/images/user-avatar.png';
-
-  // ถ้ารูปโหลดไม่ได้ จะแสดงตัวอักษรแรกแทน
-  avatarError: boolean = false;
-
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private authService: AuthService
+  ) {}
 
   ngOnInit(): void {
-    const savedUsername =
+    this.username =
+      this.authService.getUsername() ||
       localStorage.getItem('username') ||
-      sessionStorage.getItem('username');
+      sessionStorage.getItem('username') ||
+      'sat';
 
-    if (savedUsername) {
-      this.username = savedUsername;
-    }
-
-    const savedUserImage =
+    this.userImage =
       localStorage.getItem('userImage') ||
-      sessionStorage.getItem('userImage');
-
-    if (savedUserImage) {
-      this.userImage = savedUserImage;
-    }
+      sessionStorage.getItem('userImage') ||
+      'assets/images/user-avatar.png';
 
     const savedAlertCount =
       localStorage.getItem('alertCount') ||
       sessionStorage.getItem('alertCount');
 
-    if (savedAlertCount) {
-      this.alertCount = Number(savedAlertCount) || 0;
-    }
+    this.alertCount = savedAlertCount ? Number(savedAlertCount) || 0 : 0;
   }
 
   get userInitial(): string {
-    if (!this.username) {
-      return 'U';
-    }
+    return this.username ? this.username.charAt(0).toUpperCase() : 'U';
+  }
 
-    return this.username.charAt(0).toUpperCase();
+  goTo(path: string): void {
+    this.closeSettingsMenu();
+    this.router.navigate([path || '/main']);
   }
 
   toggleSettingsMenu(event: MouseEvent): void {
@@ -73,21 +78,9 @@ export class HeaderComponent implements OnInit {
   }
 
   logout(): void {
-    localStorage.clear();
+    this.authService.logout();
     sessionStorage.clear();
-
     this.router.navigate(['/login']);
-
-    console.log('Logout completed successfully.');
-  }
-
-  onNavbarSearch(event: any): void {
-    const value = event.target.value;
-
-    this.router.navigate([], {
-      queryParams: { search: value || null },
-      queryParamsHandling: 'merge'
-    });
   }
 
   @HostListener('document:click')

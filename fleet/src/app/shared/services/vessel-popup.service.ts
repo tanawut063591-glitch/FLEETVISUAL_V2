@@ -1,13 +1,14 @@
-import { Injectable } from '@angular/core';
+/*import { Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
 })
 export class VesselPopupService {
-  private vesselPopupSource = new Subject<any>();
+  private readonly vesselPopupSource = new Subject<any>();
 
-  vesselPopup$: Observable<any> = this.vesselPopupSource.asObservable();
+  readonly vesselPopup$: Observable<any> =
+    this.vesselPopupSource.asObservable();
 
   openPopup(vessel: any): void {
     if (!vessel) {
@@ -20,4 +21,4 @@ export class VesselPopupService {
   closePopup(): void {
     this.vesselPopupSource.next(null);
   }
-}
+}*/

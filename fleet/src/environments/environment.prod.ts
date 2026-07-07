@@ -3,4 +3,3 @@ export const environment = {
   API_URL: "https://fleetvisual.com",
   API2_URL: "/api/"
 };
-

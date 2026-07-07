@@ -1,12 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Subscription, timer } from 'rxjs';
-
-import { Store } from '@ngrx/store';
-
-import { FvState } from '../state-managements/states/app.states';
-
-import * as fvInfoReducer from '../state-managements/reducers/fv-info.reducer';
-import * as fvOverviewActions from '../state-managements/actions/fv-overview.action';
+import { Observable, Subject, Subscription, timer } from 'rxjs';
 
 import { HttpClientService } from './http-client.service';
 
@@ -14,20 +7,29 @@ import { HttpClientService } from './http-client.service';
   providedIn: 'root',
 })
 export class FvOverviewService {
+  // เก็บ timer สำหรับ refresh ข้อมูล Overview
   private timerSubscription: Subscription | null = null;
-  private fvInfoSubscription: Subscription | null = null;
+
+  // เก็บ subscription ตอนโหลดไฟล์ overview.tag.json
   private tagFileSubscription: Subscription | null = null;
 
+  // ค่าเวลา default ถ้าไม่ได้ส่ง interval มา
   private readonly defaultInterval = 5000;
 
+  // เก็บ tag จาก overview.tag.json
   private overviewTags: any[] = [];
+
+  // เก็บข้อมูลที่พร้อมส่งไปโหลด Overview
   private overviewDatas: any[] = [];
 
-  constructor(
-    private store: Store<FvState>,
-    private http: HttpClientService
-  ) {}
+  private readonly overviewPayloadSource = new Subject<any[]>();
 
+  readonly overviewPayload$: Observable<any[]> =
+    this.overviewPayloadSource.asObservable();
+
+  constructor(private http: HttpClientService) {}
+
+  // เริ่มทำงานของ Overview Service
   start(interval?: number): void {
     this.stop();
     this.resetData();
@@ -38,146 +40,122 @@ export class FvOverviewService {
     this.loadOverviewTags(safeInterval);
   }
 
-  stop(): void {
-    this.unsubscribe(this.timerSubscription);
-    this.unsubscribe(this.fvInfoSubscription);
-    this.unsubscribe(this.tagFileSubscription);
-
-    this.timerSubscription = null;
-    this.fvInfoSubscription = null;
-    this.tagFileSubscription = null;
-  }
-
+  // โหลดไฟล์ overview.tag.json
   private loadOverviewTags(interval: number): void {
     this.tagFileSubscription = this.http
       .getJsonFile('/assets/tags/overview.tag.json')
       .subscribe({
         next: (res: any) => {
           this.overviewTags = this.mapOverviewTags(res);
-
-          if (this.overviewTags.length === 0) {
-            return;
-          }
-
-          this.initOverview();
           this.startTimer(interval);
         },
-        error: (error: any) => {
-          console.error('Load overview tags error:', error);
+        error: (error) => {
+          console.error('[FvOverviewService] load tags error:', error);
           this.resetData();
         },
       });
   }
 
+  // แปลง tag จาก json ให้เป็นรูปแบบที่ใช้งานง่าย
   private mapOverviewTags(res: any): any[] {
-    const tags: any[] = [];
-
     if (!res) {
-      return tags;
+      return [];
     }
 
-    Object.keys(res).forEach((key: string) => {
-      const tag = res[key];
+    return Object.keys(res)
+      .map((key: string) => {
+        const tag = res[key];
 
-      if (!tag || !tag.name || !tag.tagName) {
-        return;
-      }
-
-      tags.push({
-        name: tag.name,
-        tagName: tag.tagName,
-        cal: tag.cal,
-      });
-    });
-
-    return tags;
+        return {
+          name: tag?.name || '',
+          tagName: tag?.tagName || '',
+          cal: tag?.cal,
+        };
+      })
+      .filter((tag) => tag.name && tag.tagName);
   }
 
+  // เริ่ม timer เพื่อ refresh ข้อมูล Overview ซ้ำตามเวลา
   private startTimer(interval: number): void {
     this.timerSubscription = timer(interval, interval).subscribe(() => {
       this.tick();
     });
   }
 
+  // สั่งส่งข้อมูล Overview ซ้ำ
   private tick(): void {
-    if (this.overviewDatas.length === 0) {
+    if (this.overviewDatas.length > 0) {
+      this.overviewPayloadSource.next(this.overviewDatas);
+    }
+  }
+
+  // ใช้สำหรับ set ข้อมูลเรือจาก component ภายนอก
+  setVessels(fvInfos: any[]): void {
+    if (!Array.isArray(fvInfos) || fvInfos.length === 0) {
+      this.overviewDatas = [];
+      this.overviewPayloadSource.next([]);
       return;
     }
 
-    this.store.dispatch(
-      new fvOverviewActions.GetFVOverview(this.overviewDatas)
-    );
+    this.overviewDatas = this.buildOverviewDatas(fvInfos);
+
+    if (this.overviewDatas.length > 0) {
+      this.overviewPayloadSource.next(this.overviewDatas);
+    }
   }
 
-  private initOverview(): void {
-    this.fvInfoSubscription = this.store
-      .select(fvInfoReducer.getFvInfo)
-      .subscribe((res: any) => {
-        const fvInfos = Array.isArray(res) ? res : [];
-
-        if (fvInfos.length === 0) {
-          return;
-        }
-
-        this.overviewDatas = this.buildOverviewDatas(fvInfos);
-
-        if (this.overviewDatas.length > 0) {
-          this.store.dispatch(
-            new fvOverviewActions.GetFVOverview(this.overviewDatas)
-          );
-        }
-      });
-  }
-
+  // สร้างข้อมูล Overview สำหรับเรือทุกลำ
   private buildOverviewDatas(fvInfos: any[]): any[] {
-    const datas: any[] = [];
-
-    fvInfos.forEach((fv: any) => {
-      const payload = this.generateTags(fv);
-
-      if (payload) {
-        datas.push(payload);
-      }
-    });
-
-    return datas;
+    return fvInfos
+      .map((fv) => this.generateTags(fv))
+      .filter((payload) => payload !== null);
   }
 
-  private generateTags(fv: any): any | null {
-    const fvInfo = fv && fv.fvInfo ? fv.fvInfo : fv;
-    const prefix = fvInfo && fvInfo.prefix ? fvInfo.prefix : '';
+  // สร้าง tag จริงของเรือ เช่น BOAT01-VES-GPS-SPEED
+  private generateTags(fv: any): any {
+    if (!fv) {
+      return null;
+    }
+
+    const fvInfo = fv?.fvInfo || fv;
+    const prefix = fvInfo?.prefix;
 
     if (!prefix) {
       return null;
     }
 
-    if (!Array.isArray(this.overviewTags) || this.overviewTags.length === 0) {
+    if (!this.overviewTags || this.overviewTags.length === 0) {
       return null;
     }
 
-    const tags = this.overviewTags.map((tag: any) => {
-      return {
-        name: tag.name,
-        tagName: `${prefix}-${tag.tagName}`,
-        cal: tag.cal,
-      };
-    });
+    const tags = this.overviewTags.map((tag) => ({
+      name: tag.name,
+      tagName: `${prefix}-${tag.tagName}`,
+      cal: tag.cal,
+    }));
+
+    if (tags.length === 0) {
+      return null;
+    }
 
     return {
       tags,
       fv: fvInfo,
-      datas: [],
     };
   }
 
+  // หยุด Service และเคลียร์ subscription ทั้งหมด
+  stop(): void {
+    this.timerSubscription?.unsubscribe();
+    this.tagFileSubscription?.unsubscribe();
+
+    this.timerSubscription = null;
+    this.tagFileSubscription = null;
+  }
+
+  // เคลียร์ข้อมูลเก่า กัน tag ซ้ำ / data ซ้ำ
   private resetData(): void {
     this.overviewTags = [];
     this.overviewDatas = [];
-  }
-
-  private unsubscribe(subscription: Subscription | null): void {
-    if (subscription && !subscription.closed) {
-      subscription.unsubscribe();
-    }
   }
 }

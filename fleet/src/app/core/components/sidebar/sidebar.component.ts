@@ -2,29 +2,23 @@ import {
   Component,
   OnInit,
   OnDestroy,
+  OnChanges,
+  SimpleChanges,
   ChangeDetectionStrategy,
+  Input,
   Output,
   EventEmitter,
   ChangeDetectorRef,
 } from '@angular/core';
 
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
-
-import { Store } from '@ngrx/store';
-import { Observable, Subscription } from 'rxjs';
-
-import { FvState } from '../../../shared/state-managements/states/app.states';
-import { FvInfo, FV } from '../../../shared/state-managements/models/fv.model';
-
-import * as fvInfoReducer from '../../../shared/state-managements/reducers/fv-info.reducer';
-import * as fvInfoActions from '../../../shared/state-managements/actions/fv-info.action';
+import { Subscription } from 'rxjs';
 
 import { FvTimeService } from '../../../shared/services/fv-time.service';
 import { CoordinatesService } from '../../../shared/services/coordinate.service';
 
 interface VesselViewItem {
   raw: any;
-  fvInfo: any;
   key: string;
   name: string;
   type: string;
@@ -38,16 +32,16 @@ interface VesselViewItem {
 
 @Component({
   selector: '[app-sidebar]',
+  standalone: false,
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: false,
 })
-export class SidebarComponent implements OnInit, OnDestroy {
-  @Output() selectedVessel = new EventEmitter<any>();
+export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
+  @Input() vessels: any[] = [];
+  @Input() activeVessel: any = null;
 
-  fvinfos$: Observable<any[]>;
-  fvActive$: Observable<any>;
+  @Output() selectedVessel = new EventEmitter<any>();
 
   keyword = '';
   isShowMenu = true;
@@ -59,19 +53,14 @@ export class SidebarComponent implements OnInit, OnDestroy {
   selectedVesselKey = '';
 
   private breakpointSub: Subscription | null = null;
-  private listSub: Subscription | null = null;
-  private timer: any = null;
+  private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
-    private store: Store<FvState>,
     private fvTimeService: FvTimeService,
     private coordinatesService: CoordinatesService,
     private breakpointObserver: BreakpointObserver,
     private cdr: ChangeDetectorRef
-  ) {
-    this.fvinfos$ = this.store.select(fvInfoReducer.getFvInfos) as Observable<any[]>;
-    this.fvActive$ = this.store.select(fvInfoReducer.getFvInfosActive) as Observable<any>;
-  }
+  ) {}
 
   ngOnInit(): void {
     this.breakpointSub = this.breakpointObserver
@@ -82,24 +71,29 @@ export class SidebarComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       });
 
-    this.listSub = this.fvinfos$.subscribe((vessels: any[]) => {
-      this.allVessels = Array.isArray(vessels) ? vessels : [];
-      this.buildVisibleVessels();
-    });
+    this.allVessels = Array.isArray(this.vessels) ? this.vessels : [];
+    this.syncActiveVessel();
+    this.buildVisibleVessels();
 
     this.timer = setInterval(() => {
       this.buildVisibleVessels();
     }, 60000);
   }
 
-  ngOnDestroy(): void {
-    if (this.breakpointSub && !this.breakpointSub.closed) {
-      this.breakpointSub.unsubscribe();
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['vessels']) {
+      this.allVessels = Array.isArray(this.vessels) ? this.vessels : [];
+      this.buildVisibleVessels();
     }
 
-    if (this.listSub && !this.listSub.closed) {
-      this.listSub.unsubscribe();
+    if (changes['activeVessel']) {
+      this.syncActiveVessel();
+      this.buildVisibleVessels();
     }
+  }
+
+  ngOnDestroy(): void {
+    this.breakpointSub?.unsubscribe();
 
     if (this.timer) {
       clearInterval(this.timer);
@@ -125,13 +119,11 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   selectVessel(item: VesselViewItem): void {
-    if (!item || !item.fvInfo) {
+    if (!item || !item.raw) {
       return;
     }
 
     this.selectedVesselKey = item.key;
-
-    this.store.dispatch(new fvInfoActions.SetFvActive(item.fvInfo));
     this.selectedVessel.emit(item.raw);
 
     if (this.isSm) {
@@ -146,40 +138,41 @@ export class SidebarComponent implements OnInit, OnDestroy {
     const keyword = (this.keyword || '').toLowerCase().trim();
 
     const filtered = this.allVessels.filter((vessel: any) => {
-      const fvInfo = this.getFvInfo(vessel);
-
       if (!keyword) {
         return true;
       }
 
-      const name = String(fvInfo.name || '').toLowerCase();
-      const desc = String(fvInfo.desc || '').toLowerCase();
-      const prefix = String(fvInfo.prefix || '').toLowerCase();
+      const normalized = this.normalizeVessel(vessel);
+
+      const name = String(normalized.name || '').toLowerCase();
+      const desc = String(normalized.desc || '').toLowerCase();
+      const prefix = String(normalized.prefix || '').toLowerCase();
 
       return (
-        name.indexOf(keyword) > -1 ||
-        desc.indexOf(keyword) > -1 ||
-        prefix.indexOf(keyword) > -1
+        name.includes(keyword) ||
+        desc.includes(keyword) ||
+        prefix.includes(keyword)
       );
     });
 
     this.visibleVessels = filtered.map((vessel: any, index: number) => {
-      const fvInfo = this.getFvInfo(vessel);
-      const key = this.getVesselKey(fvInfo, index);
-      const status = this.getStatus(fvInfo);
+      const normalized = this.normalizeVessel(vessel);
+      const key = this.getVesselKey(normalized, index);
+      const status = this.getStatus(normalized);
 
       return {
         raw: vessel,
-        fvInfo,
         key,
-        name: fvInfo.name || '-',
-        type: fvInfo.desc || fvInfo.prefix || 'AHTS',
-        image: fvInfo.img || 'assets/images/no-ship.png',
-        coordinate: this.getCoordinate(fvInfo),
+        name: normalized.name || '-',
+        type: normalized.desc || normalized.prefix || 'AHTS',
+        image: normalized.img || 'assets/images/no-ship.png',
+        coordinate: this.getCoordinate(normalized),
         status,
         statusClass: this.getStatusClass(status),
-        lastSeen: this.getLastSeenText(fvInfo),
-        isActive: this.selectedVesselKey !== '' && this.selectedVesselKey === key,
+        lastSeen: this.getLastSeenText(normalized),
+        isActive:
+          this.selectedVesselKey !== '' &&
+          this.selectedVesselKey === key,
       };
     });
 
@@ -223,7 +216,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
     try {
       return this.fvTimeService.getLastSeen(vessel.timestamp);
-    } catch (error) {
+    } catch {
       return '-';
     }
   }
@@ -236,7 +229,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     const now = new Date().getTime();
     const last = new Date(vessel.timestamp).getTime();
 
-    if (isNaN(last)) {
+    if (Number.isNaN(last)) {
       return 999999;
     }
 
@@ -252,7 +245,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
     try {
       return this.coordinatesService.getLatLong(vessel.lat, vessel.long);
-    } catch (error) {
+    } catch {
       return '-';
     }
   }
@@ -282,14 +275,43 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   trackByVessel(index: number, item: VesselViewItem): string | number {
-    return item.key || index;
+    return item?.key || index;
   }
 
-  private getFvInfo(vessel: any): any {
+  private syncActiveVessel(): void {
+    if (!this.activeVessel) {
+      return;
+    }
+
+    const active = this.normalizeVessel(this.activeVessel);
+    this.selectedVesselKey = this.getVesselKey(active, 0);
+  }
+
+  private normalizeVessel(vessel: any): any {
     if (!vessel) {
       return {};
     }
 
-    return vessel.fvInfo || vessel;
+    const fvInfo = vessel?.fvInfo || vessel;
+
+    return {
+      id: fvInfo.id || vessel.id,
+      _id: fvInfo._id || vessel._id,
+      name: fvInfo.name || vessel.name,
+      desc:
+        fvInfo.desc ||
+        fvInfo.description ||
+        vessel.desc ||
+        vessel.description,
+      prefix: fvInfo.prefix || vessel.prefix,
+      img: fvInfo.img || fvInfo.image || vessel.img || vessel.image,
+      lat: fvInfo.lat || fvInfo.lattitude || vessel.lat || vessel.lattitude,
+      long:
+        fvInfo.long ||
+        fvInfo.longtitude ||
+        vessel.long ||
+        vessel.longtitude,
+      timestamp: fvInfo.timestamp || vessel.timestamp,
+    };
   }
 }

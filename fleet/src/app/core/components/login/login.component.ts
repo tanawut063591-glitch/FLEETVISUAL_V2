@@ -1,14 +1,6 @@
-import {
-  Component,
-  OnInit,
-  Input,
-  ChangeDetectorRef,
-} from '@angular/core';
-
+import { Component, Input, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-
-import { AuthService } from '../../../shared/services/auth.service';
 
 import {
   trigger,
@@ -19,8 +11,11 @@ import {
   keyframes,
 } from '@angular/animations';
 
+import { AuthService } from '../../../shared/services/auth.service';
+
 @Component({
   selector: 'app-login',
+  standalone: false,
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css'],
   animations: [
@@ -40,7 +35,7 @@ import {
       transition(
         'true => false',
         animate(
-          '500ms',
+          500,
           keyframes([
             style({ opacity: 1, offset: 0.1 }),
             style({ transform: 'translateX(10px)', offset: 0.15 }),
@@ -58,14 +53,13 @@ export class LoginComponent implements OnInit {
   @Input() loginValid = true;
 
   loginForm!: FormGroup;
-
   showPassword = false;
   isSubmitting = false;
   errorMessage = '';
 
   constructor(
-    private authService: AuthService,
-    private router: Router,
+    public authService: AuthService,
+    public router: Router,
     private fb: FormBuilder,
     private changeDetectorRef: ChangeDetectorRef
   ) {
@@ -76,8 +70,8 @@ export class LoginComponent implements OnInit {
 
   createForm(): void {
     this.loginForm = this.fb.group({
-      username: ['', [Validators.required]],
-      password: ['', [Validators.required]],
+      username: ['', Validators.required],
+      password: ['', Validators.required],
     });
   }
 
@@ -92,12 +86,12 @@ export class LoginComponent implements OnInit {
 
     if (this.loginForm.invalid) {
       this.markFormTouched();
-      this.showLoginError('กรุณากรอก Username และ Password');
+      this.showLoginError('Invalid username or password');
       return;
     }
 
-    const username = String(this.loginForm.get('username')?.value || '').trim();
-    const password = String(this.loginForm.get('password')?.value || '').trim();
+    const username = String(this.loginForm.get('username')?.value ?? '').trim();
+    const password = String(this.loginForm.get('password')?.value ?? '');
 
     if (!username || !password) {
       this.showLoginError('กรุณากรอก Username และ Password');
@@ -115,13 +109,12 @@ export class LoginComponent implements OnInit {
 
       if (redirectUrl) {
         await this.router.navigateByUrl(redirectUrl);
-        return;
+      } else {
+        this.showLoginError('Invalid username or password.');
       }
-
-      this.showLoginError('Username หรือ Password ไม่ถูกต้อง');
     } catch (error) {
-      console.error('Login error:', error);
-      this.showLoginError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+      console.error('[LoginComponent] submit error:', error);
+      this.showLoginError('Something went wrong. Please try again.');
     } finally {
       this.isSubmitting = false;
     }
@@ -137,13 +130,14 @@ export class LoginComponent implements OnInit {
 
     this.loginValid = true;
     this.changeDetectorRef.detectChanges();
-
     this.loginValid = false;
   }
 
   private markFormTouched(): void {
-    Object.keys(this.loginForm.controls).forEach((key: string) => {
-      this.loginForm.get(key)?.markAsTouched();
+    Object.keys(this.loginForm.controls).forEach((key) => {
+      const control = this.loginForm.get(key);
+      control?.markAsTouched();
+      control?.updateValueAndValidity();
     });
   }
 }

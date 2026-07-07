@@ -10,7 +10,7 @@ import { environment } from '../../../environments/environment';
 import { SecurityService } from './security.service';
 import { AuthService } from './auth.service';
 
-const URL2 = environment.API2_URL;
+const URL2 = environment.API2_URL || environment.API_URL || '';
 
 @Injectable({
   providedIn: 'root',
@@ -26,7 +26,9 @@ export class NewHttpClientService {
   ) {}
 
   getJsonFile(path: string): Observable<any> {
-    return this.http.get(path);
+    return this.http.get(path).pipe(
+      catchError((err) => this.handleError<any>(err))
+    );
   }
 
   mergeUnique(arr1: any[], arr2: any[]): any[] {
@@ -53,36 +55,45 @@ export class NewHttpClientService {
 
   async getVesselInfo2(): Promise<any[]> {
     try {
-      const res = await firstValueFrom(
-        this.http.get<any[]>(`${URL2}/getvesselcurrentInfo`, {
-          headers: this.getAuthHeaders(),
-        })
+      const result = await firstValueFrom(
+        this.http
+          .get<any[]>(`${URL2}/getvesselcurrentInfo`, {
+            headers: this.getAuthHeaders(),
+          })
+          .pipe(
+            map((res: any[]) => {
+              if (!Array.isArray(res)) {
+                return [];
+              }
+
+              return res
+                .filter((x: any) => {
+                  return x?.name && this.securityService.hasAccess(x.name);
+                })
+                .sort(this.compare);
+            }),
+            catchError((err) => {
+              this.handleLoginRedirect(err);
+              return of([]);
+            })
+          )
       );
 
-      if (!Array.isArray(res)) {
-        return [];
-      }
-
-      return res
-        .filter((x: any) => {
-          return x?.name && this.securityService.hasAccess(x.name);
-        })
-        .sort(this.compare);
-    } catch (err: any) {
-      this.handleLoginRedirect(err);
+      return result;
+    } catch {
       return [];
     }
   }
 
   compare(a: any, b: any): number {
-    const nameA = a?.name || '';
-    const nameB = b?.name || '';
+    const nameA = String(a?.name || '').toUpperCase();
+    const nameB = String(b?.name || '').toUpperCase();
 
     return nameA.localeCompare(nameB);
   }
 
   tryLogin(): boolean {
-    return false;
+    return this.authService.isLoggedIn();
   }
 
   getAddress(lat: string, long: string, apiKey: string): Observable<any> {
@@ -92,9 +103,12 @@ export class NewHttpClientService {
 
     const url =
       `https://maps.googleapis.com/maps/api/geocode/json` +
-      `?latlng=${lat},${long}&key=${apiKey}`;
+      `?latlng=${encodeURIComponent(lat)},${encodeURIComponent(long)}` +
+      `&key=${encodeURIComponent(apiKey)}`;
 
-    return this.http.get(url);
+    return this.http.get(url).pipe(
+      catchError((err) => this.handleError<any>(err))
+    );
   }
 
   getPoints(prefix: string): Observable<any> {
@@ -122,7 +136,7 @@ export class NewHttpClientService {
           console.log('========== GET POINTS END ==========');
           return res;
         }),
-        catchError((err: any) => {
+        catchError((err) => {
           console.error('GET POINTS ERROR:', err);
           console.log('========== GET POINTS ERROR END ==========');
           return this.handleError<any>(err);
@@ -164,7 +178,7 @@ export class NewHttpClientService {
           console.log('========== GET RAW DATA END ==========');
           return res;
         }),
-        catchError((err: any) => {
+        catchError((err) => {
           console.error('GET RAW DATA ERROR:', err);
           console.log('========== GET RAW DATA ERROR END ==========');
           return this.handleError<any>(err);
@@ -191,9 +205,7 @@ export class NewHttpClientService {
       })
       .pipe(
         map((res: any) => res),
-        catchError((err: any) => {
-          return this.handleError<any>(err);
-        })
+        catchError((err) => this.handleError<any>(err))
       );
   }
 
@@ -221,9 +233,7 @@ export class NewHttpClientService {
         map((res: ArrayBuffer) => {
           return new Blob([res], { type: 'application/pdf' });
         }),
-        catchError((err: any) => {
-          return this.handleError<Blob>(err);
-        })
+        catchError((err) => this.handleError<Blob>(err))
       );
   }
 
@@ -236,6 +246,7 @@ export class NewHttpClientService {
 
     const request = {
       Name: names,
+      VesselName: name || '',
     };
 
     return this.http
@@ -244,9 +255,7 @@ export class NewHttpClientService {
       })
       .pipe(
         map((res: any) => res),
-        catchError((err: any) => {
-          return this.handleError<any>(err);
-        })
+        catchError((err) => this.handleError<any>(err))
       );
   }
 
@@ -265,40 +274,28 @@ export class NewHttpClientService {
       })
       .pipe(
         map((res: any) => res),
-        catchError((err: any) => {
-          return this.handleError<any>(err);
-        })
+        catchError((err) => this.handleError<any>(err))
       );
   }
 
   private mapTagNames(tags: any[]): string[] {
-    const result: string[] = [];
-
     if (!Array.isArray(tags)) {
-      return result;
+      return [];
     }
 
-    tags.forEach((tag: any) => {
-      if (!tag) {
-        return;
-      }
+    return tags
+      .map((tag: any) => {
+        if (!tag) {
+          return '';
+        }
 
-      if (typeof tag === 'string') {
-        result.push(tag);
-        return;
-      }
+        if (typeof tag === 'string') {
+          return tag;
+        }
 
-      if (tag.tagName) {
-        result.push(tag.tagName);
-        return;
-      }
-
-      if (tag.name) {
-        result.push(tag.name);
-      }
-    });
-
-    return result;
+        return tag.tagName || tag.TagName || tag.name || tag.Name || '';
+      })
+      .filter((tagName: string) => tagName.length > 0);
   }
 
   private getAuthHeaders(): HttpHeaders {
@@ -315,7 +312,7 @@ export class NewHttpClientService {
   }
 
   private handleLoginRedirect(err: any): void {
-    if (err?.status === 401 || err?.status === 403) {
+    if (err?.status === 401) {
       this.authService.logout();
       this.router.navigate(['/login']);
     }

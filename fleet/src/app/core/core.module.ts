@@ -1,22 +1,16 @@
 ﻿import { NgModule, Optional, SkipSelf } from '@angular/core';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
-
-import { DragDropModule } from '@angular/cdk/drag-drop';
-import { OverlayModule } from '@angular/cdk/overlay';
-import { PortalModule } from '@angular/cdk/portal';
-
-import { MaterialModule } from './module/material-module';
-import { ShareModule } from '../shared/shared.module';
-import { ChartsModule } from '../shared/chart.module';
 
 import { LoginComponent } from './components/login/login.component';
 import { MainComponent } from './components/main/main.component';
 import { HeaderComponent } from './components/header/header.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
-import { NotFound } from './components/not-found/not-found';
+
+import { errorInterceptor } from './interceptors/error.interceptor';
+import { tokenInterceptor } from './interceptors/token.interceptor';
 
 @NgModule({
   imports: [
@@ -24,15 +18,6 @@ import { NotFound } from './components/not-found/not-found';
     RouterModule,
     FormsModule,
     ReactiveFormsModule,
-    HttpClientModule,
-
-    DragDropModule,
-    OverlayModule,
-    PortalModule,
-
-    MaterialModule,
-    ShareModule,
-    ChartsModule,
   ],
 
   declarations: [
@@ -40,16 +25,28 @@ import { NotFound } from './components/not-found/not-found';
     MainComponent,
     HeaderComponent,
     SidebarComponent,
-    NotFound,
+  ],
+
+  exports: [
+    LoginComponent,
+    MainComponent,
+    HeaderComponent,
+    SidebarComponent,
   ],
 
   providers: [
     DatePipe,
     DecimalPipe,
+    provideHttpClient(
+      withInterceptors([
+        tokenInterceptor,
+        errorInterceptor,
+      ])
+    ),
   ],
 })
 export class CoreModule {
-  constructor(@Optional() @SkipSelf() parentModule: CoreModule | null) {
+  constructor(@Optional() @SkipSelf() parentModule: CoreModule) {
     if (parentModule) {
       throw new Error(
         'CoreModule is already loaded. Import it only in AppModule.'

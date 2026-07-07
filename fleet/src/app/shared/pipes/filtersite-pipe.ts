@@ -1,32 +1,28 @@
-import { Pipe, PipeTransform } from '@angular/core';
+import { inject, Pipe, PipeTransform } from '@angular/core';
 import { SiteModel } from '../models/config.model';
+import { AuthService } from '../services/auth.service';
 
 @Pipe({
   name: 'filtersite',
-  standalone: false,
+  standalone: false
 })
 export class FiltersitePipe implements PipeTransform {
-  transform(sites: SiteModel[] | null | undefined, searchText: string): SiteModel[] {
-    if (!Array.isArray(sites)) {
-      return [];
+  private auth = inject(AuthService);
+  private enableSite = this.auth.getSites()??[];
+  transform(sites: SiteModel[], searchText: string): SiteModel[] {
+
+    const result = sites; //sites.filter(site => this.enableSite.includes(site.id));
+    if (!result || !searchText) {
+      return result;
     }
-
-    const keyword = (searchText || '').trim().toUpperCase();
-
-    let result = [...sites];
-
-    if (keyword) {
-      result = result.filter((site: SiteModel) => {
-        const siteName = site?.name || '';
-        return siteName.toUpperCase().includes(keyword);
-      });
-    }
-
-    return result.sort((a: SiteModel, b: SiteModel) => {
-      const idA = a?.id || '';
-      const idB = b?.id || '';
-
-      return idA.toUpperCase().localeCompare(idB.toUpperCase());
-    });
+    
+    const filteredSites = result.filter(site => 
+      site.name.toUpperCase().includes(searchText.toUpperCase())
+    );
+    
+    return filteredSites.sort((a, b) => 
+      a.id.toUpperCase().localeCompare(b.id.toUpperCase())
+    );
   }
+
 }

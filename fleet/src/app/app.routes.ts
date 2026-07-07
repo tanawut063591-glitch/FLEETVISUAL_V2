@@ -3,7 +3,6 @@ import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
 
 import { LoginComponent } from './core/components/login/login.component';
 import { MainComponent } from './core/components/main/main.component';
-import { NotFound } from './core/components/not-found/not-found';
 
 export const routes: Routes = [
   {
@@ -19,23 +18,18 @@ export const routes: Routes = [
 
   {
     path: 'main',
-    component: MainComponent,
-  },
-
-  {
-    path: 'main/overview',
-    redirectTo: 'main',
+    redirectTo: 'main/overview',
     pathMatch: 'full',
   },
 
   {
-    path: 'notfound',
-    component: NotFound,
+    path: 'main/overview',
+    component: MainComponent,
   },
 
   {
     path: '**',
-    redirectTo: 'notfound',
+    redirectTo: 'login',
   },
 ];
 

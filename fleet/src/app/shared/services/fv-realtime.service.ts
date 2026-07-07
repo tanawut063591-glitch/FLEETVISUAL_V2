@@ -1,12 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Subscription, timer } from 'rxjs';
-
-import { Store } from '@ngrx/store';
-
-import { FvState } from '../state-managements/states/app.states';
-
-import * as fvInfoActions from '../state-managements/actions/fv-info.action';
-import * as fvInfoReducer from '../state-managements/reducers/fv-info.reducer';
+import { Observable, Subject, Subscription, timer } from 'rxjs';
 
 import { HttpClientService } from './http-client.service';
 
@@ -14,24 +7,32 @@ import { HttpClientService } from './http-client.service';
   providedIn: 'root',
 })
 export class FvRealtimeService {
+  // timer สำหรับ refresh ข้อมูล realtime
   private timerSubscription: Subscription | null = null;
-  private tagFileSubscription: Subscription | null = null;
-  private activeVesselSubscription: Subscription | null = null;
-  private noDataSubscription: Subscription | null = null;
 
+  // subscription โหลดไฟล์ dashboard.tag.json
+  private tagFileSubscription: Subscription | null = null;
+
+  // ค่าเวลา default ถ้าไม่มี interval ส่งเข้ามา
   private readonly defaultInterval = 5000;
 
+  // เก็บ tag จาก dashboard.tag.json
   private realtimeTags: any[] = [];
+
+  // เก็บ prefix เรือที่โหลดแล้ว กันโหลดซ้ำ
   private loadedVessels: string[] = [];
+
+  // เก็บ payload ของเรือ active ล่าสุด
   private activePayload: any = null;
 
-  private timeoutIds: any[] = [];
+  private readonly realtimePayloadSource = new Subject<any>();
 
-  constructor(
-    private store: Store<FvState>,
-    private http: HttpClientService
-  ) {}
+  readonly realtimePayload$: Observable<any> =
+    this.realtimePayloadSource.asObservable();
 
+  constructor(private http: HttpClientService) {}
+
+  // เริ่มทำงาน Realtime Service
   start(interval?: number): void {
     this.stop();
     this.resetData();
@@ -42,42 +43,23 @@ export class FvRealtimeService {
     this.loadRealtimeTags(safeInterval);
   }
 
-  stop(): void {
-    this.unsubscribe(this.timerSubscription);
-    this.unsubscribe(this.tagFileSubscription);
-    this.unsubscribe(this.activeVesselSubscription);
-    this.unsubscribe(this.noDataSubscription);
-
-    this.timerSubscription = null;
-    this.tagFileSubscription = null;
-    this.activeVesselSubscription = null;
-    this.noDataSubscription = null;
-
-    this.timeoutIds.forEach((id: any) => clearTimeout(id));
-    this.timeoutIds = [];
-  }
-
+  // โหลดไฟล์ dashboard.tag.json
   private loadRealtimeTags(interval: number): void {
     this.tagFileSubscription = this.http
       .getJsonFile('/assets/tags/dashboard.tag.json')
       .subscribe({
         next: (res: any) => {
           this.realtimeTags = this.mapRealtimeTags(res);
-
-          if (this.realtimeTags.length === 0) {
-            return;
-          }
-
-          this.initRealtime();
           this.startTimer(interval);
         },
-        error: (error: any) => {
-          console.error('Load realtime tags error:', error);
+        error: (error) => {
+          console.error('[FvRealtimeService] load tags error:', error);
           this.resetData();
         },
       });
   }
 
+  // แปลง tag จาก json ให้เป็น array ใช้งานง่าย
   private mapRealtimeTags(res: any): any[] {
     const tags: any[] = [];
 
@@ -95,7 +77,7 @@ export class FvRealtimeService {
       Object.keys(group).forEach((tagKey: string) => {
         const tag = group[tagKey];
 
-        if (tag && tag.name && tag.tagName) {
+        if (tag?.name && tag?.tagName) {
           tags.push({
             name: tag.name,
             tagName: tag.tagName,
@@ -108,110 +90,85 @@ export class FvRealtimeService {
     return tags;
   }
 
+  // เริ่ม timer สำหรับ refresh ข้อมูล realtime
   private startTimer(interval: number): void {
     this.timerSubscription = timer(interval, interval).subscribe(() => {
       this.tick();
     });
   }
 
+  // refresh ข้อมูล realtime ซ้ำตามเวลา
   private tick(): void {
-    if (!this.activePayload) {
+    if (this.activePayload) {
+      this.realtimePayloadSource.next(this.activePayload);
+    }
+  }
+
+  // ใช้สำหรับ set เรือ active จาก component ภายนอก
+  setActiveVessel(vessel: any): void {
+    const payload = this.generateTags(vessel);
+
+    if (!payload) {
       return;
     }
 
-    this.store.dispatch(
-      new fvInfoActions.SetRealtimeActive(this.activePayload)
-    );
+    this.activePayload = payload;
+    this.realtimePayloadSource.next(payload);
   }
 
-  private initRealtime(): void {
-    this.subscribeActiveVessel();
-    this.subscribeNoDataVessels();
-  }
+  // โหลดข้อมูลเรือแบบหน่วงเวลา กันยิงพร้อมกันเยอะเกินไป
+  setDelay(offset: number, vessel: any): void {
+    const delay = Math.max(offset, 1) * 100;
 
-  private subscribeActiveVessel(): void {
-    this.activeVesselSubscription = this.store
-      .select(fvInfoReducer.getFvInfosActive)
-      .subscribe((res: any) => {
-        const payload = this.generateTags(res);
-
-        if (!payload) {
-          return;
-        }
-
-        this.activePayload = payload;
-
-        this.store.dispatch(
-          new fvInfoActions.SetRealtimeActive(payload)
-        );
-      });
-  }
-
-  private subscribeNoDataVessels(): void {
-    const timeoutId = setTimeout(() => {
-      this.noDataSubscription = this.store
-        .select(fvInfoReducer.getFvNoData)
-        .subscribe((res: any[]) => {
-          if (!Array.isArray(res) || res.length === 0) {
-            return;
-          }
-
-          res.forEach((vessel: any, index: number) => {
-            this.setDelay(index + 1, vessel);
-          });
-        });
-    }, 250);
-
-    this.timeoutIds.push(timeoutId);
-  }
-
-  private setDelay(offset: number, res: any): void {
-    const timeoutId = setTimeout(() => {
-      const prefix = res?.fvInfo?.prefix;
-
-      if (!prefix) {
+    setTimeout(() => {
+      if (!vessel?.fvInfo?.prefix && !vessel?.prefix) {
         return;
       }
 
-      if (this.loadedVessels.includes(prefix)) {
+      const prefix = vessel?.fvInfo?.prefix || vessel?.prefix;
+      const isLoaded = this.loadedVessels.includes(prefix);
+
+      if (isLoaded) {
         return;
       }
 
       this.loadedVessels.push(prefix);
 
-      const payload = this.generateTags(res);
+      const payload = this.generateTags(vessel);
 
-      if (!payload) {
-        return;
+      if (payload) {
+        this.activePayload = payload;
+        this.realtimePayloadSource.next(payload);
       }
-
-      this.store.dispatch(
-        new fvInfoActions.SetRealtimeActive(payload)
-      );
-    }, offset * 100);
-
-    this.timeoutIds.push(timeoutId);
+    }, delay);
   }
 
-  private generateTags(res: any): any | null {
-    const fvInfo = res?.fvInfo;
+  // สร้าง tag จริงของเรือ เช่น BOAT01-VES-GPS-SPEED
+  private generateTags(vessel: any): any {
+    if (!vessel) {
+      return null;
+    }
+
+    const fvInfo = vessel?.fvInfo || vessel;
     const prefix = fvInfo?.prefix;
 
-    if (!fvInfo || !prefix) {
+    if (!prefix) {
       return null;
     }
 
-    if (!Array.isArray(this.realtimeTags) || this.realtimeTags.length === 0) {
+    if (!this.realtimeTags || this.realtimeTags.length === 0) {
       return null;
     }
 
-    const tags = this.realtimeTags.map((tag: any) => {
-      return {
-        name: tag.name,
-        tagName: `${prefix}-${tag.tagName}`,
-        cal: tag.cal,
-      };
-    });
+    const tags = this.realtimeTags.map((tag) => ({
+      name: tag.name,
+      tagName: `${prefix}-${tag.tagName}`,
+      cal: tag.cal,
+    }));
+
+    if (tags.length === 0) {
+      return null;
+    }
 
     return {
       tags,
@@ -219,15 +176,19 @@ export class FvRealtimeService {
     };
   }
 
+  // หยุด service และยกเลิก subscription ทั้งหมด
+  stop(): void {
+    this.timerSubscription?.unsubscribe();
+    this.tagFileSubscription?.unsubscribe();
+
+    this.timerSubscription = null;
+    this.tagFileSubscription = null;
+  }
+
+  // เคลียร์ข้อมูลเก่า กัน tag ซ้ำ / เรือโหลดค้าง
   private resetData(): void {
     this.realtimeTags = [];
     this.loadedVessels = [];
     this.activePayload = null;
-  }
-
-  private unsubscribe(subscription: Subscription | null): void {
-    if (subscription && !subscription.closed) {
-      subscription.unsubscribe();
-    }
   }
 }
