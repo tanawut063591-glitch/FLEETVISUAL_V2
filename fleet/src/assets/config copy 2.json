@@ -1,0 +1,9 @@
+
+{
+    "UrlApi": "/api/data/",
+    "UrlApiAuthen": "/api/auth/",
+    "UrlApiBilling": "/api/report/",
+    "UrlApiNotification": "/api/event/",
+    "UrlApiMaintenance": "/api/maintenance/",
+    "Timer": 5
+}

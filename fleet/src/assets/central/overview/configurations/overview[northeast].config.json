@@ -1,0 +1,22 @@
+﻿[
+  {
+    "Title": "KKB_POWER",
+    "Tagname": "KKB.CALC.W"
+  },
+  {
+    "Title": "KKB_ENERGY",
+    "Tagname": "KKB.CALC.WH_TODAY"
+  },
+  {
+    "Title": "KKB_PYRONO",
+    "Tagname": "KKB.CALC.PYRONO"
+  },
+  {
+    "Title": "KKB_PVTEMP",
+    "Tagname": "KKB.CALC.PVTEMP"
+  },
+  {
+    "Title": "KKB_AMBTEMP",
+    "Tagname": "KKB.CALC.AMBTEMP"
+  }
+]

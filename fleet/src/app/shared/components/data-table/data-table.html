@@ -1,0 +1,72 @@
+<div class="container w-100 h-100">
+    <div class="w-100 h-100 table-container ">
+        @if (dataTable()) {
+            <table class="table w-100 bz" >
+                <thead class="fixed">
+                    <tr class=" w-100 bz" >
+                        <td class="header bz" rowspan="2">TimeStamp</td>
+                        @for (item of recordHeader; track $index) {
+                            <td class="header bz" [colSpan]="item.count">{{item.name}}</td>
+                        }
+                    </tr>
+                    <tr class=" w-100 bz">
+                        @for (item of dataTable(); track $index) {
+                            <td class="bz head-item" >{{getTitle(item.Name)}} <br> ({{item.Unit}})</td>
+                        }
+                    </tr>
+                </thead>
+                @for (t of timestampList; track $index; let i = $index;) {
+                    <tr class="w-100 bz" >
+                        <td class="row bz">{{convertDate(t)}}</td>
+                        @for (d of dataTable(); track $index; let j = $index;) {
+                            <!-- <td class="row brd" >{{d.records[i].Value | numberFomat: '1.0-1'}}</td> -->
+                            <td class="row brd" >{{getDataValue(d.Name, t) | numberFomat: '1.0-1'}}</td>
+                        }
+                    </tr>
+                }
+            </table>
+        }
+    </div>
+    @if (dataTable()) {
+        <div class="w-100 bz paginator-bar d-flex-ct">
+            <div class="d-flex bz paginator">
+                <button class="nav-icon d-flex-ct h-100 bz"  (click)="getBackRange()">
+                    <i class="material-icons">
+                        arrow_back_ios
+                    </i>
+                </button>
+                <span class="range-selector d-flex-ct bz h-100">
+                    <select #range (change)="onSelectedRange(range.value)" id="range" 
+                        [value]="tableRange">
+                        <option class="option" [value]="20">20</option>
+                        <option class="option" [value]="50">50</option>
+                        <option class="option" [value]="100">100</option>
+                        <option class="option" [value]="200">200</option>
+                    </select>
+                </span>
+                <span class="selector d-flex-ct bz h-100">
+                    <input #pages list="pages" type="text" [placeholder]="'Select Page...'" (change)="goToPage(pages.value)"
+                    [value]="pageNumber">
+                    <datalist id="pages">
+                        @for (item of pageList; track $index) {
+                            <option [value]="item">{{item}}</option>
+                        }
+                    </datalist>  
+                </span>
+                <span class="page-icon d-flex-ct h-100 bz" >
+                    <span class="bz">{{pageNumber}} of {{pageList.length}}</span>
+                </span>
+                <button class="nav-icon d-flex-ct h-100 bz" (click)="exportToExcel()">
+                    <i class="material-icons">
+                        file_download
+                    </i>
+                </button>
+                <button class="nav-icon d-flex-ct h-100 bz" (click)="getForwardRange()">
+                    <i class="material-icons">
+                        arrow_forward_ios
+                    </i>
+                </button>
+            </div>
+        </div>
+    }
+</div>

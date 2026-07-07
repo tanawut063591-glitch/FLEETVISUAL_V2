@@ -1,0 +1,168 @@
+<div class="container w-100 h-100 bz">
+    @if (panels() && panels().length > 0) {
+        <svg
+            class="w-100 h-100 bz drop-shadow"
+            preserveAspectRatio="xMidYMid meet"
+            viewBox="0 0 1234 800"
+            style="perspective: 800px;"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg">
+            <g id="gbox"  
+                >
+                @for (item of displayPanel.group; track $index; let i = $index) {
+                    <g [id]="item.id"
+                        class="card"
+                        [style]="getGroupStyle(item.id)"
+                        [attr.transform]="isSelectedGreoup(item.id) ? 'translate(0, 0)' : ''"
+                        >
+                        @for (it of item.panel; track $index; let j = $index) {
+                            <path
+                                [attr.id]="it.id"
+                                [attr.d]="it.d" 
+                                [attr.stroke]="getPanelStrokeColor(it.percentage)"
+                                [style]="getProvinceStyle(it.id, item.id, it.percentage)"
+                                (click)="handleProvinceClick(it.id, item.id)"
+                                (mouseenter)="handleProvinceHover(it.id)"
+                                (mouseleave)="handleProvinceHover(null)"
+                            >
+                                <title>{{ getLabel(item.name, it.id) }}</title>
+                            </path>
+                        }
+                    </g>
+                }
+            </g>
+            <defs>
+                <!-- Gradient Definitions -->
+                <!-- <linearGradient id="gradient-excellent" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#248997;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#289F7C;stop-opacity:1" />
+                </linearGradient>
+                
+                <linearGradient id="gradient-good" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#289F7C;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#7BB046;stop-opacity:1" />
+                </linearGradient>
+                
+                <linearGradient id="gradient-fair" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#7BB046;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:rgb(145, 182, 43);stop-opacity:1" />
+                </linearGradient>
+                
+                <linearGradient id="gradient-poor" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#FF843F;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#FF4747;stop-opacity:1" />
+                </linearGradient>
+                
+                <linearGradient id="gradient-critical" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#E63940;stop-opacity:1" />
+                    <stop offset="50%" style="stop-color:#FF4F52;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#FF8085;stop-opacity:1" />
+                </linearGradient> -->
+                
+                <linearGradient id="gradient-default" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#2A2A2A;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#3A3A3A;stop-opacity:1" />
+                </linearGradient>
+                
+                <filter id="filter0_d_1987_1493" x="0.0976562" y="0.117188" width="956.707" height="565.874" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+                    <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+                    <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+                    <feOffset dx="13.2073" dy="9.9055"/>
+                    <feGaussianBlur stdDeviation="2.47638"/>
+                    <feComposite in2="hardAlpha" operator="out"/>
+                    <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0"/>
+                    <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1987_1493"/>
+                    <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1987_1493" result="shape"/>
+                </filter>
+            </defs>
+        </svg>
+    }
+    @if (selectedGroup && getSelectedGroupData()) {
+        <div class="inverter-summary-card">
+            <div class="inverter-header d-flex-sb">
+                <h3>{{ getSelectedGroupData()?.title }}</h3>
+                <span class="material-icons dropdown-arrow" (click)="handleCloseCard()">close</span>
+            </div>
+            <!-- Metrics Grid -->
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <span class="metric-label">Power</span>
+                    <span class="metric-value">{{ getSelectedGroupData()?.power | numberFomat: '1.0-2'}}</span>
+                    <span class="metric-unit">kW</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Energy</span>
+                    <span class="metric-value">{{ getSelectedGroupData()?.energy | numberFomat: '1.0-2'}}</span>
+                    <span class="metric-unit">kWh</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Efficiency</span>
+                    <span class="metric-value">{{ getSelectedGroupData()?.efficiency | numberFomat: '1.0-2'}}</span>
+                    <span class="metric-unit">%</span>
+                </div>
+            </div>
+            <div class="total-strings">
+                <span class="label">TOTAL STRINGS</span>
+                <span class="value">{{ getSelectedGroupData()?.totalStrings }}</span>
+            </div>
+            <div class="performance-list">
+
+                @for (item of getSelectedGroupData()?.performance; track $index) {
+                    <div class="performance-item">
+                        <span class="indicator excellent" [style.background]="item.color"></span>
+                        <span class="label">{{ item.title }}</span>
+                        <span class="count excellent" >{{ item.value || '---' }}</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    @if (getColorData() && getColorData().length > 0) {
+        <div class="grade-card">
+            <h3 class="grade-title">INVERTER' STRINGS PERFORMANCE</h3>
+            <div class="grade-ranges">
+                @for (color of getColorData(); track $index) {
+                    <div class="grade-range" [style.border-color]="color.color">
+                        <span class="range-text">{{ color.range }}</span>
+                    </div>
+                }
+            </div>
+        </div>
+        <!-- <div class="summary-card">
+            <div class="summary-header">
+                <div class="summary-indicator"></div>
+                <h3 class="summary-title">STRING SUMMARY</h3>
+            </div>
+            <div class="summary-list">
+                @for (item of performaceList; track $index) {
+                    <div class="summary-item">
+                        <div class="summary-indicator" [style.background-color]="item.color"></div>
+                        <span class="summary-label">{{ item.title }}</span>
+                        <span class="summary-count" [style.color]="item.color">{{ item.value || 0 }}</span>
+                        <span class="summary-unit">String</span>
+                    </div>
+                }
+            </div>
+        </div> -->
+    }
+
+    <!-- Navigation Buttons -->
+    @if (canNavigatePrevious() || canNavigateNext()) {
+        <div class="navigation-buttons">
+            <button 
+                class="nav-btn nav-btn-left" 
+                (click)="navigateToPrevious()"
+                [disabled]="!canNavigatePrevious()"
+                title="Previous Panel">
+                <span class="material-icons">chevron_left</span>
+            </button>
+            <button 
+                class="nav-btn nav-btn-right" 
+                (click)="navigateToNext()"
+                [disabled]="!canNavigateNext()"
+                title="Next Panel">
+                <span class="material-icons">chevron_right</span>
+            </button>
+        </div>
+    }
+</div>

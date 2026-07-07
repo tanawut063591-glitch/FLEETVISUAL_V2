@@ -1,0 +1,52 @@
+<div class="not-found-container">
+  <div class="not-found-content">
+    <div class="error-code">
+      <span class="number">4</span>
+      <div class="icon-wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
+      </div>
+      <span class="number">4</span>
+    </div>
+
+    <h1 class="title">Page Not Found</h1>
+    <p class="description">
+      The page you are looking for doesn't exist or has been moved.
+    </p>
+
+    <div class="suggestions">
+      <p class="suggestion-title">Here's what you can do:</p>
+      <ul>
+        <li>Check the URL for typos</li>
+        <li>Go back to the previous page</li>
+        <li>Return to the homepage</li>
+      </ul>
+    </div>
+
+    <div class="actions">
+      <button class="btn-primary" (click)="goHome()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        Go to Homepage
+      </button>
+      <button class="btn-secondary" (click)="goBack()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        Go Back
+      </button>
+    </div>
+  </div>
+
+  <div class="background-decoration">
+    <div class="circle circle-1"></div>
+    <div class="circle circle-2"></div>
+    <div class="circle circle-3"></div>
+  </div>
+</div>

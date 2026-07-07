@@ -1,0 +1,110 @@
+{
+    "Name": "Edmi Meter",
+    "Type": "meter",
+    "Parameter": [
+        { "Title": "ALARM", "Name": "ALARM", "Description": "Meter alarm status", "Unit": "-", "Group": "Status" },
+        { "Title": "STATUS", "Name": "MBFAIL", "Description": "Communication status", "Unit": "-", "Group": "Status" },
+
+        { "Title": "ActivePower", "Name": "W", "Description": "Active power", "Unit": "kW", "Group": "Major" },
+        { "Title": "ReactivePower", "Name": "VAR", "Description": "Reactive power", "Unit": "kvar", "Group": "Major" },
+        { "Title": "PowerFactor", "Name": "PF", "Description": "Power factor", "Unit": "-", "Group": "Major" },
+        { "Title": "Frequency", "Name": "HZ", "Description": "Grid frequency", "Unit": "Hz", "Group": "Major" },
+
+        { "Title": "WH", "Name": "WH", "Description": "Total energy", "Unit": "kWh", "Group": "Energy" },
+        { "Title": "WH_TODAY", "Name": "WH_TODAY", "Description": "Daily energy", "Unit": "kWh", "Group": "Energy" },
+
+        { "Title": "IAC", "Name": "I", "Description": "Total current", "Unit": "A", "Group": "Electrical" },
+        { "Title": "IACA", "Name": "I1", "Description": "Phase A current", "Unit": "A", "Group": "Electrical" },
+        { "Title": "IACB", "Name": "I2", "Description": "Phase B current", "Unit": "A", "Group": "Electrical" },
+        { "Title": "IACC", "Name": "I3", "Description": "Phase C current", "Unit": "A", "Group": "Electrical" },
+
+        { "Title": "VAC", "Name": "V", "Description": "Average voltage", "Unit": "V", "Group": "Electrical" },
+        { "Title": "VACA", "Name": "V1", "Description": "Phase A voltage", "Unit": "V", "Group": "Electrical" },
+        { "Title": "VACB", "Name": "V2", "Description": "Phase B voltage", "Unit": "V", "Group": "Electrical" },
+        { "Title": "VACC", "Name": "V3", "Description": "Phase C voltage", "Unit": "V", "Group": "Electrical" }
+    ],
+
+    "Historical": [
+        {
+            "Title": "Power Trend",
+            "Name": "x1",
+            "Tags": [
+                {
+                    "Name": "WAC",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#FF9B33",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "WH_TODAY",
+                    "Axis": 1,
+                    "Type": "area",
+                    "Color": "#278EFF",
+                    "Opacity": 0.125
+                }
+            ]
+        },
+        {
+            "Title": "Voltage & Frequency",
+            "Name": "x2",
+            "Tags": [
+                {
+                    "Name": "VACA",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#F143AA",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "VACB",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#6766FF",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "VACC",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#9945F5",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "HZ",
+                    "Axis": 1,
+                    "Type": "line",
+                    "Color": "#3DB1FC",
+                    "Opacity": 0.125
+                }
+            ]
+        },
+        {
+            "Title": "Power Quality",
+            "Name": "x3",
+            "Tags": [
+                {
+                    "Name": "WAC",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#F7F156",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "VAR",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#B2F76D",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "PF",
+                    "Axis": 1,
+                    "Type": "line",
+                    "Color": "#F143AA",
+                    "Opacity": 0.125
+                }
+            ]
+        }
+    ]
+}

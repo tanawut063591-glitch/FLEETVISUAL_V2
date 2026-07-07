@@ -1,0 +1,105 @@
+{
+    "Name": "PQM Meter",
+    "Type": "meter",
+    "Parameter": [
+        { "Title": "ActivePower", "Name": "W", "Description": "Active power (import)", "Unit": "kW", "Group": "Major" },
+        { "Title": "ReactivePower", "Name": "VAR", "Description": "Reactive power", "Unit": "kVar", "Group": "Major" },
+        { "Title": "PowerFactor", "Name": "PF", "Description": "Power factor", "Unit": "-", "Group": "Major" },
+        { "Title": "WH", "Name": "WH", "Description": "Total active electricity", "Unit": "kWh", "Group": "Major" },
+
+        { "Title": "VARH", "Name": "VARH", "Description": "Total reactive electricity", "Unit": "kVarh", "Group": "Energy" },
+        { "Title": "WH_NEG", "Name": "WH_NEG", "Description": "Negative active electricity", "Unit": "kWh", "Group": "Energy" },
+        { "Title": "VARH_NEG", "Name": "VARH_NEG", "Description": "Negative reactive electricity", "Unit": "kVarh", "Group": "Energy" },
+        { "Title": "WH_POS", "Name": "WH_POS", "Description": "Positive active electricity (import)", "Unit": "kWh", "Group": "Energy" },
+        { "Title": "VARH_POS", "Name": "VARH_POS", "Description": "Positive reactive electricity (import)", "Unit": "kVarh", "Group": "Energy" },
+
+        { "Title": "ActivePowerA", "Name": "WACA", "Description": "Phase A active power", "Unit": "kW", "Group": "Electrical" },
+        { "Title": "ActivePowerB", "Name": "WACB", "Description": "Phase B active power", "Unit": "kW", "Group": "Electrical" },
+        { "Title": "ActivePowerC", "Name": "WACC", "Description": "Phase C active power", "Unit": "kW", "Group": "Electrical" },
+
+        { "Title": "IACA", "Name": "IACA", "Description": "Phase A current", "Unit": "A", "Group": "Electrical" },
+        { "Title": "IACB", "Name": "IACB", "Description": "Phase B current", "Unit": "A", "Group": "Electrical" },
+        { "Title": "IACC", "Name": "IACC", "Description": "Phase C current", "Unit": "A", "Group": "Electrical" },
+
+        { "Title": "VACA", "Name": "VACA", "Description": "Phase A voltage", "Unit": "V", "Group": "Electrical" },
+        { "Title": "VACB", "Name": "VACB", "Description": "Phase B voltage", "Unit": "V", "Group": "Electrical" },
+        { "Title": "VACC", "Name": "VACC", "Description": "Phase C voltage", "Unit": "V", "Group": "Electrical" }
+    ],
+
+    "Historical": [
+        {
+            "Title": "Power Trend",
+            "Name": "x1",
+            "Tags": [
+                {
+                    "Name": "W",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#FF9B33",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "WH",
+                    "Axis": 1,
+                    "Type": "area",
+                    "Color": "#278EFF",
+                    "Opacity": 0.125
+                }
+            ]
+        },
+        {
+            "Title": "Voltage",
+            "Name": "x2",
+            "Tags": [
+                {
+                    "Name": "VACA",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#F143AA",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "VACB",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#6766FF",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "VACC",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#9945F5",
+                    "Opacity": 0.125
+                }
+            ]
+        },
+        {
+            "Title": "Power Quality",
+            "Name": "x3",
+            "Tags": [
+                {
+                    "Name": "W",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#F7F156",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "VAR",
+                    "Axis": 0,
+                    "Type": "line",
+                    "Color": "#B2F76D",
+                    "Opacity": 0.125
+                },
+                {
+                    "Name": "PF",
+                    "Axis": 1,
+                    "Type": "line",
+                    "Color": "#F143AA",
+                    "Opacity": 0.125
+                }
+            ]
+        }
+    ]
+}

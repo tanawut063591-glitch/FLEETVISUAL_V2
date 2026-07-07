@@ -1,0 +1,375 @@
+﻿{
+    "realtimeConfig": [
+      {
+        "Group": "left-side",
+        "Order": 0,
+        "Tags": [
+          {
+            "Title": "POWER",
+            "Tagname": "OVERALL.CALC.W"
+          },
+          {
+            "Title": "CAPACITY",
+            "Tagname": "OVERALL.CALC.CAPACITY"
+          },
+          {
+            "Title": "YIELD",
+            "Tagname": "OVERALL.CALC.YIELD_DAY"
+          },
+          {
+            "Title": "PR",
+            "Tagname": "OVERALL.CALC.PR"
+          },
+          {
+            "Title": "TODAY",
+            "Tagname": "OVERALL.CALC.WH_DAY"
+          },
+          {
+            "Title": "MONTHLY",
+            "Tagname": "OVERALL.CALC.WH_MONTH"
+          },
+          {
+            "Title": "YEARLY",
+            "Tagname": "OVERALL.CALC.WH_YEAR"
+          },
+          {
+            "Title": "TOTAL",
+            "Tagname": "OVERALL.CALC.WH"
+          },
+          {
+            "Title": "REDUCTION",
+            "Tagname": "OVERALL.CALC.CARBON"
+          },
+          {
+            "Title": "CREDIT",
+            "Tagname": "OVERALL.CALC.CREDIT"
+          },
+          {
+            "Title": "TREE",
+            "Tagname": "OVERALL.CALC.TREE"
+          },
+          {
+            "Title": "OIL",
+            "Tagname": "OVERALL.CALC.OIL"
+          }
+        ]
+      },
+      {
+        "Group": "right-side",
+        "Order": 4,
+        "Tags": [
+          {
+            "Title": "KKB_STATUS",
+            "Tagname": "KKB.CALC.STATUS"
+          }
+        ]
+      },
+      {
+        "Group": "site-data",
+        "Order": 6,
+        "Tags": [
+          {
+            "Title": "KKB_POWER",
+            "Tagname": "KKB.CALC.W"
+          },
+          {
+            "Title": "KKB_ENERGY",
+            "Tagname": "KKB.CALC.WH_DAY"
+          },
+          {
+            "Title": "KKB_PR",
+            "Tagname": "KKB.CALC.PR"
+          }
+        ]
+      }
+    ],
+    "historianConfig": [
+      {
+        "Group": "CHART01",
+        "Order": 0,
+        "Tags": [
+          {
+            "Title": "CHART01_POWER",
+            "Tagname": "OVERALL.CALC.WH_HOUR",
+            "Options": {
+              "Time": "t",
+              "Interval": 0,
+              "StartTime": "MIDN",
+              "EndTime": "NOW"
+            }
+          },
+          {
+            "Title": "CHART01_IRR",
+            "Tagname": "OVERALL.CALC.WH_EXPECT_HOUR",
+            "Options": {
+              "Time": "t",
+              "Interval": 0,
+              "StartTime": "MIDN",
+              "EndTime": "NOW"
+            }
+          }
+        ]
+      },
+      {
+        "Group": "CHART02",
+        "Order": 0,
+        "Tags": [
+          {
+            "Title": "TODAY_ENERGY",
+            "Tagname": "OVERALL.CALC.WH_DAY",
+            "Options": {
+              "Time": "",
+              "Interval": 0,
+              "StartTime": "*-7d",
+              "EndTime": "NOW"
+            }
+          }
+        ]
+      }
+      
+    ],
+    "chartConfig": [
+      {
+        "name": "CHART01",
+        "tags": [
+          {
+            "name": "OVERALL.CALC.WH_EXPECT_HOUR",
+            "title": "EXPECTED*kWh",
+            "options": {
+              "yAxis": 0,
+              "type": "column",
+              "color": "#ffbe33",
+              "borderColor": "#FF9B33",
+							"borderRadius": 0
+            }
+          },
+          {
+            "name": "OVERALL.CALC.WH_HOUR",
+            "title": "PRODUCE*kWh",
+            "options": {
+              "yAxis": 1,
+              "type": "column",
+              "color": "#3ddffc",
+              "borderColor": "#3DB1FC",
+							"borderRadius": 0
+            }
+          }
+        ],
+        "chartOptions": {
+          "chart": {
+            "zooming": {
+              "type": "x",
+              "resetButton": {
+                "position": {
+                  "y": -40,
+                  "verticalAlign": "bottom",
+                  "align": "right"
+                },
+                "theme": {
+                  "fill": "#E7CD47",
+                  "style": {
+                    "color": "white"
+                  },
+                  "states": {
+                    "hover": {
+                    "fill": "#E7CD47",
+                    "style": {
+                      "color": "white"
+                    }
+                    } 
+                  }
+                }
+              }
+            },
+            "backgroundColor": "none",
+            "animation": false,
+            "margin": [
+              10,
+              10,
+              30,
+              10
+            ],
+            "borderColor": "var(--chart-brd)",
+            "borderWidth": 0
+          },
+          "title": {},
+          "yAxis": [
+            {
+              "color": "var(--chart-txt)",
+              "title": {
+                "text": "",
+                "style": {
+                  "color": "var(--chart-txt)"
+                },
+                "useHTML": true
+              },
+              "opposite": true,
+              "enabled": false,
+              "lineColor": "var(--chart-txt)",
+              "labels": {
+                "enabled": false,
+                "style": {
+                  "color": "var(--chart-txt)"
+                },
+                "useHTML": true
+              },
+              "lineWidth": 0,
+              "gridLineColor": "var(--chart-brd)",
+              "gridLineWidth": 1,
+              "margin": 0,
+              "min": 0
+            },
+            {
+              "color": "var(--chart-txt)",
+              "title": {
+                "text": "",
+                "style": {
+                  "color": "var(--chart-txt)"
+                },
+                "useHTML": true
+              },
+              "enabled": false,
+              "lineColor": "var(--chart-txt)",
+              "labels": {
+                "enabled": false,
+                "style": {
+                  "color": "var(--chart-txt)"
+                },
+                "useHTML": true
+              },
+              "lineWidth": 0,
+              "gridLineColor": "var(--chart-brd)",
+              "gridLineWidth": 0,
+              "margin": 0,
+              "min": 0
+            }
+          ],
+          "xAxis": {
+            "type": "datetime",
+            "tickColor": "var(--chart-brd)",
+            "gridLineColor": "var(--chart-brd)",
+            "lineColor": "var(--chart-txt)",
+            "gridLineWidth": 1,
+            "tickInterval": 7200000,
+            "labels": {
+              "enabled": true,
+              "format": "{value:%H}",
+              "style": {
+                "color": "var(--chart-txt)"
+              },
+              "useHTML": true
+            },
+            "crosshair": {
+              "color": "var(--chart-txt)",
+              "dashStyle": "ShortDash"
+            },
+            "max": "t"
+          },
+          "legend": {},
+          "plotOptions": {}
+        }
+      },
+      {
+        "name": "CHART02",
+        "tags": [
+          {
+            "name": "OVERALL.CALC.WH_DAY",
+            "title": "PRODUCE*kWh",
+            "options": {
+              "yAxis": 0,
+              "type": "column",
+              "color": "#FFDF6C",
+              "borderColor": "#E4B61A",
+							"borderRadius": 0
+            }
+          }
+        ],
+        "chartOptions": {
+          "chart": {
+            "zooming": {
+              "type": "x",
+              "resetButton": {
+                "position": {
+                  "y": -40,
+                  "verticalAlign": "bottom",
+                  "align": "right"
+                },
+                "theme": {
+                  "fill": "#E7CD47",
+                  "style": {
+                    "color": "white"
+                  },
+                  "states": {
+                    "hover": {
+                    "fill": "#E7CD47",
+                    "style": {
+                      "color": "white"
+                    }
+                    } 
+                  }
+                }
+              }
+            },
+            "backgroundColor": "none",
+            "animation": true,
+            "margin": [
+              10,
+              10,
+              30,
+              60
+            ],
+            "borderColor": "var(--chart-brd)",
+            "borderWidth": 0
+          },
+          "title": {},
+          "yAxis": [
+            {
+              "color": "var(--chart-txt)",
+              "title": {
+                "text": "PRODUCTION (kWh)",
+                "style": {
+                  "color": "var(--chart-txt)"
+                },
+                "useHTML": true
+              },
+              "enabled": true,
+              "lineColor": "var(--chart-txt)",
+              "labels": {
+                "enabled": true,
+                "style": {
+                  "color": "var(--chart-txt)"
+                },
+                "useHTML": true
+              },
+              "lineWidth": 0,
+              "gridLineColor": "var(--chart-brd)",
+              "gridLineWidth": 0,
+              "margin": 0,
+              "min": 0
+            }
+          ],
+          "xAxis": {
+            "type": "datetime",
+            "tickColor": "var(--chart-brd)",
+            "gridLineColor": "var(--chart-brd)",
+            "gridLineWidth": 1,
+            "tickInterval": 86400000,
+            "labels": {
+              "enabled": true,
+              "format": "{value:%a}",
+              "style": {
+                "color": "var(--chart-txt)"
+              },
+              "useHTML": true
+            },
+            "crosshair": {
+              "color": "var(--chart-txt)",
+              "dashStyle": "ShortDash"
+            }
+          },
+          "legend": {},
+          "plotOptions": {}
+        }
+      }
+    ]
+  }

@@ -1,0 +1,93 @@
+[
+    {
+        "Name": "STATUS",
+        "Display": "i",
+        "Size": 1
+    },
+    {
+        "Name": "SEEN",
+        "Display": "visibility",
+        "Size": 1
+    },
+    {
+        "Name": "Id",
+        "Display": "CODE",
+        "Size": 1,
+        "Static": true
+    },
+    {
+        "Name": "Name",
+        "Display": "SITE",
+        "Size": 1,
+        "Static": true
+    },
+    {
+        "Name": "Province",
+        "Display": "PROVINCE",
+        "Size": 1,
+        "Index": 2,
+        "Static": true
+    },
+    {
+        "Name": "Capacity",
+        "Display": "CAPACITY\n(MWp)",
+        "Size": 1,
+        "Static": true
+    },
+    {
+        "Name": "POWER",
+        "Display": "POWER\n(MW)",
+        "Size": 1
+    },
+    {
+        "Name": "ENERGY",
+        "Display": "ENERGY TODAY\n(kWh)",
+        "Size": 1
+    },
+    {
+        "Name": "ENERGYMTD",
+        "Display": "ENERGY MTD\n(MWh)",
+        "Size": 1
+    },
+    {
+        "Name": "ENERGYYTD",
+        "Display": "ENERGY YTD\n(MWh)",
+        "Size": 1
+    },
+    {
+        "Name": "PR",
+        "Display": "PR\n(%)",
+        "Size": 1
+    },
+    {
+        "Name": "TD",
+        "Display": "YIELD TODAY\n(kWh/kWp)",
+        "Size": 1
+    },
+    {
+        "Name": "MTD",
+        "Display": "YIELD MTD\n(kWh/kWp)",
+        "Size": 1
+    },
+    {
+        "Name": "YTD",
+        "Display": "YIELD YTD\n(kWh/kWp)",
+        "Size": 1
+    },
+    {
+        "Name": "IRR",
+        "Display": "IRR\n(W/m2)",
+        "Size": 1
+    },
+    {
+        "Name": "PV",
+        "Display": "PVTEMP\n(C°)",
+        "Size": 1
+    },
+    {
+        "Name": "AMB",
+        "Display": "AMBTEMP\n(C°)",
+        "Size": 1
+    }
+    
+]

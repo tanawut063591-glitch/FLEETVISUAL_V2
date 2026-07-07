@@ -1,0 +1,98 @@
+{
+    "name": "",
+    "tags": [
+        {
+            "name": "",
+            "title": "",
+            "options": {
+                    "yAxis": 0,
+                    "type": "line",
+                    "color": "#75FAFA",
+                    "showInLegend": true
+            }
+        }
+    ],
+    "chartOptions": {
+        "chart":{
+            "zooming": {
+                "type": "x",
+                "resetButton": {
+                  "position": {
+                    "y": -40,
+                    "verticalAlign": "bottom",
+                    "align": "right"
+                  },
+                  "theme": {
+                    "fill": "#E7CD47",
+                    "style": {
+                        "color": "white"
+                    },
+                    "states": {
+                        "hover": {
+                        "fill": "#E7CD47",
+                        "style": {
+                        "color": "white"
+                        }
+                        } 
+                    }
+                    }
+                }
+              },
+            "backgroundColor": "none",
+            "animation": false,
+            "margin": [10,180,30,50],
+            "borderColor": "var(--chart-brd)",
+            "borderWidth": 0
+        },
+        "title":{
+            
+        },
+        "yAxis": [
+            {
+                "color": "var(--chart-txt)",
+                "title":{
+                    "text": "",
+                    "style": {
+                        "color": "var(--chart-txt)",
+                        "fontWeight": "bold"
+                    },
+                    "useHTML": true
+                },
+                "enabled": true,
+                "lineColor": "var(--chart-txt)",
+                "labels": {
+                    "enabled": true,
+                    "style": {
+                      "color": "var(--chart-txt)",
+                      "fontWeight": "bold"
+                    },
+                    "useHTML": true
+                  },
+                "lineWidth": 0,
+                "gridLineColor": "var(--chart-brd)",
+                "gridLineWidth": 1,
+                "margin": 0,
+                "min": 0
+            }
+        ],
+        "xAxis": {
+            "type": "datetime",
+            "gridLineColor": "var(--chart-brd)",
+            "gridLineWidth": 1,
+            "labels": {
+                  "enabled": true,
+                  "format": "{value:%H:%M}",
+                "style": {
+                    "color": "var(--chart-txt)"
+                },
+                "useHTML": true
+            },
+            "crosshair": {
+                "color": "var(--chart-txt)",
+                "dashStyle": "ShortDash"
+            }
+        },
+        "legend": {},
+        "plotOptions":{}
+    }
+}

@@ -1,0 +1,14 @@
+.grid-container{
+    display: grid;
+    padding: 8px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--primary-txt);
+    .row{
+        border-bottom: 1px solid var(--border-color);
+        max-width: 100%;
+    }
+    .row:hover{
+        background-color: var(--border-color);
+    }
+}
