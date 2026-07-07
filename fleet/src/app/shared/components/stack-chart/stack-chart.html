@@ -1,0 +1,29 @@
+<div class="chart-box bz ">
+    @if (legend()) {
+        <div class="chartValue d-flex bz" >
+            <span class="value" [style.color]="activeColor()">{{value() | number: '1.0-1'}}</span> 
+        </div>
+    }
+    <div class="chartGroup bz " [style.height.%]="height()">
+      <div class="Box w-100 h-100">
+        <div class="outerBox w-100 h-100">
+        </div>
+        <div class="innerBox w-100 h-100">
+            @for (item of chartItems(); track $index; let i = $index) {
+                <div class="chartItem1" id="idx1"
+                    [style.background-color]="getColor(rangeVal()-1-i)">
+                </div>
+            }
+        </div>
+      </div>
+      <div class="tooltip bz w-100">
+        <span class="bz w-100 no-pm">{{label() }}</span>
+        <span class="bz w-100 no-pm">{{value() | number: '1.0-2'}}  {{unit()}}</span>
+      </div>
+    </div>
+    @if (!verLabel() && title()) {
+        <div class="chartLabel bz ">{{ label() }}</div>
+    } @else if (verLabel()) {
+        <div class="bz" [ngClass]="label() && label().length > 1 ? 'chartLabel1' : 'chartLabel2' " >{{ label() }}</div>
+    }
+  </div>

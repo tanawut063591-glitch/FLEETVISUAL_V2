@@ -1,0 +1,41 @@
+<div class="permission-dialog-overlay">
+  <div class="permission-dialog-container">
+    <div class="dialog-header">
+      <div class="icon-wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
+      <h2>Access Denied</h2>
+    </div>
+
+    <div class="dialog-content">
+      <p class="main-message">
+        {{ data.message || 'You do not have permission to access this page' }}
+      </p>
+      
+      <!-- <div class="detail-info" *ngIf="data?.routePath || data?.requiredPermission">
+        <div class="info-item" *ngIf="data?.routePath">
+          <span class="label">เส้นทาง:</span>
+          <span class="value">{{ data.routePath }}</span>
+        </div>
+        <div class="info-item" *ngIf="data?.requiredPermission">
+          <span class="label">สิทธิ์ที่ต้องการ:</span>
+          <span class="value">{{ data.requiredPermission }}</span>
+        </div>
+      </div> -->
+
+      <p class="sub-message">
+        Please contact your administrator to request access permissions
+      </p>
+    </div>
+
+    <div class="dialog-actions">
+      <button class="btn-close" (click)="onClose()">
+        Close
+      </button>
+    </div>
+  </div>
+</div>

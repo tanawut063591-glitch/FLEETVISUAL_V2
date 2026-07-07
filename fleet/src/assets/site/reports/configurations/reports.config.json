@@ -1,0 +1,14 @@
+﻿[
+  {
+    "name": "Daily Report",
+    "type": "daily"
+  },
+  {
+    "name": "Monthly Report",
+    "type": "monthly"
+  },
+  {
+    "name": "Yearly Report",
+    "type": "yearly"
+  }
+]

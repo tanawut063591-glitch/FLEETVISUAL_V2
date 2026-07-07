@@ -1,0 +1,12 @@
+<div class="box d-flex">
+    <div class="polygon d-flex-ct" [style.background-color]="bgcolor()">
+        <i class="material-icons" [style.color]="icon_color()">{{ icon() }}</i>
+    </div>
+    <div class="info d-col-st">
+        <div class="title bz">{{ title() || '---' }}</div>
+        <div class="d-flex bz" style="align-items: baseline;">
+            <div class="value" [matTooltip]="getTooltip(data())" matTooltipPosition="above">{{ value() || '---' }}</div>
+            <div class="unit">{{ unit() || '' }}</div>
+        </div>
+    </div>
+</div>

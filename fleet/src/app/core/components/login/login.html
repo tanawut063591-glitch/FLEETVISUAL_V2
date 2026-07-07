@@ -1,0 +1,37 @@
+<div class="container-fluid d-flex-ct no-pm bz">
+    <div class="copy">
+        © Authorize reserved by SAT Solutions
+    </div>
+    <div class="contentBox bz ">
+        <div class="logoBox d-col ">
+            <div class="logo d-flex-ct"><img src="assets/images/solaris-w.png" alt="Super Energy Logo" width="50%"></div>
+            <div class="info ">
+                SOLARIS INSIGHT <br>
+                PV INFORMATION SYSTEM
+            </div>
+        </div>
+        <div class="formBox d-flex-ct bz ">
+            <div class="form-content d-col bz ">
+                <div class="w-100">
+                    <div class=" topic ">
+                        <span>WELCOME</span>
+                    </div>
+                    <form class="form-input bz  w-100 ">
+                        <!-- <input [(ngModel)]="form.username" name="username" type="text" class="form-control" placeholder="username" aria-label="Username"> -->
+                        <div class="input-group w-100 ">
+                            <input [(ngModel)]="form.username" required="" type="text" name="text" autocomplete="off" class="input bz w-100">
+                            <label class="user-label">username</label>
+                        </div>
+                        <div class="input-group w-100 ">
+                            <input [(ngModel)]="form.password" required="" type="password" name="text" autocomplete="off" class="input bz w-100">
+                            <label class="user-label">password</label>
+                        </div>
+                        <!-- <input [(ngModel)]="form.password" type="password" placeholder="password" class="form-control" name="password" aria-label="Username"> -->
+                        <span  [className]="animateClass">{{invalidText}}</span>
+                        <button type="submit"  class="submit-btn" (click)="login()">LOGIN</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

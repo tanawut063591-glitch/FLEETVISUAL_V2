@@ -1,0 +1,59 @@
+.horizontal-content{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vertical-content{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.chart {
+    width: 150px;
+    //min-height: 100px;
+    background-color: #f8f8f800;
+    z-index: 50;
+    //border: 2px solid red;
+    //padding: 2px;
+}
+
+.status-list {
+    display: flex;
+    flex-direction: column;
+    flex: 0;
+    gap: 8px;
+}
+  
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .status-label {
+        font-family: 'Roboto', sans-serif;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--secondary-txt);
+        min-width: 90px;
+        width: 100%;
+        max-width: 120px;
+    }
+
+    .status-count {
+        font-family: 'Roboto', sans-serif;
+        font-size: 16px;
+        font-weight: 600;
+        min-width: 35px;
+        text-align: right;
+    }
+
+    .status-sites {
+        font-family: 'Roboto', sans-serif;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--secondary-txt);
+    }
+}

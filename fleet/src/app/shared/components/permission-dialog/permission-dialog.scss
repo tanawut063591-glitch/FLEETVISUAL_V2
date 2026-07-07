@@ -1,0 +1,206 @@
+.permission-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.permission-dialog-container {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  max-width: 480px;
+  width: 90%;
+  overflow: hidden;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dialog-header {
+  padding: 24px 24px 20px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+
+  .icon-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-gd1), var(--color-gd2));
+    margin-bottom: 16px;
+    box-shadow: 0 4px 16px rgba(228, 182, 26, 0.3);
+
+    svg {
+      width: 32px;
+      height: 32px;
+      color: var(--main-bg);
+    }
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--primary-txt);
+    letter-spacing: 0.3px;
+  }
+}
+
+.dialog-content {
+  padding: 24px;
+
+  .main-message {
+    font-size: 16px;
+    color: var(--primary-txt);
+    line-height: 1.6;
+    margin: 0 0 20px;
+    text-align: center;
+  }
+
+  .detail-info {
+    background: var(--primary-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+
+    .info-item {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 12px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .label {
+        font-size: 13px;
+        color: var(--secondary-txt);
+        min-width: 100px;
+        font-weight: 500;
+      }
+
+      .value {
+        font-size: 13px;
+        color: var(--active-txt);
+        font-family: monospace;
+        background: var(--main-bg);
+        padding: 4px 8px;
+        border-radius: 4px;
+        word-break: break-all;
+      }
+    }
+  }
+
+  .sub-message {
+    font-size: 14px;
+    color: var(--secondary-txt);
+    line-height: 1.5;
+    margin: 0;
+    text-align: center;
+  }
+}
+
+.dialog-actions {
+  padding: 16px 24px 24px;
+  display: flex;
+  justify-content: center;
+
+  .btn-close {
+    background: var(--btn-bg);
+    border: 2px solid var(--btn-border);
+    color: var(--btn-color);
+    padding: 12px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+    &:hover {
+      background: linear-gradient(135deg, var(--color-gd1), var(--color-gd2));
+      border-color: var(--highlight);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(228, 182, 26, 0.3);
+    }
+
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(228, 182, 26, 0.2);
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 576px) {
+  .permission-dialog-container {
+    width: 95%;
+    margin: 20px;
+  }
+
+  .dialog-header {
+    padding: 20px 16px 16px;
+
+    .icon-wrapper {
+      width: 56px;
+      height: 56px;
+
+      svg {
+        width: 28px;
+        height: 28px;
+      }
+    }
+
+    h2 {
+      font-size: 20px;
+    }
+  }
+
+  .dialog-content {
+    padding: 20px 16px;
+
+    .main-message {
+      font-size: 15px;
+    }
+
+    .detail-info .info-item {
+      flex-direction: column;
+
+      .label {
+        min-width: auto;
+        margin-bottom: 4px;
+      }
+    }
+  }
+
+  .dialog-actions {
+    padding: 12px 16px 20px;
+  }
+}

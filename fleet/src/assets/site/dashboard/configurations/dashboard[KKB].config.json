@@ -1,0 +1,898 @@
+﻿{
+    "realtimeConfig": [
+      {
+        "Group": "power",
+        "Order": 0,
+        "Tags": [
+          {
+            "Title": "POWER",
+            "Tagname": "KKB.CALC.W"
+          },
+          {
+            "Title": "PEAK",
+            "Tagname": "KKB.CALC.W_PEAK"
+          },
+          {
+            "Title": "CAPACITY",
+            "Tagname": "KKB.CALC.CAPACITY"
+          },
+          {
+            "Title": "YIELD",
+            "Tagname": "KKB.CALC.YIELD"
+          },
+          {
+            "Title": "PR",
+            "Tagname": "KKB.CALC.PR"
+          },
+          {
+            "Title": "OPR",
+            "Tagname": "KKB.CALC.OPR"
+          }
+        ]
+      },
+      {
+        "Group": "energy",
+        "Order": 1,
+        "Tags": [
+          {
+            "Title": "TODAY",
+            "Tagname": "KKB.CALC.WH_TODAY"
+          },
+          {
+            "Title": "MONTHLY",
+            "Tagname": "KKB.CALC.WH_MONTH"
+          },
+          {
+            "Title": "YEARLY",
+            "Tagname": "KKB.CALC.WH_YEAR"
+          },
+          {
+            "Title": "TOTAL",
+            "Tagname": "KKB.CALC.WH"
+          }
+        ]
+      },
+      {
+        "Group": "enviroment",
+        "Order": 2,
+        "Tags": [
+          {
+            "Title": "PYRANO",
+            "Tagname": "KKB.CALC.PYRANO"
+          },
+          {
+            "Title": "INSOLUTION",
+            "Tagname": "KKB.CALC.PYRANO_TODAY"
+          },
+          {
+            "Title": "AMBTEMP",
+            "Tagname": "KKB.CALC.AMBTEMP"
+          },
+          {
+            "Title": "PVTEMP",
+            "Tagname": "KKB.CALC.PVTEMP"
+          },
+          {
+            "Title": "WIND",
+            "Tagname": "KKB.CALC.WIND_SPD"
+          },
+          {
+            "Title": "REDUCTION",
+            "Tagname": "KKB.SLG01.CABON"
+          }
+        ]
+      },
+      {
+        "Group": "inverter",
+        "Order": 3,
+        "Tags": [
+          {
+            "Title":  "INV01_TODAY",
+            "Tagname":  "KKB.INV01.WH_TODAY"
+          },
+          {
+            "Title":  "INV02_TODAY",
+            "Tagname":  "KKB.INV02.WH_TODAY"
+          },
+          {
+            "Title":  "INV03_TODAY",
+            "Tagname":  "KKB.INV03.WH_TODAY"
+          },
+          {
+            "Title":  "INV04_TODAY",
+            "Tagname":  "KKB.INV04.WH_TODAY"
+          },
+          {
+            "Title":  "INV05_TODAY",
+            "Tagname":  "KKB.INV05.WH_TODAY"
+          },
+          {
+            "Title":  "INV06_TODAY",
+            "Tagname":  "KKB.INV06.WH_TODAY"
+          },
+          {
+            "Title":  "INV07_TODAY",
+            "Tagname":  "KKB.INV07.WH_TODAY"
+          },
+          {
+            "Title":  "INV08_TODAY",
+            "Tagname":  "KKB.INV08.WH_TODAY"
+          },
+          {
+            "Title":  "INV09_TODAY",
+            "Tagname":  "KKB.INV09.WH_TODAY"
+          },
+          {
+            "Title":  "INV10_TODAY",
+            "Tagname":  "KKB.INV10.WH_TODAY"
+          },
+          {
+            "Title":  "INV11_TODAY",
+            "Tagname":  "KKB.INV11.WH_TODAY"
+          },
+          {
+            "Title":  "INV12_TODAY",
+            "Tagname":  "KKB.INV12.WH_TODAY"
+          },
+          {
+            "Title":  "INV13_TODAY",
+            "Tagname":  "KKB.INV13.WH_TODAY"
+          },
+          {
+            "Title":  "INV14_TODAY",
+            "Tagname":  "KKB.INV14.WH_TODAY"
+          },
+          {
+            "Title":  "INV15_TODAY",
+            "Tagname":  "KKB.INV15.WH_TODAY"
+          },
+          {
+            "Title":  "INV16_TODAY",
+            "Tagname":  "KKB.INV16.WH_TODAY"
+          },
+          {
+            "Title":  "INV17_TODAY",
+            "Tagname":  "KKB.INV17.WH_TODAY"
+          },
+          {
+            "Title":  "INV18_TODAY",
+            "Tagname":  "KKB.INV18.WH_TODAY"
+          },
+          {
+            "Title":  "INV19_TODAY",
+            "Tagname":  "KKB.INV19.WH_TODAY"
+          },
+          {
+            "Title":  "INV20_TODAY",
+            "Tagname":  "KKB.INV20.WH_TODAY"
+          },
+          {
+            "Title":  "INV21_TODAY",
+            "Tagname":  "KKB.INV21.WH_TODAY"
+          },
+          {
+            "Title":  "INV22_TODAY",
+            "Tagname":  "KKB.INV22.WH_TODAY"
+          },
+          {
+            "Title":  "INV23_TODAY",
+            "Tagname":  "KKB.INV23.WH_TODAY"
+          },
+          {
+            "Title":  "INV24_TODAY",
+            "Tagname":  "KKB.INV24.WH_TODAY"
+          },
+          {
+            "Title":  "INV25_TODAY",
+            "Tagname":  "KKB.INV25.WH_TODAY"
+          },
+          {
+            "Title":  "INV26_TODAY",
+            "Tagname":  "KKB.INV26.WH_TODAY"
+          },
+          {
+            "Title":  "INV27_TODAY",
+            "Tagname":  "KKB.INV27.WH_TODAY"
+          }
+        ]
+      },
+      {
+        "Group": "inverter_power",
+        "Order": 4,
+        "Tags": [
+          {
+            "Title":  "INV01_POWER",
+            "Tagname":  "KKB.INV01.WAC"
+          },
+          {
+            "Title":  "INV02_POWER",
+            "Tagname":  "KKB.INV02.WAC"
+          },
+          {
+            "Title":  "INV03_POWER",
+            "Tagname":  "KKB.INV03.WAC"
+          },
+          {
+            "Title":  "INV04_POWER",
+            "Tagname":  "KKB.INV04.WAC"
+          },
+          {
+            "Title":  "INV05_POWER",
+            "Tagname":  "KKB.INV05.WAC"
+          },
+          {
+            "Title":  "INV06_POWER",
+            "Tagname":  "KKB.INV06.WAC"
+          },
+          {
+            "Title":  "INV07_POWER",
+            "Tagname":  "KKB.INV07.WAC"
+          },
+          {
+            "Title":  "INV08_POWER",
+            "Tagname":  "KKB.INV08.WAC"
+          },
+          {
+            "Title":  "INV09_POWER",
+            "Tagname":  "KKB.INV09.WAC"
+          },
+          {
+            "Title":  "INV10_POWER",
+            "Tagname":  "KKB.INV10.WAC"
+          },
+          {
+            "Title":  "INV11_POWER",
+            "Tagname":  "KKB.INV11.WAC"
+          },
+          {
+            "Title":  "INV12_POWER",
+            "Tagname":  "KKB.INV12.WAC"
+          },
+          {
+            "Title":  "INV13_POWER",
+            "Tagname":  "KKB.INV13.WAC"
+          },
+          {
+            "Title":  "INV14_POWER",
+            "Tagname":  "KKB.INV14.WAC"
+          },
+          {
+            "Title":  "INV15_POWER",
+            "Tagname":  "KKB.INV15.WAC"
+          },
+          {
+            "Title":  "INV16_POWER",
+            "Tagname":  "KKB.INV16.WAC"
+          },
+          {
+            "Title":  "INV17_POWER",
+            "Tagname":  "KKB.INV17.WAC"
+          },
+          {
+            "Title":  "INV18_POWER",
+            "Tagname":  "KKB.INV18.WAC"
+          },
+          {
+            "Title":  "INV19_POWER",
+            "Tagname":  "KKB.INV19.WAC"
+          },
+          {
+            "Title":  "INV20_POWER",
+            "Tagname":  "KKB.INV20.WAC"
+          },
+          {
+            "Title":  "INV21_POWER",
+            "Tagname":  "KKB.INV21.WAC"
+          },
+          {
+            "Title":  "INV22_POWER",
+            "Tagname":  "KKB.INV22.WAC"
+          },
+          {
+            "Title":  "INV23_POWER",
+            "Tagname":  "KKB.INV23.WAC"
+          },
+          {
+            "Title":  "INV24_POWER",
+            "Tagname":  "KKB.INV24.WAC"
+          },
+          {
+            "Title":  "INV25_POWER",
+            "Tagname":  "KKB.INV25.WAC"
+          },
+          {
+            "Title":  "INV26_POWER",
+            "Tagname":  "KKB.INV26.WAC"
+          },
+          {
+            "Title":  "INV27_POWER",
+            "Tagname":  "KKB.INV27.WAC"
+          }
+        ]
+      },
+      {
+        "Group": "inverter_pr",
+        "Order": 5,
+        "Tags": [
+          {
+            "Title":  "INV01_PR",
+            "Tagname":  "KKB.INV01.EFF"
+          },
+          {
+            "Title":  "INV02_PR",
+            "Tagname":  "KKB.INV02.EFF"
+          },
+          {
+            "Title":  "INV03_PR",
+            "Tagname":  "KKB.INV03.EFF"
+          },
+          {
+            "Title":  "INV04_PR",
+            "Tagname":  "KKB.INV04.EFF"
+          },
+          {
+            "Title":  "INV05_PR",
+            "Tagname":  "KKB.INV05.EFF"
+          },
+          {
+            "Title":  "INV06_PR",
+            "Tagname":  "KKB.INV06.EFF"
+          },
+          {
+            "Title":  "INV07_PR",
+            "Tagname":  "KKB.INV07.EFF"
+          },
+          {
+            "Title":  "INV08_PR",
+            "Tagname":  "KKB.INV08.EFF"
+          },
+          {
+            "Title":  "INV09_PR",
+            "Tagname":  "KKB.INV09.EFF"
+          },
+          {
+            "Title":  "INV10_PR",
+            "Tagname":  "KKB.INV10.EFF"
+          },
+          {
+            "Title":  "INV11_PR",
+            "Tagname":  "KKB.INV11.EFF"
+          },
+          {
+            "Title":  "INV12_PR",
+            "Tagname":  "KKB.INV12.EFF"
+          },
+          {
+            "Title":  "INV13_PR",
+            "Tagname":  "KKB.INV13.EFF"
+          },
+          {
+            "Title":  "INV14_PR",
+            "Tagname":  "KKB.INV14.EFF"
+          },
+          {
+            "Title":  "INV15_PR",
+            "Tagname":  "KKB.INV15.EFF"
+          },
+          {
+            "Title":  "INV16_PR",
+            "Tagname":  "KKB.INV16.EFF"
+          },
+          {
+            "Title":  "INV17_PR",
+            "Tagname":  "KKB.INV17.EFF"
+          },
+          {
+            "Title":  "INV18_PR",
+            "Tagname":  "KKB.INV18.EFF"
+          },
+          {
+            "Title":  "INV19_PR",
+            "Tagname":  "KKB.INV19.EFF"
+          },
+          {
+            "Title":  "INV20_PR",
+            "Tagname":  "KKB.INV20.EFF"
+          },
+          {
+            "Title":  "INV21_PR",
+            "Tagname":  "KKB.INV21.EFF"
+          },
+          {
+            "Title":  "INV22_PR",
+            "Tagname":  "KKB.INV22.EFF"
+          },
+          {
+            "Title":  "INV23_PR",
+            "Tagname":  "KKB.INV23.EFF"
+          },
+          {
+            "Title":  "INV24_PR",
+            "Tagname":  "KKB.INV24.EFF"
+          },
+          {
+            "Title":  "INV25_PR",
+            "Tagname":  "KKB.INV25.EFF"
+          },
+          {
+            "Title":  "INV26_PR",
+            "Tagname":  "KKB.INV26.EFF"
+          },
+          {
+            "Title":  "INV27_PR",
+            "Tagname":  "KKB.INV27.EFF"
+          }
+        ]
+      },
+      {
+        "Group": "inverter_avai",
+        "Order": 6,
+        "Tags": [
+          {
+            "Title":  "INV01_AVAI",
+            "Tagname":  "KKB.INV01.AVAI"
+          },
+          {
+            "Title":  "INV02_AVAI",
+            "Tagname":  "KKB.INV02.AVAI"
+          },
+          {
+            "Title":  "INV03_AVAI",
+            "Tagname":  "KKB.INV03.AVAI"
+          },
+          {
+            "Title":  "INV04_AVAI",
+            "Tagname":  "KKB.INV04.AVAI"
+          },
+          {
+            "Title":  "INV05_AVAI",
+            "Tagname":  "KKB.INV05.AVAI"
+          },
+          {
+            "Title":  "INV06_AVAI",
+            "Tagname":  "KKB.INV06.AVAI"
+          },
+          {
+            "Title":  "INV07_AVAI",
+            "Tagname":  "KKB.INV07.AVAI"
+          },
+          {
+            "Title":  "INV08_AVAI",
+            "Tagname":  "KKB.INV08.AVAI"
+          },
+          {
+            "Title":  "INV09_AVAI",
+            "Tagname":  "KKB.INV09.AVAI"
+          },
+          {
+            "Title":  "INV10_AVAI",
+            "Tagname":  "KKB.INV10.AVAI"
+          },
+          {
+            "Title":  "INV11_AVAI",
+            "Tagname":  "KKB.INV11.AVAI"
+          },
+          {
+            "Title":  "INV12_AVAI",
+            "Tagname":  "KKB.INV12.AVAI"
+          },
+          {
+            "Title":  "INV13_AVAI",
+            "Tagname":  "KKB.INV13.AVAI"
+          },
+          {
+            "Title":  "INV14_AVAI",
+            "Tagname":  "KKB.INV14.AVAI"
+          },
+          {
+            "Title":  "INV15_AVAI",
+            "Tagname":  "KKB.INV15.AVAI"
+          },
+          {
+            "Title":  "INV16_AVAI",
+            "Tagname":  "KKB.INV16.AVAI"
+          },
+          {
+            "Title":  "INV17_AVAI",
+            "Tagname":  "KKB.INV17.AVAI"
+          },
+          {
+            "Title":  "INV18_AVAI",
+            "Tagname":  "KKB.INV18.AVAI"
+          },
+          {
+            "Title":  "INV19_AVAI",
+            "Tagname":  "KKB.INV19.AVAI"
+          },
+          {
+            "Title":  "INV20_AVAI",
+            "Tagname":  "KKB.INV20.AVAI"
+          },
+          {
+            "Title":  "INV21_AVAI",
+            "Tagname":  "KKB.INV21.AVAI"
+          },
+          {
+            "Title":  "INV22_AVAI",
+            "Tagname":  "KKB.INV22.AVAI"
+          },
+          {
+            "Title":  "INV23_AVAI",
+            "Tagname":  "KKB.INV23.AVAI"
+          },
+          {
+            "Title":  "INV24_AVAI",
+            "Tagname":  "KKB.INV24.AVAI"
+          },
+          {
+            "Title":  "INV25_AVAI",
+            "Tagname":  "KKB.INV25.AVAI"
+          },
+          {
+            "Title":  "INV26_AVAI",
+            "Tagname":  "KKB.INV26.AVAI"
+          },
+          {
+            "Title":  "INV27_AVAI",
+            "Tagname":  "KKB.INV27.AVAI"
+          }
+        ]
+      }
+    ],
+    "historianConfig": [
+      {
+        "Group": "CHART01",
+        "Order": 0,
+        "Tags": [
+          {
+            "Title": "CHART01_IMPORT",
+            "Tagname": "KKB.PQM01.W",
+            "Options": {
+              "Time": "t",
+              "Interval": 0,
+              "StartTime": "MIDN",
+              "EndTime": "NOW"
+            }
+          },
+          {
+            "Title": "CHART01_POWER",
+            "Tagname": "KKB.CALC.W",
+            "Options": {
+              "Time": "t",
+              "Interval": 0,
+              "StartTime": "MIDN",
+              "EndTime": "NOW"
+            }
+          },
+          {
+            "Title": "CHART01_IRR",
+            "Tagname": "KKB.CALC.PYRANO",
+            "Options": {
+              "Time": "t",
+              "Interval": 0,
+              "StartTime": "MIDN",
+              "EndTime": "NOW"
+            }
+          }
+        ]
+      },
+      {
+        "Group": "CHART02",
+        "Order": 0,
+        "Tags": [
+          {
+            "Title": "TODAY_ENERGY",
+            "Tagname": "KKB.CALC.WH_HOUR",
+            "Options": {
+              "Time": "t",
+              "Interval": 0,
+              "StartTime": "*-7d",
+              "EndTime": "NOW"
+            }
+          }
+        ]
+      }
+      
+    ],
+    "chartConfig": [
+      {
+        "name": "CHART01",
+        "tags": [
+          {
+            "name": "KKB.CALC.PYRANO",
+            "title": "IRRADIANCE*W/m²",
+            "options": {
+              "yAxis": 0,
+              "type": "area",
+              "color": "#FF9B33",
+              "fillOpacity": 0.125,
+              "showInLegend": true
+            }
+          },
+          {
+            "name": "KKB.CALC.W",
+            "title": "PRODUCE*kW",
+            "options": {
+              "yAxis": 1,
+              "type": "area",
+              "color": "#3DB1FC",
+              "fillOpacity": 0.125,
+              "showInLegend": true
+            }
+          },
+          {
+            "name": "KKB.PQM01.W",
+            "title": "IMPORT*kW",
+            "options": {
+              "yAxis": 1,
+              "type": "area",
+              "color": "#d1FC",
+              "fillOpacity": 0.125,
+              "showInLegend": true
+            }
+          }
+        ],
+        "chartOptions": {
+          "chart": {
+            "zooming": {
+              "type": "x",
+              "resetButton": {
+                "position": {
+                  "y": -40,
+                  "verticalAlign": "bottom",
+                  "align": "right"
+                },
+                "theme": {
+                  "fill": "#E7CD47",
+                  "style": {
+                    "color": "white"
+                  },
+                  "states": {
+                    "hover": {
+                    "fill": "#E7CD47",
+                    "style": {
+                      "color": "white"
+                    }
+                    } 
+                  }
+                }
+              }
+            },
+            "backgroundColor": "none",
+            "animation": true,
+            "margin": [
+              30,
+              70,
+              30,
+              60
+            ],
+            "borderColor": "var(--chart-brd)",
+            "borderWidth": 0
+          },
+          "title": {},
+          "yAxis": [
+            {
+              "color": "var(--chart-txt)",
+              "title": {
+                "text": "IRR (W/m2)",
+                "style": {
+                  "color": "var(--chart-txt)"
+                },
+                "useHTML": true
+              },
+              "opposite": true,
+              "enabled": true,
+              "lineColor": "var(--chart-brd)",
+              "labels": {
+                "enabled": true,
+                "style": {
+                  "color": "var(--chart-txt)"
+                },
+                "useHTML": true
+              },
+              "lineWidth": 0,
+              "gridLineColor": "var(--chart-brd)",
+              "gridLineWidth": 1,
+              "max": 1600,
+              "tickInterval": 50,
+              "margin": 0,
+              "min": 0
+            },
+            {
+              "color": "var(--chart-txt)",
+              "title": {
+                "text": "POWER (kW)",
+                "style": {
+                  "color": "var(--chart-txt)"
+                },
+                "useHTML": true
+              },
+              "enabled": true,
+              "lineColor": "var(--chart-brd)",
+              "labels": {
+                "enabled": true,
+                "style": {
+                  "color": "var(--chart-txt)"
+                },
+                "useHTML": true
+              },
+              "lineWidth": 0,
+              "gridLineColor": "var(--chart-brd)",
+              "gridLineWidth": 0,
+              "tickInterval": 250,
+              "margin": 0,
+              "min": 0
+            }
+          ],
+          "xAxis": {
+            "type": "datetime",
+            "gridLineColor": "var(--chart-brd)",
+            "gridLineWidth": 1,
+            "tickInterval": 7200000,
+            "labels": {
+              "enabled": true,
+              "format": "{value:%H}",
+              "style": {
+                "color": "var(--chart-txt)"
+              },
+              "useHTML": true
+            },
+            "crosshair": {
+              "color": "var(--chart-txt)",
+              "dashStyle": "ShortDash"
+            },
+            "max": "t"
+          },
+          "legend": {
+            "enabled": true,
+              "floating": true,
+              "align": "center",
+              "verticalAlign": "top",
+              "layout": "horizontal",
+              "y": -15
+          },
+          "plotOptions": {}
+        }
+      },
+      {
+        "name": "CHART02",
+        "tags": [
+          {
+            "name": "KKB.CALC.WH_HOUR",
+            "title": "PRODUCE*kWh",
+            "time": "d",
+            "options": {
+              "yAxis": 0,
+              "type": "column",
+              "color": "#FFDF6C",
+              "borderColor": "#E4B61A",
+							"borderRadius": 0
+            }
+          },
+          {
+            "name": "KKB.CALC.WH_DAY",
+            "title": "PRODUCE*kWh",
+            "time": "w",
+            "options": {
+              "yAxis": 0,
+              "type": "column",
+              "color": "#FFDF6C",
+              "borderColor": "#E4B61A",
+							"borderRadius": 0
+            }
+          },
+          {
+            "name": "KKB.CALC.WH_DAY",
+            "title": "PRODUCE*kWh",
+            "time": "m",
+            "options": {
+              "yAxis": 0,
+              "type": "column",
+              "color": "#FFDF6C",
+              "borderColor": "#E4B61A",
+							"borderRadius": 0
+            }
+          },
+          {
+            "name": "KKB.CALC.WH_MONTH",
+            "title": "PRODUCE*kWh",
+            "time": "y",
+            "options": {
+              "yAxis": 0,
+              "type": "column",
+              "color": "#FFDF6C",
+              "borderColor": "#E4B61A",
+							"borderRadius": 0
+            }
+          }
+        ],
+        "chartOptions": {
+          "chart": {
+            "zooming": {
+              "type": "x",
+              "resetButton": {
+                "position": {
+                  "y": -40,
+                  "verticalAlign": "bottom",
+                  "align": "right"
+                },
+                "theme": {
+                  "fill": "#E7CD47",
+                  "style": {
+                    "color": "white"
+                  },
+                  "states": {
+                    "hover": {
+                    "fill": "#E7CD47",
+                    "style": {
+                      "color": "white"
+                    }
+                    } 
+                  }
+                }
+              }
+            },
+            "backgroundColor": "none",
+            "animation": true,
+            "margin": [
+              10,
+              10,
+              30,
+              60
+            ],
+            "borderColor": "var(--chart-brd)",
+            "borderWidth": 0
+          },
+          "title": {},
+          "yAxis": [
+            {
+              "color": "var(--chart-txt)",
+              "title": {
+                "text": "PRODUCE (kWh)",
+                "style": {
+                  "color": "var(--chart-txt)"
+                },
+                "useHTML": true
+              },
+              "enabled": true,
+              "lineColor": "var(--chart-brd)",
+              "labels": {
+                "enabled": true,
+                "style": {
+                  "color": "var(--chart-txt)"
+                },
+                "useHTML": true
+              },
+              "lineWidth": 0,
+              "gridLineColor": "var(--chart-brd)",
+              "gridLineWidth": 1,
+              "tickInterval": 10,
+              "margin": 0,
+              "min": 0
+            }
+          ],
+          "xAxis": {
+            "type": "datetime",
+            "gridLineColor": "var(--chart-brd)",
+            "gridLineWidth": 1,
+            "tickInterval": 7200000,
+            "labels": {
+              "enabled": true,
+              "format": "{value:%H}",
+              "style": {
+                "color": "var(--chart-txt)"
+              },
+              "useHTML": true
+            },
+            "crosshair": {
+              "color": "var(--chart-txt)",
+              "dashStyle": "ShortDash"
+            },
+            "max": "t"
+          },
+          "legend": {},
+          "plotOptions": {}
+        }
+      }
+    ]
+  }
