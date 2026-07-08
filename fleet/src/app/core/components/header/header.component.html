@@ -1,85 +1,146 @@
-<header class="fleet-header">
-  <button class="brand" type="button" (click)="goTo('/main')">
-    <img src="assets/images/vessel/LocationEyeIcon.png" alt="Fleet Visual" />
+<header class="fleet-header noselect">
+  <!-- LOGO -->
+  <a
+    class="brand-box"
+    [routerLink]="['/main/overview']"
+    (click)="closeSettingsMenu()"
+  >
+    <img
+      class="main-logo"
+      [src]="logoSrc"
+      alt="Fleet Visual Logo"
+      (error)="onLogoError($event)"
+    />
+  </a>
 
-    <span>
-      <strong>FLEET VISUAL</strong>
-      <small>Maritime Fleet Monitoring System</small>
-    </span>
+  <!-- MOBILE TOGGLER -->
+  <button
+    type="button"
+    class="mobile-toggler"
+    aria-label="Toggle navigation"
+    (click)="toggleMobileMenu($event)"
+  >
+    <span></span>
+    <span></span>
+    <span></span>
   </button>
 
-  <nav class="header-nav" aria-label="Main navigation">
-    <button
-      type="button"
-      class="nav-item"
+  <!-- CENTER MENU -->
+  <nav
+    class="main-menu"
+    [class.open]="mobileMenuOpen"
+    aria-label="Main navigation"
+  >
+    <a
       *ngFor="let item of menuItems"
-      (click)="goTo(item.path)"
+      class="nav-item"
+      [class.is-alert]="item.isAlert"
+      [class.is-log]="item.isLog"
+      [routerLink]="item.route"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: false }"
+      (click)="closeSettingsMenu(); closeMobileMenu()"
+      [hidden]="item.show === false"
     >
-      <i [class]="item.icon"></i>
-      <span>{{ item.label }}</span>
-    </button>
+      <div class="nav-icon">
+        <i [class]="item.icon" aria-hidden="true"></i>
+
+        <span
+          class="alert-count"
+          *ngIf="item.isAlert && alertCount > 0"
+        >
+          {{ alertCount }}
+        </span>
+      </div>
+
+      <div class="nav-text">{{ item.label }}</div>
+    </a>
   </nav>
 
-  <div class="header-actions">
-    <button class="icon-btn notification-btn" type="button" aria-label="Alerts">
-      <i class="fa fa-bell-o"></i>
-      <span class="alert-count" *ngIf="alertCount > 0">{{ alertCount }}</span>
-    </button>
-
-    <div class="settings-wrap" [class.open]="settingsMenuOpen">
+  <!-- RIGHT ACTIONS -->
+  <section class="right-menu">
+    <!-- SETTINGS -->
+    <div class="settings-action-wrap" [class.open]="settingsMenuOpen">
       <button
-        class="icon-btn"
         type="button"
-        aria-label="Settings"
+        class="settings-action-btn"
+        title="Settings"
         (click)="toggleSettingsMenu($event)"
       >
-        <i class="fa fa-cog"></i>
+        <i class="fa fa-cog" aria-hidden="true"></i>
       </button>
 
       <div class="settings-dropdown">
         <div class="dropdown-title">System Settings</div>
 
-        <button type="button" class="dropdown-item" (click)="goTo('/main')">
-          <i class="fa fa-sliders"></i>
-          <span>
-            <strong>General Settings</strong>
-            <small>System preferences</small>
+        <button
+          type="button"
+          class="dropdown-item"
+          *ngFor="let item of settingsItems"
+          (click)="goTo(item.route)"
+        >
+          <span class="dropdown-icon" [class]="item.color">
+            <i [class]="item.icon"></i>
           </span>
-        </button>
 
-        <button type="button" class="dropdown-item" (click)="goTo('/main')">
-          <i class="fa fa-ship"></i>
-          <span>
-            <strong>Vessel Management</strong>
-            <small>Manage vessel profiles</small>
-          </span>
-        </button>
-
-        <button type="button" class="dropdown-item danger" (click)="logout()">
-          <i class="fa fa-sign-out"></i>
-          <span>
-            <strong>Logout</strong>
-            <small>Back to login page</small>
-          </span>
+          <div class="dropdown-copy">
+            <strong>{{ item.title }}</strong>
+            <small>{{ item.subtitle }}</small>
+          </div>
         </button>
       </div>
     </div>
 
-    <div class="user-chip">
-      <div class="avatar">
+    <!-- DARK MODE -->
+    <button
+      type="button"
+      class="dark-mode-pill"
+      [class.active]="isDarkMode"
+      (click)="toggleDarkMode($event)"
+    >
+      <span class="dark-icon">
+        <i
+          class="fa"
+          [class.fa-moon-o]="!isDarkMode"
+          [class.fa-sun-o]="isDarkMode"
+          aria-hidden="true"
+        ></i>
+      </span>
+
+      <span class="dark-copy">
+        <strong>{{ isDarkMode ? 'LIGHT' : 'DARK' }}</strong>
+        <small>Switch mode</small>
+      </span>
+    </button>
+
+    <!-- USER -->
+    <div class="user-profile-pill">
+      <div class="user-avatar">
         <img
-          *ngIf="!avatarError"
+          *ngIf="!avatarError && userImage"
           [src]="userImage"
-          alt="User avatar"
+          alt="User"
           (error)="onUserImageError()"
         />
-        <span *ngIf="avatarError">{{ userInitial }}</span>
+
+        <span *ngIf="avatarError || !userImage" class="user-initial">
+          {{ userInitial }}
+        </span>
       </div>
 
-      <span class="user-meta">
-        <strong>{{ username }}</strong>
-        <small>Operator</small>
-      </span>
+      <div class="user-info">
+        <span class="user-label">USER</span>
+        <strong>{{ username || 'User' }}</strong>
+      </div>
     </div>
-  </div>
+
+    <!-- LOGOUT -->
+    <button type="button" class="logout-item" (click)="logout()">
+      <div class="nav-icon logout-icon">
+        <i class="fa fa-sign-out" aria-hidden="true"></i>
+      </div>
+
+      <div class="nav-text logout">LOGOUT</div>
+    </button>
+  </section>
 </header>

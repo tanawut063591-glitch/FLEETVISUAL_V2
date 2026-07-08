@@ -1,6 +1,8 @@
 import { Injectable } from "@angular/core";
 
-@Injectable()
+@Injectable({
+  providedIn: 'root',
+})
 export class TagService {
   // เก็บ tag ที่ผู้ใช้เลือก
   public tagSelected: TagGroup[] = [];

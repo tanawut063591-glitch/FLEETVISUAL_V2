@@ -1,0 +1,199 @@
+<div class="map-overview">
+
+  <div class="map" id="map"></div>
+
+  <div class="map-filter-bar">
+
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="activeFilter === 'all'"
+      (click)="setFilter('all')">
+      <span class="filter-dot all"></span>
+      All ({{ totalVessels }})
+    </button>
+
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="activeFilter === 'online'"
+      (click)="setFilter('online')">
+      <span class="filter-dot online"></span>
+      Online ({{ onlineCount }})
+    </button>
+
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="activeFilter === 'idle'"
+      (click)="setFilter('idle')">
+      <span class="filter-dot idle"></span>
+      Idle ({{ idleCount }})
+    </button>
+
+    <button
+      type="button"
+      class="filter-pill"
+      [class.active]="activeFilter === 'offline'"
+      (click)="setFilter('offline')">
+      <span class="filter-dot offline"></span>
+      Offline ({{ offlineCount }})
+    </button>
+
+  </div>
+
+  <div class="map-legend">
+
+    <div class="legend-item">
+      <span class="legend-dot online"></span>
+      Online
+    </div>
+
+    <div class="legend-item">
+      <span class="legend-dot idle"></span>
+      Idle
+    </div>
+
+    <div class="legend-item">
+      <span class="legend-dot offline"></span>
+      Offline
+    </div>
+
+  </div>
+
+  <section
+    class="vessel-popup"
+    *ngIf="selectedVessel">
+
+    <div class="popup-arrow"></div>
+
+    <button
+      type="button"
+      class="popup-close"
+      (click)="closeSelectedCard()">
+      ×
+    </button>
+
+    <div class="popup-head">
+
+      <div class="vessel-img-wrap">
+        <img
+          class="vessel-img"
+          [src]="getVesselImage(selectedVessel)"
+          (error)="onImageError($event)"
+          alt="vessel">
+
+        <div class="vessel-img-fallback">
+          <i class="fa fa-ship"></i>
+        </div>
+      </div>
+
+      <div class="vessel-info">
+
+        <div class="vessel-title-row">
+          <h3>{{ getVesselName(selectedVessel) }}</h3>
+
+          <span
+            class="status-badge"
+            [ngClass]="selectedStatus">
+            {{ getStatusText(selectedStatus) }}
+          </span>
+        </div>
+
+        <p>{{ getVesselType(selectedVessel) }}</p>
+
+        <span class="coordinate">
+          {{ getCoordinateText(selectedVessel) }}
+        </span>
+
+        <small>
+          Last seen: {{ getLastUpdateText(selectedVessel) }}
+        </small>
+
+      </div>
+
+    </div>
+
+    <div class="summary-title">
+      TODAY SUMMARY
+    </div>
+
+    <div class="summary-grid">
+
+      <div class="summary-item">
+        <div class="summary-icon blue">
+          <i class="fa fa-tachometer"></i>
+        </div>
+        <span>SPEED</span>
+        <strong>{{ getSpeedText(selectedVessel) }}</strong>
+        <small>knots</small>
+      </div>
+
+      <div class="summary-item">
+        <div class="summary-icon engine">
+          <i class="fa fa-cogs"></i>
+        </div>
+        <span>ENGINE LOAD</span>
+        <strong>{{ getEngineLoadText(selectedVessel) }}</strong>
+        <small>%</small>
+      </div>
+
+      <div class="summary-item">
+        <div class="summary-icon orange">
+          <i class="fa fa-fire"></i>
+        </div>
+        <span>FUEL CONSUMPTION</span>
+        <strong>{{ getFuelConsumptionText(selectedVessel) }}</strong>
+        <small>L</small>
+      </div>
+
+      <div class="summary-item">
+        <div class="summary-icon green">
+          <i class="fa fa-location-arrow"></i>
+        </div>
+        <span>COURSE</span>
+        <strong>{{ getCourseText(selectedVessel) }}°</strong>
+      </div>
+
+      <div class="summary-item">
+        <div class="summary-icon soft-blue">
+          <i class="fa fa-arrows-h"></i>
+        </div>
+        <span>DISTANCE</span>
+        <strong>{{ getDistanceText(selectedVessel) }}</strong>
+        <small>nm</small>
+      </div>
+
+    </div>
+
+    <div class="popup-actions">
+
+      <button
+        type="button"
+        class="action-btn past"
+        (click)="goPastTrack(selectedVessel)">
+        <i class="fa fa-line-chart"></i>
+
+        <div>
+          <b>Past Track</b>
+          <small>Route history</small>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        class="action-btn realtime"
+        (click)="goRealtime(selectedVessel)">
+        <i class="fa fa-bolt"></i>
+
+        <div>
+          <b>Real Time</b>
+          <small>Live vessel data</small>
+        </div>
+      </button>
+
+    </div>
+
+  </section>
+
+</div>

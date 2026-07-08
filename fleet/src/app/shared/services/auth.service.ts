@@ -80,16 +80,21 @@ export class AuthService {
 
       const token =
         res?.Access?.Token ||
+        res?.Access?.access_token ||
         res?.access?.token ||
+        res?.access_token ||
+        res?.accessToken ||
         res?.Token ||
         res?.token ||
+        res?.data?.token ||
+        res?.data?.access_token ||
         '';
 
       if (!token) {
         return false;
       }
 
-      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(TOKEN_KEY, String(token));
       localStorage.setItem(USERNAME_KEY, username);
 
       const user =
@@ -142,11 +147,16 @@ export class AuthService {
 
     this.redirectUrl = '';
 
-    if (redirect && redirect !== '/login' && redirect !== '/notfound') {
+    if (
+      redirect &&
+      redirect !== '/login' &&
+      redirect !== '/notfound' &&
+      redirect !== '/main'
+    ) {
       return redirect;
     }
 
-    return '/main';
+    return '/main/overview';
   }
 
   // เช็กว่า token เดิมยังใช้ได้ไหม

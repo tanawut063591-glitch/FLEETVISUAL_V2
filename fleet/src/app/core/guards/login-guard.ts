@@ -34,11 +34,6 @@ export class LoginGuard implements CanActivate {
       return true;
     }
 
-    /**
-     * ถ้าเปิดหน้า main/overview แล้ว ค่อยเปลี่ยน return true เป็นบรรทัดนี้
-     */
-    // return this.router.createUrlTree(['/main/overview']);
-
-    return true;
+    return this.router.createUrlTree(['/main/overview']);
   }
 }

@@ -1,6 +1,8 @@
 import { Injectable } from "@angular/core";
 import { DatePipe } from "@angular/common";
-@Injectable()
+@Injectable({
+  providedIn: 'root',
+})
 export class TooltipFormatService {
   constructor(private datePipe: DatePipe) {}
 

@@ -57,20 +57,23 @@ export class NewHttpClientService {
     try {
       const result = await firstValueFrom(
         this.http
-          .get<any[]>(`${URL2}/getvesselcurrentInfo`, {
+          .get<any>(`${URL2}/getvesselcurrentInfo`, {
             headers: this.getAuthHeaders(),
           })
           .pipe(
-            map((res: any[]) => {
-              if (!Array.isArray(res)) {
+            map((res: any) => {
+              const list = this.extractArray(res);
+
+              if (list.length === 0) {
                 return [];
               }
 
-              return res
-                .filter((x: any) => {
-                  return x?.name && this.securityService.hasAccess(x.name);
-                })
+              const accessible = list
+                .filter((x: any) => x?.name && this.securityService.hasAccess(x.name))
                 .sort(this.compare);
+
+              // ถ้า user ไม่อยู่ใน permission list เดิม อย่าให้หน้าจอว่าง: แสดงข้อมูลที่ backend ส่งมาแทน
+              return (accessible.length > 0 ? accessible : list).sort(this.compare);
             }),
             catchError((err) => {
               this.handleLoginRedirect(err);
@@ -278,6 +281,34 @@ export class NewHttpClientService {
       );
   }
 
+
+  private extractArray(response: any): any[] {
+    if (Array.isArray(response)) {
+      return response;
+    }
+
+    const candidates = [
+      response?.data,
+      response?.Data,
+      response?.result,
+      response?.Result,
+      response?.results,
+      response?.Results,
+      response?.vessels,
+      response?.Vessels,
+      response?.items,
+      response?.Items,
+    ];
+
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate)) {
+        return candidate;
+      }
+    }
+
+    return [];
+  }
+
   private mapTagNames(tags: any[]): string[] {
     if (!Array.isArray(tags)) {
       return [];
@@ -301,8 +332,9 @@ export class NewHttpClientService {
   private getAuthHeaders(): HttpHeaders {
     const token = this.authService.getToken();
 
+    // API2 เดิมของโปรเจกต์ Angular 5 ใช้ token แบบ raw ไม่ใช่ Bearer
     return new HttpHeaders({
-      Authorization: `Bearer ${token}`,
+      Authorization: token,
     });
   }
 

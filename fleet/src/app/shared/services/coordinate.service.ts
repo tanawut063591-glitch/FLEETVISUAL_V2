@@ -5,7 +5,9 @@ import { HttpClientService } from "../services/http-client.service";
 // API Key สำหรับเรียก Google Map / Address API
 const API_KEY: string = "ใส่_API_KEY_เดิมของคุณตรงนี้";
 
-@Injectable()
+@Injectable({
+  providedIn: 'root',
+})
 export class CoordinatesService {
   constructor(
     private decimalPipe: DecimalPipe,

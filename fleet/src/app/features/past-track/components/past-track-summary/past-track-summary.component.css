@@ -1,0 +1,102 @@
+.summary-grid {
+    display: grid;
+    grid-template-columns: 2fr repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.vessel-card,
+.kpi-card {
+    min-height: 90px;
+    background: #ffffff;
+    border: 1px solid #dbe7f5;
+    border-radius: 12px;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+}
+
+.vessel-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+}
+
+.ship-box {
+    width: 106px;
+    height: 70px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(180deg, #aee4ff, #8bd2f4);
+    overflow: hidden;
+}
+
+.ship-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.vessel-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.vessel-name span {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #e9fff4;
+    color: #10a462;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.vessel-meta {
+    margin-top: 10px;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.kpi-card {
+    padding: 16px;
+}
+
+.kpi-card small {
+    display: block;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.kpi-card strong {
+    display: block;
+    margin-top: 8px;
+    color: #1769ff;
+    font-size: 27px;
+    line-height: 1;
+    font-weight: 900;
+}
+
+.kpi-card span {
+    display: block;
+    margin-top: 7px;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.kpi-card .date-text {
+    color: #0f172a;
+    font-size: 18px;
+    line-height: 1.15;
+}
+
+@media (max-width: 1400px) {
+    .summary-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}

@@ -1,21 +1,22 @@
 import { inject } from '@angular/core';
 import { HttpInterceptorFn } from '@angular/common/http';
-import { AuthService } from '../../shared/services/auth.service';
 import { Router } from '@angular/router';
 
+import { AuthService } from '../../shared/services/auth.service';
+
 const SUSPICIOUS_PATTERNS: { pattern: RegExp; label: string }[] = [
-  { pattern: /<script[\s\S]*?>/i,         label: '<script> tag' },
-  { pattern: /javascript\s*:/i,           label: 'javascript: protocol' },
+  { pattern: /<script[\s\S]*?>/i, label: '<script> tag' },
+  { pattern: /javascript\s*:/i, label: 'javascript: protocol' },
   { pattern: /on\w+\s*=\s*["']?[^"'>]+/i, label: 'inline event handler (on*)' },
-  { pattern: /eval\s*\(/i,               label: 'eval()' },
-  { pattern: /expression\s*\(/i,         label: 'CSS expression()' },
-  { pattern: /vbscript\s*:/i,            label: 'vbscript: protocol' },
-  { pattern: /<iframe[\s\S]*?>/i,        label: '<iframe> tag' },
-  { pattern: /<object[\s\S]*?>/i,        label: '<object> tag' },
-  { pattern: /<embed[\s\S]*?>/i,         label: '<embed> tag' },
-  { pattern: /data\s*:\s*text\/html/i,   label: 'data:text/html URI' },
-  { pattern: /document\s*\.\s*cookie/i,  label: 'document.cookie access' },
-  { pattern: /window\s*\.\s*location/i,  label: 'window.location manipulation' },
+  { pattern: /eval\s*\(/i, label: 'eval()' },
+  { pattern: /expression\s*\(/i, label: 'CSS expression()' },
+  { pattern: /vbscript\s*:/i, label: 'vbscript: protocol' },
+  { pattern: /<iframe[\s\S]*?>/i, label: '<iframe> tag' },
+  { pattern: /<object[\s\S]*?>/i, label: '<object> tag' },
+  { pattern: /<embed[\s\S]*?>/i, label: '<embed> tag' },
+  { pattern: /data\s*:\s*text\/html/i, label: 'data:text/html URI' },
+  { pattern: /document\s*\.\s*cookie/i, label: 'document.cookie access' },
+  { pattern: /window\s*\.\s*location/i, label: 'window.location manipulation' },
 ];
 
 function inspectPayload(value: unknown, path: string): string[] {
@@ -28,11 +29,11 @@ function inspectPayload(value: unknown, path: string): string[] {
   }
 
   if (Array.isArray(value)) {
-    return value.flatMap((item, i) => inspectPayload(item, `${path}[${i}]`));
+    return value.flatMap((item, index) => inspectPayload(item, `${path}[${index}]`));
   }
 
   if (value !== null && typeof value === 'object') {
-    return Object.keys(value as object).flatMap(key =>
+    return Object.keys(value as object).flatMap((key) =>
       inspectPayload((value as Record<string, unknown>)[key], `${path}.${key}`)
     );
   }
@@ -40,29 +41,38 @@ function inspectPayload(value: unknown, path: string): string[] {
   return [];
 }
 
-
 export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
-  const token = authService.getToken();
-  const username = authService.getUser() || ''
-  const router = inject(Router);;
+  const router = inject(Router);
 
-  if (req.body !== null && req.body !== undefined) {
+  const url = req.url || '';
+  const isLoginRequest = url.includes('/authen') || url.includes('/token');
+  const isAssetRequest = url.includes('/assets/');
+
+  if (!isAssetRequest && req.body !== null && req.body !== undefined) {
     const warnings = inspectPayload(req.body, 'body');
+
     if (warnings.length > 0) {
+      console.warn('[tokenInterceptor] suspicious payload blocked', warnings);
       localStorage.clear();
       sessionStorage.clear();
       router.navigate(['/login']);
     }
   }
 
-  if (token) {
-    req = req.clone({
-      setHeaders: {
-        Authorization: `${token}`,
-        user:  username
-      }
-    });
+  if (!isLoginRequest && !isAssetRequest) {
+    const token = authService.getToken();
+    const username = authService.getUser() || '';
+
+    if (token) {
+      req = req.clone({
+        setHeaders: {
+          // API2 จาก Angular 5 ใช้ token แบบ raw
+          Authorization: token,
+          user: username,
+        },
+      });
+    }
   }
 
   return next(req);

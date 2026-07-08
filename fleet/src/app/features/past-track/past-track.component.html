@@ -1,0 +1,93 @@
+<div class="past-track-page">
+
+    <div class="page-header">
+        <div>
+            <div class="breadcrumb">
+                Overview
+                <span>›</span>
+                Part Track
+                <span>›</span>
+                <b>{{ vesselId }}</b>
+            </div>
+
+            <h1>PAST TRACK</h1>
+            <p>Track vessel movement history and route timeline</p>
+        </div>
+
+        <div class="header-actions">
+            <div class="date-box">
+                <span>📅</span>
+                <input type="date" [(ngModel)]="startDate">
+
+                <span class="arrow">→</span>
+
+                <input type="date" [(ngModel)]="endDate">
+                <span>📅</span>
+            </div>
+
+            <button type="button" class="btn light" (click)="loadPastTrack()">
+                ☷ Filter
+            </button>
+
+            <button type="button" class="btn primary" (click)="exportCsv()">
+                ⬇ Export
+            </button>
+        </div>
+    </div>
+
+    <div *ngIf="loading" class="state-box">
+        Loading past track data...
+    </div>
+
+    <div *ngIf="errorMessage" class="state-box error">
+        {{ errorMessage }}
+    </div>
+
+    <div *ngIf="!loading && !errorMessage && summary">
+
+        <app-past-track-summary
+            [summary]="summary">
+        </app-past-track-summary>
+
+        <div class="main-grid">
+
+            <div class="left-area">
+
+                <app-past-track-map
+                    [trackPoints]="trackPoints"
+                    [selectedPoint]="selectedPoint"
+                    (pointSelected)="selectPoint($event)">
+                </app-past-track-map>
+
+                <app-past-track-timeline
+                    [trackPoints]="trackPoints"
+                    [selectedPoint]="selectedPoint"
+                    (pointSelected)="selectPoint($event)">
+                </app-past-track-timeline>
+
+            </div>
+
+            <div class="right-area">
+
+                <app-past-track-detail
+                    [point]="selectedPoint">
+                </app-past-track-detail>
+
+                <app-past-track-playback
+                    [trackPoints]="trackPoints"
+                    [selectedPoint]="selectedPoint"
+                    [isPlaying]="isPlaying"
+                    [playbackSpeed]="playbackSpeed"
+                    (previousClicked)="previousPoint()"
+                    (nextClicked)="nextPoint()"
+                    (playClicked)="togglePlayback()"
+                    (speedChanged)="changePlaybackSpeed($event)">
+                </app-past-track-playback>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
