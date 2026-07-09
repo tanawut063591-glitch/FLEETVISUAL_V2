@@ -4,6 +4,8 @@ import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
 import { LoginComponent } from './core/components/login/login.component';
 import { MainComponent } from './core/components/main/main.component';
 import { OverviewComponent } from './features/overview/overview.component';
+import { RealtimeComponent } from './features/realtime/realtime.component';
+import { NotfoundComponent } from './features/notfound/notfound.component';
 
 //import { RealtimeComponent } from './shared/components/realtime/realtime.component';
 //import { DataLoggerComponent } from './shared/components/data-logger/data-logger.component';
@@ -48,43 +50,43 @@ export const routes: Routes = [
           title: 'OVERVIEW',
         },
       },
-      // {
-      //   path: 'realtime',
-      //   component: RealtimeComponent,
-      //   data: {
-      //     depth: 2,
-      //     title: 'REALTIME',
-      //   },
-      // },
-      // {
-      //   path: 'realtime/:id',
-      //   component: RealtimeComponent,
-      //   data: {
-      //     depth: 2,
-      //     title: 'REALTIME',
-      //   },
-      // },
-      // {
-      //   path: 'data-logger',
-      //   component: DataLoggerComponent,
-      //   data: {
-      //     depth: 3,
-      //     title: 'DATA LOGGER',
-      //   },
-      // },
+      {
+        path: 'realtime',
+        component: RealtimeComponent,
+        data: {
+          depth: 2,
+          title: 'REALTIME',
+        },
+      },
+      {
+        path: 'realtime/:id',
+        component: RealtimeComponent,
+        data: {
+          depth: 2,
+          title: 'REALTIME',
+        },
+      },
       {
         path: 'datalogger',
         redirectTo: 'data-logger',
         pathMatch: 'full',
       },
-      // {
-      //   path: 'chart',
-      //   component: ChartComponent,
-      //   data: {
-      //     depth: 4,
-      //     title: 'CHART',
-      //   },
-      // },
+      {
+        path: 'data-logger',
+        component: NotfoundComponent,
+        data: {
+          depth: 3,
+          title: 'DATA LOGGER',
+        },
+      },
+      {
+        path: 'chart',
+        component: NotfoundComponent,
+        data: {
+          depth: 4,
+          title: 'CHART',
+        },
+      },
       {
         path: 'diagram',
         component: DiagramComponent,
@@ -93,14 +95,46 @@ export const routes: Routes = [
           title: 'DIAGRAM',
         },
       },
-      // {
-      //   path: 'report',
-      //   component: ReportComponent,
-      //   data: {
-      //     depth: 6,
-      //     title: 'REPORT',
-      //   },
-      // },
+      {
+        path: 'report',
+        component: NotfoundComponent,
+        data: {
+          depth: 6,
+          title: 'REPORT',
+        },
+      },
+      {
+        path: 'alerts',
+        component: NotfoundComponent,
+        data: {
+          depth: 7,
+          title: 'ALERTS',
+        },
+      },
+      {
+        path: 'log',
+        component: NotfoundComponent,
+        data: {
+          depth: 8,
+          title: 'LOG',
+        },
+      },
+      {
+        path: 'settings',
+        component: NotfoundComponent,
+        data: {
+          depth: 10,
+          title: 'SETTINGS',
+        },
+      },
+      {
+        path: 'settings/:section',
+        component: NotfoundComponent,
+        data: {
+          depth: 10,
+          title: 'SETTINGS',
+        },
+      },
   
       {
         path: 'past-track',

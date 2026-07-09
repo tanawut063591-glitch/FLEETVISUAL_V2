@@ -1,9 +1,12 @@
 import {
+  AfterViewInit,
   Component,
+  ElementRef,
   OnInit,
   OnDestroy,
   Input,
   NgZone,
+  ViewChild,
 } from '@angular/core';
 
 import { Router } from '@angular/router';
@@ -21,7 +24,10 @@ type MapStatus = 'online' | 'idle' | 'offline';
   templateUrl: './maps-all.component.html',
   styleUrls: ['./maps-all.component.css'],
 })
-export class MapsAllComponent implements OnInit, OnDestroy {
+export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('mapElement', { static: true })
+  mapElement?: ElementRef<HTMLDivElement>;
+
   map: any = null;
   markers: any[] = [];
   markerMap: Record<string, any> = {};
@@ -44,6 +50,9 @@ export class MapsAllComponent implements OnInit, OnDestroy {
 
   private popupSub?: Subscription;
   private realtimeTimer: any = null;
+  private resizeObserver?: ResizeObserver;
+  private resizeTimer: ReturnType<typeof setTimeout> | null = null;
+  private mapInitRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly idleAfterMinutes = 30;
   private readonly offlineAfterMinutes = 120;
   private readonly realtimeRefreshMs = 15000;
@@ -72,10 +81,6 @@ export class MapsAllComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    setTimeout(() => {
-      this.initMap();
-    }, 0);
-
     this.popupSub = this.vesselPopup.vesselPopup$.subscribe((vessel) => {
       if (!vessel) {
         this.closeSelectedCard();
@@ -88,20 +93,42 @@ export class MapsAllComponent implements OnInit, OnDestroy {
     this.startRealtimeWatcher();
   }
 
+  ngAfterViewInit(): void {
+    setTimeout(() => {
+      this.initMap();
+    }, 0);
+  }
+
   ngOnDestroy(): void {
     this.clearOverlays();
     this.popupSub?.unsubscribe();
+    this.resizeObserver?.disconnect();
 
     if (this.realtimeTimer) {
       clearInterval(this.realtimeTimer);
       this.realtimeTimer = null;
     }
+
+    if (this.resizeTimer) {
+      clearTimeout(this.resizeTimer);
+      this.resizeTimer = null;
+    }
+
+    if (this.mapInitRetryTimer) {
+      clearTimeout(this.mapInitRetryTimer);
+      this.mapInitRetryTimer = null;
+    }
   }
 
   initMap(): void {
-    const mapElement = document.getElementById('map');
+    const mapElement = this.mapElement?.nativeElement;
 
     if (!mapElement) {
+      return;
+    }
+
+    if (mapElement.clientWidth <= 0 || mapElement.clientHeight <= 0) {
+      this.mapInitRetryTimer = setTimeout(() => this.initMap(), 120);
       return;
     }
 
@@ -140,9 +167,48 @@ export class MapsAllComponent implements OnInit, OnDestroy {
       styles: [],
     });
 
+    this.setupMapResizeObserver(mapElement);
+    this.refreshMapSize();
+
     if (this._data.length > 0) {
       this.renderMap(this._data);
     }
+  }
+
+
+  private setupMapResizeObserver(mapElement: HTMLElement): void {
+    this.resizeObserver?.disconnect();
+
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    this.resizeObserver = new ResizeObserver(() => {
+      this.refreshMapSize();
+    });
+
+    this.resizeObserver.observe(mapElement);
+  }
+
+  private refreshMapSize(): void {
+    if (!this.map || typeof google === 'undefined' || !google.maps) {
+      return;
+    }
+
+    if (this.resizeTimer) {
+      clearTimeout(this.resizeTimer);
+    }
+
+    this.resizeTimer = setTimeout(() => {
+      const center = this.map.getCenter?.();
+      google.maps.event.trigger(this.map, 'resize');
+
+      if (center) {
+        this.map.setCenter(center);
+      } else {
+        this.map.setCenter(this.centerPosition);
+      }
+    }, 80);
   }
 
   startRealtimeWatcher(): void {

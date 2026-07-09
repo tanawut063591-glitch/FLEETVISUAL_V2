@@ -2,8 +2,14 @@
   display: block;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: #eef5ff;
+}
+
+:host,
+:host * {
+  box-sizing: border-box;
 }
 
 .fullscreen_bg {
@@ -15,42 +21,60 @@
   filter: blur(12px) saturate(1.05);
   opacity: 0.28;
   z-index: -1;
+  pointer-events: none;
 }
 
 .main {
-  width: 100%;
-  height: 100%;
+  --fleet-header-height: 68px;
+  --fleet-sidebar-width: 310px;
+
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   display: grid;
   grid-template-areas:
     "grid-header grid-header"
     "grid-sidenav grid-content";
-  grid-template-columns: 280px minmax(0, 1fr);
-  grid-template-rows: 68px minmax(0, 1fr);
+  grid-template-columns: var(--fleet-sidebar-width) minmax(0, 1fr);
+  grid-template-rows: var(--fleet-header-height) minmax(0, 1fr);
   overflow: hidden;
   background: #eef5ff;
 }
 
 .grid-header {
   grid-area: grid-header;
+  position: relative;
   z-index: 1000;
+  width: 100%;
   min-width: 0;
+  height: var(--fleet-header-height);
+  overflow: visible;
 }
 
 .grid-sidenav {
   grid-area: grid-sidenav;
-  min-width: 0;
-  height: 100%;
-  overflow: hidden;
+  position: relative;
   z-index: 900;
+  width: var(--fleet-sidebar-width);
+  min-width: var(--fleet-sidebar-width);
+  max-width: var(--fleet-sidebar-width);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #f3f6fb;
 }
 
 .grid-content {
   grid-area: grid-content;
+  position: relative;
+  z-index: 1;
+  width: 100%;
   min-width: 0;
   min-height: 0;
   height: 100%;
   overflow: auto;
   background: linear-gradient(180deg, #f7fbff 0%, #eef5ff 100%);
+  isolation: isolate;
 }
 
 .grid-content.is-overview {
@@ -61,7 +85,7 @@
 @media screen and (max-width: 991px) {
   .main {
     grid-template-columns: 1fr;
-    grid-template-rows: 68px minmax(0, 1fr);
+    grid-template-rows: var(--fleet-header-height) minmax(0, 1fr);
     grid-template-areas:
       "grid-header"
       "grid-content";
@@ -70,9 +94,13 @@
   .grid-sidenav {
     position: fixed;
     left: 0;
-    top: 68px;
+    top: var(--fleet-header-height);
     bottom: 0;
-    width: 280px;
+    width: var(--fleet-sidebar-width);
+    min-width: var(--fleet-sidebar-width);
+    max-width: var(--fleet-sidebar-width);
+    height: calc(100vh - var(--fleet-header-height));
+    height: calc(100dvh - var(--fleet-header-height));
     z-index: 1100;
   }
 }

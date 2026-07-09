@@ -1,0 +1,153 @@
+<div class="container-fluid">
+  <!-- Fuel Supply + Load -->
+  <div id="group-ftd1">
+    <div class="ftd1">
+      <div class="ftd1-name">
+        Flow
+      </div>
+
+      <div
+        class="ftd1-value"
+        [attr.title]="getTooltip(flow_supply)"
+      >
+        {{ displayNumber(flow_supply, 1) }}
+      </div>
+
+      <div class="ftd1-unit">
+        L/h
+      </div>
+    </div>
+
+    <div class="ftd1" *ngIf="hasLoad">
+      <div class="ftd1-name">
+        Load.
+      </div>
+
+      <div
+        class="ftd1-value"
+        [attr.title]="getTooltip(load)"
+      >
+        {{ displayNumber(load, 1) }}
+      </div>
+
+      <div class="ftd1-unit">
+        %
+      </div>
+    </div>
+
+    <div class="ftd1" *ngIf="hasLoadKw">
+      <div class="ftd1-name">
+        Load.
+      </div>
+
+      <div
+        class="ftd1-value"
+        [attr.title]="getTooltip(load_kw)"
+      >
+        {{ displayNumber(load_kw, 1) }}
+      </div>
+
+      <div class="ftd1-unit">
+        kW
+      </div>
+    </div>
+  </div>
+
+  <!-- Fuel Return -->
+  <div id="group-ftd2">
+    <div class="ftd1">
+      <div class="ftd1-name">
+        Flow
+      </div>
+
+      <div
+        class="ftd1-value"
+        [attr.title]="getTooltip(flow_return)"
+      >
+        {{ displayNumber(flow_return, 1) }}
+      </div>
+
+      <div class="ftd1-unit">
+        L/h
+      </div>
+    </div>
+  </div>
+
+  <!-- Consumption Rate -->
+  <div id="group-ftd3">
+    <div class="ftd1">
+      <div class="ftd1-name">
+        Cons.
+      </div>
+
+      <div
+        class="ftd1-value"
+        [attr.title]="getTooltip(cons)"
+      >
+        {{ displayAbsNumber(cons, 1) }}
+      </div>
+
+      <div class="ftd1-unit">
+        L/h
+      </div>
+    </div>
+  </div>
+
+  <!-- Consumption Today -->
+  <div id="group-ftd4">
+    <div class="ftd1">
+      <div class="ftd1-name">
+        Cons.
+      </div>
+
+      <div
+        class="ftd1-value"
+        [attr.title]="getTooltip(consL)"
+      >
+        {{ displayNumber(consL, 0) }}
+      </div>
+
+      <div class="ftd1-unit">
+        L
+      </div>
+    </div>
+  </div>
+
+  <!-- Diagram Line -->
+  <div id="fuel-use"></div>
+
+  <!-- Fuel Supply Label -->
+  <div id="fuel-supply-title">
+    <div style="text-align: center; line-height: 1.5">
+      <i
+        class="fa fa-caret-right"
+        aria-hidden="true"
+        style="line-height: 0.1; font-size: 18px"
+      ></i>
+    </div>
+
+    <div style="font-size: 10px; line-height: 0.1; text-align: center">
+      Fuel Supply
+    </div>
+  </div>
+
+  <!-- Fuel Return Label -->
+  <div id="fuel-return-title">
+    <div style="font-size: 10px; line-height: 0.6">
+      Fuel Return
+    </div>
+
+    <div style="text-align: center; line-height: 1.5">
+      <i
+        class="fa fa-caret-left"
+        aria-hidden="true"
+        style="line-height: 0.1; font-size: 18px"
+      ></i>
+    </div>
+  </div>
+
+  <!-- DG Box -->
+  <div id="engine">
+    DG
+  </div>
+</div>

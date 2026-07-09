@@ -1,0 +1,174 @@
+<div class="container-fluid">
+  <!-- SPEED -->
+  <div class="row">
+    <div class="col-3">
+      <div class="icon-dash">
+        <i class="fa fa-tachometer" aria-hidden="true"></i>
+      </div>
+    </div>
+
+    <div class="col-3 border-right">
+      <div class="unit-name">CURRENT</div>
+      <div
+        class="value"
+        [matTooltip]="getTooltip(speedCurr)"
+        matTooltipPosition="above"
+      >
+        {{ displayNumber(speedCurr, 1) }}
+      </div>
+      <div class="unit">
+        <span>knot</span>
+      </div>
+    </div>
+
+    <div class="col-3 border-right">
+      <div class="unit-name">AVG</div>
+      <div
+        class="value"
+        [matTooltip]="getTooltip(speedAvg)"
+        matTooltipPosition="above"
+      >
+        {{ displayNumber(speedAvg, 1) }}
+      </div>
+      <div class="unit">
+        <span>knot</span>
+      </div>
+    </div>
+
+    <div class="col-3">
+      <div class="unit-name">MAX</div>
+      <div
+        class="value"
+        [matTooltip]="getTooltip(speedMax)"
+        matTooltipPosition="above"
+      >
+        {{ displayNumber(speedMax, 1) }}
+      </div>
+      <div class="unit">
+        <span>knot</span>
+      </div>
+    </div>
+  </div>
+
+  <hr />
+
+  <!-- POSITION -->
+  <div class="row">
+    <div class="col-4">
+      <div>
+        <div class="icon-mile">
+          <i class="fa fa-expand" aria-hidden="true"></i>
+        </div>
+
+        <div class="mile">
+          <div
+            class="value-mile"
+            [matTooltip]="getTooltip(distance)"
+            matTooltipPosition="above"
+          >
+            {{ displayNumber(distance, 1) }}
+          </div>
+          <div class="unit">mile</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-3">
+      <div>
+        <div class="icon-mile">
+          <i class="fa fa-compass" aria-hidden="true"></i>
+        </div>
+
+        <div class="mile">
+          <div
+            class="value-mile"
+            [matTooltip]="getTooltip(heading)"
+            matTooltipPosition="above"
+          >
+            {{ displayNumber(heading, 1) }}
+          </div>
+          <div class="unit">degree</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-5">
+      <div>
+        <div class="icon-mile" style="font-size: 23px">
+          <i class="fa fa-map-marker" aria-hidden="true"></i>
+        </div>
+
+        <div class="mile link-map" (click)="linkToMap()">
+          <div
+            class="coordinate"
+            [matTooltip]="getTooltip(lat)"
+            matTooltipPosition="above"
+          >
+            {{ displayCoordinate(lat, 6) }}{{ coordinatesService.getUnitLat(displayCoordinate(lat, 6)) }}
+          </div>
+
+          <div
+            class="coordinate"
+            [matTooltip]="getTooltip(long)"
+            matTooltipPosition="above"
+          >
+            {{ displayCoordinate(long, 6) }}{{ coordinatesService.getUnitLong(displayCoordinate(long, 6)) }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr />
+
+  <!-- FUEL -->
+  <div class="row">
+    <div class="col-3">
+      <div class="icon-dash">
+        <i class="fa fa-tint header-icon" aria-hidden="true"></i>
+      </div>
+    </div>
+
+    <div class="col-3 border-right">
+      <div class="unit-name">CURRENT</div>
+      <div
+        class="value"
+        [matTooltip]="getTooltip(fuel_cons)"
+        matTooltipPosition="above"
+      >
+        {{ displayNumber(fuel_cons, 1) }}
+      </div>
+      <div class="unit">
+        <span>L/h</span>
+      </div>
+    </div>
+
+    <div class="col-3 border-right">
+      <div class="unit-name">AVG</div>
+      <div
+        class="value"
+        [matTooltip]="getTooltip(fuelAvg)"
+        matTooltipPosition="above"
+      >
+        {{ displayNumber(fuelAvg, 1) }}
+      </div>
+      <div class="unit">
+        <span>L/h</span>
+      </div>
+    </div>
+
+    <div class="col-3">
+      <div class="unit-name">TOTAL</div>
+      <div
+        class="value"
+        [matTooltip]="getTooltip(fuelTotal)"
+        matTooltipPosition="above"
+      >
+        {{ displayNumber(fuelTotal, 0) }}
+      </div>
+      <div class="unit">
+        <span>L</span>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,139 @@
+<div class="container-fluid">
+  <div id="group-ftd1">
+    <div class="ftd1">
+      <div class="ftd1-name">Flow</div>
+      <div class="ftd1-value" [attr.title]="getTooltip(flow_supply)">
+        {{ displayNumber(flow_supply, 1) }}
+      </div>
+      <div class="ftd1-unit">L/h</div>
+    </div>
+
+    <div class="ftd1">
+      <div class="ftd1-name">Temp.</div>
+      <div class="ftd1-value" [attr.title]="getTooltip(temp_supply)">
+        {{ displayTempSupply || displayNumber(temp_supply, 1) }}
+      </div>
+      <div class="ftd1-unit">°C</div>
+    </div>
+
+    <div class="ftd1">
+      <div class="ftd1-name">Dens.</div>
+      <div class="ftd1-value" [attr.title]="getTooltip(dens_supply)">
+        {{ displayNumber(dens_supply, 1) }}
+      </div>
+      <div class="ftd1-unit">kg/m3</div>
+    </div>
+  </div>
+
+  <div id="group-ftd2">
+    <div class="ftd1">
+      <div class="ftd1-name">Flow</div>
+      <div class="ftd1-value" [attr.title]="getTooltip(flow_return)">
+        {{ displayNumber(flow_return, 1) }}
+      </div>
+      <div class="ftd1-unit">L/h</div>
+    </div>
+
+    <div class="ftd1">
+      <div class="ftd1-name">Temp.</div>
+      <div class="ftd1-value" [attr.title]="getTooltip(temp_return)">
+        {{ displayTempReturn || displayNumber(temp_return, 1) }}
+      </div>
+      <div class="ftd1-unit">°C</div>
+    </div>
+
+    <div class="ftd1">
+      <div class="ftd1-name">Dens.</div>
+      <div class="ftd1-value" [attr.title]="getTooltip(dens_return)">
+        {{ displayNumber(dens_return, 1) }}
+      </div>
+      <div class="ftd1-unit">kg/m3</div>
+    </div>
+  </div>
+
+  <div id="group-ftd3">
+    <div class="ftd1">
+      <div class="ftd1-name">Cons.</div>
+      <div class="ftd1-value" [attr.title]="getTooltip(cons)">
+        {{ displayAbsNumber(cons, 1) }}
+      </div>
+      <div class="ftd1-unit">L/h</div>
+    </div>
+  </div>
+
+  <div id="group-ftd4">
+    <div class="ftd1">
+      <div class="ftd1-name">Cons.</div>
+      <div class="ftd1-value" [attr.title]="getTooltip(consL)">
+        {{ displayNumber(consL, 0) }}
+      </div>
+      <div class="ftd1-unit">L</div>
+    </div>
+  </div>
+
+  <div id="fuel-use"></div>
+
+  <div id="fuel-supply-title">
+    <div style="text-align: center; line-height: 1.5">
+      <i
+        class="fa fa-caret-right"
+        aria-hidden="true"
+        style="line-height: 0.1; font-size: 18px"
+      ></i>
+    </div>
+    <div style="font-size: 10px; line-height: 0.1; text-align: center">
+      Fuel Supply
+    </div>
+  </div>
+
+  <div id="fuel-return-title">
+    <div style="font-size: 10px; line-height: 0.6">
+      Fuel Return
+    </div>
+    <div style="text-align: center; line-height: 1.5">
+      <i
+        class="fa fa-caret-left"
+        aria-hidden="true"
+        style="line-height: 0.1; font-size: 18px"
+      ></i>
+    </div>
+  </div>
+
+  <div id="engine">Engine</div>
+  <div id="gear">Gear</div>
+  <div id="line-engine-shaft"></div>
+  <div id="enging-shaft-title">Engine Shaft</div>
+  <div id="prop-shaft-title">Prop. Shaft</div>
+  <div id="line1"></div>
+  <div id="line2"></div>
+
+  <div id="speed-engine">
+    <div class="ftd1">
+      <div class="ftd1-name">Speed</div>
+      <div class="ftd1-value" [attr.title]="getTooltip(speed_eng)">
+        {{ displayNumber(speed_eng, 0) }}
+      </div>
+      <div class="ftd1-unit">RPM</div>
+    </div>
+  </div>
+
+  <div id="speed-prop">
+    <div class="ftd1">
+      <div class="ftd1-name">Speed</div>
+      <div class="ftd1-value" [attr.title]="getTooltip(speed_gear)">
+        {{ displayNumber(speed_gear, 0) }}
+      </div>
+      <div class="ftd1-unit">RPM</div>
+    </div>
+  </div>
+
+  <div id="load-prop" *ngIf="hasLoad">
+    <div class="ftd1">
+      <div class="ftd1-name">Load</div>
+      <div class="ftd1-value" [attr.title]="getTooltip(load)">
+        {{ displayNumber(load, 0) }}
+      </div>
+      <div class="ftd1-unit">%</div>
+    </div>
+  </div>
+</div>

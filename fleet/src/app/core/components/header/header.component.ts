@@ -53,7 +53,7 @@ export class HeaderComponent implements OnInit {
     {
       label: 'DATA LOGGER',
       icon: 'fa fa-database',
-      route: '/main/datalogger',
+      route: '/main/data-logger',
       show: true,
     },
     {

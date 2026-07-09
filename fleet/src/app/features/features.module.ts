@@ -1,4 +1,10 @@
-import { NgModule, NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import {
+  NgModule,
+  NO_ERRORS_SCHEMA,
+  CUSTOM_ELEMENTS_SCHEMA,
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { SharedComponentsModule } from '../shared/shared-components.module';
 
@@ -10,6 +16,17 @@ import { OverviewCardComponent } from './overview/summary-overview-card/overview
 
 import { DiagramComponent } from './diagram/diagram.component';
 import { NotfoundComponent } from './notfound/notfound.component';
+
+import { RealtimeComponent } from './realtime/realtime.component';
+import { SummaryComponent } from './realtime/summary/summary.component';
+import { MapComponent } from './realtime/map/map.component';
+import { MainEngineComponent } from './realtime/main-engine/main-engine.component';
+import { Main2EngineComponent } from './realtime/main-2engine/main-engine.component';
+import { MainEngineElectricComponent } from './realtime/main-engine-electric/main-engine-electric.component';
+import { AuxEngineComponent } from './realtime/aux-engine/aux-engine.component';
+import { DieselGeneratorNoRpmComponent } from './realtime/diesel-generator-no-rpm/diesel-generator-no-rpm.component';
+import { DieselGeneratorNoRpmVtotalComponent } from './realtime/diesel-generator-no-rpm-vtotal/diesel-generator-no-rpm-vtotal.component';
+import { ElectricMotorComponent } from './realtime/electric-motor/electric-motor.component';
 
 import { PastTrackComponent } from './past-track/past-track.component';
 import { PastTrackMapComponent } from './past-track/components/past-track-map/past-track-map.component';
@@ -24,8 +41,21 @@ const FEATURE_COMPONENTS = [
   SummaryOverviewComponent,
   SummaryOverviewCardComponent,
   OverviewCardComponent,
+
   DiagramComponent,
   NotfoundComponent,
+
+  RealtimeComponent,
+  SummaryComponent,
+  MapComponent,
+  MainEngineComponent,
+  Main2EngineComponent,
+  MainEngineElectricComponent,
+  AuxEngineComponent,
+  DieselGeneratorNoRpmComponent,
+  DieselGeneratorNoRpmVtotalComponent,
+  ElectricMotorComponent,
+
   PastTrackComponent,
   PastTrackMapComponent,
   PastTrackSummaryComponent,
@@ -36,10 +66,19 @@ const FEATURE_COMPONENTS = [
 
 @NgModule({
   imports: [
+    CommonModule,
     SharedComponentsModule,
+    MatTooltipModule,
   ],
-  declarations: FEATURE_COMPONENTS,
-  exports: FEATURE_COMPONENTS,
-  schemas: [CUSTOM_ELEMENTS_SCHEMA, NO_ERRORS_SCHEMA],
+  declarations: [
+    ...FEATURE_COMPONENTS,
+  ],
+  exports: [
+    ...FEATURE_COMPONENTS,
+  ],
+  schemas: [
+    CUSTOM_ELEMENTS_SCHEMA,
+    NO_ERRORS_SCHEMA,
+  ],
 })
 export class FeaturesModule {}

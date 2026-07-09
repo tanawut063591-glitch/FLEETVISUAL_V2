@@ -1,49 +1,42 @@
 import { Injectable } from '@angular/core';
-import { Observable, Subject, Subscription, timer } from 'rxjs';
+import { Store } from '@ngrx/store';
+import { BehaviorSubject, Observable, Subject, Subscription, timer } from 'rxjs';
 
 import { HttpClientService } from './http-client.service';
+import * as fvInfoActions from '../../store/actions/fv-info.action';
 
 @Injectable({
   providedIn: 'root',
 })
 export class FvRealtimeService {
-  // timer สำหรับ refresh ข้อมูล realtime
   private timerSubscription: Subscription | null = null;
-
-  // subscription โหลดไฟล์ dashboard.tag.json
   private tagFileSubscription: Subscription | null = null;
-
-  // ค่าเวลา default ถ้าไม่มี interval ส่งเข้ามา
   private readonly defaultInterval = 5000;
 
-  // เก็บ tag จาก dashboard.tag.json
   private realtimeTags: any[] = [];
-
-  // เก็บ prefix เรือที่โหลดแล้ว กันโหลดซ้ำ
   private loadedVessels: string[] = [];
-
-  // เก็บ payload ของเรือ active ล่าสุด
   private activePayload: any = null;
+  private pendingVessel: any = null;
 
   private readonly realtimePayloadSource = new Subject<any>();
+  private readonly activeVesselSource = new BehaviorSubject<any>(this.readStoredVessel());
 
-  readonly realtimePayload$: Observable<any> =
-    this.realtimePayloadSource.asObservable();
+  readonly realtimePayload$: Observable<any> = this.realtimePayloadSource.asObservable();
+  readonly activeVessel$: Observable<any> = this.activeVesselSource.asObservable();
 
-  constructor(private http: HttpClientService) {}
+  constructor(
+    private http: HttpClientService,
+    private store: Store<any>
+  ) {}
 
-  // เริ่มทำงาน Realtime Service
   start(interval?: number): void {
     this.stop();
     this.resetData();
 
-    const safeInterval =
-      interval && interval > 0 ? interval : this.defaultInterval;
-
+    const safeInterval = interval && interval > 0 ? interval : this.defaultInterval;
     this.loadRealtimeTags(safeInterval);
   }
 
-  // โหลดไฟล์ dashboard.tag.json
   private loadRealtimeTags(interval: number): void {
     this.tagFileSubscription = this.http
       .getJsonFile('/assets/tags/dashboard.tag.json')
@@ -51,6 +44,12 @@ export class FvRealtimeService {
         next: (res: any) => {
           this.realtimeTags = this.mapRealtimeTags(res);
           this.startTimer(interval);
+
+          if (this.pendingVessel) {
+            const pending = this.pendingVessel;
+            this.pendingVessel = null;
+            this.setActiveVessel(pending);
+          }
         },
         error: (error) => {
           console.error('[FvRealtimeService] load tags error:', error);
@@ -59,7 +58,6 @@ export class FvRealtimeService {
       });
   }
 
-  // แปลง tag จาก json ให้เป็น array ใช้งานง่าย
   private mapRealtimeTags(res: any): any[] {
     const tags: any[] = [];
 
@@ -90,33 +88,48 @@ export class FvRealtimeService {
     return tags;
   }
 
-  // เริ่ม timer สำหรับ refresh ข้อมูล realtime
   private startTimer(interval: number): void {
     this.timerSubscription = timer(interval, interval).subscribe(() => {
       this.tick();
     });
   }
 
-  // refresh ข้อมูล realtime ซ้ำตามเวลา
   private tick(): void {
     if (this.activePayload) {
-      this.realtimePayloadSource.next(this.activePayload);
+      this.emitRealtimePayload(this.activePayload);
     }
   }
 
-  // ใช้สำหรับ set เรือ active จาก component ภายนอก
   setActiveVessel(vessel: any): void {
+    if (!vessel) {
+      return;
+    }
+
+    this.activeVesselSource.next(vessel);
+
+    try {
+      localStorage.setItem('selectedVessel', JSON.stringify(vessel));
+      localStorage.setItem('realtimeVessel', JSON.stringify(vessel));
+    } catch {}
+
+    this.store.dispatch(new fvInfoActions.SetFvActive(vessel));
+
+    if (!this.realtimeTags || this.realtimeTags.length === 0) {
+      this.pendingVessel = vessel;
+      return;
+    }
+
     const payload = this.generateTags(vessel);
 
     if (!payload) {
+      this.pendingVessel = vessel;
       return;
     }
 
     this.activePayload = payload;
-    this.realtimePayloadSource.next(payload);
+    this.emitRealtimePayload(payload);
   }
 
-  // โหลดข้อมูลเรือแบบหน่วงเวลา กันยิงพร้อมกันเยอะเกินไป
   setDelay(offset: number, vessel: any): void {
     const delay = Math.max(offset, 1) * 100;
 
@@ -133,24 +146,22 @@ export class FvRealtimeService {
       }
 
       this.loadedVessels.push(prefix);
-
-      const payload = this.generateTags(vessel);
-
-      if (payload) {
-        this.activePayload = payload;
-        this.realtimePayloadSource.next(payload);
-      }
+      this.setActiveVessel(vessel);
     }, delay);
   }
 
-  // สร้าง tag จริงของเรือ เช่น BOAT01-VES-GPS-SPEED
+  private emitRealtimePayload(payload: any): void {
+    this.realtimePayloadSource.next(payload);
+    this.store.dispatch(new fvInfoActions.SetRealtimeActive(payload));
+  }
+
   private generateTags(vessel: any): any {
     if (!vessel) {
       return null;
     }
 
-    const fvInfo = vessel?.fvInfo || vessel;
-    const prefix = fvInfo?.prefix;
+    const fvInfo = vessel?.fvInfo || vessel?.fv || vessel;
+    const prefix = fvInfo?.prefix || fvInfo?.id || fvInfo?.name;
 
     if (!prefix) {
       return null;
@@ -172,11 +183,13 @@ export class FvRealtimeService {
 
     return {
       tags,
-      fv: fvInfo,
+      fv: {
+        ...fvInfo,
+        prefix,
+      },
     };
   }
 
-  // หยุด service และยกเลิก subscription ทั้งหมด
   stop(): void {
     this.timerSubscription?.unsubscribe();
     this.tagFileSubscription?.unsubscribe();
@@ -185,10 +198,19 @@ export class FvRealtimeService {
     this.tagFileSubscription = null;
   }
 
-  // เคลียร์ข้อมูลเก่า กัน tag ซ้ำ / เรือโหลดค้าง
   private resetData(): void {
     this.realtimeTags = [];
     this.loadedVessels = [];
     this.activePayload = null;
+    this.pendingVessel = null;
+  }
+
+  private readStoredVessel(): any {
+    try {
+      const raw = localStorage.getItem('realtimeVessel') || localStorage.getItem('selectedVessel');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
   }
 }

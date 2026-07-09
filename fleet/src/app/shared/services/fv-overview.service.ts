@@ -1,46 +1,39 @@
 import { Injectable } from '@angular/core';
+import { Store } from '@ngrx/store';
 import { Observable, Subject, Subscription, timer } from 'rxjs';
 
 import { HttpClientService } from './http-client.service';
+import * as fvOverviewActions from '../../store/actions/fv-overview.action';
 
 @Injectable({
   providedIn: 'root',
 })
 export class FvOverviewService {
-  // เก็บ timer สำหรับ refresh ข้อมูล Overview
   private timerSubscription: Subscription | null = null;
-
-  // เก็บ subscription ตอนโหลดไฟล์ overview.tag.json
   private tagFileSubscription: Subscription | null = null;
-
-  // ค่าเวลา default ถ้าไม่ได้ส่ง interval มา
   private readonly defaultInterval = 5000;
 
-  // เก็บ tag จาก overview.tag.json
   private overviewTags: any[] = [];
-
-  // เก็บข้อมูลที่พร้อมส่งไปโหลด Overview
   private overviewDatas: any[] = [];
+  private pendingVessels: any[] = [];
 
   private readonly overviewPayloadSource = new Subject<any[]>();
 
-  readonly overviewPayload$: Observable<any[]> =
-    this.overviewPayloadSource.asObservable();
+  readonly overviewPayload$: Observable<any[]> = this.overviewPayloadSource.asObservable();
 
-  constructor(private http: HttpClientService) {}
+  constructor(
+    private http: HttpClientService,
+    private store: Store<any>
+  ) {}
 
-  // เริ่มทำงานของ Overview Service
   start(interval?: number): void {
     this.stop();
     this.resetData();
 
-    const safeInterval =
-      interval && interval > 0 ? interval : this.defaultInterval;
-
+    const safeInterval = interval && interval > 0 ? interval : this.defaultInterval;
     this.loadOverviewTags(safeInterval);
   }
 
-  // โหลดไฟล์ overview.tag.json
   private loadOverviewTags(interval: number): void {
     this.tagFileSubscription = this.http
       .getJsonFile('/assets/tags/overview.tag.json')
@@ -48,6 +41,12 @@ export class FvOverviewService {
         next: (res: any) => {
           this.overviewTags = this.mapOverviewTags(res);
           this.startTimer(interval);
+
+          if (this.pendingVessels.length > 0) {
+            const pending = [...this.pendingVessels];
+            this.pendingVessels = [];
+            this.setVessels(pending);
+          }
         },
         error: (error) => {
           console.error('[FvOverviewService] load tags error:', error);
@@ -56,7 +55,6 @@ export class FvOverviewService {
       });
   }
 
-  // แปลง tag จาก json ให้เป็นรูปแบบที่ใช้งานง่าย
   private mapOverviewTags(res: any): any[] {
     if (!res) {
       return [];
@@ -75,50 +73,52 @@ export class FvOverviewService {
       .filter((tag) => tag.name && tag.tagName);
   }
 
-  // เริ่ม timer เพื่อ refresh ข้อมูล Overview ซ้ำตามเวลา
   private startTimer(interval: number): void {
     this.timerSubscription = timer(interval, interval).subscribe(() => {
       this.tick();
     });
   }
 
-  // สั่งส่งข้อมูล Overview ซ้ำ
   private tick(): void {
     if (this.overviewDatas.length > 0) {
-      this.overviewPayloadSource.next(this.overviewDatas);
+      this.emitOverviewPayload(this.overviewDatas);
     }
   }
 
-  // ใช้สำหรับ set ข้อมูลเรือจาก component ภายนอก
   setVessels(fvInfos: any[]): void {
     if (!Array.isArray(fvInfos) || fvInfos.length === 0) {
       this.overviewDatas = [];
-      this.overviewPayloadSource.next([]);
+      this.emitOverviewPayload([]);
+      return;
+    }
+
+    if (!this.overviewTags || this.overviewTags.length === 0) {
+      this.pendingVessels = fvInfos;
       return;
     }
 
     this.overviewDatas = this.buildOverviewDatas(fvInfos);
-
-    if (this.overviewDatas.length > 0) {
-      this.overviewPayloadSource.next(this.overviewDatas);
-    }
+    this.emitOverviewPayload(this.overviewDatas);
   }
 
-  // สร้างข้อมูล Overview สำหรับเรือทุกลำ
+  private emitOverviewPayload(payload: any[]): void {
+    this.overviewPayloadSource.next(payload);
+    this.store.dispatch(new fvOverviewActions.GetFVOverview(payload));
+  }
+
   private buildOverviewDatas(fvInfos: any[]): any[] {
     return fvInfos
       .map((fv) => this.generateTags(fv))
       .filter((payload) => payload !== null);
   }
 
-  // สร้าง tag จริงของเรือ เช่น BOAT01-VES-GPS-SPEED
   private generateTags(fv: any): any {
     if (!fv) {
       return null;
     }
 
-    const fvInfo = fv?.fvInfo || fv;
-    const prefix = fvInfo?.prefix;
+    const fvInfo = fv?.fvInfo || fv?.fv || fv;
+    const prefix = fvInfo?.prefix || fvInfo?.id || fvInfo?.name;
 
     if (!prefix) {
       return null;
@@ -140,11 +140,13 @@ export class FvOverviewService {
 
     return {
       tags,
-      fv: fvInfo,
+      fv: {
+        ...fvInfo,
+        prefix,
+      },
     };
   }
 
-  // หยุด Service และเคลียร์ subscription ทั้งหมด
   stop(): void {
     this.timerSubscription?.unsubscribe();
     this.tagFileSubscription?.unsubscribe();
@@ -153,9 +155,9 @@ export class FvOverviewService {
     this.tagFileSubscription = null;
   }
 
-  // เคลียร์ข้อมูลเก่า กัน tag ซ้ำ / data ซ้ำ
   private resetData(): void {
     this.overviewTags = [];
     this.overviewDatas = [];
+    this.pendingVessels = [];
   }
 }

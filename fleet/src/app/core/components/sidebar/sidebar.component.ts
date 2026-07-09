@@ -3,6 +3,7 @@ import {
   OnInit,
   OnDestroy,
   OnChanges,
+  DoCheck,
   SimpleChanges,
   ChangeDetectionStrategy,
   Input,
@@ -16,6 +17,7 @@ import { Subscription } from 'rxjs';
 
 import { CoordinatesService } from '../../../shared/services/coordinate.service';
 
+// รูปแบบข้อมูลที่เอาไปแสดงใน Sidebar
 interface VesselViewItem {
   raw: any;
   key: string;
@@ -34,12 +36,18 @@ interface VesselViewItem {
   standalone: false,
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.css'],
+
+  // ใช้ OnPush เพื่อให้หน้าเบาขึ้น เวลา realtime update
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
+export class SidebarComponent implements OnInit, OnDestroy, OnChanges, DoCheck {
+  // รับ list เรือจาก parent component
   @Input() vessels: any[] = [];
+
+  // รับเรือที่กำลัง active อยู่
   @Input() activeVessel: any = null;
 
+  // ส่งเรือที่เลือกกลับไปให้ parent
   @Output() selectedVessel = new EventEmitter<any>();
 
   keyword = '';
@@ -52,7 +60,8 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
   selectedVesselKey = '';
 
   private breakpointSub: Subscription | null = null;
-  private timer: ReturnType<typeof setInterval> | null = null;
+  private realtimeTimer: ReturnType<typeof setInterval> | null = null;
+  private lastVesselSignature = '';
 
   constructor(
     private coordinatesService: CoordinatesService,
@@ -61,6 +70,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
   ) {}
 
   ngOnInit(): void {
+    // เช็กขนาดจอ ถ้าจอเล็กให้ซ่อน Sidebar
     this.breakpointSub = this.breakpointObserver
       .observe(['(max-width: 991px)'])
       .subscribe((state: BreakpointState) => {
@@ -70,33 +80,50 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       });
 
     this.allVessels = Array.isArray(this.vessels) ? this.vessels : [];
+    this.lastVesselSignature = this.createVesselSignature(this.allVessels);
+
     this.syncActiveVessel();
     this.buildVisibleVessels();
 
-    // refresh เวลา Last seen ทุก 1 นาที
-    this.timer = setInterval(() => {
-      this.buildVisibleVessels();
-    }, 60000);
+    // เริ่มจับเวลา Last seen แบบ realtime
+    this.startRealtimeLastSeenTimer();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    // ถ้าข้อมูลเรือเปลี่ยน ให้สร้าง Sidebar ใหม่
     if (changes['vessels']) {
       this.allVessels = Array.isArray(this.vessels) ? this.vessels : [];
+      this.lastVesselSignature = this.createVesselSignature(this.allVessels);
       this.buildVisibleVessels();
     }
 
+    // ถ้าเรือ active เปลี่ยน ให้ sync highlight ใหม่
     if (changes['activeVessel']) {
       this.syncActiveVessel();
       this.buildVisibleVessels();
     }
   }
 
+  ngDoCheck(): void {
+    // จับกรณีข้อมูล realtime เปลี่ยน แต่ array ยังเป็นตัวเดิม
+    const source = Array.isArray(this.vessels) ? this.vessels : [];
+    const currentSignature = this.createVesselSignature(source);
+
+    if (currentSignature && currentSignature !== this.lastVesselSignature) {
+      this.lastVesselSignature = currentSignature;
+      this.allVessels = source;
+      this.buildVisibleVessels();
+    }
+  }
+
   ngOnDestroy(): void {
+    // เคลียร์ subscription กัน memory leak
     this.breakpointSub?.unsubscribe();
 
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
+    // เคลียร์ timer กันทำงานค้างหลังออกจากหน้า
+    if (this.realtimeTimer) {
+      clearInterval(this.realtimeTimer);
+      this.realtimeTimer = null;
     }
   }
 
@@ -122,9 +149,13 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       return;
     }
 
+    // เก็บ key เรือที่เลือก เพื่อทำ active card
     this.selectedVesselKey = item.key;
+
+    // ส่งข้อมูลเรือออกไปให้หน้า Overview / Realtime / Past Track
     this.selectedVessel.emit(item.raw);
 
+    // จำเรือที่เลือกล่าสุดไว้ใช้ข้ามหน้า
     try {
       localStorage.setItem('selectedVessel', JSON.stringify(item.raw));
       localStorage.setItem('realtimeVessel', JSON.stringify(item.raw));
@@ -138,12 +169,12 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     this.buildVisibleVessels();
-    this.cdr.markForCheck();
   }
 
   buildVisibleVessels(): void {
     const keyword = (this.keyword || '').toLowerCase().trim();
 
+    // กรองเรือตามคำค้นหา
     const filtered = this.allVessels.filter((vessel: any) => {
       if (!keyword) {
         return true;
@@ -162,6 +193,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       );
     });
 
+    // แปลงข้อมูลดิบให้เป็นข้อมูลพร้อมแสดงผล
     this.visibleVessels = filtered.map((vessel: any, index: number) => {
       const normalized = this.normalizeVessel(vessel);
       const key = this.getVesselKey(normalized, index);
@@ -183,7 +215,19 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       };
     });
 
+    // บอก Angular ให้ refresh UI เพราะใช้ OnPush
     this.cdr.markForCheck();
+  }
+
+  private startRealtimeLastSeenTimer(): void {
+    if (this.realtimeTimer) {
+      clearInterval(this.realtimeTimer);
+    }
+
+    // ให้ Last seen เดินเอง เช่น 1 M, 2 M, 3 M
+    this.realtimeTimer = setInterval(() => {
+      this.buildVisibleVessels();
+    }, 1000);
   }
 
   getStatus(vessel: any): string {
@@ -206,6 +250,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       return 'Online';
     }
 
+    // ถ้าไม่มี status จาก backend ให้คำนวณจาก Last seen
     const minute = this.getLastSeenMinute(vessel);
 
     if (minute > 120) {
@@ -236,8 +281,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       return '-';
     }
 
-    // บังคับ format เอง ไม่ใช้ FvTimeService
-    // เพื่อให้แสดงเป็น 1 M, 2 M, 60 D แบบ sidebar
+    // แปลง timestamp เป็น 1 M, 2 M, 1 H, 1 D
     return this.formatLastSeen(vessel.timestamp);
   }
 
@@ -246,14 +290,13 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       return 999999;
     }
 
-    const now = Date.now();
     const last = new Date(vessel.timestamp).getTime();
 
     if (Number.isNaN(last)) {
       return 999999;
     }
 
-    const diff = Math.floor((now - last) / 60000);
+    const diff = Math.floor((Date.now() - last) / 60000);
 
     return diff < 0 ? 0 : diff;
   }
@@ -278,6 +321,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
     try {
       const service: any = this.coordinatesService;
 
+      // ถ้ามี service format พิกัด ให้ใช้ของเดิม
       if (typeof service.getLatLong === 'function') {
         const value = service.getLatLong(String(lat), String(lng));
 
@@ -293,6 +337,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   getVesselKey(vessel: any, index: number): string {
+    // ใช้สร้าง key เฉพาะของเรือแต่ละลำ
     if (!vessel) {
       return String(index);
     }
@@ -317,6 +362,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   trackByVessel(index: number, item: VesselViewItem): string | number {
+    // ช่วยลดการ render ซ้ำของ list
     return item?.key || index;
   }
 
@@ -333,6 +379,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       return;
     }
 
+    // sync เรือที่ active มาจาก parent
     const active = this.normalizeVessel(this.activeVessel);
     this.selectedVesselKey = this.getVesselKey(active, 0);
   }
@@ -342,8 +389,13 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       return {};
     }
 
+    // รองรับหลายรูปแบบข้อมูล เช่น fvInfo, fv, data ดิบ
     const fvInfo = vessel?.fvInfo || vessel?.fv || vessel;
-    const newData = vessel?.newData || this.buildTagMap(vessel?.datas || []);
+
+    const newData =
+      vessel?.newData ||
+      vessel?.data ||
+      this.buildTagMap(vessel?.datas || []);
 
     const tagValue = (names: string[]): any => {
       for (const name of names) {
@@ -351,7 +403,11 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
           newData?.[name] ||
           this.findCaseInsensitive(newData, name);
 
-        const value = item?.value ?? item?.Value;
+        const value =
+          item?.value ??
+          item?.Value ??
+          item?.ivalue ??
+          item?.IValue;
 
         if (value !== undefined && value !== null && value !== '') {
           return value;
@@ -371,6 +427,9 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
         'GPS_LONG',
         'GPS_LNG',
         'GPS_SPEED',
+        'LAT',
+        'LNG',
+        'LONG',
       ];
 
       for (const key of keys) {
@@ -382,7 +441,8 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
           item?.timestamp ||
           item?.dateTime ||
           item?.DateTime ||
-          item?.TimeStamp;
+          item?.TimeStamp ||
+          item?.timeStamp;
 
         if (timestamp) {
           return timestamp;
@@ -437,8 +497,9 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
           'GPS_LONG',
           'GPS_LNG',
           'LNG',
-          'lng',
+          'LONG',
           'long',
+          'lng',
           'longitude',
         ]) ??
         fvInfo.long ??
@@ -474,6 +535,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       return map;
     }
 
+    // แปลง array datas ให้เป็น object เพื่อค้นหา tag ได้ง่าย
     datas.forEach((data: any) => {
       const name =
         data?.name ||
@@ -486,12 +548,17 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       }
 
       map[name] = {
-        value: data.value ?? data.Value,
+        value:
+          data.value ??
+          data.Value ??
+          data.ivalue ??
+          data.IValue,
         timestamp:
           data.dateTime ||
           data.timestamp ||
           data.DateTime ||
-          data.TimeStamp,
+          data.TimeStamp ||
+          data.timeStamp,
       };
     });
 
@@ -503,6 +570,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       return null;
     }
 
+    // ค้นหา key แบบไม่สนตัวเล็กตัวใหญ่
     const foundKey = Object.keys(obj).find(
       (itemKey) => itemKey.toLowerCase() === key.toLowerCase()
     );
@@ -510,7 +578,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
     return foundKey ? obj[foundKey] : null;
   }
 
-  private formatLastSeen(timestamp: string): string {
+  private formatLastSeen(timestamp: string | Date): string {
     const date = new Date(timestamp);
 
     if (Number.isNaN(date.getTime())) {
@@ -520,7 +588,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
     const diffMs = Date.now() - date.getTime();
     const diffMinRaw = Math.floor(diffMs / 60000);
 
-    // ถ้าน้อยกว่า 1 นาที ให้แสดง 1 M แทน Now
+    // ถ้าน้อยกว่า 1 นาที แสดง 1 M ให้เหมือน UI
     const diffMin = diffMinRaw < 1 ? 1 : diffMinRaw;
 
     if (diffMin < 60) {
@@ -551,6 +619,28 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
     const num = Number.parseFloat(String(value));
 
     return Number.isNaN(num) ? null : num;
+  }
+
+  private createVesselSignature(vessels: any[]): string {
+    if (!Array.isArray(vessels)) {
+      return '';
+    }
+
+    // ใช้เช็กว่าข้อมูล realtime เปลี่ยนหรือยัง
+    return vessels
+      .map((vessel: any, index: number) => {
+        const item = this.normalizeVessel(vessel);
+        const key = this.getVesselKey(item, index);
+
+        return [
+          key,
+          item.lat,
+          item.long,
+          item.status,
+          item.timestamp,
+        ].join('|');
+      })
+      .join('::');
   }
 
   private resolveFallbackImage(name: string): string {

@@ -1,26 +1,33 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
+const INVALID_SENSOR_VALUES = [999999, -999999];
+
 @Pipe({
   name: 'valueLength',
   standalone: false,
 })
 export class ValueLengthPipe implements PipeTransform {
-  transform(value: any, digits: number = 0): string | number {
-    if (value === undefined || value === null || value === '') {
-      return '0';
+  transform(
+    value: string | number | null | undefined,
+    digits = 2,
+    fallback = '---'
+  ): string {
+    if (value === null || value === undefined || value === '') {
+      return fallback;
     }
 
-    const normalized = typeof value === 'string'
-      ? value.replace(/,/g, '')
-      : value;
-
+    const normalized = typeof value === 'string' ? value.replace(/,/g, '') : value;
     const num = Number(normalized);
 
     if (!Number.isFinite(num)) {
-      return value;
+      return fallback;
     }
 
-    const safeDigits = Number.isFinite(Number(digits)) ? Number(digits) : 0;
+    if (INVALID_SENSOR_VALUES.includes(num)) {
+      return '0';
+    }
+
+    const safeDigits = Number.isFinite(Number(digits)) ? Number(digits) : 2;
     return num.toFixed(safeDigits);
   }
 }
