@@ -1,4 +1,9 @@
 import {
+  BreakpointObserver,
+  MediaMatcher,
+  coerceArray
+} from "./chunk-NJ3CF4NL.js";
+import {
   CdkScrollableModule,
   ScrollDispatcher,
   ScrollingModule,
@@ -6,19 +11,14 @@ import {
   coerceElement,
   coerceNumberProperty,
   supportsScrollBehavior
-} from "./chunk-LIDVA5UJ.js";
+} from "./chunk-DZYXIC2N.js";
+import {
+  Platform
+} from "./chunk-36ZHZ5MG.js";
 import {
   BidiModule,
   Directionality
 } from "./chunk-3NE2K5RG.js";
-import {
-  BreakpointObserver,
-  MediaMatcher,
-  coerceArray
-} from "./chunk-NJ3CF4NL.js";
-import {
-  Platform
-} from "./chunk-36ZHZ5MG.js";
 import {
   Location,
   NgClass
