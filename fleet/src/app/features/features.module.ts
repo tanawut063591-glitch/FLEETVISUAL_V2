@@ -4,7 +4,9 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { PdfViewerModule } from 'ng2-pdf-viewer';
 
 import { SharedComponentsModule } from '../shared/shared-components.module';
 
@@ -15,6 +17,7 @@ import { SummaryOverviewCardComponent } from './overview/summary-overview-card/s
 import { OverviewCardComponent } from './overview/summary-overview-card/overview-card/overview-card.component';
 
 import { DiagramComponent } from './diagram/diagram.component';
+import { ReportComponent } from './report/report.component';
 import { NotfoundComponent } from './notfound/notfound.component';
 
 import { RealtimeComponent } from './realtime/realtime.component';
@@ -43,6 +46,7 @@ const FEATURE_COMPONENTS = [
   OverviewCardComponent,
 
   DiagramComponent,
+  ReportComponent,
   NotfoundComponent,
 
   RealtimeComponent,
@@ -67,8 +71,10 @@ const FEATURE_COMPONENTS = [
 @NgModule({
   imports: [
     CommonModule,
+    FormsModule,
     SharedComponentsModule,
     MatTooltipModule,
+    PdfViewerModule,
   ],
   declarations: [
     ...FEATURE_COMPONENTS,

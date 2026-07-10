@@ -247,14 +247,21 @@ export class NewHttpClientService {
       return of([]);
     }
 
+    // _cacheBust ใช้กัน browser/backend คืนค่าค้าง ทำให้หน้า Realtime/Diagram อัปเดตจริงทุกรอบ
     const request = {
       Name: names,
       VesselName: name || '',
+      _cacheBust: Date.now(),
     };
+
+    const headers = this.getAuthHeaders()
+      .set('Cache-Control', 'no-cache')
+      .set('Pragma', 'no-cache')
+      .set('Expires', '0');
 
     return this.http
       .post(`${URL2}/getcurrentvalues`, request, {
-        headers: this.getAuthHeaders(),
+        headers,
       })
       .pipe(
         map((res: any) => res),

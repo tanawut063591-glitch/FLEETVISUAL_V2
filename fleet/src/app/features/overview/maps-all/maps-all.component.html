@@ -171,7 +171,7 @@
       <button
         type="button"
         class="action-btn past"
-        (click)="goPastTrack(selectedVessel)">
+        (click)="goPastTrack(selectedVessel, $event)">
         <i class="fa fa-line-chart"></i>
 
         <div>
@@ -183,7 +183,7 @@
       <button
         type="button"
         class="action-btn realtime"
-        (click)="goRealtime(selectedVessel)">
+        (click)="goRealtime(selectedVessel, $event)">
         <i class="fa fa-bolt"></i>
 
         <div>

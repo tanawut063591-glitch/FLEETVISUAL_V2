@@ -878,3 +878,92 @@
     background: #ffffff;
   }
 }
+/* =========================================================
+   DARK BLACK MODE - Header polish
+   ========================================================= */
+:host-context([data-theme='dark']) .fleet-header {
+  background: linear-gradient(180deg, #080b11 0%, #05070b 100%);
+  border-bottom-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.46);
+}
+
+:host-context([data-theme='dark']) .brand-box,
+:host-context([data-theme='dark']) .main-menu,
+:host-context([data-theme='dark']) .right-menu {
+  background: transparent;
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+:host-context([data-theme='dark']) .nav-item {
+  color: #94a3b8;
+}
+
+:host-context([data-theme='dark']) .nav-item:hover,
+:host-context([data-theme='dark']) .nav-item.active {
+  background: rgba(37, 99, 235, 0.14);
+  color: #e0f2fe;
+}
+
+:host-context([data-theme='dark']) .nav-item.active::after {
+  background: linear-gradient(90deg, #2563eb 0%, #38bdf8 100%);
+  box-shadow: 0 -6px 20px rgba(37, 99, 235, 0.36);
+}
+
+:host-context([data-theme='dark']) .settings-action-btn,
+:host-context([data-theme='dark']) .dark-mode-pill,
+:host-context([data-theme='dark']) .user-profile-pill {
+  background: #0b0d12;
+  border-color: rgba(148, 163, 184, 0.18);
+  color: #f8fafc;
+  box-shadow: none;
+}
+
+:host-context([data-theme='dark']) .dark-mode-pill.active {
+  background: rgba(37, 99, 235, 0.14);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+:host-context([data-theme='dark']) .settings-dropdown {
+  background: #080b11;
+  border-color: rgba(148, 163, 184, 0.18);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.64);
+}
+
+:host-context([data-theme='dark']) .dropdown-item:hover {
+  background: #111827;
+}
+
+
+/* =========================================================
+   BLACK PRO POLISH - Header readability
+   ========================================================= */
+:host-context([data-theme='dark']) .fleet-header,
+:host-context([data-theme='dark']) .brand-box,
+:host-context([data-theme='dark']) .main-menu,
+:host-context([data-theme='dark']) .right-menu {
+  background: linear-gradient(180deg, #03050a 0%, #000000 100%) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+:host-context([data-theme='dark']) .main-logo {
+  filter: drop-shadow(0 0 18px rgba(59, 130, 246, 0.46)) brightness(1.18) saturate(1.18) !important;
+}
+
+:host-context([data-theme='dark']) .nav-item {
+  color: #b7c4d8 !important;
+}
+
+:host-context([data-theme='dark']) .nav-item:hover,
+:host-context([data-theme='dark']) .nav-item.active {
+  color: #93c5fd !important;
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.24), rgba(37, 99, 235, 0.06)) !important;
+}
+
+:host-context([data-theme='dark']) .settings-action-btn,
+:host-context([data-theme='dark']) .dark-mode-pill,
+:host-context([data-theme='dark']) .user-profile-pill,
+:host-context([data-theme='dark']) .logout-item {
+  background: linear-gradient(180deg, #0d121b 0%, #080c12 100%) !important;
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  color: #ffffff !important;
+}

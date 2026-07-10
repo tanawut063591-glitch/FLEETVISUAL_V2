@@ -11,7 +11,7 @@ import { NotfoundComponent } from './features/notfound/notfound.component';
 //import { DataLoggerComponent } from './shared/components/data-logger/data-logger.component';
 //import { ChartComponent } from './shared/components/chart/chart.component';
 import { DiagramComponent } from './features/diagram/diagram.component';
-//import { ReportComponent } from './shared/components/report/report.component';
+import { ReportComponent } from './features/report/report.component';
 import { PastTrackComponent } from './features/past-track/past-track.component';
 
 
@@ -97,7 +97,7 @@ export const routes: Routes = [
       },
       {
         path: 'report',
-        component: NotfoundComponent,
+        component: ReportComponent,
         data: {
           depth: 6,
           title: 'REPORT',

@@ -6,6 +6,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { PdfViewerModule } from 'ng2-pdf-viewer';
 
 import { BillingStatusPipe } from './pipes/billing-status-pipe';
 import { FilterTablePipe } from './pipes/filter-table-pipe';
@@ -16,6 +17,12 @@ import { ValueLengthPipe } from './pipes/value-length.pipe';
 import { RealtimeColorDirective } from './directives/realtime-color.directive';
 import { RealtimeValueDirective } from './directives/realtime-value.directive';
 
+import { ReportDatePickerComponent } from './components/report-date-picker/report-date-picker.component';
+import { ReportMessageAlertComponent } from './components/report-message-alert/report-message-alert.component';
+import { SelectedVesselCardComponent } from './components/selected-vessel-card/selected-vessel-card.component';
+import { ReportPdfViewerComponent } from './components/report-pdf-viewer/report-pdf-viewer.component';
+import { ReportInfoBarComponent } from './components/report-info-bar/report-info-bar.component';
+
 const SHARED_DECLARATIONS = [
   BillingStatusPipe,
   FilterTablePipe,
@@ -25,6 +32,11 @@ const SHARED_DECLARATIONS = [
   ValueLengthPipe,
   RealtimeColorDirective,
   RealtimeValueDirective,
+  ReportDatePickerComponent,
+  ReportMessageAlertComponent,
+  SelectedVesselCardComponent,
+  ReportPdfViewerComponent,
+  ReportInfoBarComponent,
 ];
 
 @NgModule({
@@ -33,6 +45,7 @@ const SHARED_DECLARATIONS = [
     RouterModule,
     FormsModule,
     ReactiveFormsModule,
+    PdfViewerModule,
   ],
   declarations: [
     ...SHARED_DECLARATIONS,
@@ -42,6 +55,7 @@ const SHARED_DECLARATIONS = [
     RouterModule,
     FormsModule,
     ReactiveFormsModule,
+    PdfViewerModule,
     ...SHARED_DECLARATIONS,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA, NO_ERRORS_SCHEMA],

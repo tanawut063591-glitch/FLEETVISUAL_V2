@@ -6,21 +6,22 @@
   display: block;
   width: 100%;
   min-width: 0;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  height: auto;
+  overflow: visible;
 }
 
 .premium-dashboard {
   width: 100%;
   min-width: 0;
   min-height: calc(100vh - 72px);
+  height: auto;
   background-color: #f8fafc;
-  padding: 20px;
+  padding: 20px 20px 90px;
   font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #0f172a;
   box-sizing: border-box;
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: visible;
 }
 
 /* ลดขนาด content ข้างในนิดหน่อย ให้ Sidebar แสดงเต็ม */
@@ -581,5 +582,240 @@
     width: 100%;
     margin-left: 0;
     justify-content: flex-start;
+  }
+}
+
+
+/* Realtime page must scroll inside Main content, not get clipped by :host */
+:host ::ng-deep .realtime-page-scroll-fix {
+  min-height: 0;
+}
+
+/* =========================================================
+   DARK BLACK MODE - Realtime dashboard polish
+   ========================================================= */
+:host-context([data-theme='dark']) .premium-dashboard {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(37, 99, 235, 0.14), transparent 30%),
+    radial-gradient(circle at 92% 8%, rgba(14, 165, 233, 0.08), transparent 28%),
+    linear-gradient(180deg, #030407 0%, #020305 100%);
+  color: #f8fafc;
+}
+
+:host-context([data-theme='dark']) .dash-header,
+:host-context([data-theme='dark']) .kpi-card,
+:host-context([data-theme='dark']) .premium-card,
+:host-context([data-theme='dark']) .live-status-card,
+:host-context([data-theme='dark']) .map-wrapper {
+  background: linear-gradient(180deg, #0f131a 0%, #0a0d13 100%);
+  border-color: rgba(148, 163, 184, 0.18);
+  color: #f8fafc;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.34);
+}
+
+:host-context([data-theme='dark']) .ship-title-row h1,
+:host-context([data-theme='dark']) .kpi-val,
+:host-context([data-theme='dark']) .card-header,
+:host-context([data-theme='dark']) .dg-title,
+:host-context([data-theme='dark']) .st-val {
+  color: #f8fafc;
+}
+
+:host-context([data-theme='dark']) .ship-meta,
+:host-context([data-theme='dark']) .ship-coords,
+:host-context([data-theme='dark']) .kpi-title,
+:host-context([data-theme='dark']) .date-badge,
+:host-context([data-theme='dark']) .st-lbl,
+:host-context([data-theme='dark']) .st-unit,
+:host-context([data-theme='dark']) .live-label {
+  color: #94a3b8;
+}
+
+:host-context([data-theme='dark']) .ship-avatar,
+:host-context([data-theme='dark']) .ship-photo {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+:host-context([data-theme='dark']) .date-badge,
+:host-context([data-theme='dark']) .btn-live {
+  background: #080b11;
+  border-color: rgba(148, 163, 184, 0.18);
+  color: #f8fafc;
+}
+
+:host-context([data-theme='dark']) .card-body,
+:host-context([data-theme='dark']) .map-component {
+  background: #05070b;
+  color: #f8fafc;
+}
+
+:host-context([data-theme='dark']) .kpi-icon.blue,
+:host-context([data-theme='dark']) .sum-icon-box {
+  background: rgba(37, 99, 235, 0.14);
+  color: #60a5fa;
+}
+
+:host-context([data-theme='dark']) .kpi-icon.green { background: rgba(34, 197, 94, 0.14); color: #86efac; }
+:host-context([data-theme='dark']) .kpi-icon.orange { background: rgba(249, 115, 22, 0.14); color: #fdba74; }
+:host-context([data-theme='dark']) .kpi-icon.purple { background: rgba(139, 92, 246, 0.15); color: #c4b5fd; }
+:host-context([data-theme='dark']) .kpi-icon.teal { background: rgba(20, 184, 166, 0.14); color: #5eead4; }
+:host-context([data-theme='dark']) .kpi-icon.red { background: rgba(239, 68, 68, 0.14); color: #fca5a5; }
+
+:host-context([data-theme='dark']) .badge-online,
+:host-context([data-theme='dark']) .badge-run {
+  background: rgba(34, 197, 94, 0.14);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.22);
+}
+
+:host-context([data-theme='dark']) .txt-blue,
+:host-context([data-theme='dark']) .value,
+:host-context([data-theme='dark']) .value-mile,
+:host-context([data-theme='dark']) .coordinate {
+  color: #60a5fa !important;
+}
+
+
+/* =========================================================
+   BLACK PRO POLISH - Realtime detail pass
+   แก้ความชัดของตัวหนังสือและ card ในธีมดำ
+   ========================================================= */
+:host-context([data-theme='dark']) .premium-dashboard {
+  background:
+    radial-gradient(circle at 18% -8%, rgba(37, 99, 235, 0.15), transparent 28%),
+    linear-gradient(180deg, #000000 0%, #03050a 45%, #000000 100%) !important;
+  color: #f8fafc !important;
+  padding-bottom: 120px;
+}
+
+:host-context([data-theme='dark']) .dash-header,
+:host-context([data-theme='dark']) .kpi-card,
+:host-context([data-theme='dark']) .premium-card,
+:host-context([data-theme='dark']) .live-status-card {
+  background:
+    linear-gradient(180deg, rgba(18, 25, 37, 0.98) 0%, rgba(8, 12, 18, 0.98) 100%) !important;
+  border: 1px solid rgba(148, 163, 184, 0.22) !important;
+  color: #f8fafc !important;
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+}
+
+:host-context([data-theme='dark']) .dash-header {
+  border-radius: 16px;
+}
+
+:host-context([data-theme='dark']) .ship-title-row h1 {
+  color: #ffffff !important;
+  font-size: 22px;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+:host-context([data-theme='dark']) .ship-meta,
+:host-context([data-theme='dark']) .ship-coords,
+:host-context([data-theme='dark']) .date-badge,
+:host-context([data-theme='dark']) .live-label,
+:host-context([data-theme='dark']) .kpi-title,
+:host-context([data-theme='dark']) .st-lbl,
+:host-context([data-theme='dark']) .st-unit,
+:host-context([data-theme='dark']) .card-header {
+  color: #cbd5e1 !important;
+}
+
+:host-context([data-theme='dark']) .live-status-card strong,
+:host-context([data-theme='dark']) .kpi-val,
+:host-context([data-theme='dark']) .st-val,
+:host-context([data-theme='dark']) .dg-title,
+:host-context([data-theme='dark']) .nav-icon {
+  color: #ffffff !important;
+}
+
+:host-context([data-theme='dark']) .txt-blue,
+:host-context([data-theme='dark']) .st-val.txt-blue {
+  color: #60a5fa !important;
+  font-weight: 900 !important;
+}
+
+:host-context([data-theme='dark']) .kpi-val small {
+  color: #cbd5e1 !important;
+  font-weight: 800;
+}
+
+:host-context([data-theme='dark']) .card-header,
+:host-context([data-theme='dark']) .sum-row {
+  border-color: rgba(203, 213, 225, 0.18) !important;
+}
+
+:host-context([data-theme='dark']) .card-body,
+:host-context([data-theme='dark']) .pd-0-summary {
+  background: rgba(0, 0, 0, 0.08) !important;
+}
+
+:host-context([data-theme='dark']) .ship-photo {
+  border-color: rgba(96, 165, 250, 0.35) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.52) !important;
+}
+
+:host-context([data-theme='dark']) .badge-run,
+:host-context([data-theme='dark']) .badge-online.online {
+  background: rgba(34, 197, 94, 0.16) !important;
+  color: #bbf7d0 !important;
+  border: 1px solid rgba(34, 197, 94, 0.32) !important;
+}
+
+:host-context([data-theme='dark']) .map-wrapper {
+  background: #05070d !important;
+  border: 1px solid rgba(148, 163, 184, 0.20) !important;
+}
+
+:host-context([data-theme='dark']) .kpi-icon {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+
+:host-context([data-theme='dark']) .kpi-icon.blue,
+:host-context([data-theme='dark']) .sum-icon-box {
+  background: rgba(59, 130, 246, 0.18) !important;
+  color: #93c5fd !important;
+}
+
+:host-context([data-theme='dark']) .kpi-icon.green { background: rgba(34, 197, 94, 0.16) !important; color: #bbf7d0 !important; }
+:host-context([data-theme='dark']) .kpi-icon.orange { background: rgba(249, 115, 22, 0.16) !important; color: #fdba74 !important; }
+:host-context([data-theme='dark']) .kpi-icon.purple { background: rgba(139, 92, 246, 0.18) !important; color: #c4b5fd !important; }
+:host-context([data-theme='dark']) .kpi-icon.teal { background: rgba(20, 184, 166, 0.16) !important; color: #99f6e4 !important; }
+:host-context([data-theme='dark']) .kpi-icon.red { background: rgba(239, 68, 68, 0.16) !important; color: #fecaca !important; }
+
+/* ให้ content ของเครื่องยนต์อ่านชัดขึ้น */
+:host-context([data-theme='dark']) .card-body.pd-0 {
+  min-height: 292px;
+  background: linear-gradient(180deg, rgba(6, 10, 16, 0.95), rgba(2, 4, 8, 0.96)) !important;
+}
+
+@media (max-width: 1600px) {
+  .col-right {
+    grid-template-columns: repeat(3, minmax(230px, 1fr));
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(6, minmax(130px, 1fr));
+  }
+
+  .kpi-card {
+    padding: 14px 12px;
+  }
+
+  .kpi-val {
+    font-size: 19px;
+  }
+}
+
+@media (max-width: 1400px) {
+  .col-right {
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
   }
 }

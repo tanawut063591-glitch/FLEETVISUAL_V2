@@ -13,6 +13,8 @@ import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 
 import { VesselPopupService } from '../../../shared/services/vessel-popup.service';
+import { FvRealtimeService } from '../../../shared/services/fv-realtime.service';
+import { NewHttpClientService } from '../../../shared/services/http-client1.service';
 
 declare var google: any;
 
@@ -49,13 +51,47 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedMarker: any = null;
 
   private popupSub?: Subscription;
+  private popupSummarySub?: Subscription;
+  private popupSummaryCache: Record<string, { newData: Record<string, any> }> = {};
   private realtimeTimer: any = null;
   private resizeObserver?: ResizeObserver;
   private resizeTimer: ReturnType<typeof setTimeout> | null = null;
   private mapInitRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly idleAfterMinutes = 30;
   private readonly offlineAfterMinutes = 120;
-  private readonly realtimeRefreshMs = 15000;
+  private readonly realtimeRefreshMs = 15000; // รีเฟรช popup/map เพื่อให้ Last seen เดินตามข้อมูล
+
+  // tag ที่ใช้แสดง Today Summary ใน popup
+  // ดึงเพิ่มจาก dashboard tag เพราะ overview tag เดิมมีแค่ lat/long บางตัว
+  private readonly popupSummaryTagSuffixes: string[] = [
+    'VES-GPS-SPEED',
+    'VES-GPS-HEAD',
+    'VES-GPS-COURSE',
+    'VES-GPS-DIS-TODAY',
+    'VES-GPS-DIS',
+    'VES-DISTANCE',
+    'VES-CONS-TODAY',
+    'VES-FUEL-CONSUMPTION',
+
+    // Engine load จริงของ dashboard เดิมใช้ PME/SME เป็นหลัก
+    // เพิ่มหลายชื่อไว้เผื่อเรือบางลำใช้ tag คนละชุด
+    'PME-ENGINE-LOAD',
+    'CME-ENGINE-LOAD',
+    'SME-ENGINE-LOAD',
+    'PAE-ENGINE-LOAD',
+    'CAE-ENGINE-LOAD',
+    'SAE-ENGINE-LOAD',
+    'ENGINE-LOAD',
+    'VES-ENGINE-LOAD',
+
+    'PME-CONS-TODAY',
+    'CME-CONS-TODAY',
+    'SME-CONS-TODAY',
+    'DG1-CONS-TODAY',
+    'DG2-CONS-TODAY',
+    'DG3-CONS-TODAY',
+    'DG4-CONS-TODAY',
+  ];
 
   @Input('data')
   set data(value: any[]) {
@@ -77,7 +113,9 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private router: Router,
     private zone: NgZone,
-    private vesselPopup: VesselPopupService
+    private vesselPopup: VesselPopupService,
+    private fvRealtimeService: FvRealtimeService,
+    private newHttp: NewHttpClientService
   ) {}
 
   ngOnInit(): void {
@@ -102,6 +140,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.clearOverlays();
     this.popupSub?.unsubscribe();
+    this.popupSummarySub?.unsubscribe();
     this.resizeObserver?.disconnect();
 
     if (this.realtimeTimer) {
@@ -296,15 +335,20 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
   openVesselPopup(vessel: any, status: MapStatus, marker: any): void {
     this.zone.run(() => {
-      this.selectedVessel = vessel;
+      // เก็บข้อมูลเรือแบบ normalize เพื่อให้ popup อ่านค่า speed/load/fuel ได้ครบ
+      const normalizedVessel = this.normalizePopupVessel(vessel);
+
+      this.selectedVessel = normalizedVessel;
       this.selectedStatus = status;
       this.selectedMarker = marker;
 
       try {
-        localStorage.setItem('selectedVessel', JSON.stringify(vessel));
-        localStorage.setItem('realtimeVessel', JSON.stringify(vessel));
-        localStorage.setItem('pastTrackVessel', JSON.stringify(vessel));
+        localStorage.setItem('selectedVessel', JSON.stringify(normalizedVessel));
+        localStorage.setItem('realtimeVessel', JSON.stringify(normalizedVessel));
+        localStorage.setItem('pastTrackVessel', JSON.stringify(normalizedVessel));
       } catch {}
+
+      this.loadPopupSummary(normalizedVessel);
 
       if (this.map && marker) {
         this.map.panTo(marker.getPosition());
@@ -325,7 +369,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     const item = this.markerMap?.[selectedKey];
 
     if (item) {
-      this.selectedVessel = item.vessel;
+      this.selectedVessel = this.normalizePopupVessel(item.vessel);
       this.selectedStatus = item.status;
       this.selectedMarker = item.marker;
     }
@@ -642,76 +686,365 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getSpeedText(vessel: any): string {
-    return this.formatNumber(this.getFirstTagValue(vessel, ['VES_GPS_SPEED', 'GPS_SPEED', 'SPEED']) ?? vessel?.speed, 1);
+    return this.formatNumber(
+      this.getFirstTagValue(vessel, [
+        'VES_GPS_SPEED',
+        'VES_GPS_SOG',
+        'GPS_SPEED',
+        'SPEED',
+        'SOG',
+      ]) ?? this.getDirectValue(vessel, ['speed', 'sog']),
+      1
+    );
   }
 
   getEngineLoadText(vessel: any): string {
-    return this.formatNumber(this.getFirstTagValue(vessel, ['VES_ENGINE_LOAD', 'ENGINE_LOAD', 'ENG_LOAD', 'PME_ENGINE_LOAD']) ?? vessel?.engineLoad, 0);
+    const values = this.getAllNumericValues(
+      vessel,
+      [
+        'PME_ENGINE_LOAD',
+        'CME_ENGINE_LOAD',
+        'SME_ENGINE_LOAD',
+        'PAE_ENGINE_LOAD',
+        'CAE_ENGINE_LOAD',
+        'SAE_ENGINE_LOAD',
+        'VES_ENGINE_LOAD',
+        'ENGINE_LOAD',
+        'ENG_LOAD',
+        'MAIN_ENGINE_LOAD',
+        'LOAD',
+      ],
+      ['engineLoad', 'engine_load', 'load']
+    );
+
+    // ถ้ามีหลายเครื่อง ให้ใช้ค่าเฉลี่ยของเครื่องที่มี load จริง (> 0)
+    // เพื่อไม่ให้ tag ตัวแรกที่เป็น 0 ไปทับค่าจริงของอีกเครื่อง
+    const activeLoads = values.filter((value) => value > 0);
+    const value = activeLoads.length > 0
+      ? activeLoads.reduce((sum, current) => sum + current, 0) / activeLoads.length
+      : values[0];
+
+    return this.formatNumber(value, 0);
   }
 
   getFuelConsumptionText(vessel: any): string {
-    return this.formatNumber(this.getFirstTagValue(vessel, ['VES_FUEL_CONSUMPTION', 'VES_CONS_TODAY', 'FUEL_CONSUMPTION']) ?? vessel?.fuelConsumption, 0);
+    return this.formatNumber(
+      this.getFirstTagValue(vessel, [
+        'VES_CONS_TODAY',
+        'VES_FUEL_CONSUMPTION',
+        'VES_FUEL_CONS_TODAY',
+        'FUEL_CONSUMPTION',
+        'FUEL_CONSUMPTION_TODAY',
+        'CONS_TODAY',
+        'PME_CONS_TODAY',
+        'CME_CONS_TODAY',
+        'SME_CONS_TODAY',
+      ]) ?? this.getDirectValue(vessel, ['fuelConsumption', 'fuel_consumption']),
+      0
+    );
   }
 
   getCourseText(vessel: any): string {
-    return this.formatNumber(this.getFirstTagValue(vessel, ['VES_GPS_HEAD', 'VES_GPS_COURSE', 'GPS_COURSE', 'COURSE']) ?? vessel?.course, 0);
+    return this.formatNumber(
+      this.getFirstTagValue(vessel, [
+        'VES_GPS_HEAD',
+        'VES_GPS_COURSE',
+        'GPS_HEAD',
+        'GPS_COURSE',
+        'COURSE',
+        'HEADING',
+      ]) ?? this.getDirectValue(vessel, ['course', 'heading']),
+      0
+    );
   }
 
   getDistanceText(vessel: any): string {
-    return this.formatNumber(this.getFirstTagValue(vessel, ['VES_DISTANCE', 'VES_GPS_DIS_TODAY', 'DISTANCE']) ?? vessel?.distance, 1);
+    const values = this.getAllNumericValues(
+      vessel,
+      [
+        'VES_GPS_DIS_TODAY',
+        'VES_GPS_DIS',
+        'VES_DISTANCE',
+        'VES_GPS_DIS_TOTAL',
+        'GPS_DIS_TODAY',
+        'GPS_DIS',
+        'DISTANCE_TODAY',
+        'TODAY_DISTANCE',
+        'DISTANCE',
+      ],
+      ['distance', 'distanceToday', 'todayDistance', 'tripDistance']
+    );
+
+    // เลือกค่าระยะทางที่มากกว่า 0 ก่อน เพราะ direct default บางเรือเป็น 0
+    const value = values.find((item) => item > 0) ?? values[0];
+
+    return this.formatNumber(value, 1);
   }
 
-  goPastTrack(vessel: any): void {
-    if (vessel) {
-      localStorage.setItem('pastTrackVessel', JSON.stringify(vessel));
+  goPastTrack(vessel: any, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const selected = this.normalizePopupVessel(vessel);
+
+    if (selected) {
+      localStorage.setItem('pastTrackVessel', JSON.stringify(selected));
+      localStorage.setItem('selectedVessel', JSON.stringify(selected));
     }
 
-    this.router.navigate(['/main/past-track']);
+    const routeId = this.getVesselRouteId(selected);
+    this.zone.run(() => {
+      this.router.navigate(routeId ? ['/main/past-track', routeId] : ['/main/past-track']);
+    });
   }
 
-  goRealtime(vessel: any): void {
-    if (vessel) {
-      localStorage.setItem('realtimeVessel', JSON.stringify(vessel));
-      localStorage.setItem('selectedVessel', JSON.stringify(vessel));
+  goRealtime(vessel: any, event?: Event): void {
+    // กัน click ซ้อนกับ Google Map และกันหน้าเว็บค้างจาก event bubble
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const selected = this.normalizePopupVessel(vessel);
+
+    if (selected) {
+      localStorage.setItem('realtimeVessel', JSON.stringify(selected));
+      localStorage.setItem('selectedVessel', JSON.stringify(selected));
     }
 
-    const prefix = this.getVesselPrefix(vessel);
-    this.router.navigate(prefix ? ['/main/realtime', prefix] : ['/main/realtime']);
+    // สำคัญ: ไป /main/realtime ตรง ๆ ไม่ส่ง :id
+    // เพราะบาง prefix/name มีช่องว่างหรืออักขระพิเศษแล้วทำให้ route/realtime ค้างได้
+    this.zone.run(() => {
+      this.router.navigate(['/main/realtime']).then(() => {
+        if (selected) {
+          // set active หลัง navigate สำเร็จ เพื่อให้ RealtimeComponent พร้อมรับข้อมูลก่อน
+          setTimeout(() => this.fvRealtimeService.setActiveVessel(selected), 50);
+        }
+      });
+    });
+  }
+
+  private loadPopupSummary(vessel: any): void {
+    const prefix = this.getBackendPrefix(vessel);
+
+    if (!prefix) {
+      return;
+    }
+
+    const tags = this.buildPopupSummaryTags(prefix);
+
+    if (tags.length === 0) {
+      return;
+    }
+
+    this.popupSummarySub?.unsubscribe();
+
+    this.popupSummarySub = this.newHttp.getCurrentValues(tags, prefix).subscribe({
+      next: (response: any) => {
+        const summaryData = this.buildTagMapFromCurrentResponse(response, prefix);
+
+        if (Object.keys(summaryData).length === 0) {
+          return;
+        }
+
+        const cacheKey = this.getSummaryCacheKey(vessel);
+        this.popupSummaryCache[cacheKey] = { newData: summaryData };
+
+        if (!this.selectedVessel || this.getSummaryCacheKey(this.selectedVessel) !== cacheKey) {
+          return;
+        }
+
+        this.zone.run(() => {
+          this.selectedVessel = this.normalizePopupVessel({
+            ...this.selectedVessel,
+            newData: {
+              ...this.getTagMap(this.selectedVessel),
+              ...summaryData,
+            },
+          });
+        });
+      },
+      error: (error: any) => {
+        console.warn('[MapsAllComponent] popup summary load failed:', error);
+      },
+    });
+  }
+
+  private buildPopupSummaryTags(prefix: string): any[] {
+    return this.popupSummaryTagSuffixes.map((suffix) => {
+      const tagName = `${prefix}-${suffix}`;
+
+      return {
+        name: this.toShortTagName(tagName),
+        tagName,
+        cal: false,
+      };
+    });
+  }
+
+  private buildTagMapFromCurrentResponse(response: any, prefix: string): Record<string, any> {
+    const map: Record<string, any> = {};
+    const rows = this.flattenCurrentResponse(response);
+
+    rows.forEach((item: any) => {
+      const tagName = this.getCurrentResponseTagName(item);
+
+      if (!tagName) {
+        return;
+      }
+
+      const shortName = this.toShortTagName(tagName);
+      const value =
+        item?.Value ??
+        item?.value ??
+        item?.IValue ??
+        item?.ivalue ??
+        item?.iValue ??
+        item?.ActualValue ??
+        item?.actualValue ??
+        item?.CurrentValue ??
+        item?.currentValue ??
+        item?.Val ??
+        item?.val ??
+        item?.Data ??
+        item?.data;
+
+      const timestamp =
+        item?.TimeStamp ||
+        item?.timestamp ||
+        item?.DateTime ||
+        item?.dateTime ||
+        item?.timeStamp ||
+        item?.time ||
+        new Date().toISOString();
+
+      const tagValue = {
+        value,
+        timestamp,
+        tagName,
+      };
+
+      this.addTagAlias(map, tagName, tagValue);
+      this.addTagAlias(map, shortName, tagValue);
+      this.addTagAlias(map, tagName.replace(`${prefix}-`, '').replace(/-/g, '_'), tagValue);
+    });
+
+    return map;
+  }
+
+  private flattenCurrentResponse(response: any): any[] {
+    if (Array.isArray(response)) {
+      return response;
+    }
+
+    const candidates = [
+      response?.data,
+      response?.Data,
+      response?.result,
+      response?.Result,
+      response?.results,
+      response?.Results,
+      response?.items,
+      response?.Items,
+      response?.rows,
+      response?.Rows,
+    ];
+
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate)) {
+        return candidate;
+      }
+    }
+
+    if (response && typeof response === 'object') {
+      return Object.keys(response).map((key) => {
+        const value = response[key];
+
+        if (value && typeof value === 'object') {
+          return {
+            Name: key,
+            ...value,
+          };
+        }
+
+        return {
+          Name: key,
+          Value: value,
+          TimeStamp: new Date().toISOString(),
+        };
+      });
+    }
+
+    return [];
+  }
+
+  private getCurrentResponseTagName(item: any): string {
+    return String(
+      item?.Name ||
+      item?.name ||
+      item?.TagName ||
+      item?.tagName ||
+      item?.tagname ||
+      item?.Tag ||
+      item?.tag ||
+      item?.FullName ||
+      item?.fullName ||
+      item?.fulltagname ||
+      item?.FullTagName ||
+      item?.Key ||
+      item?.key ||
+      ''
+    );
+  }
+
+  private getBackendPrefix(vessel: any): string {
+    const prefix = String(
+      vessel?.prefix ||
+      vessel?.fv?.prefix ||
+      vessel?.fvInfo?.prefix ||
+      vessel?.id ||
+      vessel?.fv?.id ||
+      vessel?.fvInfo?.id ||
+      ''
+    ).trim();
+
+    if (prefix) {
+      return prefix;
+    }
+
+    return this.nameToPrefix(this.getVesselName(vessel));
+  }
+
+  private getSummaryCacheKey(vessel: any): string {
+    return this.normalizeKey(
+      this.getBackendPrefix(vessel) ||
+      this.getVesselKey(vessel) ||
+      this.getVesselName(vessel)
+    );
   }
 
   getLatValue(vessel: any): any {
     return (
-      this.getFirstTagValue(vessel, ['VES_GPS_LAT', 'GPS_LAT', 'LAT', 'lat', 'latitude']) ??
-      vessel?.lat ??
-      vessel?.latitude ??
-      vessel?.lattitude ??
-      vessel?.fv?.lat ??
-      vessel?.fvInfo?.lat
+      this.getFirstTagValue(vessel, ['VES_GPS_LAT', 'GPS_LAT', 'LAT', 'LATITUDE']) ??
+      this.getDirectValue(vessel, ['lat', 'latitude', 'lattitude'])
     );
   }
 
   getLngValue(vessel: any): any {
     return (
-      this.getFirstTagValue(vessel, ['VES_GPS_LONG', 'VES_GPS_LNG', 'GPS_LONG', 'GPS_LNG', 'LNG', 'lng', 'long', 'longitude']) ??
-      vessel?.lng ??
-      vessel?.long ??
-      vessel?.longitude ??
-      vessel?.longtitude ??
-      vessel?.fv?.lng ??
-      vessel?.fv?.long ??
-      vessel?.fvInfo?.lng ??
-      vessel?.fvInfo?.long
+      this.getFirstTagValue(vessel, ['VES_GPS_LONG', 'VES_GPS_LNG', 'GPS_LONG', 'GPS_LNG', 'LNG', 'LONG', 'LONGITUDE']) ??
+      this.getDirectValue(vessel, ['lng', 'long', 'longitude', 'longtitude'])
     );
   }
 
   getLatestTimestamp(vessel: any): any {
     return (
-      vessel?.timestamp ||
-      vessel?.lastUpdate ||
-      vessel?.updatedAt ||
-      vessel?.fv?.timestamp ||
-      vessel?.fv?.lastUpdate ||
-      vessel?.fvInfo?.timestamp ||
+      this.getDirectValue(vessel, [
+        'timestamp',
+        'lastUpdate',
+        'updatedAt',
+        'lastSeenAt',
+        'dateTime',
+        'DateTime',
+      ]) ||
       this.getFirstTagTimestamp(vessel, [
         'VES_GPS_LAT',
         'VES_GPS_LONG',
@@ -725,11 +1058,23 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getFirstTagValue(vessel: any, names: string[]): any {
-    const newData = vessel?.newData || this.buildTagMap(vessel?.datas || []);
+    const newData = this.getTagMap(vessel);
 
     for (const name of names) {
-      const tag = newData?.[name];
-      const value = tag?.value ?? tag?.Value;
+      const tag = this.findTag(newData, name);
+      const value =
+        tag?.value ??
+        tag?.Value ??
+        tag?.ivalue ??
+        tag?.IValue ??
+        tag?.iValue ??
+        tag?.actualValue ??
+        tag?.ActualValue ??
+        tag?.currentValue ??
+        tag?.CurrentValue ??
+        tag?.val ??
+        tag?.Val;
+
       if (this.hasValue(value)) {
         return value;
       }
@@ -739,11 +1084,12 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getFirstTagTimestamp(vessel: any, names: string[]): any {
-    const newData = vessel?.newData || this.buildTagMap(vessel?.datas || []);
+    const newData = this.getTagMap(vessel);
 
     for (const name of names) {
-      const tag = newData?.[name];
-      const value = tag?.timestamp || tag?.dateTime || tag?.TimeStamp;
+      const tag = this.findTag(newData, name);
+      const value = tag?.timestamp || tag?.dateTime || tag?.DateTime || tag?.TimeStamp || tag?.timeStamp || tag?.time;
+
       if (this.hasValue(value)) {
         return value;
       }
@@ -772,15 +1118,237 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     datas.forEach((data: any) => {
-      if (!data?.name) return;
+      const name = data?.name || data?.Name || data?.tagName || data?.TagName;
+      const tagName = data?.tagName || data?.TagName || name;
 
-      map[data.name] = {
-        value: data.value ?? data.Value,
-        timestamp: data.dateTime || data.timestamp || data.TimeStamp,
+      if (!name && !tagName) {
+        return;
+      }
+
+      const tagValue = {
+        value:
+          data.value ??
+          data.Value ??
+          data.ivalue ??
+          data.IValue ??
+          data.iValue ??
+          data.actualValue ??
+          data.ActualValue ??
+          data.currentValue ??
+          data.CurrentValue ??
+          data.val ??
+          data.Val,
+        timestamp: data.dateTime || data.timestamp || data.DateTime || data.TimeStamp || data.timeStamp || data.time,
+        tagName,
       };
+
+      this.addTagAlias(map, name, tagValue);
+      this.addTagAlias(map, tagName, tagValue);
+      this.addTagAlias(map, this.toShortTagName(tagName), tagValue);
     });
 
     return map;
+  }
+
+  private getTagMap(vessel: any): Record<string, any> {
+    const direct = {
+      ...(vessel?.newData || {}),
+      ...(vessel?.rawData || {}),
+      ...(vessel?.fv?.newData || {}),
+      ...(vessel?.fvInfo?.newData || {}),
+    };
+
+    const fromDatas = this.buildTagMap([
+      ...(Array.isArray(vessel?.datas) ? vessel.datas : []),
+      ...(Array.isArray(vessel?.fv?.datas) ? vessel.fv.datas : []),
+      ...(Array.isArray(vessel?.fvInfo?.datas) ? vessel.fvInfo.datas : []),
+    ]);
+
+    const map: Record<string, any> = { ...fromDatas };
+
+    Object.keys(direct).forEach((key) => {
+      const value = direct[key];
+      this.addTagAlias(map, key, value);
+      this.addTagAlias(map, this.toShortTagName(value?.tagName || key), value);
+    });
+
+    return map;
+  }
+
+  private findTag(map: Record<string, any>, name: string): any {
+    if (!map || !name) {
+      return null;
+    }
+
+    const candidates = [
+      name,
+      name.toUpperCase(),
+      name.toLowerCase(),
+      name.replace(/-/g, '_'),
+      name.replace(/_/g, '-'),
+      this.toShortTagName(name),
+    ];
+
+    for (const candidate of candidates) {
+      if (map[candidate]) {
+        return map[candidate];
+      }
+    }
+
+    const normalizedName = this.normalizeKey(name);
+    const foundKey = Object.keys(map).find((key) => {
+      const normalizedKey = this.normalizeKey(key);
+      return normalizedKey === normalizedName || normalizedKey.endsWith(normalizedName);
+    });
+
+    return foundKey ? map[foundKey] : null;
+  }
+
+  private addTagAlias(map: Record<string, any>, key: any, value: any): void {
+    if (!key) {
+      return;
+    }
+
+    const text = String(key);
+    map[text] = value;
+    map[text.toUpperCase()] = value;
+    map[text.toLowerCase()] = value;
+    map[text.replace(/-/g, '_')] = value;
+    map[text.replace(/_/g, '-')] = value;
+  }
+
+  private toShortTagName(fullName: any): string {
+    const parts = String(fullName || '').split('-');
+
+    if (parts.length > 1) {
+      parts.shift();
+    }
+
+    return parts.join('-').replace(/-/g, '_');
+  }
+
+  private getAllNumericValues(vessel: any, tagNames: string[], directKeys: string[] = []): number[] {
+    const values: number[] = [];
+    const used = new Set<string>();
+    const tagMap = this.getTagMap(vessel);
+
+    tagNames.forEach((name) => {
+      const tag = this.findTag(tagMap, name);
+      const rawValue =
+        tag?.value ??
+        tag?.Value ??
+        tag?.ivalue ??
+        tag?.IValue ??
+        tag?.iValue ??
+        tag?.actualValue ??
+        tag?.ActualValue ??
+        tag?.currentValue ??
+        tag?.CurrentValue ??
+        tag?.val ??
+        tag?.Val;
+
+      const num = this.toCleanNumber(rawValue);
+      const identity = `${name}:${num}`;
+
+      if (num !== null && !used.has(identity)) {
+        used.add(identity);
+        values.push(num);
+      }
+    });
+
+    directKeys.forEach((key) => {
+      const num = this.toCleanNumber(this.getDirectValue(vessel, [key]));
+      const identity = `${key}:${num}`;
+
+      if (num !== null && !used.has(identity)) {
+        used.add(identity);
+        values.push(num);
+      }
+    });
+
+    return values;
+  }
+
+  private getDirectValue(vessel: any, keys: string[]): any {
+    const sources = [vessel, vessel?.fv, vessel?.fvInfo, vessel?.raw, vessel?.raw?.fv, vessel?.raw?.fvInfo];
+
+    for (const source of sources) {
+      if (!source) {
+        continue;
+      }
+
+      for (const key of keys) {
+        const value = source?.[key];
+
+        if (this.hasValue(value)) {
+          return value;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  private normalizePopupVessel(vessel: any): any {
+    if (!vessel) {
+      return vessel;
+    }
+
+    const fv = vessel?.fv || vessel?.fvInfo || vessel;
+    const cacheKey = this.getSummaryCacheKey(vessel);
+    const cached = this.popupSummaryCache[cacheKey]?.newData || {};
+
+    // รวมข้อมูล 2 ส่วนเข้าด้วยกัน:
+    // 1) overview data ที่แผนที่ใช้วาง marker
+    // 2) popup summary data ที่ดึงเพิ่มจาก getcurrentvalues ตอนคลิกเรือ
+    const mergedNewData = {
+      ...this.getTagMap(vessel),
+      ...cached,
+    };
+
+    const mergedVessel = {
+      ...vessel,
+      newData: mergedNewData,
+    };
+
+    return {
+      ...mergedVessel,
+      id: vessel?.id || fv?.id || fv?.prefix || fv?.name,
+      prefix: vessel?.prefix || fv?.prefix || fv?.id || fv?.name,
+      name: this.getVesselName(vessel),
+      desc: this.getVesselType(vessel),
+      img: this.getVesselImage(vessel),
+      lat: this.getLatValue(mergedVessel),
+      lng: this.getLngValue(mergedVessel),
+      long: this.getLngValue(mergedVessel),
+      speed: this.getSpeedText(mergedVessel),
+      engineLoad: this.getEngineLoadText(mergedVessel),
+      fuelConsumption: this.getFuelConsumptionText(mergedVessel),
+      course: this.getCourseText(mergedVessel),
+      distance: this.getDistanceText(mergedVessel),
+      timestamp: this.getLatestTimestamp(mergedVessel),
+      newData: mergedNewData,
+    };
+  }
+
+  private getVesselRouteId(vessel: any): string {
+    return String(
+      vessel?.prefix ||
+      vessel?.id ||
+      vessel?.fv?.prefix ||
+      vessel?.fvInfo?.prefix ||
+      vessel?.fv?.id ||
+      vessel?.fvInfo?.id ||
+      this.getVesselName(vessel)
+    ).trim();
+  }
+
+  private nameToPrefix(name: string): string {
+    return String(name || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
   }
 
   private normalizeKey(value: any): string {
@@ -792,8 +1360,34 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private toNumberOrNull(value: any): number | null {
-    const num = Number.parseFloat(value);
-    return Number.isNaN(num) ? null : num;
+    return this.toCleanNumber(value);
+  }
+
+  private toCleanNumber(value: any): number | null {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+
+    const rawValue = typeof value === 'object'
+      ? value?.value ?? value?.Value ?? value?.ivalue ?? value?.IValue ?? value?.iValue ?? value?.val ?? value?.Val
+      : value;
+
+    if (rawValue === undefined || rawValue === null || rawValue === '') {
+      return null;
+    }
+
+    const num = Number.parseFloat(String(rawValue).replace(/,/g, ''));
+
+    if (!Number.isFinite(num)) {
+      return null;
+    }
+
+    // ค่า sentinel จากระบบเดิม ไม่ใช่ค่าจริง
+    if (num === 999999 || num === -999999) {
+      return 0;
+    }
+
+    return num;
   }
 
   private formatNumber(value: any, digit: number): string {

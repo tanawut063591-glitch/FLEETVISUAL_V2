@@ -130,7 +130,7 @@ export class LoginComponent implements OnInit {
 
     // กันค่าว่าง
     if (!username || !password) {
-      this.showLoginError('กรุณากรอก Username และ Password');
+      this.showLoginError('Please enter your username and password.');
       return;
     }
 

@@ -440,3 +440,86 @@
 .stat-card.update small {
     margin-top: 7px;
 }
+
+
+/* =========================================================
+   BLACK PRO POLISH - Diagram detail pass
+   ทำให้หน้า Diagram เข้าธีมดำและอ่านชัดทุกจุด
+   ========================================================= */
+:host-context([data-theme='dark']) .diagram-page {
+    background:
+      radial-gradient(circle at 18% -8%, rgba(37, 99, 235, 0.15), transparent 28%),
+      linear-gradient(180deg, #000000 0%, #03050a 45%, #000000 100%) !important;
+    color: #f8fafc !important;
+}
+
+:host-context([data-theme='dark']) .diagram-header,
+:host-context([data-theme='dark']) .diagram-scroll,
+:host-context([data-theme='dark']) .stat-card,
+:host-context([data-theme='dark']) .device-card {
+    background: linear-gradient(180deg, #0d121b 0%, #080c12 100%) !important;
+    border-color: rgba(148, 163, 184, 0.22) !important;
+    color: #f8fafc !important;
+    box-shadow:
+      0 18px 44px rgba(0, 0, 0, 0.48),
+      inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+}
+
+:host-context([data-theme='dark']) .diagram-scroll {
+    background:
+      radial-gradient(circle at 50% 8%, rgba(37, 99, 235, 0.08), transparent 36%),
+      linear-gradient(180deg, #05070d 0%, #02040a 100%) !important;
+}
+
+:host-context([data-theme='dark']) .diagram-eyebrow {
+    background: rgba(59, 130, 246, 0.16) !important;
+    color: #93c5fd !important;
+    border: 1px solid rgba(96, 165, 250, 0.28);
+}
+
+:host-context([data-theme='dark']) .diagram-title-block h1,
+:host-context([data-theme='dark']) .stat-card strong,
+:host-context([data-theme='dark']) .device-title {
+    color: #ffffff !important;
+}
+
+:host-context([data-theme='dark']) .diagram-title-block p,
+:host-context([data-theme='dark']) .stat-card small,
+:host-context([data-theme='dark']) .device-subtitle {
+    color: #cbd5e1 !important;
+}
+
+:host-context([data-theme='dark']) .device-icon {
+    color: #60a5fa !important;
+}
+
+:host-context([data-theme='dark']) .device-card:hover {
+    border-color: rgba(96, 165, 250, 0.55) !important;
+    box-shadow: 0 22px 52px rgba(0, 0, 0, 0.58), 0 0 0 1px rgba(96, 165, 250, 0.14) !important;
+}
+
+:host-context([data-theme='dark']) .status-online {
+    border-color: rgba(34, 197, 94, 0.42) !important;
+}
+
+:host-context([data-theme='dark']) .status-offline {
+    border-color: rgba(239, 68, 68, 0.42) !important;
+}
+
+:host-context([data-theme='dark']) .status-unknown {
+    border-color: rgba(148, 163, 184, 0.30) !important;
+}
+
+:host-context([data-theme='dark']) .group-box {
+    stroke: rgba(96, 165, 250, 0.55) !important;
+}
+
+:host-context([data-theme='dark']) .line-blue {
+    stroke: #3b82f6 !important;
+    filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.20));
+}
+
+:host-context([data-theme='dark']) .line-green {
+    stroke: #22c55e !important;
+    filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.18));
+}

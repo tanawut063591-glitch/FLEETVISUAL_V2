@@ -104,3 +104,24 @@
     z-index: 1100;
   }
 }
+
+/* DARK BLACK MODE */
+:host-context([data-theme='dark']) {
+  background: #020305;
+}
+
+:host-context([data-theme='dark']) .main,
+:host-context([data-theme='dark']) .grid-content,
+:host-context([data-theme='dark']) .grid-sidenav {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(37, 99, 235, 0.12), transparent 28%),
+    linear-gradient(180deg, #030407 0%, #020305 100%);
+}
+
+:host-context([data-theme='dark']) .grid-sidenav {
+  border-right: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+:host-context([data-theme='dark']) .grid-content.is-overview {
+  background: #05070b;
+}

@@ -224,7 +224,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges, DoCheck {
       clearInterval(this.realtimeTimer);
     }
 
-    // ให้ Last seen เดินเอง เช่น 1 M, 2 M, 3 M
+    // ให้ Last seen เดินเอง เช่น 1 M, 2 M, 3 M ตาม timestamp จาก backend
     this.realtimeTimer = setInterval(() => {
       this.buildVisibleVessels();
     }, 1000);
@@ -277,12 +277,21 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges, DoCheck {
   }
 
   getLastSeenText(vessel: any): string {
-    if (!vessel || !vessel.timestamp) {
+    if (!vessel) {
       return '-';
     }
 
-    // แปลง timestamp เป็น 1 M, 2 M, 1 H, 1 D
-    return this.formatLastSeen(vessel.timestamp);
+    // ถ้ามี timestamp จาก backend ให้คำนวณเวลาเดินต่อเอง เช่น 1 M, 2 M, 3 M
+    if (vessel.timestamp) {
+      return this.formatLastSeen(vessel.timestamp);
+    }
+
+    // ถ้า backend ส่งข้อความมาอยู่แล้ว เช่น 1 M / 2 H / 3 D ให้แสดงตามข้อมูลเดิม
+    if (vessel.lastSeen) {
+      return String(vessel.lastSeen);
+    }
+
+    return '-';
   }
 
   getLastSeenMinute(vessel: any): number {
@@ -520,11 +529,17 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges, DoCheck {
         tagTimestamp() ||
         fvInfo.timestamp ||
         fvInfo.lastUpdate ||
+        fvInfo.lastSeenAt ||
         fvInfo.updatedAt ||
+        fvInfo.dateTime ||
+        fvInfo.DateTime ||
         vessel.timestamp ||
         vessel.lastUpdate ||
+        vessel.lastSeenAt ||
         vessel.updatedAt ||
-        vessel.dateTime,
+        vessel.dateTime ||
+        vessel.DateTime,
+      lastSeen: fvInfo.lastSeen || vessel.lastSeen || vessel.time || vessel.lastSeenText,
     };
   }
 
@@ -578,8 +593,12 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges, DoCheck {
     return foundKey ? obj[foundKey] : null;
   }
 
-  private formatLastSeen(timestamp: string | Date): string {
-    const date = new Date(timestamp);
+  private formatLastSeen(timestamp: string | number | Date): string {
+    const rawValue = typeof timestamp === 'number' && timestamp < 10000000000
+      ? timestamp * 1000
+      : timestamp;
+
+    const date = new Date(rawValue);
 
     if (Number.isNaN(date.getTime())) {
       return '-';

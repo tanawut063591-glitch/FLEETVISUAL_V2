@@ -6,6 +6,7 @@ import { distinctUntilChanged, map } from 'rxjs/operators';
 
 import * as fvInfoActions from '../../store/actions/fv-info.action';
 import * as fvInfoReducer from '../../store/reducers/fv-info.reducer';
+import { FvRealtimeService } from '../../shared/services/fv-realtime.service';
 
 interface DiagramDevice {
   id: string;
@@ -175,13 +176,19 @@ export class DiagramComponent implements OnInit, OnDestroy {
   ];
 
   private subscription = new Subscription();
+  private activeVesselIdentity = '';
 
   constructor(
     private store: Store<any>,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private fvRealtimeService: FvRealtimeService
   ) {}
 
   ngOnInit(): void {
+    // Diagram ใช้ข้อมูล live ชุดเดียวกับหน้า Realtime
+    // service จะยิง /getcurrentvalues ทุก 5 วินาทีเอง ไม่ต้อง refresh browser
+    this.fvRealtimeService.ensureStarted(5000);
+
     this.watchRouteVessel();
     this.watchActiveVessel();
     this.watchRealtimeData();
@@ -264,7 +271,15 @@ export class DiagramComponent implements OnInit, OnDestroy {
   }
 
   private watchActiveVessel(): void {
-    this.vessel$ = this.store.select(fvInfoReducer.getFvInfosActive);
+    this.vessel$ = combineLatest([
+      this.store.select(fvInfoReducer.getFvInfosActive),
+      this.fvRealtimeService.activeVessel$,
+    ]).pipe(
+      map(([storeActive, serviceActive]) => serviceActive || storeActive),
+      distinctUntilChanged((prev, curr) =>
+        this.getVesselIdentity(prev) === this.getVesselIdentity(curr)
+      )
+    );
 
     const vesselSubscription = this.vessel$.subscribe((data) => {
       const info = this.getVesselInfo(data);
@@ -277,13 +292,32 @@ export class DiagramComponent implements OnInit, OnDestroy {
 
       this.vesselName = info.name || info.prefix || 'SELECTED VESSEL';
       this.vesselPrefix = info.prefix || '';
+
+      const identity = this.getVesselIdentity(data);
+
+      if (identity && identity !== this.activeVesselIdentity) {
+        this.activeVesselIdentity = identity;
+        this.fvRealtimeService.setActiveVessel(data);
+      }
     });
 
     this.subscription.add(vesselSubscription);
   }
 
   private watchRealtimeData(): void {
-    this.data$ = this.store.select(fvInfoReducer.getFvRealtimeData);
+    this.data$ = combineLatest([
+      this.store.select(fvInfoReducer.getFvRealtimeData),
+      this.fvRealtimeService.currentData$,
+    ]).pipe(
+      map(([storeData, liveData]) => {
+        const normalizedLiveData = this.normalizeRealtimeData(liveData);
+        const normalizedStoreData = this.normalizeRealtimeData(storeData);
+
+        return Object.keys(normalizedLiveData).length > 0
+          ? normalizedLiveData
+          : normalizedStoreData;
+      })
+    );
 
     const dataSubscription = this.data$.subscribe((data) => {
       this.currentValues = this.normalizeRealtimeData(data);
@@ -331,6 +365,17 @@ export class DiagramComponent implements OnInit, OnDestroy {
     const nextName = (info.name || '').toLowerCase();
 
     return !!currentName && !!nextName && currentName === nextName;
+  }
+
+  private getVesselIdentity(vessel: any): string {
+    const info = this.getVesselInfo(vessel);
+
+    return String(
+      info?.prefix ||
+        info?.id ||
+        info?.name ||
+        ''
+    ).toLowerCase();
   }
 
   private normalizeRealtimeData(data: any): { [key: string]: any } {

@@ -173,3 +173,591 @@ body {
 .no-padding {
     padding: 0px !important;
 }
+
+/* =========================================================
+   PREMIUM BLACK THEME OVERRIDES
+   ใช้กับทุกหน้าเมื่อตั้งค่า html[data-theme='dark']
+   ========================================================= */
+[data-theme='dark'],
+[data-theme='dark'] body {
+  background: var(--main-bg) !important;
+  color: var(--primary-txt) !important;
+}
+
+[data-theme='dark'] .main,
+[data-theme='dark'] .grid-content,
+[data-theme='dark'] .grid-sidenav,
+[data-theme='dark'] .premium-dashboard,
+[data-theme='dark'] .diagram-page,
+[data-theme='dark'] .report-page,
+[data-theme='dark'] .overview-page,
+[data-theme='dark'] .past-track-page {
+  background:
+    radial-gradient(circle at 16% 0%, rgba(37, 99, 235, 0.12), transparent 28%),
+    radial-gradient(circle at 88% 8%, rgba(14, 165, 233, 0.08), transparent 26%),
+    linear-gradient(180deg, #030407 0%, #05070b 48%, #020305 100%) !important;
+  color: var(--primary-txt) !important;
+}
+
+[data-theme='dark'] .fullscreen_bg {
+  opacity: 0.12 !important;
+  filter: blur(18px) saturate(0.8) brightness(0.42) !important;
+}
+
+[data-theme='dark'] *::selection {
+  background: rgba(59, 130, 246, 0.34);
+  color: #ffffff;
+}
+
+/* Header */
+[data-theme='dark'] .fleet-header,
+[data-theme='dark'] .brand-box,
+[data-theme='dark'] .main-menu,
+[data-theme='dark'] .right-menu {
+  background: linear-gradient(180deg, #080b11 0%, #05070b 100%) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+[data-theme='dark'] .fleet-header {
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42) !important;
+}
+
+[data-theme='dark'] .nav-item {
+  color: var(--secondary-txt) !important;
+}
+
+[data-theme='dark'] .nav-icon,
+[data-theme='dark'] .nav-text {
+  color: inherit !important;
+}
+
+[data-theme='dark'] .nav-item:hover,
+[data-theme='dark'] .nav-item.active {
+  background: rgba(37, 99, 235, 0.12) !important;
+  color: #dbeafe !important;
+}
+
+[data-theme='dark'] .nav-item.active::after {
+  background: linear-gradient(90deg, #2563eb, #38bdf8) !important;
+}
+
+[data-theme='dark'] .settings-action-btn,
+[data-theme='dark'] .dark-mode-pill,
+[data-theme='dark'] .user-profile-pill,
+[data-theme='dark'] .logout-item {
+  background: #0b0d12 !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .settings-dropdown {
+  background: #080b11 !important;
+  border-color: var(--border-color) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.62) !important;
+}
+
+[data-theme='dark'] .dropdown-title,
+[data-theme='dark'] .dropdown-item strong,
+[data-theme='dark'] .user-info strong,
+[data-theme='dark'] .logout-text,
+[data-theme='dark'] .dark-copy strong {
+  color: var(--primary-txt) !important;
+}
+
+[data-theme='dark'] .dropdown-item,
+[data-theme='dark'] .dropdown-copy small,
+[data-theme='dark'] .user-label,
+[data-theme='dark'] .dark-copy small {
+  color: var(--secondary-txt) !important;
+}
+
+[data-theme='dark'] .dropdown-item:hover {
+  background: #111827 !important;
+}
+
+/* Sidebar */
+[data-theme='dark'] app-sidebar,
+[data-theme='dark'] app-sidebar .main,
+[data-theme='dark'] app-sidebar .vessel-sidebar,
+[data-theme='dark'] .vessel-sidebar {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(37, 99, 235, 0.12), transparent 30%),
+    linear-gradient(180deg, #080b11 0%, #05070b 100%) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+[data-theme='dark'] .sidebar-title,
+[data-theme='dark'] .vessel-name,
+[data-theme='dark'] .vessel-card strong {
+  color: var(--primary-txt) !important;
+}
+
+[data-theme='dark'] .sidebar-subtitle,
+[data-theme='dark'] .vessel-type,
+[data-theme='dark'] .vessel-position,
+[data-theme='dark'] .vessel-coordinate,
+[data-theme='dark'] .vessel-speed,
+[data-theme='dark'] .last-seen-label {
+  color: var(--secondary-txt) !important;
+}
+
+[data-theme='dark'] .search-box,
+[data-theme='dark'] .search-box input,
+[data-theme='dark'] .close-btn,
+[data-theme='dark'] .view-all-btn {
+  background: #0b0d12 !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .search-box input::placeholder {
+  color: #6b7280 !important;
+}
+
+[data-theme='dark'] .vessel-card {
+  background: linear-gradient(180deg, #0f131a 0%, #0a0d13 100%) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28) !important;
+}
+
+[data-theme='dark'] .vessel-card:hover,
+[data-theme='dark'] .vessel-card.active {
+  background: linear-gradient(180deg, #131925 0%, #0b1018 100%) !important;
+  border-color: rgba(59, 130, 246, 0.58) !important;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34), inset 0 0 0 1px rgba(59, 130, 246, 0.10) !important;
+}
+
+[data-theme='dark'] .vessel-image {
+  background: #111827 !important;
+  box-shadow: inset 0 0 0 1px var(--border-color) !important;
+}
+
+/* Generic panels / cards */
+[data-theme='dark'] .dash-header,
+[data-theme='dark'] .kpi-card,
+[data-theme='dark'] .premium-card,
+[data-theme='dark'] .live-status-card,
+[data-theme='dark'] .report-header,
+[data-theme='dark'] .report-controls,
+[data-theme='dark'] .simple-field,
+[data-theme='dark'] .pdf-summary-item,
+[data-theme='dark'] .selected-vessel-card,
+[data-theme='dark'] .message-alert,
+[data-theme='dark'] .pdf-viewer-panel,
+[data-theme='dark'] .pdf-toolbar,
+[data-theme='dark'] .diagram-card,
+[data-theme='dark'] .info-card,
+[data-theme='dark'] .content-card {
+  background: linear-gradient(180deg, #0f131a 0%, #0a0d13 100%) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+[data-theme='dark'] .report-header h1,
+[data-theme='dark'] .ship-title-row h1,
+[data-theme='dark'] .kpi-val,
+[data-theme='dark'] .st-val,
+[data-theme='dark'] .pdf-summary-item strong,
+[data-theme='dark'] .pdf-toolbar strong,
+[data-theme='dark'] .selected-vessel-card strong,
+[data-theme='dark'] .card-header,
+[data-theme='dark'] .dg-title,
+[data-theme='dark'] .unit-name,
+[data-theme='dark'] .mile-unit {
+  color: var(--primary-txt) !important;
+}
+
+[data-theme='dark'] .report-header p,
+[data-theme='dark'] .kpi-title,
+[data-theme='dark'] .ship-meta,
+[data-theme='dark'] .ship-coords,
+[data-theme='dark'] .date-badge,
+[data-theme='dark'] .st-lbl,
+[data-theme='dark'] .st-unit,
+[data-theme='dark'] .pdf-summary-item small,
+[data-theme='dark'] .simple-field > span,
+[data-theme='dark'] .selected-vessel-card small,
+[data-theme='dark'] .pdf-toolbar small {
+  color: var(--secondary-txt) !important;
+}
+
+[data-theme='dark'] .ship-avatar,
+[data-theme='dark'] .summary-icon,
+[data-theme='dark'] .kpi-icon,
+[data-theme='dark'] .sum-icon-box {
+  background: rgba(37, 99, 235, 0.14) !important;
+  color: #60a5fa !important;
+}
+
+[data-theme='dark'] .badge-online,
+[data-theme='dark'] .badge-run {
+  background: rgba(34, 197, 94, 0.14) !important;
+  color: #86efac !important;
+  border: 1px solid rgba(34, 197, 94, 0.22) !important;
+}
+
+[data-theme='dark'] .date-badge,
+[data-theme='dark'] .btn-live,
+[data-theme='dark'] .select-wrap select,
+[data-theme='dark'] .field-control,
+[data-theme='dark'] input,
+[data-theme='dark'] select,
+[data-theme='dark'] textarea {
+  background: #080b11 !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+[data-theme='dark'] input::placeholder,
+[data-theme='dark'] textarea::placeholder {
+  color: #6b7280 !important;
+}
+
+[data-theme='dark'] .load-btn,
+[data-theme='dark'] .primary-btn,
+[data-theme='dark'] .action-primary {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 18px 34px rgba(37, 99, 235, 0.26) !important;
+}
+
+[data-theme='dark'] .pdf-preview,
+[data-theme='dark'] .pdf-canvas,
+[data-theme='dark'] .empty-state,
+[data-theme='dark'] .map-wrapper,
+[data-theme='dark'] .map-component,
+[data-theme='dark'] .card-body {
+  background: #05070b !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+/* Realtime diagram internals */
+[data-theme='dark'] app-main-engine,
+[data-theme='dark'] app-main-2engine,
+[data-theme='dark'] app-main-engine-electric,
+[data-theme='dark'] app-diesel-generator-no-rpm,
+[data-theme='dark'] app-diesel-generator-no-rpm-vtotal,
+[data-theme='dark'] app-aux-engine,
+[data-theme='dark'] app-electric-motor,
+[data-theme='dark'] app-summary {
+  color: var(--primary-txt) !important;
+}
+
+[data-theme='dark'] #engine,
+[data-theme='dark'] #gear,
+[data-theme='dark'] #engine1,
+[data-theme='dark'] #engine2,
+[data-theme='dark'] #generator,
+[data-theme='dark'] #motor {
+  background: #111827 !important;
+  color: var(--primary-txt) !important;
+  border-color: rgba(148, 163, 184, 0.32) !important;
+}
+
+[data-theme='dark'] #line1,
+[data-theme='dark'] #line2,
+[data-theme='dark'] #line3,
+[data-theme='dark'] #line4,
+[data-theme='dark'] #line5,
+[data-theme='dark'] #line6 {
+  border-color: rgba(148, 163, 184, 0.34) !important;
+}
+
+[data-theme='dark'] .ftd1-value,
+[data-theme='dark'] .value,
+[data-theme='dark'] .value-mile,
+[data-theme='dark'] .coordinate,
+[data-theme='dark'] .txt-blue {
+  color: #60a5fa !important;
+}
+
+/* Scrollbars */
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: #273142 !important;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-track {
+  background: #05070b !important;
+}
+
+/* Shared report components */
+[data-theme='dark'] .pdf-panel,
+[data-theme='dark'] .pdf-header,
+[data-theme='dark'] .report-date-picker,
+[data-theme='dark'] .field-control,
+[data-theme='dark'] .selected-vessel,
+[data-theme='dark'] .report-info-bar,
+[data-theme='dark'] .summary-card {
+  background: linear-gradient(180deg, #0f131a 0%, #0a0d13 100%) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.34) !important;
+}
+
+[data-theme='dark'] .pdf-title strong,
+[data-theme='dark'] .selected-vessel strong,
+[data-theme='dark'] .report-info-bar strong,
+[data-theme='dark'] .summary-card strong,
+[data-theme='dark'] .empty-state h2 {
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] .pdf-title span,
+[data-theme='dark'] .field-label,
+[data-theme='dark'] .selected-vessel small,
+[data-theme='dark'] .panel-title small,
+[data-theme='dark'] .summary-card span,
+[data-theme='dark'] .empty-state p,
+[data-theme='dark'] .report-date-picker em {
+  color: #94a3b8 !important;
+}
+
+[data-theme='dark'] .field-control input,
+[data-theme='dark'] .pdf-tools button,
+[data-theme='dark'] .secondary-action {
+  background: #080b11 !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] .pdf-tools button:hover,
+[data-theme='dark'] .secondary-action:hover {
+  background: #111827 !important;
+  border-color: rgba(59, 130, 246, 0.38) !important;
+}
+
+[data-theme='dark'] .pdf-viewer-wrap {
+  background: #05070b !important;
+}
+
+[data-theme='dark'] .report-message-alert.success {
+  background: rgba(34, 197, 94, 0.12) !important;
+  border-color: rgba(34, 197, 94, 0.28) !important;
+  color: #86efac !important;
+}
+
+[data-theme='dark'] .report-message-alert.error {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.28) !important;
+  color: #fca5a5 !important;
+}
+
+[data-theme='dark'] .report-message-alert.info,
+[data-theme='dark'] .report-message-alert.warning {
+  background: rgba(37, 99, 235, 0.12) !important;
+  border-color: rgba(59, 130, 246, 0.28) !important;
+  color: #bfdbfe !important;
+}
+
+
+/* =========================================================
+   PREMIUM BLACK PRO DETAIL OVERRIDES
+   เน้นแก้จุดที่มองไม่ชัดใน Dark mode: Header, Sidebar, Realtime, Diagram
+   ========================================================= */
+[data-theme='dark'] {
+  background: #000000 !important;
+}
+
+[data-theme='dark'] body {
+  background: #000000 !important;
+  color: var(--primary-txt) !important;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-theme='dark'] .main,
+[data-theme='dark'] .grid-content,
+[data-theme='dark'] .premium-dashboard,
+[data-theme='dark'] .diagram-page,
+[data-theme='dark'] .report-page,
+[data-theme='dark'] .past-track-page {
+  background:
+    radial-gradient(circle at 16% -8%, rgba(37, 99, 235, 0.16), transparent 28%),
+    radial-gradient(circle at 92% 0%, rgba(14, 165, 233, 0.08), transparent 24%),
+    linear-gradient(180deg, #000000 0%, #03050a 42%, #000000 100%) !important;
+  color: var(--primary-txt) !important;
+}
+
+[data-theme='dark'] .grid-content {
+  scrollbar-color: #334155 #05070d;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 999px;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-track {
+  background: #05070d;
+}
+
+/* ---------- Header polish ---------- */
+[data-theme='dark'] .fleet-header,
+[data-theme='dark'] .brand-box,
+[data-theme='dark'] .main-menu,
+[data-theme='dark'] .right-menu {
+  background: linear-gradient(180deg, #03050a 0%, #000000 100%) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  color: var(--primary-txt) !important;
+}
+
+[data-theme='dark'] .fleet-header {
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.65) !important;
+}
+
+[data-theme='dark'] .main-logo {
+  filter: drop-shadow(0 0 16px rgba(59, 130, 246, 0.42)) brightness(1.15) saturate(1.2) !important;
+}
+
+[data-theme='dark'] .nav-item {
+  color: #b7c4d8 !important;
+}
+
+[data-theme='dark'] .nav-icon,
+[data-theme='dark'] .nav-text {
+  color: inherit !important;
+}
+
+[data-theme='dark'] .nav-item:hover,
+[data-theme='dark'] .nav-item.active {
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.22), rgba(37, 99, 235, 0.06)) !important;
+  color: #93c5fd !important;
+}
+
+[data-theme='dark'] .settings-action-btn,
+[data-theme='dark'] .dark-mode-pill,
+[data-theme='dark'] .user-profile-pill,
+[data-theme='dark'] .logout-item,
+[data-theme='dark'] .live-status-card,
+[data-theme='dark'] .date-badge,
+[data-theme='dark'] .btn-live {
+  background: linear-gradient(180deg, #0d121b 0%, #080c12 100%) !important;
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  color: #f8fafc !important;
+  box-shadow: none !important;
+}
+
+[data-theme='dark'] .dark-mode-pill strong,
+[data-theme='dark'] .dark-copy small,
+[data-theme='dark'] .user-info strong,
+[data-theme='dark'] .user-label,
+[data-theme='dark'] .logout-text {
+  color: #f8fafc !important;
+}
+
+/* ---------- Sidebar polish ---------- */
+[data-theme='dark'] .sidebar,
+[data-theme='dark'] .fleet-sidebar,
+[data-theme='dark'] app-sidebar,
+[data-theme='dark'] .grid-sidenav {
+  background: linear-gradient(180deg, #03050a 0%, #000000 100%) !important;
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] .sidebar-title,
+[data-theme='dark'] .sidebar-header h3,
+[data-theme='dark'] .vessel-name,
+[data-theme='dark'] .vessel-type,
+[data-theme='dark'] .vessel-time {
+  color: #f8fafc !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .sidebar-subtitle,
+[data-theme='dark'] .vessel-coordinate,
+[data-theme='dark'] .sidebar-count,
+[data-theme='dark'] .search-box input::placeholder {
+  color: #b7c4d8 !important;
+}
+
+[data-theme='dark'] .search-box,
+[data-theme='dark'] .search-box input,
+[data-theme='dark'] .vessel-card {
+  background: linear-gradient(180deg, #0d121b 0%, #080c12 100%) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] .vessel-card:hover,
+[data-theme='dark'] .vessel-card.active {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.20) 0%, #0d121b 100%) !important;
+  border-color: rgba(96, 165, 250, 0.62) !important;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(96, 165, 250, 0.10) !important;
+}
+
+[data-theme='dark'] .status-badge.online {
+  background: rgba(34, 197, 94, 0.16) !important;
+  color: #bbf7d0 !important;
+  border: 1px solid rgba(34, 197, 94, 0.28) !important;
+}
+
+[data-theme='dark'] .status-badge.offline {
+  background: rgba(239, 68, 68, 0.17) !important;
+  color: #fecaca !important;
+  border: 1px solid rgba(239, 68, 68, 0.28) !important;
+}
+
+/* ---------- Realtime child components: fix invisible text ---------- */
+[data-theme='dark'] .premium-dashboard .ftd1-name,
+[data-theme='dark'] .premium-dashboard .ftd1-unit,
+[data-theme='dark'] .premium-dashboard .unit,
+[data-theme='dark'] .premium-dashboard .unit-name,
+[data-theme='dark'] .premium-dashboard .mile-unit,
+[data-theme='dark'] .premium-dashboard #fuel-supply-title,
+[data-theme='dark'] .premium-dashboard #fuel-return-title,
+[data-theme='dark'] .premium-dashboard #fuel2-supply-title,
+[data-theme='dark'] .premium-dashboard #fuel2-return-title,
+[data-theme='dark'] .premium-dashboard #enging-shaft-title,
+[data-theme='dark'] .premium-dashboard #prop-shaft-title {
+  color: #eaf2ff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45) !important;
+}
+
+[data-theme='dark'] .premium-dashboard .ftd1-value,
+[data-theme='dark'] .premium-dashboard .value,
+[data-theme='dark'] .premium-dashboard .value-mile,
+[data-theme='dark'] .premium-dashboard .coordinate {
+  color: #60a5fa !important;
+  font-weight: 900 !important;
+  text-shadow: 0 0 10px rgba(96, 165, 250, 0.16) !important;
+}
+
+[data-theme='dark'] .premium-dashboard #engine,
+[data-theme='dark'] .premium-dashboard #engine2,
+[data-theme='dark'] .premium-dashboard #gear {
+  background: linear-gradient(180deg, #111827 0%, #070a10 100%) !important;
+  color: #f8fafc !important;
+  border-color: rgba(148, 163, 184, 0.55) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), 0 10px 22px rgba(0,0,0,0.45) !important;
+}
+
+[data-theme='dark'] .premium-dashboard #fuel-use,
+[data-theme='dark'] .premium-dashboard #fuel-use2 {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.18) !important;
+}
+
+[data-theme='dark'] .premium-dashboard #line1,
+[data-theme='dark'] .premium-dashboard #line2 {
+  border-color: rgba(203, 213, 225, 0.48) !important;
+}
+
+/* ---------- General cards ---------- */
+[data-theme='dark'] .card,
+[data-theme='dark'] .panel,
+[data-theme='dark'] .filter-card,
+[data-theme='dark'] .report-hero,
+[data-theme='dark'] .report-filter-card,
+[data-theme='dark'] .report-status,
+[data-theme='dark'] .report-content,
+[data-theme='dark'] .pdf-panel {
+  background: linear-gradient(180deg, #0d121b 0%, #080c12 100%) !important;
+  border-color: rgba(148, 163, 184, 0.20) !important;
+  color: #f8fafc !important;
+}

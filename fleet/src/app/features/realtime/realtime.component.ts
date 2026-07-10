@@ -41,8 +41,23 @@ export class RealtimeComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.data$ = this.store.select(fvInfoReducer.getFvRealtimeData).pipe(
-      map((data) => this.normalizeRealtimeData(data)),
+    // ให้ service เริ่มยิง /getcurrentvalues เองทุก 5 วินาที
+    // ใช้ได้แม้เปิดหน้า Realtime โดยตรง ไม่ต้อง refresh browser
+    this.fvRealtimeService.ensureStarted(5000);
+
+    this.data$ = combineLatest([
+      this.store.select(fvInfoReducer.getFvRealtimeData),
+      this.fvRealtimeService.currentData$,
+    ]).pipe(
+      map(([storeData, liveData]) => {
+        const normalizedLiveData = this.normalizeRealtimeData(liveData);
+        const normalizedStoreData = this.normalizeRealtimeData(storeData);
+
+        // ให้ข้อมูล live จาก service มาก่อน เพราะเป็นค่าที่เพิ่งยิง backend รอบล่าสุด
+        return Object.keys(normalizedLiveData).length > 0
+          ? normalizedLiveData
+          : normalizedStoreData;
+      }),
       shareReplay({ bufferSize: 1, refCount: true })
     );
 
@@ -60,12 +75,52 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     );
 
     this.syncActiveVesselFromRoute();
+    this.activateStoredVessel();
+    this.watchSelectedVesselForLiveUpdate();
     this.watchRealtimePrefix();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+
+  /**
+   * เปิดจากปุ่ม Realtime ใน popup จะเก็บเรือไว้ใน localStorage
+   * ฟังก์ชันนี้ดึงเรือนั้นมา set active อีกครั้ง กันหน้า realtime ว่าง/ค้าง
+   */
+  private activateStoredVessel(): void {
+    const stored = this.getStoredRealtimeVessel();
+
+    if (!stored) {
+      return;
+    }
+
+    setTimeout(() => {
+      this.fvRealtimeService.setActiveVessel(stored);
+    }, 80);
+  }
+
+  /**
+   * ถ้า active vessel มาจาก Store / Sidebar / URL ให้ส่งเข้า FvRealtimeService
+   * เพื่อให้ service ยิง backend ซ้ำอัตโนมัติ ไม่ต้อง refresh หน้าเว็บ
+   */
+  private watchSelectedVesselForLiveUpdate(): void {
+    this.activeVessel$
+      .pipe(
+        distinctUntilChanged((prev, curr) =>
+          this.getVesselIdentity(prev) === this.getVesselIdentity(curr)
+        ),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((vessel) => {
+        if (!vessel) {
+          return;
+        }
+
+        this.fvRealtimeService.setActiveVessel(vessel);
+      });
   }
 
   /**

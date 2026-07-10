@@ -211,7 +211,21 @@ export class FleetVesselDataService {
         }
 
         const shortName = this.toShortTagName(fullName, row.fv?.prefix || row.fv?.name || '');
-        const value = item?.Value ?? item?.value ?? item?.Val ?? item?.val ?? item?.Data ?? item?.data ?? '';
+        const value =
+          item?.Value ??
+          item?.value ??
+          item?.IValue ??
+          item?.ivalue ??
+          item?.iValue ??
+          item?.ActualValue ??
+          item?.actualValue ??
+          item?.CurrentValue ??
+          item?.currentValue ??
+          item?.Val ??
+          item?.val ??
+          item?.Data ??
+          item?.data ??
+          '';
         const dateTime = item?.TimeStamp || item?.timestamp || item?.dateTime || item?.DateTime || item?.time || '';
 
         this.upsertRowValue(row, shortName, value, dateTime, fullName);
@@ -255,10 +269,15 @@ export class FleetVesselDataService {
       item.name ||
       item.TagName ||
       item.tagName ||
+      item.tagname ||
       item.Tag ||
       item.tag ||
       item.FullName ||
       item.fullName ||
+      item.FullTagName ||
+      item.fulltagname ||
+      item.Key ||
+      item.key ||
       ''
     );
   }
@@ -305,12 +324,16 @@ export class FleetVesselDataService {
       VES_GPS_COURSE: fv?.course,
       VES_ENGINE_LOAD: fv?.engineLoad,
       ENGINE_LOAD: fv?.engineLoad,
+      PME_ENGINE_LOAD: fv?.engineLoad,
+      SME_ENGINE_LOAD: fv?.engineLoad,
       VES_FUEL_RATE: fv?.fuelRate,
       VES_CONS_RATE: fv?.fuelRate,
       VES_FUEL_CONSUMPTION: fv?.fuelConsumption,
       VES_CONS_TODAY: fv?.fuelConsumption,
       VES_DISTANCE: fv?.distance,
       VES_GPS_DIS_TODAY: fv?.distance,
+      VES_GPS_DIS: fv?.distance,
+      DISTANCE_TODAY: fv?.distance,
       VES_STATUS: fv?.status,
       STATUS: fv?.status,
     };
@@ -319,6 +342,15 @@ export class FleetVesselDataService {
       const value = directMap[key];
 
       if (value === undefined || value === null || value === '') {
+        return;
+      }
+
+      // ถ้า backend ดึงค่าปัจจุบันมาแล้ว ห้ามเอาค่า default จาก vessel info ไปทับ
+      // สาเหตุเดิมที่ popup เป็น 0 คือ speed/fuel/distance จริงถูก seedDirectValues ทับด้วย 0
+      const existing = row.newData[key];
+      const existingValue = existing?.value;
+
+      if (existingValue !== undefined && existingValue !== null && existingValue !== '') {
         return;
       }
 
@@ -379,10 +411,10 @@ export class FleetVesselDataService {
       long: this.pickNumber(fv.long, fv.lng, fv.longitude, fv.longtitude, fv.Long, item?.long, item?.lng, item?.longitude, item?.longtitude),
       speed: this.pickNumber(fv.speed, fv.sog, item?.speed, item?.sog, 0),
       course: this.pickNumber(fv.course, fv.heading, item?.course, item?.heading, 0),
-      engineLoad: this.pickNumber(fv.engineLoad, fv.engine_load, fv.load, item?.engineLoad, item?.engine_load, item?.load, 0),
+      engineLoad: this.pickNumber(fv.engineLoad, fv.engine_load, fv.load, item?.engineLoad, item?.engine_load, item?.load),
       fuelRate: this.pickNumber(fv.fuelRate, fv.fuel_rate, item?.fuelRate, item?.fuel_rate, 0),
       fuelConsumption: this.pickNumber(fv.fuelConsumption, fv.fuel_consumption, item?.fuelConsumption, item?.fuel_consumption, 0),
-      distance: this.pickNumber(fv.distance, item?.distance, 0),
+      distance: this.pickNumber(fv.distance, fv.distanceToday, fv.todayDistance, item?.distance, item?.distanceToday, item?.todayDistance),
       status: fv.status || item?.status || '',
       timestamp:
         fv.timestamp ||
@@ -479,6 +511,7 @@ export class FleetVesselDataService {
       { name: 'VES_FUEL_RATE', tagName: 'VES-FUEL-RATE', cal: false },
       { name: 'VES_FUEL_CONSUMPTION', tagName: 'VES-FUEL-CONSUMPTION', cal: false },
       { name: 'VES_DISTANCE', tagName: 'VES-DISTANCE', cal: false },
+      { name: 'VES_GPS_DIS', tagName: 'VES-GPS-DIS', cal: false },
       { name: 'VES_STATUS', tagName: 'VES-STATUS', cal: false },
     ];
   }

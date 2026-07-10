@@ -1,5 +1,6 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { ThemeModeService } from '../../../shared/services/theme-mode.service';
 
 /*
   รูปแบบข้อมูลของเมนูบน Header
@@ -146,7 +147,10 @@ export class HeaderComponent implements OnInit {
     },
   ];
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private themeModeService: ThemeModeService
+  ) {}
 
   /*
     ngOnInit ทำงานครั้งแรกตอน Header ถูกสร้าง
@@ -154,6 +158,7 @@ export class HeaderComponent implements OnInit {
   */
   ngOnInit(): void {
     this.loadUserData();
+    this.initThemeMode();
   }
 
   /*
@@ -229,14 +234,23 @@ export class HeaderComponent implements OnInit {
   }
 
   /*
-    สลับสถานะ Dark / Light mode
-    ตอนนี้ยังเป็นแค่สถานะปุ่ม ยังไม่ได้เปลี่ยน theme ทั้งระบบ
+    โหลด theme จาก localStorage
+    default เป็น Dark Black เพื่อให้ Dashboard ดูพรีเมียมตั้งแต่เปิดเว็บ
+  */
+  private initThemeMode(): void {
+    const mode = this.themeModeService.init();
+    this.isDarkMode = mode === 'dark';
+  }
+
+  /*
+    สลับ Dark / Light mode จริงทั้งระบบ
+    service จะใส่ data-theme ให้ <html> และจำค่าที่เลือกไว้ใน localStorage
   */
   toggleDarkMode(event: MouseEvent): void {
     event.stopPropagation();
-    this.isDarkMode = !this.isDarkMode;
 
-    console.log('[HeaderComponent] Dark mode:', this.isDarkMode);
+    const nextMode = this.themeModeService.toggleMode();
+    this.isDarkMode = nextMode === 'dark';
   }
 
   /*
@@ -273,8 +287,15 @@ export class HeaderComponent implements OnInit {
     แล้วส่งกลับไปหน้า login
   */
   logout(): void {
+    const themeMode = localStorage.getItem('fleet-theme-mode');
+
     localStorage.clear();
     sessionStorage.clear();
+
+    // เก็บ theme ที่ผู้ใช้เลือกไว้ แม้ logout แล้วกลับมาใหม่ก็ยังเป็น mode เดิม
+    if (themeMode) {
+      localStorage.setItem('fleet-theme-mode', themeMode);
+    }
 
     this.closeSettingsMenu();
     this.closeMobileMenu();
