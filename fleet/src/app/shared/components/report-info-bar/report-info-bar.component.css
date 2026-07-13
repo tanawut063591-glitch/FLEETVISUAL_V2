@@ -1,0 +1,131 @@
+:host {
+  display: block;
+}
+
+.report-info-bar,
+.report-info-bar * {
+  box-sizing: border-box;
+}
+
+.report-info-bar {
+  height: 100%;
+  padding: 14px;
+  border: 1px solid #dce6f3;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.title-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.panel-title small,
+.summary-card span {
+  display: block;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.summary-card span i {
+  margin-right: 6px;
+  color: #2563eb;
+}
+
+.panel-title strong {
+  display: block;
+  margin-top: 3px;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.summary-grid {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.summary-card {
+  padding: 11px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 13px;
+  background: #f8fafc;
+}
+
+.summary-card strong {
+  display: block;
+  margin-top: 5px;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.file-card strong {
+  font-size: 12px;
+}
+
+.actions {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.actions button {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.actions button i {
+  margin-right: 8px;
+}
+
+.actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.primary-action {
+  border: 0;
+  color: #ffffff;
+  background: #0f172a;
+}
+
+.primary-action:hover:not(:disabled) {
+  background: #020617;
+}
+
+.secondary-action {
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid #cfdbea !important;
+}
+
+.secondary-action:hover:not(:disabled) {
+  background: #f8fafc;
+}

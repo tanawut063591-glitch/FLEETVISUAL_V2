@@ -1,0 +1,113 @@
+[
+    {
+        "reportName":"SME",
+        "tags":[
+            {
+                "name" : "FIN-MFLOW",
+                "tagName" : "SME-FIN-MFLOW"
+            },
+            {
+                "name" : "FIN-DENS",
+                "tagName" : "SME-FIN-DENS"
+            },
+            {
+                "name" : "FIN-TEMP",
+                "tagName" : "SME-FIN-TEMP"
+            },
+            {
+                "name" : "FIN-VTOTAL",
+                "tagName" : "SME-FIN-VTOTAL"
+            },
+            {
+                "name" : "FOUT-MFLOW",
+                "tagName" : "SME-FOUT-MFLOW"
+            },
+            {
+                "name" : "FOUT-DENS",
+                "tagName" : "SME-FOUT-DENS"
+            },
+            {
+                "name" : "FOUT-TEMP",
+                "tagName" : "SME-FOUT-TEMP"
+            },
+            {
+                "name" : "FOUT-VTOTAL",
+                "tagName" : "SME-FOUT-VTOTAL"
+            }
+        ]
+    },
+    {
+        "reportName":"PME",
+        "tags":[
+            {
+                "name" : "FIN-MFLOW",
+                "tagName" : "PME-FIN-MFLOW"
+            },
+            {
+                "name" : "FIN-DENS",
+                "tagName" : "PME-FIN-DENS"
+            },
+            {
+                "name" : "FIN-TEMP",
+                "tagName" : "PME-FIN-TEMP"
+            },
+            {
+                "name" : "FIN-VTOTAL",
+                "tagName" : "PME-FIN-VTOTAL"
+            },
+            {
+                "name" : "FOUT-MFLOW",
+                "tagName" : "PME-FOUT-MFLOW"
+            },
+            {
+                "name" : "FOUT-DENS",
+                "tagName" : "PME-FOUT-DENS"
+            },
+            {
+                "name" : "FOUT-TEMP",
+                "tagName" : "PME-FOUT-TEMP"
+            },
+            {
+                "name" : "FOUT-VTOTAL",
+                "tagName" : "PME-FOUT-VTOTAL"
+            }
+        ]
+    },
+    {
+        "reportName":"CME",
+        "tags":[
+            {
+                "name" : "FIN-MFLOW",
+                "tagName" : "CME-FIN-MFLOW"
+            },
+            {
+                "name" : "FIN-DENS",
+                "tagName" : "CME-FIN-DENS"
+            },
+            {
+                "name" : "FIN-TEMP",
+                "tagName" : "CME-FIN-TEMP"
+            },
+            {
+                "name" : "FIN-VTOTAL",
+                "tagName" : "CME-FIN-VTOTAL"
+            },
+            {
+                "name" : "FOUT-MFLOW",
+                "tagName" : "CME-FOUT-MFLOW"
+            },
+            {
+                "name" : "FOUT-DENS",
+                "tagName" : "CME-FOUT-DENS"
+            },
+            {
+                "name" : "FOUT-TEMP",
+                "tagName" : "CME-FOUT-TEMP"
+            },
+            {
+                "name" : "FOUT-VTOTAL",
+                "tagName" : "CME-FOUT-VTOTAL"
+            }
+        ]
+    }
+]

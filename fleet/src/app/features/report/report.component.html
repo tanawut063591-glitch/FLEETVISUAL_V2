@@ -1,0 +1,95 @@
+<section class="report-page">
+  <div class="report-container">
+    <section class="report-header">
+      <div class="report-title-block">
+        <span class="section-label">Fleet Visual PDF</span>
+        <h1>Report Center</h1>
+        <p>Select a vessel, choose a report type and date, then load the PDF from the backend.</p>
+      </div>
+
+      <app-selected-vessel-card [vesselName]="selectedVesselName"></app-selected-vessel-card>
+    </section>
+
+    <section class="report-controls" aria-label="Report filters">
+      <label class="simple-field">
+        <span>Report Type</span>
+        <div class="select-wrap">
+          <i [class]="selectedReportIcon" aria-hidden="true"></i>
+          <select [(ngModel)]="selectedReportType" (ngModelChange)="onReportTypeChange()">
+            <option *ngFor="let item of reportOptions" [ngValue]="item.value">
+              {{ item.label }}
+            </option>
+          </select>
+        </div>
+      </label>
+
+      <app-report-date-picker
+        *ngIf="selectedReportType === 'd'"
+        label="Date"
+        icon="fa fa-calendar-o"
+        mode="date"
+        [value]="selectedDate"
+        hint=""
+        (valueChange)="onReportDateChange($event, 'd')"
+      ></app-report-date-picker>
+
+      <app-report-date-picker
+        *ngIf="selectedReportType === 'm'"
+        label="Month"
+        icon="fa fa-calendar"
+        mode="month"
+        [value]="selectedMonth"
+        hint=""
+        (valueChange)="onReportDateChange($event, 'm')"
+      ></app-report-date-picker>
+
+      <button type="button" class="load-btn" [disabled]="!canLoadReport" (click)="loadReport()">
+        <i
+          class="fa"
+          [class.fa-circle-o-notch]="loading"
+          [class.fa-spin]="loading"
+          [class.fa-file-pdf-o]="!loading"
+          aria-hidden="true"
+        ></i>
+        <span>{{ loading ? 'Loading...' : 'Load Report' }}</span>
+      </button>
+    </section>
+
+    <section class="message-row" *ngIf="errorMessage || successMessage">
+      <app-report-message-alert
+        *ngIf="errorMessage"
+        type="error"
+        [message]="errorMessage"
+        (dismissed)="clearError()"
+      ></app-report-message-alert>
+
+      <app-report-message-alert
+        *ngIf="successMessage"
+        type="success"
+        [message]="successMessage"
+        [meta]="loadedAtLabel"
+        (dismissed)="clearSuccess()"
+      ></app-report-message-alert>
+    </section>
+
+    <section class="report-content">
+      <app-report-pdf-viewer
+        [src]="pdfUrl"
+        [fileName]="reportFileName"
+        [zoom]="pdfZoom"
+        [loading]="loading"
+        [canLoad]="canLoadReport"
+        emptyTitle="No PDF Loaded"
+        emptyMessage="Select a vessel from the sidebar, choose a report period, and click Load Report."
+        (reload)="reloadReport()"
+        (download)="download()"
+        (openNewTab)="openPdfNewTab()"
+        (zoomIn)="zoomIn()"
+        (zoomOut)="zoomOut()"
+        (resetZoom)="resetZoom()"
+        (load)="loadReport()"
+        (pdfError)="onPdfError($event)"
+      ></app-report-pdf-viewer>
+    </section>
+  </div>
+</section>

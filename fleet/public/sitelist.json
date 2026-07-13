@@ -1,0 +1,96 @@
+{
+	"name": "OVERVIEW",
+	"number": 125,
+	"capacity": "680.6",
+	"zoneList": [
+		{
+			"title":"CENTRAL 1",
+			"display": "Central 1",
+			"number": 14,
+			"capacity": "23.29",
+			"siteList": [
+				{
+					"id": "J2301-1",
+					"name": "SINGHA KAMEDA",
+					"project": "SPP6",
+					"location": "SAMUTPRAKARN",
+					"capacity": "1.14",
+					"invtype": "CENTRAL"
+				},
+				{
+					"id": "J2301-2",
+					"name": "VARA FOOD PHASE1",
+					"project": "SPP6",
+					"location": "NAKHONPATHOM",
+					"capacity": "0.993",
+					"invtype": "CENTRAL"
+				},
+				{
+					"id": "J2301-3",
+					"name": "PSC STARCH",
+					"project": "SPP6",
+					"location": "CHONBURI",
+					"capacity": " 0.999",
+					"invtype": "CENTRAL"
+				},
+				{
+					"id": "J2301-4",
+					"name": "SINGHA PARK CRI",
+					"project": "SPP6",
+					"location": "CHIANGRAI",
+					"capacity": "0.460",
+					"invtype": "CENTRAL"
+				},
+				{
+					"id": "J2301-5",
+					"name": "VARA FOOD PHASE2",
+					"project": "SPP6",
+					"location": "NAKHONPATHOM",
+					"capacity": "0.999",
+					"invtype": "CENTRAL"
+				},
+				{
+					"id": "COOP02",
+					"name": "BAB",
+					"project": "17AYH",
+					"location": "SURATTHANI",
+					"capacity": "0.999",
+					"invtype": "STRING"
+				},
+				{
+					"id": "COOP08",
+					"name": "SRB",
+					"project": "AIQ",
+					"location": "AYUTTHAYA",
+					"capacity": "1.485",
+					"invtype": "CENTRAL"
+				},
+				{
+					"id": "COOP10",
+					"name": "WNB2",
+					"project": "IQE",
+					"location": "KHON KAEN",
+					"capacity": "1.219",
+					"invtype": "CENTRAL"
+				},
+				{
+					"id": "COOP11",
+					"name": "KKB FACTORY",
+					"project": "IQE",
+					"location": "SINGBURI",
+					"capacity": "1.495",
+					"invtype": "CENTRAL"
+				},
+				{
+					"id": "COOP12",
+					"name": "SBC",
+					"project": "IQE",
+					"location": "NAKHONPATHOM",
+					"capacity": "1.501",
+					"invtype": "CENTRAL"
+				}
+			]
+
+		}
+	]
+}

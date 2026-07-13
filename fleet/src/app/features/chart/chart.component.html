@@ -1,0 +1,193 @@
+<div class="chart-page">
+
+    <app-datetime-control
+        [loading]="loading"
+        [selectAll]="false"
+        [display]="true"
+        [maxSelection]="10"
+        [dialogSubtitle]="'Select sensor parameters for Chart'"
+        [searchTitle]="'Export'"
+        [pageTitle]="'CHART'"
+        [pageSubtitle]="'Visualize and compare vessel sensor trends over time.'"
+        [badgeLabel]="'LIVE HISTORICAL CHART'"
+        [parameterText]="'Choose the sensor tags you want to display on the chart.'"
+        (showLoggerEmit)="showLogger($event)"
+        (selectedTimer)="exportChartCsv($event)">
+    </app-datetime-control>
+
+    <div class="chart-workspace">
+
+        <div class="chart-toolbar">
+            <div class="toolbar-left">
+                <div class="tab-title">
+                    <span class="tab-dot"></span>
+                    <span>Live Chart</span>
+                </div>
+
+                <div class="selected-pill">
+                    <i class="fa fa-tags"></i>
+                    {{ getSelectedLabel() }}
+                </div>
+            </div>
+
+            <div class="toolbar-actions">
+                <span class="mode-label">GRAPH DISPLAY MODE</span>
+
+                <div class="mode-switch">
+                    <button type="button" [ngClass]="{ 'active': displayMode == 'all' }" (click)="setDisplayMode('all')">
+                        All Lines
+                    </button>
+                    <button type="button" [ngClass]="{ 'active': displayMode == 'groups' }" (click)="setDisplayMode('groups')">
+                        Separate Groups
+                    </button>
+                </div>
+
+                <button type="button" class="auto-btn" [ngClass]="{ 'active': autoRefresh }" (click)="toggleAutoRefresh()">
+                    <span>Auto Refresh</span>
+                    <i class="toggle-dot"></i>
+                </button>
+
+                <button type="button" class="icon-btn" title="Refresh" (click)="refreshNow()">
+                    <i class="fa fa-refresh"></i>
+                </button>
+
+                <button type="button" class="icon-btn" title="Clear" (click)="clearChart()">
+                    <i class="fa fa-eraser"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="chart-meta" *ngIf="lastStartLabel || lastEndLabel || lastUpdatedLabel">
+            <div>
+                <span>Range</span>
+                <strong>{{ lastStartLabel || '-' }} → {{ lastEndLabel || '-' }}</strong>
+            </div>
+            <div>
+                <span>Mode</span>
+                <strong>{{ getModeLabel() }}</strong>
+            </div>
+            <div>
+                <span>Last Update</span>
+                <strong>{{ lastUpdatedLabel || '-' }}</strong>
+            </div>
+        </div>
+
+        <div class="parameter-strip" *ngIf="selectedSeries.length > 0">
+            <div
+                class="parameter-chip"
+                *ngFor="let s of selectedSeries; trackBy: trackBySeries">
+                <span class="chip-color" [style.background]="s.color"></span>
+                <span>{{ s.label }}</span>
+                <em *ngIf="s.unit">{{ s.unit }}</em>
+            </div>
+        </div>
+
+        <div class="chart-content">
+
+            <div class="chart-main">
+
+                <div class="state-card loading-state" *ngIf="loading">
+                    <i class="fa fa-circle-o-notch fa-spin"></i>
+                    <strong>Loading chart data...</strong>
+                    <span>Please wait while the historian values are loading.</span>
+                </div>
+
+                <div class="state-card error-state" *ngIf="!loading && errorMessage">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    <strong>{{ errorMessage }}</strong>
+                    <span>Please check the selected tags or try again.</span>
+                </div>
+
+                <div class="state-card empty-state" *ngIf="!loading && !errorMessage && selectedSeries.length == 0">
+                    <i class="fa fa-line-chart"></i>
+                    <strong>Select tags and click Apply</strong>
+                    <span>Choose parameters, select a time range and visualize data as line or area charts.</span>
+                </div>
+
+                <div class="chart-card" *ngIf="!loading && selectedSeries.length > 0 && displayMode == 'all'">
+                    <div class="chart-card-head">
+                        <div>
+                            <h3>All selected parameters</h3>
+                            <p>Combined trend view with every selected tag in one chart.</p>
+                        </div>
+                        <div class="card-tools">
+                            <i class="fa fa-search-plus"></i>
+                            <i class="fa fa-expand"></i>
+                            <i class="fa fa-ellipsis-h"></i>
+                        </div>
+                    </div>
+                    <highcharts-chart
+                        *ngIf="mainChartOptions as options"
+                        [options]="options"
+                        class="chart-instance big-chart">
+                    </highcharts-chart>
+                </div>
+
+                <div class="group-stack" *ngIf="!loading && selectedSeries.length > 0 && displayMode == 'groups'">
+                    <div class="chart-card group-card" *ngFor="let group of groupCharts; trackBy: trackByGroup">
+                        <div class="chart-card-head compact">
+                            <div>
+                                <h3>{{ group.label }}</h3>
+                                <p>{{ group.count }} parameters in this group</p>
+                            </div>
+                            <div class="card-tools">
+                                <i class="fa fa-eye"></i>
+                                <i class="fa fa-expand"></i>
+                                <i class="fa fa-ellipsis-h"></i>
+                            </div>
+                        </div>
+                        <highcharts-chart
+                            [options]="group.chartOptions"
+                            class="chart-instance group-chart">
+                        </highcharts-chart>
+                    </div>
+                </div>
+
+            </div>
+
+            <aside class="chart-side">
+
+                <div class="side-panel">
+                    <div class="side-head">
+                        <h4>SELECTED PARAMETERS</h4>
+                        <span>{{ selectedSeries.length }} / 10 max</span>
+                    </div>
+
+                    <div class="side-list" *ngIf="selectedSeries.length > 0">
+                        <div class="side-item" *ngFor="let s of selectedSeries; trackBy: trackBySeries">
+                            <span class="side-color" [style.background]="s.color"></span>
+                            <div>
+                                <strong>{{ s.label }}</strong>
+                                <small>{{ s.group }} <span *ngIf="s.unit">· {{ s.unit }}</span></small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="side-empty" *ngIf="selectedSeries.length == 0">
+                        No parameters selected yet.
+                    </div>
+                </div>
+
+                <div class="side-panel chart-type-panel">
+                    <h4>CHART TYPE</h4>
+
+                    <div class="chart-type-grid">
+                        <button type="button" [ngClass]="{ 'active': chartType == 'line' }" (click)="setChartType('line')">
+                            <i class="fa fa-line-chart"></i>
+                            <span>Line</span>
+                        </button>
+
+                        <button type="button" [ngClass]="{ 'active': chartType == 'area' }" (click)="setChartType('area')">
+                            <i class="fa fa-area-chart"></i>
+                            <span>Area</span>
+                        </button>
+                    </div>
+                </div>
+
+            </aside>
+
+        </div>
+
+    </div>
+
+</div>

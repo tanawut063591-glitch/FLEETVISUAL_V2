@@ -1,0 +1,51 @@
+<section class="detail-panel">
+
+    <h3>POINT DETAIL</h3>
+    <p>Information of selected track point</p>
+
+    <div class="detail-card" *ngIf="point">
+
+        <div class="detail-head">
+            <div>
+                <span>Time</span>
+                <strong>{{ point.time }}</strong>
+            </div>
+
+            <label [ngClass]="getStatusClass()">
+                {{ point.status }}
+            </label>
+        </div>
+
+        <div class="detail-row">
+            <span>⌖ Latitude</span>
+            <b>{{ formatLat(point.lat) }}</b>
+        </div>
+
+        <div class="detail-row">
+            <span>⌖ Longitude</span>
+            <b>{{ formatLng(point.lng) }}</b>
+        </div>
+
+        <div class="detail-row">
+            <span>↗ Speed</span>
+            <b>{{ point.speed }} kt</b>
+        </div>
+
+        <div class="detail-row">
+            <span>➤ Course</span>
+            <b>{{ point.course }}°</b>
+        </div>
+
+        <div class="detail-row">
+            <span>▣ Engine</span>
+            <b>{{ point.engine }}</b>
+        </div>
+
+        <div class="detail-row">
+            <span>▤ Fuel Rate</span>
+            <b>{{ point.fuelRate }} L/H</b>
+        </div>
+
+    </div>
+
+</section>

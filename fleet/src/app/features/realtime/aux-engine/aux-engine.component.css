@@ -1,0 +1,171 @@
+.container-fluid{
+    padding-right: 0px;
+    padding-left: 0px;
+    position: absolute;
+    width: 100%;
+    height: 200px;
+    font-family:'Krona+One', sans-serif;
+}
+
+#group-ftd1{
+    left: 10px;
+    top: 5px;
+    position: absolute;
+    width: 163px;
+}
+
+#group-ftd2{
+
+    left: 10px;
+    top: 181px;
+    position: absolute;
+    width: 163px;
+}
+
+
+#group-ftd3{
+    position: absolute;
+    width: 35px;
+    left: 16px;
+    top: 91px;
+    z-index: 2;
+}
+
+#group-ftd4{
+    position: absolute;
+    width: 35px;
+    left: 69px;
+    top: 91px;
+    z-index: 2;
+
+
+}
+
+#speed-engine{
+    position: absolute;
+    width: 35px;
+    left: 79%;
+    top: 29px;
+}
+
+
+.ftd1{
+	position: relative;
+    width: 49px;
+	height: 100%;
+    float: left;
+    text-align: center;
+}
+
+.ftd1-name{
+    font-size: 12px;
+}
+
+.ftd1-value{
+    font-size: 11px;
+    color: cornflowerblue;
+    line-height: 1.4;
+    font-weight: bold;
+}
+
+.ftd1-unit{
+    font-size: 11px;
+    line-height: 1;
+}
+
+
+#fuel-use{
+    height: 108px;
+    width: 145px;
+    border: 5px solid #FF9900;
+    border-left: none;
+    top: 63px;
+    left: 5px;
+    position: absolute;
+    z-index: 0;
+}
+
+#fuel-supply-title{
+    height: 20px;
+    width: 56px;
+    top: 57px;
+    left: 50px;
+    position: absolute;
+    z-index: 1;
+}
+
+#fuel-return-title{
+    height: 20px;
+    width: 56px;
+    top: 149px;
+    left: 45px;
+    position: absolute;
+    z-index: 1;
+}
+
+#engine{
+    height: 41px;
+    width: 50px;
+    top: 95px;
+    left: 125px;
+    position: absolute;
+    border: 2px solid #999999;
+    border-radius: 6px;
+    z-index: 1;
+    background-color: floralwhite;
+    text-align: center;
+    line-height: 2.8;
+    font-size: 13px;
+}
+
+
+
+#line-engine-shaft{
+    height: 5px;
+    width: calc(92% - 125px);
+    background-color: #0000FF;
+    top: 112px;
+    left: 144px;
+    z-index: 0;
+    position: absolute;
+}
+
+#enging-shaft-title{
+    height: 20px;
+    width: 25%;
+    top: 122px;
+    left: 69%;
+    position: absolute;
+    z-index: 1;
+    font-size: 11px;
+}
+
+
+
+#line1{
+    height: 61px;
+    width: 17px;
+    top: 55px;
+    left: 73%;
+    position: absolute;
+    z-index: 1;
+    border: 1px solid black;
+    border-style: dotted;
+    border-right: none;
+    border-bottom: none;
+}
+
+
+@media screen and (max-width:992px){
+    .ftd1{
+        width: 47px;
+    }
+
+    #group-ftd1{
+        width: 141px;
+    }
+
+    #group-ftd2{
+        width: 141px;
+    }
+}
