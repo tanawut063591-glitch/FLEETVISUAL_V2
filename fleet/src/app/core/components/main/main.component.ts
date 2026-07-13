@@ -30,7 +30,7 @@ export class MainComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
   private readonly defaultTimer = 5000;
-
+  
   constructor(
     public fvTimeService: FvTimeService,
     public coordinatesService: CoordinatesService,
@@ -92,10 +92,35 @@ export class MainComponent implements OnInit, OnDestroy {
 
     this.fvRealtimeService.setActiveVessel(vessel);
     this.vesselPopup.openPopup(vessel);
+
+    // On Past Track, selecting another vessel must change the route parameter.
+    // PastTrackComponent subscribes to paramMap and reloads that vessel automatically.
+    if (this.router.url.includes('/main/past-track')) {
+      const routeId = this.getVesselRouteId(vessel);
+
+      if (routeId) {
+        this.router.navigate(['/main/past-track', routeId]);
+      }
+    }
   }
 
   getDepth(outlet: any): number {
     return outlet?.activatedRouteData?.['depth'] || 0;
+  }
+
+  private getVesselRouteId(vessel: any): string {
+    return String(
+      vessel?.prefix ||
+        vessel?.fv?.prefix ||
+        vessel?.fvInfo?.prefix ||
+        vessel?.id ||
+        vessel?._id ||
+        vessel?.vesselId ||
+        vessel?.fv?.id ||
+        vessel?.fvInfo?.id ||
+        vessel?.name ||
+        ''
+    ).trim();
   }
 
   private loadSidebarVessels(): void {

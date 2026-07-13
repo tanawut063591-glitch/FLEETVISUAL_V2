@@ -16,6 +16,11 @@
             </label>
         </div>
 
+        <div class="detail-row source-time" *ngIf="point.recordedTime && point.recordedTime !== point.time">
+            <span>◷ Source Time</span>
+            <b>{{ point.recordedTime }}</b>
+        </div>
+
         <div class="detail-row">
             <span>⌖ Latitude</span>
             <b>{{ formatLat(point.lat) }}</b>

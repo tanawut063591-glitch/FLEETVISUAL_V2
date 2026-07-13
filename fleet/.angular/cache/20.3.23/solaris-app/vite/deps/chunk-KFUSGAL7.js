@@ -1,10 +1,10 @@
 import {
+  Platform
+} from "./chunk-MBZQ3IYF.js";
+import {
   BidiModule,
   Directionality
 } from "./chunk-76A2NOZY.js";
-import {
-  Platform
-} from "./chunk-MBZQ3IYF.js";
 import {
   ApplicationRef,
   ChangeDetectionStrategy,
@@ -1776,4 +1776,4 @@ export {
   CdkScrollableModule,
   ScrollingModule
 };
-//# sourceMappingURL=chunk-ILR5HGHR.js.map
+//# sourceMappingURL=chunk-KFUSGAL7.js.map

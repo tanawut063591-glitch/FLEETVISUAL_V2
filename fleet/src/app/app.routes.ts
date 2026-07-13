@@ -73,7 +73,10 @@ export const routes: Routes = [
       },
       {
         path: 'data-logger',
-        component: NotfoundComponent,
+        loadChildren: () =>
+          import('./features/data-logger/data-logger.module').then(
+            (module) => module.DataLoggerFeatureModule
+          ),
         data: {
           depth: 3,
           title: 'DATA LOGGER',
@@ -81,7 +84,10 @@ export const routes: Routes = [
       },
       {
         path: 'chart',
-        component: NotfoundComponent,
+        loadChildren: () =>
+          import('./features/chart/chart.module').then(
+            (module) => module.ChartFeatureModule
+          ),
         data: {
           depth: 4,
           title: 'CHART',

@@ -1,93 +1,107 @@
 <div class="past-track-page">
+  <div class="page-header">
+    <div class="heading-block">
+      <div class="breadcrumb">
+        Overview
+        <span>›</span>
+        Past Track
+        <span>›</span>
+        <b>{{ vesselId }}</b>
+      </div>
 
-    <div class="page-header">
-        <div>
-            <div class="breadcrumb">
-                Overview
-                <span>›</span>
-                Part Track
-                <span>›</span>
-                <b>{{ vesselId }}</b>
-            </div>
+      <h1>PAST TRACK</h1>
+      <p>Track vessel movement history and route timeline</p>
+    </div>
 
-            <h1>PAST TRACK</h1>
-            <p>Track vessel movement history and route timeline</p>
+    <div class="header-actions">
+      <div class="date-box" aria-label="Fixed seven-day history range">
+        <span class="calendar-icon">▦</span>
+        <strong>{{ getRangeStartLabel() }}</strong>
+        <span class="arrow">→</span>
+        <strong>{{ getRangeEndLabel() }}</strong>
+        <span class="interval-badge">{{ samplingIntervalMinutes }} MIN</span>
+      </div>
+
+      <button type="button" class="btn light" (click)="refreshPastTrack()" [disabled]="loading">
+        <span>↻</span> Refresh
+      </button>
+
+      <button type="button" class="btn primary" (click)="exportCsv()" [disabled]="!trackPoints.length">
+        <span>⇩</span> Export
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="state-box loading-state">
+    <span class="spinner"></span>
+    <div>
+      <strong>Loading past track data...</strong>
+      <p>Retrieving latitude and longitude history for the last 7 days.</p>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="state-box error">
+    {{ errorMessage }}
+  </div>
+
+  <ng-container *ngIf="!loading && !errorMessage && summary">
+    <app-past-track-summary [summary]="summary"></app-past-track-summary>
+
+    <div class="route-info-bar">
+      <div class="route-info-item">
+        <small>SELECTED TIME</small>
+        <strong>{{ getSelectedTimeLabel() }}</strong>
+      </div>
+      <div class="route-info-item">
+        <small>TIME INTERVAL</small>
+        <strong>Every {{ samplingIntervalMinutes }} minutes</strong>
+      </div>
+      <div class="route-info-item">
+        <small>DISPLAY / RAW POINTS</small>
+        <strong>{{ summary.trackPoints }} / {{ summary.rawTrackPoints || summary.trackPoints }}</strong>
+      </div>
+      <div class="route-info-item coverage-item">
+        <small>DATA COVERAGE</small>
+        <div class="coverage-value">
+          <strong>{{ summary.coveragePercent || 0 }}%</strong>
+          <span class="coverage-track"><i [style.width.%]="summary.coveragePercent || 0"></i></span>
         </div>
-
-        <div class="header-actions">
-            <div class="date-box">
-                <span>📅</span>
-                <input type="date" [(ngModel)]="startDate">
-
-                <span class="arrow">→</span>
-
-                <input type="date" [(ngModel)]="endDate">
-                <span>📅</span>
-            </div>
-
-            <button type="button" class="btn light" (click)="loadPastTrack()">
-                ☷ Filter
-            </button>
-
-            <button type="button" class="btn primary" (click)="exportCsv()">
-                ⬇ Export
-            </button>
-        </div>
+      </div>
     </div>
 
-    <div *ngIf="loading" class="state-box">
-        Loading past track data...
+    <div class="main-grid">
+      <div class="left-area">
+        <app-past-track-map
+          [trackPoints]="trackPoints"
+          [selectedPoint]="selectedPoint"
+          (pointSelected)="selectPoint($event)">
+        </app-past-track-map>
+
+        <app-past-track-timeline
+          [trackPoints]="trackPoints"
+          [selectedPoint]="selectedPoint"
+          (pointSelected)="selectPoint($event)">
+        </app-past-track-timeline>
+      </div>
+
+      <div class="right-area">
+        <app-past-track-detail [point]="selectedPoint"></app-past-track-detail>
+
+        <app-past-track-playback
+          [trackPoints]="trackPoints"
+          [selectedPoint]="selectedPoint"
+          [isPlaying]="isPlaying"
+          [playbackSpeed]="playbackSpeed"
+          [rangeStart]="startDate"
+          [rangeEnd]="endDate"
+          [samplingIntervalMinutes]="samplingIntervalMinutes"
+          (previousClicked)="previousPoint()"
+          (nextClicked)="nextPoint()"
+          (playClicked)="togglePlayback()"
+          (speedChanged)="changePlaybackSpeed($event)"
+          (pointScrubbed)="scrubToPoint($event)">
+        </app-past-track-playback>
+      </div>
     </div>
-
-    <div *ngIf="errorMessage" class="state-box error">
-        {{ errorMessage }}
-    </div>
-
-    <div *ngIf="!loading && !errorMessage && summary">
-
-        <app-past-track-summary
-            [summary]="summary">
-        </app-past-track-summary>
-
-        <div class="main-grid">
-
-            <div class="left-area">
-
-                <app-past-track-map
-                    [trackPoints]="trackPoints"
-                    [selectedPoint]="selectedPoint"
-                    (pointSelected)="selectPoint($event)">
-                </app-past-track-map>
-
-                <app-past-track-timeline
-                    [trackPoints]="trackPoints"
-                    [selectedPoint]="selectedPoint"
-                    (pointSelected)="selectPoint($event)">
-                </app-past-track-timeline>
-
-            </div>
-
-            <div class="right-area">
-
-                <app-past-track-detail
-                    [point]="selectedPoint">
-                </app-past-track-detail>
-
-                <app-past-track-playback
-                    [trackPoints]="trackPoints"
-                    [selectedPoint]="selectedPoint"
-                    [isPlaying]="isPlaying"
-                    [playbackSpeed]="playbackSpeed"
-                    (previousClicked)="previousPoint()"
-                    (nextClicked)="nextPoint()"
-                    (playClicked)="togglePlayback()"
-                    (speedChanged)="changePlaybackSpeed($event)">
-                </app-past-track-playback>
-
-            </div>
-
-        </div>
-
-    </div>
-
+  </ng-container>
 </div>

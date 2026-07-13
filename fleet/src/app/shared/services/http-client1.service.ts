@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 
-import { Observable, firstValueFrom, of, throwError } from 'rxjs';
+import { Observable, concat, defaultIfEmpty, filter, firstValueFrom, of, take, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
@@ -10,12 +10,17 @@ import { environment } from '../../../environments/environment';
 import { SecurityService } from './security.service';
 import { AuthService } from './auth.service';
 
+const URL = environment.API_URL || '';
 const URL2 = environment.API2_URL || environment.API_URL || '';
+
+type HistorianStrategy = 'api2-chart' | 'api2-logger' | 'gateway-chart' | 'gateway-logger';
 
 @Injectable({
   providedIn: 'root',
 })
 export class NewHttpClientService {
+  private historianStrategy: HistorianStrategy | null = null;
+
   public newVessel: string[] = ['SC_DUMMY', 'A02'];
 
   constructor(
@@ -145,6 +150,203 @@ export class NewHttpClientService {
           return this.handleError<any>(err);
         })
       );
+  }
+
+
+  /**
+   * Loads historian values with the same API contract used by the legacy Angular 5 app.
+   *
+   * The project currently has two backend routes in use:
+   *  - API2 direct route: { Tags: string[] }
+   *  - FleetVisual gateway route: { HistorianTag: tag[] }
+   *
+   * The first successful contract is cached, so normal requests use only one HTTP call.
+   */
+  getHistorianValues(start: string, end: string, tags: any[]): Observable<any> {
+    const tagNames = this.mapTagNames(tags);
+
+    if (!start || !end || tagNames.length === 0) {
+      return of([]);
+    }
+
+    const normalizedTags = tags.map((tag: any) => {
+      const tagName = typeof tag === 'string'
+        ? tag
+        : (tag?.tagName || tag?.TagName || tag?.name || tag?.Name || '');
+
+      return typeof tag === 'string'
+        ? { name: tagName, tagName }
+        : { ...tag, name: tag?.name || tagName, tagName };
+    });
+
+    const directPayload = {
+      StartTime: start,
+      EndTime: end,
+      Tags: tagNames,
+    };
+
+    const gatewayPayload = {
+      StartTime: start,
+      EndTime: end,
+      HistorianTag: normalizedTags,
+    };
+
+    if (this.historianStrategy) {
+      return this.requestHistorianByStrategy(
+        this.historianStrategy,
+        directPayload,
+        gatewayPayload
+      );
+    }
+
+    const attempts: Observable<any>[] = [
+      this.requestHistorianByStrategy('api2-chart', directPayload, gatewayPayload),
+      this.requestHistorianByStrategy('api2-logger', directPayload, gatewayPayload),
+    ];
+
+    if (URL && this.normalizeBaseUrl(URL) !== this.normalizeBaseUrl(URL2)) {
+      attempts.push(
+        this.requestHistorianByStrategy('gateway-chart', directPayload, gatewayPayload),
+        this.requestHistorianByStrategy('gateway-logger', directPayload, gatewayPayload)
+      );
+    }
+
+    return concat(...attempts).pipe(
+      filter((result: any) => this.hasHistorianData(result)),
+      take(1),
+      defaultIfEmpty([])
+    );
+  }
+
+  private requestHistorianByStrategy(
+    strategy: HistorianStrategy,
+    directPayload: any,
+    gatewayPayload: any
+  ): Observable<any> {
+    let url = '';
+    let payload: any = directPayload;
+
+    switch (strategy) {
+      case 'api2-chart':
+        url = `${URL2}/ChartGetHistorianValues`;
+        break;
+      case 'api2-logger':
+        url = `${URL2}/loggergethistorianvalues`;
+        break;
+      case 'gateway-chart':
+        url = `${URL}/api/vessels/ChartGetHistorianValues`;
+        payload = gatewayPayload;
+        break;
+      case 'gateway-logger':
+        url = `${URL}/api/vessels/loggergethistorianvalues`;
+        payload = gatewayPayload;
+        break;
+    }
+
+    return this.http.post(url, payload, { headers: this.getAuthHeaders() }).pipe(
+      map((response: any) => {
+        const parsed = this.parseJsonResponse(response);
+
+        if (this.hasHistorianData(parsed)) {
+          this.historianStrategy = strategy;
+          console.info(`[Historian] Active API strategy: ${strategy}`);
+        } else {
+          console.warn(`[Historian] Empty response from ${strategy}`, parsed);
+        }
+
+        return parsed;
+      }),
+      catchError((error: any) => {
+        if (error?.status === 401) {
+          this.handleLoginRedirect(error);
+          return throwError(() => error);
+        }
+
+        console.warn(`[Historian] ${strategy} request failed`, {
+          url,
+          status: error?.status,
+          message: error?.message,
+          error: error?.error,
+        });
+
+        return of(null);
+      })
+    );
+  }
+
+  private parseJsonResponse(response: any): any {
+    if (typeof response !== 'string') {
+      return response;
+    }
+
+    const text = response.trim();
+    if (!text) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return response;
+    }
+  }
+
+  private hasHistorianData(value: any, depth = 0): boolean {
+    if (value === null || value === undefined || depth > 8) {
+      return false;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = this.parseJsonResponse(value);
+      return parsed !== value && this.hasHistorianData(parsed, depth + 1);
+    }
+
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        return false;
+      }
+
+      return value.some((item: any) => this.hasHistorianData(item, depth + 1));
+    }
+
+    if (typeof value !== 'object') {
+      return false;
+    }
+
+    const hasTime = [
+      'TimeStamp', 'Timestamp', 'timeStamp', 'timestamp',
+      'Time', 'time', 'DateTime', 'datetime', 'Date', 'date', 'x'
+    ].some((key: string) => value[key] !== undefined && value[key] !== null && value[key] !== '');
+
+    const hasValue = [
+      'Value', 'value', 'Data', 'data', 'Val', 'val',
+      'NumericValue', 'numericValue', 'y'
+    ].some((key: string) => value[key] !== undefined && value[key] !== null && value[key] !== '');
+
+    if (hasTime && hasValue) {
+      return true;
+    }
+
+    const preferredKeys = [
+      'records', 'Records', 'values', 'Values', 'Value',
+      'data', 'Data', 'result', 'Result', 'results', 'Results',
+      'items', 'Items', 'HistorianValues', 'historianValues',
+      'History', 'history', 'ValueList', 'valueList', 'Points', 'points'
+    ];
+
+    for (const key of preferredKeys) {
+      if (value[key] !== undefined && this.hasHistorianData(value[key], depth + 1)) {
+        return true;
+      }
+    }
+
+    return Object.keys(value).some((key: string) =>
+      !preferredKeys.includes(key) && this.hasHistorianData(value[key], depth + 1)
+    );
+  }
+
+  private normalizeBaseUrl(value: string): string {
+    return String(value || '').replace(/\/+$/, '').toLowerCase();
   }
 
   getRawData(start: string, end: string, tags: any[]): Observable<any> {

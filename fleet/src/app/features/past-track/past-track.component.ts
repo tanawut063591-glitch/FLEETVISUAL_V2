@@ -6,6 +6,7 @@ import {
   PastTrackPoint,
   PastTrackSummary,
   PastTrackStatus,
+  PastTrackResponse,
 } from './models/past-track.model';
 
 import { PastTrackService } from '../../shared/services/past-track.service';
@@ -19,8 +20,10 @@ type PlaybackSpeed = '0.5x' | '1x' | '1.5x' | '2x';
   styleUrls: ['./past-track.component.css'],
 })
 export class PastTrackComponent implements OnInit, OnDestroy {
-  vesselId = '';
+  readonly historyDays = 7;
+  readonly samplingIntervalMinutes = 30;
 
+  vesselId = '';
   startDate = '';
   endDate = '';
 
@@ -39,18 +42,17 @@ export class PastTrackComponent implements OnInit, OnDestroy {
   private playTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
-    private route: ActivatedRoute,
-    private pastTrackService: PastTrackService
+    private readonly route: ActivatedRoute,
+    private readonly pastTrackService: PastTrackService
   ) {}
 
   ngOnInit(): void {
-    this.setDefaultDateRange();
+    this.setFixedSevenDayRange();
 
     this.routeSub = this.route.paramMap.subscribe((params) => {
-      const idFromUrl = params.get('id') || '';
-
-      this.vesselId = this.decodeValue(idFromUrl) || this.getVesselIdFromStorage();
-      this.loadPastTrack();
+      const idFromUrl = this.decodeValue(params.get('id') || '');
+      this.vesselId = this.resolveBackendPrefix(idFromUrl);
+      this.loadPastTrack(false);
     });
   }
 
@@ -60,7 +62,17 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     this.loadSub?.unsubscribe();
   }
 
-  loadPastTrack(): void {
+  /** Refresh always reloads the latest seven calendar days. */
+  refreshPastTrack(): void {
+    this.setFixedSevenDayRange();
+    this.loadPastTrack(false);
+  }
+
+  loadPastTrack(resetRange = false): void {
+    if (resetRange) {
+      this.setFixedSevenDayRange();
+    }
+
     this.errorMessage = '';
 
     if (!this.validateDateRange()) {
@@ -72,7 +84,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       this.summary = null;
       this.trackPoints = [];
       this.selectedPoint = null;
-      this.errorMessage = 'Please select vessel before loading past track data';
+      this.errorMessage = 'Please select a vessel before loading past track data';
       return;
     }
 
@@ -87,7 +99,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     this.loadSub = this.pastTrackService
       .getPastTrack(this.vesselId, this.startDate, this.endDate)
       .subscribe({
-        next: (response: any) => {
+        next: (response: PastTrackResponse) => {
           const points = this.normalizeTrackPoints(response?.points || []);
 
           this.trackPoints = points;
@@ -95,9 +107,8 @@ export class PastTrackComponent implements OnInit, OnDestroy {
           this.selectedPoint = points.length > 0 ? points[0] : null;
           this.loading = false;
         },
-        error: (error: any) => {
+        error: (error: unknown) => {
           console.error('[PastTrackComponent] loadPastTrack error:', error);
-
           this.summary = null;
           this.trackPoints = [];
           this.selectedPoint = null;
@@ -105,11 +116,6 @@ export class PastTrackComponent implements OnInit, OnDestroy {
           this.loading = false;
         },
       });
-  }
-
-  clearDateFilter(): void {
-    this.setDefaultDateRange();
-    this.loadPastTrack();
   }
 
   selectPoint(point: PastTrackPoint | null): void {
@@ -120,31 +126,27 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     this.selectedPoint = point;
   }
 
+  scrubToPoint(point: PastTrackPoint | null): void {
+    if (!point) {
+      return;
+    }
+
+    this.stopPlayback();
+    this.selectedPoint = point;
+  }
+
   previousPoint(): void {
     if (this.trackPoints.length === 0) {
       return;
     }
 
-    if (!this.selectedPoint) {
-      this.selectedPoint = this.trackPoints[0];
-      return;
-    }
-
     const index = this.findSelectedIndex();
-
-    if (index > 0) {
-      this.selectedPoint = this.trackPoints[index - 1];
-    }
+    this.selectedPoint = this.trackPoints[Math.max(0, index - 1)];
   }
 
   nextPoint(): void {
     if (this.trackPoints.length === 0) {
       this.stopPlayback();
-      return;
-    }
-
-    if (!this.selectedPoint) {
-      this.selectedPoint = this.trackPoints[0];
       return;
     }
 
@@ -176,6 +178,18 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     }
   }
 
+  getRangeStartLabel(): string {
+    return this.formatRangeDate(this.startDate);
+  }
+
+  getRangeEndLabel(): string {
+    return this.formatRangeDate(this.endDate);
+  }
+
+  getSelectedTimeLabel(): string {
+    return this.selectedPoint?.time || 'No point selected';
+  }
+
   exportCsv(): void {
     if (!this.trackPoints.length) {
       console.warn('[PastTrackComponent] No past track data to export');
@@ -184,7 +198,9 @@ export class PastTrackComponent implements OnInit, OnDestroy {
 
     const headers = [
       'No',
-      'Time',
+      '30-minute slot',
+      'Recorded time',
+      'Sample offset (minutes)',
       'Latitude',
       'Longitude',
       'Status',
@@ -198,6 +214,8 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       return [
         point.no || index + 1,
         point.time,
+        point.recordedTime || point.time,
+        point.sampleOffsetMinutes ?? 0,
         point.lat,
         point.lng,
         point.status,
@@ -216,13 +234,12 @@ export class PastTrackComponent implements OnInit, OnDestroy {
 
     const link = document.createElement('a');
     link.href = url;
-    link.download = `past-track-${this.toSafeFileName(this.vesselId || 'vessel')}.csv`;
+    link.download = `past-track-7-days-${this.toSafeFileName(this.vesselId || 'vessel')}.csv`;
     link.style.display = 'none';
 
     document.body.appendChild(link);
     link.click();
     link.remove();
-
     window.URL.revokeObjectURL(url);
   }
 
@@ -231,7 +248,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.selectedPoint) {
+    if (!this.selectedPoint || this.findSelectedIndex() >= this.trackPoints.length - 1) {
       this.selectedPoint = this.trackPoints[0];
     }
 
@@ -283,35 +300,33 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     return index >= 0 ? index : 0;
   }
 
-  private setDefaultDateRange(): void {
+  private setFixedSevenDayRange(): void {
     const end = new Date();
-    const start = new Date();
+    const start = new Date(end);
 
-    start.setDate(end.getDate() - 365);
+    // Today plus the previous six calendar days = seven-day view.
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - (this.historyDays - 1));
 
     this.startDate = this.toInputDate(start);
     this.endDate = this.toInputDate(end);
   }
 
   private validateDateRange(): boolean {
-    if (!this.startDate || !this.endDate) {
+    const start = new Date(`${this.startDate}T00:00:00`).getTime();
+    const end = new Date(`${this.endDate}T23:59:59`).getTime();
+
+    if (Number.isNaN(start) || Number.isNaN(end) || start > end) {
       this.loading = false;
-      this.errorMessage = 'Please select start date and end date';
+      this.errorMessage = 'Invalid seven-day date range';
       return false;
     }
 
-    const start = new Date(this.startDate).getTime();
-    const end = new Date(this.endDate).getTime();
+    const calendarDays = Math.floor((end - start) / 86_400_000) + 1;
 
-    if (Number.isNaN(start) || Number.isNaN(end)) {
+    if (calendarDays > this.historyDays) {
       this.loading = false;
-      this.errorMessage = 'Invalid date range';
-      return false;
-    }
-
-    if (start > end) {
-      this.loading = false;
-      this.errorMessage = 'Start date must be before end date';
+      this.errorMessage = 'Past Track supports a maximum of seven calendar days';
       return false;
     }
 
@@ -324,30 +339,28 @@ export class PastTrackComponent implements OnInit, OnDestroy {
         return point && this.isValidNumber(point.lat) && this.isValidNumber(point.lng);
       })
       .sort((a: PastTrackPoint, b: PastTrackPoint) => {
-        const timeA = new Date(a.time).getTime();
-        const timeB = new Date(b.time).getTime();
+        const timeA = this.parseDisplayTime(a.time);
+        const timeB = this.parseDisplayTime(b.time);
 
-        if (Number.isNaN(timeA) || Number.isNaN(timeB)) {
+        if (timeA === null || timeB === null) {
           return Number(a.no || 0) - Number(b.no || 0);
         }
 
         return timeA - timeB;
       })
-      .map((point: PastTrackPoint, index: number) => {
-        return {
-          ...point,
-          no: point.no || index + 1,
-          vesselId: point.vesselId || this.vesselId,
-          time: point.time || '-',
-          lat: this.toSafeNumber(point.lat),
-          lng: this.toSafeNumber(point.lng),
-          status: this.normalizeStatus(point.status),
-          speed: this.toSafeNumber(point.speed),
-          course: this.toSafeNumber(point.course),
-          engine: point.engine || '-',
-          fuelRate: this.toSafeNumber(point.fuelRate),
-        };
-      });
+      .map((point: PastTrackPoint, index: number) => ({
+        ...point,
+        no: index + 1,
+        vesselId: point.vesselId || this.vesselId,
+        time: point.time || '-',
+        lat: this.toSafeNumber(point.lat),
+        lng: this.toSafeNumber(point.lng),
+        status: this.normalizeStatus(point.status),
+        speed: this.toSafeNumber(point.speed),
+        course: this.toSafeNumber(point.course),
+        engine: point.engine || '-',
+        fuelRate: this.toSafeNumber(point.fuelRate),
+      }));
   }
 
   private buildFallbackSummary(points: PastTrackPoint[]): PastTrackSummary {
@@ -361,6 +374,12 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       image: 'assets/images/vessel/notfound.png',
       totalDistance: 0,
       trackPoints: points.length,
+      rawTrackPoints: points.length,
+      samplingIntervalMinutes: this.samplingIntervalMinutes,
+      expectedSlots: this.historyDays * 48,
+      coveragePercent: 0,
+      rangeStart: this.startDate,
+      rangeEnd: this.endDate,
       avgSpeed: this.calculateAverageSpeed(points),
       totalTime: '-',
       lastUpdate: points.length > 0 ? points[points.length - 1].time : '-',
@@ -379,7 +398,41 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     return Math.round((total / points.length) * 100) / 100;
   }
 
-  private getVesselIdFromStorage(): string {
+  private resolveBackendPrefix(idFromUrl: string): string {
+    const storedVessel = this.getVesselFromStorage();
+    const storedPrefix = this.readVesselPrefix(storedVessel);
+
+    if (!idFromUrl) {
+      return storedPrefix;
+    }
+
+    if (!storedVessel || !storedPrefix) {
+      return idFromUrl;
+    }
+
+    const routeKey = this.normalizeVesselKey(idFromUrl);
+    const candidates = [
+      storedPrefix,
+      storedVessel?.id,
+      storedVessel?._id,
+      storedVessel?.vesselId,
+      storedVessel?.name,
+      storedVessel?.fv?.id,
+      storedVessel?.fv?.prefix,
+      storedVessel?.fv?.name,
+      storedVessel?.fvInfo?.id,
+      storedVessel?.fvInfo?.prefix,
+      storedVessel?.fvInfo?.name,
+    ];
+
+    const belongsToStoredVessel = candidates.some((value: unknown) => {
+      return value && this.normalizeVesselKey(value) === routeKey;
+    });
+
+    return belongsToStoredVessel ? storedPrefix : idFromUrl;
+  }
+
+  private getVesselFromStorage(): any {
     const keys = ['pastTrackVessel', 'selectedVessel', 'realtimeVessel'];
 
     for (const key of keys) {
@@ -390,18 +443,35 @@ export class PastTrackComponent implements OnInit, OnDestroy {
           continue;
         }
 
-        const vessel = JSON.parse(raw);
-        const id = vessel?.id || vessel?._id || vessel?.prefix || vessel?.name || vessel?.vesselId || '';
-
-        if (id) {
-          return String(id);
-        }
+        return JSON.parse(raw);
       } catch {
         continue;
       }
     }
 
-    return '';
+    return null;
+  }
+
+  private readVesselPrefix(vessel: any): string {
+    return String(
+      vessel?.prefix ||
+        vessel?.fv?.prefix ||
+        vessel?.fvInfo?.prefix ||
+        vessel?.id ||
+        vessel?._id ||
+        vessel?.vesselId ||
+        vessel?.fv?.id ||
+        vessel?.fvInfo?.id ||
+        vessel?.name ||
+        ''
+    ).trim();
+  }
+
+  private normalizeVesselKey(value: unknown): string {
+    return String(value || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
   }
 
   private normalizePlaybackSpeed(speed: string): PlaybackSpeed {
@@ -412,7 +482,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     return '1x';
   }
 
-  private normalizeStatus(status: any): PastTrackStatus {
+  private normalizeStatus(status: unknown): PastTrackStatus {
     if (status === 'Sailing' || status === 'Idle' || status === 'No Data') {
       return status;
     }
@@ -420,7 +490,56 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     return 'No Data';
   }
 
-  private csvEscape(value: any): string {
+  private parseDisplayTime(value: string): number | null {
+    const native = new Date(value).getTime();
+
+    if (!Number.isNaN(native)) {
+      return native;
+    }
+
+    const match = String(value || '').match(
+      /^(\d{1,2})-([A-Za-z]{3})-(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+    );
+
+    if (!match) {
+      return null;
+    }
+
+    const months: Record<string, number> = {
+      JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+      JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11,
+    };
+    const month = months[match[2].toUpperCase()];
+
+    if (month === undefined) {
+      return null;
+    }
+
+    return new Date(
+      Number(match[3]),
+      month,
+      Number(match[1]),
+      Number(match[4]),
+      Number(match[5]),
+      Number(match[6] || 0)
+    ).getTime();
+  }
+
+  private formatRangeDate(value: string): string {
+    const date = new Date(`${value}T00:00:00`);
+
+    if (Number.isNaN(date.getTime())) {
+      return '-';
+    }
+
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+
+  private csvEscape(value: unknown): string {
     const text = String(value ?? '');
 
     if (text.includes(',') || text.includes('"') || text.includes('\n') || text.includes('\r')) {
@@ -453,20 +572,18 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const day = date.getDate();
-
     const mm = month < 10 ? '0' + month : String(month);
     const dd = day < 10 ? '0' + day : String(day);
 
     return `${year}-${mm}-${dd}`;
   }
 
-  private isValidNumber(value: any): boolean {
-    return !Number.isNaN(Number(value));
+  private isValidNumber(value: unknown): boolean {
+    return Number.isFinite(Number(value));
   }
 
-  private toSafeNumber(value: any): number {
+  private toSafeNumber(value: unknown): number {
     const num = Number(value);
-
-    return Number.isNaN(num) ? 0 : num;
+    return Number.isFinite(num) ? num : 0;
   }
 }

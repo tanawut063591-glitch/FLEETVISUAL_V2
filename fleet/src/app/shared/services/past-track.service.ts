@@ -1,1229 +1,1828 @@
-import { timeout } from 'rxjs/operators';
 import { Injectable } from '@angular/core';
-
-import { Observable } from 'rxjs';
-
-
+import { Observable, of } from 'rxjs';
+import { catchError, map, switchMap, timeout } from 'rxjs/operators';
 
 import { NewHttpClientService } from './http-client1.service';
-
 import {
-    PastTrackPoint,
-    PastTrackResponse,
-    PastTrackSummary
+  PastTrackPoint,
+  PastTrackResponse,
+  PastTrackSummary,
 } from '../../features/past-track/models/past-track.model';
 
+type RouteValueType = 'lat' | 'lng' | 'speed' | 'course' | 'fuelRate';
+
+interface RouteTags {
+  lat: string;
+  lng: string;
+  speed: string;
+  course: string;
+  fuelRate: string;
+}
+
+interface HistorianSample {
+  time: number;
+  value: number;
+}
+
+interface HistorianSamples {
+  lat: HistorianSample[];
+  lng: HistorianSample[];
+  speed: HistorianSample[];
+  course: HistorianSample[];
+  fuelRate: HistorianSample[];
+}
+
+interface HeaderTable {
+  headers: any[];
+  records: any[];
+}
+
 @Injectable({
-    providedIn: 'root'
+  providedIn: 'root',
 })
 export class PastTrackService {
+  private readonly pointTimeoutMs = 20_000;
+  private readonly historianTimeoutMs = 60_000;
+  private readonly pairToleranceMs = 75_000;
+  private readonly samplingIntervalMinutes = 30;
+  private readonly samplingToleranceMs = 15 * 60_000;
 
-    private readonly apiTimeoutMs: number = 20000;
+  constructor(private readonly newHttp: NewHttpClientService) {}
 
-    constructor(
-        private newHttp: NewHttpClientService
-    ) {}
+  /**
+   * โหลดเส้นทางย้อนหลังของเรือหนึ่งลำ
+   * 1) โหลด tag ของเรือตาม prefix
+   * 2) เลือก GPS latitude / longitude และ tag ประกอบ
+   * 3) เรียก historian contract เดียวกับ Data Logger
+   * 4) จับคู่ lat/lng ตามเวลา แล้วส่งให้แผนที่วาด polyline
+   */
+  getPastTrack(
+    vesselId: string,
+    startDate: string,
+    endDate: string
+  ): Observable<PastTrackResponse> {
+    const prefix = this.normalizePrefix(vesselId);
 
-    getPastTrack(
-        vesselId: string,
-        startDate: string,
-        endDate: string
-    ): Observable<PastTrackResponse> {
-
-        var prefix = vesselId ? String(vesselId).trim() : '';
-        var self = this;
-
-        return Observable.create(function(observer: any) {
-            console.log('PAST TRACK PREFIX:', prefix);
-
-            if (!prefix) {
-                observer.next(self.buildResponse(prefix, []));
-                observer.complete();
-                return;
-            }
-
-            // Step 1: ดึงรายการ Tag หรือจุดจาก Backend
-            self.newHttp
-                .getPoints(prefix)
-                .pipe(timeout(self.apiTimeoutMs))
-                .subscribe(
-                    function(getPointsResponse: any) {
-                        console.log('PAST TRACK /getpoints RAW:', getPointsResponse);
-
-                        // กรณี API /getpoints ส่ง lat/lng route points มาโดยตรง
-                        var directPoints = self.normalizeDirectPoints(
-                            getPointsResponse,
-                            prefix,
-                            startDate,
-                            endDate
-                        );
-
-                        if (directPoints.length > 0) {
-                            console.log('PAST TRACK DIRECT REAL POINTS:', directPoints);
-                            observer.next(self.buildResponse(prefix, directPoints));
-                            observer.complete();
-                            return;
-                        }
-
-                        // กรณี API /getpoints ส่งเป็นรายการ Tag
-                        var tagRows = self.extractArray(getPointsResponse);
-                        var routeTags = self.findRouteTags(tagRows);
-
-                        console.log('PAST TRACK SELECTED ROUTE TAGS:', routeTags);
-
-                        if (!routeTags.lat || !routeTags.lng) {
-                            console.warn('PAST TRACK: Cannot find GPS LAT/LONG tags from /getpoints');
-
-                            observer.next(self.buildResponse(prefix, []));
-                            observer.complete();
-                            return;
-                        }
-
-                        self.loadHistorianRoute(
-                            prefix,
-                            routeTags,
-                            startDate,
-                            endDate,
-                            observer
-                        );
-                    },
-                    function(error: any) {
-                        console.error('PAST TRACK /getpoints ERROR:', error);
-
-                        observer.next(self.buildResponse(prefix, []));
-                        observer.complete();
-                    }
-                );
-        });
+    if (!prefix) {
+      return of(this.buildResponse('', [], [], startDate, endDate));
     }
 
-    private loadHistorianRoute(
-        prefix: string,
-        routeTags: any,
-        startDate: string,
-        endDate: string,
-        observer: any
-    ): void {
+    console.info('[PastTrack] loading vessel:', prefix);
 
-        var range = this.buildHistoryRange(startDate, endDate);
-        var tagRequest = this.buildTagRequest(routeTags);
-
-        console.log('PAST TRACK HISTORY RANGE:', range);
-        console.log('PAST TRACK HISTORY TAG REQUEST:', tagRequest);
-
-        // Step 2: ดึง Historian จริงจาก Backend
-        this.newHttp
-            .getRawData(range.start, range.end, tagRequest)
-            .pipe(timeout(this.apiTimeoutMs))
-            .subscribe(
-                (historyResponse: any) => {
-                    console.log('PAST TRACK HISTORIAN RAW:', historyResponse);
-
-                    var points = this.normalizeHistorianPoints(
-                        historyResponse,
-                        prefix,
-                        routeTags,
-                        startDate,
-                        endDate
-                    );
-
-                    console.log('PAST TRACK HISTORIAN NORMALIZED POINTS:', points);
-
-                    observer.next(this.buildResponse(prefix, points));
-                    observer.complete();
-                },
-                (error: any) => {
-                    console.error('PAST TRACK HISTORIAN ERROR:', error);
-
-                    observer.next(this.buildResponse(prefix, []));
-                    observer.complete();
-                }
-            );
-    }
-
-    private buildResponse(prefix: string, points: PastTrackPoint[]): PastTrackResponse {
-        return {
-            summary: this.buildSummary(prefix, points),
-            points: points
-        };
-    }
-
-    private buildTagRequest(routeTags: any): any[] {
-        var tags: any[] = [];
-
-        if (routeTags.lat) {
-            tags.push({ tagName: routeTags.lat });
-        }
-
-        if (routeTags.lng) {
-            tags.push({ tagName: routeTags.lng });
-        }
-
-        if (routeTags.speed) {
-            tags.push({ tagName: routeTags.speed });
-        }
-
-        if (routeTags.course) {
-            tags.push({ tagName: routeTags.course });
-        }
-
-        if (routeTags.fuelRate) {
-            tags.push({ tagName: routeTags.fuelRate });
-        }
-
-        return tags;
-    }
-
-    private buildHistoryRange(startDate: string, endDate: string): any {
-        if (startDate && endDate) {
-            return {
-                start: startDate + ' 00:00:00',
-                end: endDate + ' 23:59:59'
-            };
-        }
-
-        var end = new Date();
-        var start = new Date();
-
-        // Default: ดึงย้อนหลัง 365 วัน เพื่อเช็กข้อมูล history ให้กว้าง
-        start.setDate(end.getDate() - 365);
-
-        return {
-            start: this.formatDateTime(start),
-            end: this.formatDateTime(end)
-        };
-    }
-
-    private formatDateTime(date: Date): string {
-        var year = date.getFullYear();
-        var month = this.pad(date.getMonth() + 1);
-        var day = this.pad(date.getDate());
-        var hour = this.pad(date.getHours());
-        var minute = this.pad(date.getMinutes());
-        var second = this.pad(date.getSeconds());
-
-        return year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second;
-    }
-
-    private pad(value: number): string {
-        return value < 10 ? '0' + value : String(value);
-    }
-
-    private findRouteTags(tagRows: any[]): any {
-        return {
-            lat: this.findBestTag(tagRows, 'lat'),
-            lng: this.findBestTag(tagRows, 'lng'),
-            speed: this.findBestTag(tagRows, 'speed'),
-            course: this.findBestTag(tagRows, 'course'),
-            fuelRate: this.findBestTag(tagRows, 'fuelRate')
-        };
-    }
-
-    private findBestTag(tagRows: any[], type: string): string {
-        if (!tagRows || tagRows.length === 0) {
-            return '';
-        }
-
-        var bestTagName = '';
-        var bestScore = 0;
-
-        for (var i = 0; i < tagRows.length; i++) {
-            var row = tagRows[i];
-            var tagName = this.getTagName(row);
-
-            if (!tagName) {
-                continue;
-            }
-
-            var description = this.readFirst(row, [
-                'Description',
-                'description',
-                'Desc',
-                'desc'
-            ]) || '';
-
-            var text = (String(tagName) + ' ' + String(description)).toUpperCase();
-            var score = this.scoreTag(text, type);
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestTagName = String(tagName);
-            }
-        }
-
-        return bestScore > 0 ? bestTagName : '';
-    }
-
-    private scoreTag(text: string, type: string): number {
-        var score = 0;
-
-        if (type === 'lat') {
-            if (text.indexOf('VES-GPS-LAT') >= 0) { score += 300; }
-            if (text.indexOf('GPS_LAT') >= 0) { score += 220; }
-            if (text.indexOf('GPS LAT') >= 0) { score += 220; }
-            if (text.indexOf('LATITUDE') >= 0) { score += 180; }
-            if (text.indexOf('LAT') >= 0) { score += 100; }
-            if (text.indexOf('GPS') >= 0) { score += 30; }
-        }
-
-        if (type === 'lng') {
-            if (text.indexOf('VES-GPS-LONG') >= 0) { score += 300; }
-            if (text.indexOf('VES-GPS-LNG') >= 0) { score += 300; }
-            if (text.indexOf('GPS_LONG') >= 0) { score += 220; }
-            if (text.indexOf('GPS LNG') >= 0) { score += 220; }
-            if (text.indexOf('GPS LON') >= 0) { score += 220; }
-            if (text.indexOf('LONGITUDE') >= 0) { score += 180; }
-            if (text.indexOf('LONG') >= 0) { score += 100; }
-            if (text.indexOf('LNG') >= 0) { score += 100; }
-            if (text.indexOf('LON') >= 0) { score += 100; }
-            if (text.indexOf('GPS') >= 0) { score += 30; }
-        }
-
-        if (type === 'speed') {
-            if (text.indexOf('VES-GPS-SPEED') >= 0) { score += 300; }
-            if (text.indexOf('SOG') >= 0) { score += 160; }
-            if (text.indexOf('SPEED') >= 0) { score += 120; }
-            if (text.indexOf('GPS') >= 0) { score += 30; }
-        }
-
-        if (type === 'course') {
-            if (text.indexOf('VES-GPS-HEAD') >= 0) { score += 300; }
-            if (text.indexOf('COURSE') >= 0) { score += 160; }
-            if (text.indexOf('COG') >= 0) { score += 160; }
-            if (text.indexOf('HEADING') >= 0) { score += 140; }
-            if (text.indexOf('HEAD') >= 0) { score += 100; }
-            if (text.indexOf('GPS') >= 0) { score += 30; }
-        }
-
-        if (type === 'fuelRate') {
-            if (text.indexOf('FUEL RATE') >= 0) { score += 160; }
-            if (text.indexOf('FUEL') >= 0 && text.indexOf('FLOW') >= 0) { score += 140; }
-            if (text.indexOf('MFLOW') >= 0) { score += 120; }
-            if (text.indexOf('FUEL') >= 0) { score += 60; }
-        }
-
-        return score;
-    }
-
-    private normalizeDirectPoints(
-        response: any,
-        vesselId: string,
-        startDate: string,
-        endDate: string
-    ): PastTrackPoint[] {
-
-        var rows = this.extractArray(response);
-        var result: PastTrackPoint[] = [];
-
-        if (!rows || rows.length === 0) {
-            return result;
-        }
-
-        for (var i = 0; i < rows.length; i++) {
-            var row = rows[i];
-
-            var lat = this.toNumber(this.getLatValue(row));
-            var lng = this.toNumber(this.getLngValue(row));
-
-            if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
-                continue;
-            }
-
-            var rawTime = this.getTimeValue(row);
-
-            if (!this.isInDateRange(rawTime, startDate, endDate)) {
-                continue;
-            }
-
-            result.push(this.createPoint(
-                result.length + 1,
-                vesselId,
-                rawTime,
-                lat,
-                lng,
-                this.toNumber(this.getSpeedValue(row)),
-                this.toNumber(this.getCourseValue(row)),
-                this.toNumber(this.getFuelRateValue(row))
-            ));
-        }
-
-        return this.sortAndRemoveDuplicate(result);
-    }
-
-    private normalizeHistorianPoints(
-        historyResponse: any,
-        vesselId: string,
-        routeTags: any,
-        startDate: string,
-        endDate: string
-    ): PastTrackPoint[] {
-
-        console.log('PAST TRACK HISTORIAN PARSE START:', historyResponse);
-
-        var headerRecordPoints = this.normalizeHeaderRecordResponse(
-            historyResponse,
-            vesselId,
-            routeTags,
-            startDate,
-            endDate
+    return this.newHttp.getPoints(prefix).pipe(
+      timeout(this.pointTimeoutMs),
+      catchError((error: any) => {
+        // แม้ /getpoints จะล้มเหลว เรายังลอง tag GPS มาตรฐานของระบบต่อได้
+        console.warn('[PastTrack] getPoints failed; using standard GPS tags', error);
+        return of([]);
+      }),
+      switchMap((getPointsResponse: any) => {
+        const directPoints = this.normalizeDirectPoints(
+          getPointsResponse,
+          prefix,
+          startDate,
+          endDate
         );
 
-        if (headerRecordPoints.length > 0) {
-            return headerRecordPoints;
+        if (directPoints.length > 0) {
+          const sampledPoints = this.resampleToFixedSlots(
+            directPoints,
+            startDate,
+            endDate,
+            this.samplingIntervalMinutes
+          );
+
+          console.info('[PastTrack] direct route points:', {
+            raw: directPoints.length,
+            sampled: sampledPoints.length,
+          });
+
+          return of(
+            this.buildResponse(
+              prefix,
+              sampledPoints,
+              directPoints,
+              startDate,
+              endDate
+            )
+          );
         }
 
-        var rows = this.extractArray(historyResponse);
-        var grouped: any = {};
+        const tagRows = this.extractTagRows(getPointsResponse);
+        const routeTags = this.resolveRouteTags(tagRows, prefix);
+        const range = this.buildHistoryRange(startDate, endDate);
+        const tagRequest = this.buildTagRequest(routeTags, prefix);
 
-        this.flattenHistoryRows(rows, routeTags, grouped);
+        console.info('[PastTrack] route tags:', routeTags);
+        console.info('[PastTrack] historian range:', range);
 
-        var points: PastTrackPoint[] = [];
-        var keys = Object.keys(grouped);
+        return this.newHttp
+          .getHistorianValues(range.start, range.end, tagRequest)
+          .pipe(
+            timeout(this.historianTimeoutMs),
+            map((historyResponse: any) => {
+              const points = this.normalizeHistorianPoints(
+                historyResponse,
+                prefix,
+                routeTags,
+                startDate,
+                endDate
+              );
 
-        for (var i = 0; i < keys.length; i++) {
-            var item = grouped[keys[i]];
+              const sampledPoints = this.resampleToFixedSlots(
+                points,
+                startDate,
+                endDate,
+                this.samplingIntervalMinutes
+              );
 
-            if (item.lat === undefined || item.lng === undefined) {
-                continue;
-            }
+              console.info('[PastTrack] normalized route points:', {
+                raw: points.length,
+                sampled: sampledPoints.length,
+                intervalMinutes: this.samplingIntervalMinutes,
+              });
 
-            var lat = this.toNumber(item.lat);
-            var lng = this.toNumber(item.lng);
+              return this.buildResponse(
+                prefix,
+                sampledPoints,
+                points,
+                startDate,
+                endDate
+              );
+            }),
+            catchError((error: any) => {
+              console.error('[PastTrack] historian request failed:', error);
+              return of(this.buildResponse(prefix, [], [], startDate, endDate));
+            })
+          );
+      }),
+      catchError((error: any) => {
+        console.error('[PastTrack] load failed:', error);
+        return of(this.buildResponse(prefix, [], [], startDate, endDate));
+      })
+    );
+  }
 
-            if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
-                continue;
-            }
+  private resolveRouteTags(tagRows: any[], prefix: string): RouteTags {
+    const raw: RouteTags = {
+      lat: this.findBestTag(tagRows, 'lat') || 'VES-GPS-LAT',
+      lng: this.findBestTag(tagRows, 'lng') || 'VES-GPS-LONG',
+      speed: this.findBestTag(tagRows, 'speed') || 'VES-GPS-SPEED',
+      course: this.findBestTag(tagRows, 'course') || 'VES-GPS-HEAD',
+      fuelRate: this.findBestTag(tagRows, 'fuelRate'),
+    };
 
-            if (!this.isInDateRange(item.time, startDate, endDate)) {
-                continue;
-            }
+    return {
+      lat: this.ensureVesselPrefix(raw.lat, prefix),
+      lng: this.ensureVesselPrefix(raw.lng, prefix),
+      speed: this.ensureVesselPrefix(raw.speed, prefix),
+      course: this.ensureVesselPrefix(raw.course, prefix),
+      fuelRate: raw.fuelRate ? this.ensureVesselPrefix(raw.fuelRate, prefix) : '',
+    };
+  }
 
-            points.push(this.createPoint(
-                points.length + 1,
-                vesselId,
-                item.time,
-                lat,
-                lng,
-                this.toNumber(item.speed),
-                this.toNumber(item.course),
-                this.toNumber(item.fuelRate)
-            ));
-        }
+  private buildTagRequest(routeTags: RouteTags, prefix: string): any[] {
+    const result: any[] = [];
 
-        return this.sortAndRemoveDuplicate(points);
+    (Object.keys(routeTags) as RouteValueType[]).forEach((type: RouteValueType) => {
+      const tagName = routeTags[type];
+
+      if (!tagName) {
+        return;
+      }
+
+      result.push({
+        name: this.stripVesselPrefix(tagName, prefix),
+        tagName,
+        vesselPrefix: prefix,
+      });
+    });
+
+    return result;
+  }
+
+  private normalizeHistorianPoints(
+    response: any,
+    vesselId: string,
+    routeTags: RouteTags,
+    startDate: string,
+    endDate: string
+  ): PastTrackPoint[] {
+    const source = this.parseJsonValue(response);
+
+    // รองรับ response แบบ { Headers: [...], Records: [...] }
+    const tablePoints = this.normalizeHeaderTables(
+      source,
+      vesselId,
+      routeTags,
+      startDate,
+      endDate
+    );
+
+    if (tablePoints.length > 0) {
+      return this.sanitizeTrack(tablePoints);
     }
 
-    private normalizeHeaderRecordResponse(
-        response: any,
-        vesselId: string,
-        routeTags: any,
-        startDate: string,
-        endDate: string
-    ): PastTrackPoint[] {
+    // รองรับ response แบบ series / flat records / nested objects
+    const samples: HistorianSamples = {
+      lat: [],
+      lng: [],
+      speed: [],
+      course: [],
+      fuelRate: [],
+    };
 
-        if (!response) {
-            return [];
+    const series = this.extractHistorianSeries(source);
+    const requestedTags = [
+      routeTags.lat,
+      routeTags.lng,
+      routeTags.speed,
+      routeTags.course,
+      routeTags.fuelRate,
+    ];
+    const visited = new WeakSet<object>();
+
+    if (series.length > 0) {
+      series.forEach((item: any, index: number) => {
+        const fallbackTag = this.getTagName(item) || requestedTags[index] || '';
+        this.collectHistorianSamples(
+          item,
+          fallbackTag,
+          routeTags,
+          samples,
+          visited,
+          0
+        );
+      });
+    } else {
+      this.collectHistorianSamples(
+        source,
+        '',
+        routeTags,
+        samples,
+        visited,
+        0
+      );
+    }
+
+    const latSamples = this.normalizeSamples(samples.lat);
+    const lngSamples = this.normalizeSamples(samples.lng);
+    const speedSamples = this.normalizeSamples(samples.speed);
+    const courseSamples = this.normalizeSamples(samples.course);
+    const fuelSamples = this.normalizeSamples(samples.fuelRate);
+
+    const points: PastTrackPoint[] = [];
+
+    for (const latSample of latSamples) {
+      const lngSample = this.findNearestSample(
+        lngSamples,
+        latSample.time,
+        this.pairToleranceMs
+      );
+
+      if (!lngSample) {
+        continue;
+      }
+
+      const lat = latSample.value;
+      const lng = lngSample.value;
+
+      if (!this.isValidCoordinate(lat, lng)) {
+        continue;
+      }
+
+      const pointTime = Math.round((latSample.time + lngSample.time) / 2);
+
+      if (!this.isTimestampInRange(pointTime, startDate, endDate)) {
+        continue;
+      }
+
+      const speed = this.findNearestSample(
+        speedSamples,
+        pointTime,
+        this.pairToleranceMs
+      )?.value;
+      const course = this.findNearestSample(
+        courseSamples,
+        pointTime,
+        this.pairToleranceMs
+      )?.value;
+      const fuelRate = this.findNearestSample(
+        fuelSamples,
+        pointTime,
+        this.pairToleranceMs
+      )?.value;
+
+      points.push(
+        this.createPoint(
+          points.length + 1,
+          vesselId,
+          pointTime,
+          lat,
+          lng,
+          speed ?? 0,
+          course ?? 0,
+          fuelRate ?? 0
+        )
+      );
+    }
+
+    return this.sanitizeTrack(points);
+  }
+
+  private normalizeHeaderTables(
+    source: any,
+    vesselId: string,
+    routeTags: RouteTags,
+    startDate: string,
+    endDate: string
+  ): PastTrackPoint[] {
+    const tables: HeaderTable[] = [];
+    this.findHeaderTables(source, tables, new WeakSet<object>(), 0);
+
+    const points: PastTrackPoint[] = [];
+
+    for (const table of tables) {
+      const latIndex = this.findHeaderIndex(table.headers, routeTags.lat, [
+        'VESGPSLAT',
+        'GPSLAT',
+        'LATITUDE',
+      ]);
+      const lngIndex = this.findHeaderIndex(table.headers, routeTags.lng, [
+        'VESGPSLONG',
+        'VESGPSLNG',
+        'GPSLONG',
+        'GPSLNG',
+        'LONGITUDE',
+      ]);
+
+      if (latIndex < 0 || lngIndex < 0) {
+        continue;
+      }
+
+      const timeIndex = this.findHeaderIndex(table.headers, '', [
+        'TIMESTAMP',
+        'DATETIME',
+        'RECORDTIME',
+        'TIME',
+        'DATE',
+      ]);
+      const speedIndex = this.findHeaderIndex(table.headers, routeTags.speed, [
+        'VESGPSSPEED',
+        'SPEED',
+        'SOG',
+      ]);
+      const courseIndex = this.findHeaderIndex(table.headers, routeTags.course, [
+        'VESGPSHEAD',
+        'COURSE',
+        'HEADING',
+        'COG',
+      ]);
+      const fuelIndex = this.findHeaderIndex(table.headers, routeTags.fuelRate, [
+        'FUELRATE',
+        'FUELFLOW',
+        'MFLOW',
+      ]);
+
+      for (let index = 0; index < table.records.length; index += 1) {
+        const record = table.records[index];
+        const rawTime = this.readRecordTime(record, table.headers, timeIndex);
+        const timestamp = this.parseTimestamp(rawTime);
+        const lat = this.toNumber(
+          this.readRecordValue(record, table.headers, latIndex, routeTags.lat)
+        );
+        const lng = this.toNumber(
+          this.readRecordValue(record, table.headers, lngIndex, routeTags.lng)
+        );
+
+        if (
+          timestamp === null ||
+          !this.isValidCoordinate(lat, lng) ||
+          !this.isTimestampInRange(timestamp, startDate, endDate)
+        ) {
+          continue;
         }
 
-        var headers = response.Headers || response.headers || [];
-        var records = response.Records || response.records || [];
+        const speed = this.toNumber(
+          this.readRecordValue(record, table.headers, speedIndex, routeTags.speed)
+        );
+        const course = this.toNumber(
+          this.readRecordValue(record, table.headers, courseIndex, routeTags.course)
+        );
+        const fuelRate = this.toNumber(
+          this.readRecordValue(record, table.headers, fuelIndex, routeTags.fuelRate)
+        );
 
-        console.log('PAST TRACK HISTORIAN HEADERS:', headers);
-        console.log('PAST TRACK HISTORIAN RECORDS LENGTH:', records ? records.length : 0);
+        points.push(
+          this.createPoint(
+            points.length + 1,
+            vesselId,
+            timestamp,
+            lat,
+            lng,
+            Number.isFinite(speed) ? speed : 0,
+            Number.isFinite(course) ? course : 0,
+            Number.isFinite(fuelRate) ? fuelRate : 0
+          )
+        );
+      }
+    }
 
-        if (!headers || !records || records.length === 0) {
-            return [];
-        }
+    return this.sortAndRemoveDuplicate(points);
+  }
 
-        var latIndex = this.findHeaderIndex(headers, routeTags.lat, ['LAT', 'LATITUDE', 'GPSLAT']);
-        var lngIndex = this.findHeaderIndex(headers, routeTags.lng, ['LONG', 'LNG', 'LON', 'LONGITUDE', 'GPSLONG']);
-        var speedIndex = this.findHeaderIndex(headers, routeTags.speed, ['SPEED', 'SOG']);
-        var courseIndex = this.findHeaderIndex(headers, routeTags.course, ['COURSE', 'COG', 'HEADING', 'HEAD']);
-        var fuelIndex = this.findHeaderIndex(headers, routeTags.fuelRate, ['FUEL', 'MFLOW']);
-        var timeIndex = this.findHeaderIndex(headers, '', ['TIME', 'TIMESTAMP', 'DATETIME', 'DATE']);
+  private collectHistorianSamples(
+    rawValue: any,
+    parentTagName: string,
+    routeTags: RouteTags,
+    samples: HistorianSamples,
+    visited: WeakSet<object>,
+    depth: number
+  ): void {
+    if (rawValue === null || rawValue === undefined || depth > 12) {
+      return;
+    }
 
-        console.log('PAST TRACK HEADER INDEX:', {
-            timeIndex: timeIndex,
-            latIndex: latIndex,
-            lngIndex: lngIndex,
-            speedIndex: speedIndex,
-            courseIndex: courseIndex,
-            fuelIndex: fuelIndex
+    const value = this.parseJsonValue(rawValue);
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        this.collectHistorianSamples(
+          item,
+          parentTagName,
+          routeTags,
+          samples,
+          visited,
+          depth + 1
+        );
+      }
+      return;
+    }
+
+    if (typeof value !== 'object') {
+      return;
+    }
+
+    if (visited.has(value)) {
+      return;
+    }
+    visited.add(value);
+
+    const ownTagName = this.getTagName(value) || parentTagName;
+    const timestamp = this.parseTimestamp(this.getTimeValue(value));
+    const rawRecordValue = this.getTagValue(value);
+    const type = this.getTypeFromSelectedTag(ownTagName, routeTags);
+
+    if (
+      type &&
+      timestamp !== null &&
+      rawRecordValue !== undefined &&
+      rawRecordValue !== null &&
+      !Array.isArray(rawRecordValue) &&
+      typeof rawRecordValue !== 'object'
+    ) {
+      const numericValue = this.toNumber(rawRecordValue);
+
+      if (Number.isFinite(numericValue)) {
+        samples[type].push({ time: timestamp, value: numericValue });
+      }
+    }
+
+    const keys = Object.keys(value);
+
+    for (const key of keys) {
+      const child = value[key];
+
+      if (!child || (typeof child !== 'object' && !Array.isArray(child))) {
+        continue;
+      }
+
+      const nextParentTag = this.looksLikeRouteTag(key)
+        ? key
+        : ownTagName;
+
+      this.collectHistorianSamples(
+        child,
+        nextParentTag,
+        routeTags,
+        samples,
+        visited,
+        depth + 1
+      );
+    }
+  }
+
+  private normalizeDirectPoints(
+    response: any,
+    vesselId: string,
+    startDate: string,
+    endDate: string
+  ): PastTrackPoint[] {
+    const rows = this.extractTagRows(response);
+    const points: PastTrackPoint[] = [];
+
+    for (const row of rows) {
+      const lat = this.toNumber(this.getLatValue(row));
+      const lng = this.toNumber(this.getLngValue(row));
+      const timestamp = this.parseTimestamp(this.getTimeValue(row));
+
+      if (
+        timestamp === null ||
+        !this.isValidCoordinate(lat, lng) ||
+        !this.isTimestampInRange(timestamp, startDate, endDate)
+      ) {
+        continue;
+      }
+
+      const speed = this.toNumber(this.getSpeedValue(row));
+      const course = this.toNumber(this.getCourseValue(row));
+      const fuelRate = this.toNumber(this.getFuelRateValue(row));
+
+      points.push(
+        this.createPoint(
+          points.length + 1,
+          vesselId,
+          timestamp,
+          lat,
+          lng,
+          Number.isFinite(speed) ? speed : 0,
+          Number.isFinite(course) ? course : 0,
+          Number.isFinite(fuelRate) ? fuelRate : 0
+        )
+      );
+    }
+
+    return this.sanitizeTrack(points);
+  }
+
+  private createPoint(
+    no: number,
+    vesselId: string,
+    timestamp: number,
+    lat: number,
+    lng: number,
+    speed: number,
+    course: number,
+    fuelRate: number
+  ): PastTrackPoint {
+    const safeSpeed = Number.isFinite(speed) ? speed : 0;
+
+    return {
+      no,
+      vesselId,
+      time: this.formatDisplayTime(new Date(timestamp)),
+      lat: Number(lat),
+      lng: Number(lng),
+      status: safeSpeed > 0.5 ? 'Sailing' : 'Idle',
+      speed: Number(safeSpeed.toFixed(2)),
+      course: Number((Number.isFinite(course) ? course : 0).toFixed(2)),
+      engine: safeSpeed > 0.5 ? 'Running' : 'Idle',
+      fuelRate: Number((Number.isFinite(fuelRate) ? fuelRate : 0).toFixed(2)),
+    };
+  }
+
+  private sanitizeTrack(points: PastTrackPoint[]): PastTrackPoint[] {
+    const sorted = this.sortAndRemoveDuplicate(points);
+    const result: PastTrackPoint[] = [];
+
+    for (const point of sorted) {
+      if (!this.isValidCoordinate(point.lat, point.lng)) {
+        continue;
+      }
+
+      const previous = result[result.length - 1];
+
+      if (previous && this.isImplausibleJump(previous, point)) {
+        console.warn('[PastTrack] skipped implausible GPS jump', {
+          from: previous,
+          to: point,
         });
+        continue;
+      }
 
-        if (latIndex < 0 || lngIndex < 0) {
-            console.warn('PAST TRACK: Headers found but cannot find lat/lng column');
-            return [];
-        }
-
-        var points: PastTrackPoint[] = [];
-
-        for (var i = 0; i < records.length; i++) {
-            var record = records[i];
-
-            var rawTime = this.readRecordTime(record, headers, timeIndex, i);
-            var lat = this.toNumber(this.readRecordValue(record, headers, latIndex, routeTags.lat));
-            var lng = this.toNumber(this.readRecordValue(record, headers, lngIndex, routeTags.lng));
-
-            if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
-                continue;
-            }
-
-            if (!this.isInDateRange(rawTime, startDate, endDate)) {
-                continue;
-            }
-
-            points.push(this.createPoint(
-                points.length + 1,
-                vesselId,
-                rawTime,
-                lat,
-                lng,
-                this.toNumber(this.readRecordValue(record, headers, speedIndex, routeTags.speed)),
-                this.toNumber(this.readRecordValue(record, headers, courseIndex, routeTags.course)),
-                this.toNumber(this.readRecordValue(record, headers, fuelIndex, routeTags.fuelRate))
-            ));
-        }
-
-        console.log('PAST TRACK HEADER RECORD POINTS:', points);
-
-        return this.sortAndRemoveDuplicate(points);
+      point.no = result.length + 1;
+      result.push(point);
     }
 
-    private createPoint(
-        no: number,
-        vesselId: string,
-        rawTime: any,
-        lat: number,
-        lng: number,
-        speed: number,
-        course: number,
-        fuelRate: number
-    ): PastTrackPoint {
+    return result;
+  }
 
-        if (isNaN(speed)) { speed = 0; }
-        if (isNaN(course)) { course = 0; }
-        if (isNaN(fuelRate)) { fuelRate = 0; }
+  private isImplausibleJump(previous: PastTrackPoint, current: PastTrackPoint): boolean {
+    const previousTime = this.parseTimestamp(previous.time);
+    const currentTime = this.parseTimestamp(current.time);
 
-        return {
-            no: no,
-            vesselId: vesselId,
-            time: rawTime ? String(rawTime) : '-',
-            lat: Number(lat),
-            lng: Number(lng),
-            status: speed > 0 ? 'Sailing' : 'Idle',
-            speed: Number(speed.toFixed(2)),
-            course: Number(course.toFixed(2)),
-            engine: speed > 0 ? 'Running' : 'Idle',
-            fuelRate: Number(fuelRate.toFixed(2))
-        };
+    if (previousTime === null || currentTime === null || currentTime <= previousTime) {
+      return false;
     }
 
-    private findHeaderIndex(headers: any[], selectedTag: string, keywords: string[]): number {
-        if (!headers || headers.length === 0) {
-            return -1;
-        }
+    const hours = (currentTime - previousTime) / 3_600_000;
 
-        var selected = this.normalizeText(selectedTag);
-
-        for (var i = 0; i < headers.length; i++) {
-            var headerText = this.normalizeText(this.headerToText(headers[i]));
-
-            if (selected && headerText === selected) {
-                return i;
-            }
-
-            if (selected && headerText.indexOf(selected) >= 0) {
-                return i;
-            }
-
-            if (selected && selected.indexOf(headerText) >= 0) {
-                return i;
-            }
-        }
-
-        for (var h = 0; h < headers.length; h++) {
-            var text = this.normalizeText(this.headerToText(headers[h]));
-
-            for (var k = 0; k < keywords.length; k++) {
-                var keyword = this.normalizeText(keywords[k]);
-
-                if (text.indexOf(keyword) >= 0) {
-                    return h;
-                }
-            }
-        }
-
-        return -1;
+    if (hours <= 0) {
+      return false;
     }
 
-    private flattenHistoryRows(rows: any[], routeTags: any, grouped: any): void {
-        if (!rows || rows.length === 0) {
-            return;
-        }
+    const distance = this.distanceNm(
+      previous.lat,
+      previous.lng,
+      current.lat,
+      current.lng
+    );
+    const impliedSpeed = distance / hours;
 
-        for (var i = 0; i < rows.length; i++) {
-            var row = rows[i];
-            var parentTagName = this.getTagName(row);
-            var nested = this.getNestedArray(row);
+    return impliedSpeed > 120;
+  }
 
-            if (nested && nested.length > 0) {
-                for (var n = 0; n < nested.length; n++) {
-                    this.pushHistoryValue(grouped, nested[n], parentTagName, routeTags, i + '-' + n);
-                }
-            } else {
-                this.pushHistoryValue(grouped, row, parentTagName, routeTags, String(i));
-            }
-        }
+  private normalizeSamples(input: HistorianSample[]): HistorianSample[] {
+    const sorted = input
+      .filter(
+        (sample: HistorianSample) =>
+          Number.isFinite(sample.time) && Number.isFinite(sample.value)
+      )
+      .sort((a: HistorianSample, b: HistorianSample) => a.time - b.time);
+
+    const map = new Map<number, HistorianSample>();
+
+    for (const sample of sorted) {
+      // Historian ของระบบแสดงผลเป็น 1 นาที จึงรวม millisecond/second ที่ต่างกันเล็กน้อย
+      const bucket = Math.floor(sample.time / 60_000) * 60_000;
+      map.set(bucket, { time: sample.time, value: sample.value });
     }
 
-    private pushHistoryValue(
-        grouped: any,
-        row: any,
-        parentTagName: string,
-        routeTags: any,
-        fallbackKey: string
-    ): void {
+    return Array.from(map.values()).sort(
+      (a: HistorianSample, b: HistorianSample) => a.time - b.time
+    );
+  }
 
-        var tagName = this.getTagName(row) || parentTagName;
-        var type = this.getTypeFromSelectedTag(tagName, routeTags);
-
-        if (!type) {
-            return;
-        }
-
-        var time = this.getTimeValue(row);
-        var value = this.getTagValue(row);
-
-        if (value === undefined || value === null || value === '') {
-            return;
-        }
-
-        var groupKey = time ? String(time) : fallbackKey;
-
-        if (!grouped[groupKey]) {
-            grouped[groupKey] = {
-                time: time
-            };
-        }
-
-        grouped[groupKey][type] = value;
+  private findNearestSample(
+    samples: HistorianSample[],
+    targetTime: number,
+    toleranceMs: number
+  ): HistorianSample | null {
+    if (samples.length === 0) {
+      return null;
     }
 
-    private getTypeFromSelectedTag(tagName: string, routeTags: any): string {
-        if (!tagName) {
-            return '';
-        }
+    let low = 0;
+    let high = samples.length - 1;
 
-        var name = this.normalizeText(tagName);
+    while (low <= high) {
+      const middle = Math.floor((low + high) / 2);
+      const value = samples[middle].time;
 
-        if (routeTags.lat && name === this.normalizeText(routeTags.lat)) { return 'lat'; }
-        if (routeTags.lng && name === this.normalizeText(routeTags.lng)) { return 'lng'; }
-        if (routeTags.speed && name === this.normalizeText(routeTags.speed)) { return 'speed'; }
-        if (routeTags.course && name === this.normalizeText(routeTags.course)) { return 'course'; }
-        if (routeTags.fuelRate && name === this.normalizeText(routeTags.fuelRate)) { return 'fuelRate'; }
-
-        return '';
+      if (value < targetTime) {
+        low = middle + 1;
+      } else if (value > targetTime) {
+        high = middle - 1;
+      } else {
+        return samples[middle];
+      }
     }
 
-    private buildSummary(vesselId: string, points: PastTrackPoint[]): PastTrackSummary {
-        var savedVessel = this.getSavedVessel();
+    const candidates: HistorianSample[] = [];
 
-        return {
-            vesselId: vesselId,
-            vesselName: this.getVesselName(vesselId, savedVessel),
-            vesselType: this.getVesselType(savedVessel),
-            imo: this.getImo(savedVessel),
-            mmsi: this.getMmsi(savedVessel),
-            status: points.length > 0 ? 'Online' : 'No Data',
-            image: this.getVesselImage(savedVessel),
-            totalDistance: this.calculateTotalDistance(points),
-            trackPoints: points.length,
-            avgSpeed: this.calculateAvgSpeed(points),
-            totalTime: this.calculateTotalTime(points),
-            lastUpdate: points.length > 0 ? points[points.length - 1].time : '-'
-        };
+    if (low < samples.length) {
+      candidates.push(samples[low]);
+    }
+    if (low - 1 >= 0) {
+      candidates.push(samples[low - 1]);
     }
 
-    private getSavedVessel(): any {
-        try {
-            var raw = localStorage.getItem('pastTrackVessel');
+    let nearest: HistorianSample | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
 
-            if (!raw) {
-                return null;
-            }
+    for (const candidate of candidates) {
+      const distance = Math.abs(candidate.time - targetTime);
 
-            return JSON.parse(raw);
-        } catch (error) {
-            return null;
-        }
+      if (distance < nearestDistance) {
+        nearest = candidate;
+        nearestDistance = distance;
+      }
     }
 
-    private getVesselName(vesselId: string, vessel: any): string {
-        if (vessel && vessel.fv && vessel.fv.name) {
-            return vessel.fv.name;
-        }
+    return nearest && nearestDistance <= toleranceMs ? nearest : null;
+  }
 
-        if (vessel && vessel.name) {
-            return vessel.name;
-        }
-
-        return vesselId ? vesselId.replace(/_/g, ' ') : 'VESSEL';
+  private findHeaderTables(
+    rawValue: any,
+    result: HeaderTable[],
+    visited: WeakSet<object>,
+    depth: number
+  ): void {
+    if (rawValue === null || rawValue === undefined || depth > 10) {
+      return;
     }
 
-    private getVesselType(vessel: any): string {
-        if (vessel && vessel.fv && vessel.fv.desc) {
-            return vessel.fv.desc;
-        }
+    const value = this.parseJsonValue(rawValue);
 
-        if (vessel && vessel.desc) {
-            return vessel.desc;
-        }
-
-        if (vessel && vessel.type) {
-            return vessel.type;
-        }
-
-        return 'AHTS';
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        this.findHeaderTables(item, result, visited, depth + 1);
+      }
+      return;
     }
 
-    private getImo(vessel: any): string {
-        if (vessel && vessel.imo) {
-            return String(vessel.imo);
-        }
-
-        return '-';
+    if (typeof value !== 'object') {
+      return;
     }
 
-    private getMmsi(vessel: any): string {
-        if (vessel && vessel.mmsi) {
-            return String(vessel.mmsi);
-        }
+    if (visited.has(value)) {
+      return;
+    }
+    visited.add(value);
 
-        return '-';
+    const headers = value['Headers'] || value['headers'];
+    const records = value['Records'] || value['records'];
+
+    if (Array.isArray(headers) && Array.isArray(records)) {
+      result.push({ headers, records });
     }
 
-    private getVesselImage(vessel: any): string {
-        if (vessel && vessel.fv && vessel.fv.img) {
-            return vessel.fv.img;
-        }
+    for (const key of Object.keys(value)) {
+      const child = value[key];
+      if (child && typeof child === 'object') {
+        this.findHeaderTables(child, result, visited, depth + 1);
+      }
+    }
+  }
 
-        if (vessel && vessel.img) {
-            return vessel.img;
-        }
+  private findHeaderIndex(
+    headers: any[],
+    selectedTag: string,
+    keywords: string[]
+  ): number {
+    const selectedAliases = this.getTagAliases(selectedTag);
 
-        if (vessel && vessel.image) {
-            return vessel.image;
-        }
+    for (let index = 0; index < headers.length; index += 1) {
+      const header = this.normalizeText(this.headerToText(headers[index]));
 
-        return 'assets/images/vessel/default-vessel.png';
+      if (selectedAliases.some((alias: string) => header === alias || header.includes(alias))) {
+        return index;
+      }
     }
 
-    private headerToText(header: any): string {
-        if (header === undefined || header === null) {
-            return '';
-        }
+    for (let index = 0; index < headers.length; index += 1) {
+      const header = this.normalizeText(this.headerToText(headers[index]));
 
-        if (typeof header === 'string') {
-            return header;
-        }
-
-        var tagName = this.readFirst(header, [
-            'TagName',
-            'tagName',
-            'Name',
-            'name',
-            'Header',
-            'header',
-            'Key',
-            'key',
-            'Description',
-            'description'
-        ]);
-
-        if (tagName) {
-            return String(tagName);
-        }
-
-        try {
-            return JSON.stringify(header);
-        } catch (error) {
-            return String(header);
-        }
+      if (keywords.some((keyword: string) => header.includes(this.normalizeText(keyword)))) {
+        return index;
+      }
     }
 
-    private readRecordTime(record: any, headers: any[], timeIndex: number, fallbackIndex: number): any {
-        if (!record) {
-            return fallbackIndex;
-        }
+    return -1;
+  }
 
-        if (Array.isArray(record)) {
-            if (timeIndex >= 0 && record[timeIndex] !== undefined) {
-                return record[timeIndex];
-            }
-
-            return record[0];
-        }
-
-        var directTime = this.readFirstDeep(record, [
-            'Time',
-            'time',
-            'Timestamp',
-            'timestamp',
-            'DateTime',
-            'dateTime',
-            'datetime',
-            'Date',
-            'date',
-            'CreatedAt',
-            'createdAt',
-            'RecordTime',
-            'recordTime'
-        ]);
-
-        if (directTime) {
-            return directTime;
-        }
-
-        if (timeIndex >= 0) {
-            var headerName = this.headerToText(headers[timeIndex]);
-
-            if (record[headerName] !== undefined) {
-                return record[headerName];
-            }
-        }
-
-        return fallbackIndex;
+  private readRecordTime(record: any, headers: any[], timeIndex: number): any {
+    if (Array.isArray(record)) {
+      return timeIndex >= 0 ? record[timeIndex] : record[0];
     }
 
-    private readRecordValue(record: any, headers: any[], index: number, selectedTag: string): any {
-        if (!record || index < 0) {
-            return undefined;
-        }
+    const direct = this.readFirstDeep(record, [
+      'TimeStamp',
+      'Timestamp',
+      'timeStamp',
+      'timestamp',
+      'Time',
+      'time',
+      'DateTime',
+      'datetime',
+      'Date',
+      'date',
+      'RecordTime',
+      'recordTime',
+    ]);
 
-        if (Array.isArray(record)) {
-            return record[index];
-        }
-
-        var selected = selectedTag ? String(selectedTag) : '';
-        var headerName = this.headerToText(headers[index]);
-
-        if (selected && record[selected] !== undefined) {
-            return record[selected];
-        }
-
-        if (headerName && record[headerName] !== undefined) {
-            return record[headerName];
-        }
-
-        if (record.Values && Array.isArray(record.Values)) {
-            return record.Values[index];
-        }
-
-        if (record.values && Array.isArray(record.values)) {
-            return record.values[index];
-        }
-
-        if (record.Data && Array.isArray(record.Data)) {
-            return record.Data[index];
-        }
-
-        if (record.data && Array.isArray(record.data)) {
-            return record.data[index];
-        }
-
-        return undefined;
+    if (direct !== undefined) {
+      return direct;
     }
 
-    private getNestedArray(row: any): any[] {
-        var nested = this.readFirst(row, [
-            'values',
-            'Values',
-            'data',
-            'Data',
-            'items',
-            'Items',
-            'records',
-            'Records',
-            'history',
-            'History'
-        ]);
-
-        return Array.isArray(nested) ? nested : [];
+    if (timeIndex >= 0) {
+      const headerName = this.headerToText(headers[timeIndex]);
+      return record?.[headerName];
     }
 
-    private getTagName(row: any): any {
-        return this.readFirst(row, [
-            'TagName',
-            'tagName',
-            'tagname',
-            'TAGNAME',
-            'Name',
-            'name',
-            'NAME',
-            'Tag',
-            'tag',
-            'TAG'
-        ]);
+    return undefined;
+  }
+
+  private readRecordValue(
+    record: any,
+    headers: any[],
+    index: number,
+    selectedTag: string
+  ): any {
+    if (index < 0 || !record) {
+      return undefined;
     }
 
-    private getTagValue(row: any): any {
-        return this.readFirstDeep(row, [
-            'Value',
-            'value',
-            'VALUE',
-            'Val',
-            'val',
-            'VAL',
-            'DataValue',
-            'dataValue',
-            'CurrentValue',
-            'currentValue',
-            'v',
-            'V'
-        ]);
+    if (Array.isArray(record)) {
+      return record[index];
     }
 
-    private extractArray(res: any): any[] {
-        if (!res) {
-            return [];
+    const headerName = this.headerToText(headers[index]);
+
+    if (selectedTag && record[selectedTag] !== undefined) {
+      return record[selectedTag];
+    }
+    if (headerName && record[headerName] !== undefined) {
+      return record[headerName];
+    }
+
+    const arrays = [record['Values'], record['values'], record['Data'], record['data']];
+
+    for (const array of arrays) {
+      if (Array.isArray(array)) {
+        return array[index];
+      }
+    }
+
+    return undefined;
+  }
+
+  private getTypeFromSelectedTag(
+    tagName: string,
+    routeTags: RouteTags
+  ): RouteValueType | '' {
+    if (!tagName) {
+      return '';
+    }
+
+    const normalizedName = this.normalizeText(tagName);
+    const types: RouteValueType[] = ['lat', 'lng', 'speed', 'course', 'fuelRate'];
+
+    for (const type of types) {
+      const aliases = this.getTagAliases(routeTags[type]);
+
+      if (
+        aliases.some(
+          (alias: string) =>
+            normalizedName === alias ||
+            normalizedName.endsWith(alias) ||
+            alias.endsWith(normalizedName)
+        )
+      ) {
+        return type;
+      }
+    }
+
+    let bestType: RouteValueType | '' = '';
+    let bestScore = 0;
+
+    for (const type of types) {
+      const score = this.scoreTag(String(tagName).toUpperCase(), type);
+      if (score > bestScore) {
+        bestScore = score;
+        bestType = type;
+      }
+    }
+
+    return bestScore > 0 ? bestType : '';
+  }
+
+  private findBestTag(tagRows: any[], type: RouteValueType): string {
+    let bestTagName = '';
+    let bestScore = 0;
+
+    for (const row of tagRows) {
+      const tagName = this.getTagName(row);
+
+      if (!tagName) {
+        continue;
+      }
+
+      const description =
+        this.readFirst(row, ['Description', 'description', 'Desc', 'desc']) || '';
+      const score = this.scoreTag(
+        `${String(tagName)} ${String(description)}`.toUpperCase(),
+        type
+      );
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestTagName = String(tagName);
+      }
+    }
+
+    return bestScore > 0 ? bestTagName : '';
+  }
+
+  private scoreTag(text: string, type: RouteValueType): number {
+    let score = 0;
+
+    if (type === 'lat') {
+      if (text.includes('VES-GPS-LAT')) score += 400;
+      if (text.includes('GPS_LAT') || text.includes('GPS LAT')) score += 260;
+      if (text.includes('LATITUDE')) score += 220;
+      if (text.includes('LAT')) score += 100;
+    }
+
+    if (type === 'lng') {
+      if (text.includes('VES-GPS-LONG') || text.includes('VES-GPS-LNG')) score += 400;
+      if (text.includes('GPS_LONG') || text.includes('GPS LNG')) score += 260;
+      if (text.includes('LONGITUDE')) score += 220;
+      if (text.includes('LONG') || text.includes('LNG') || text.includes('LON')) score += 100;
+    }
+
+    if (type === 'speed') {
+      if (text.includes('VES-GPS-SPEED')) score += 400;
+      if (text.includes('SPEED')) score += 180;
+      if (text.includes('SOG')) score += 160;
+    }
+
+    if (type === 'course') {
+      if (text.includes('VES-GPS-HEAD')) score += 400;
+      if (text.includes('COURSE') || text.includes('COG')) score += 180;
+      if (text.includes('HEADING') || text.includes('HEAD')) score += 140;
+    }
+
+    if (type === 'fuelRate') {
+      if (text.includes('FUEL RATE')) score += 220;
+      if (text.includes('FUEL') && text.includes('FLOW')) score += 190;
+      if (text.includes('MFLOW')) score += 160;
+    }
+
+    if (text.includes('GPS') && type !== 'fuelRate') {
+      score += 30;
+    }
+
+    return score;
+  }
+
+  private extractHistorianSeries(rawResponse: any): any[] {
+    const response = this.parseJsonValue(rawResponse);
+
+    if (Array.isArray(response)) {
+      return response;
+    }
+
+    if (!response || typeof response !== 'object') {
+      return [];
+    }
+
+    const candidates = [
+      response['data'],
+      response['Data'],
+      response['result'],
+      response['Result'],
+      response['results'],
+      response['Results'],
+      response['items'],
+      response['Items'],
+      response['values'],
+      response['Values'],
+      response['tags'],
+      response['Tags'],
+      response['HistorianValues'],
+      response['historianValues'],
+      response['history'],
+      response['History'],
+      response['payload'],
+      response['Payload'],
+    ];
+
+    for (const candidate of candidates) {
+      const parsed = this.parseJsonValue(candidate);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+
+    return [];
+  }
+
+  private extractTagRows(rawResponse: any): any[] {
+    const response = this.parseJsonValue(rawResponse);
+
+    if (Array.isArray(response)) {
+      return response;
+    }
+
+    if (!response || typeof response !== 'object') {
+      return [];
+    }
+
+    const candidates = [
+      response['points'],
+      response['Points'],
+      response['data'],
+      response['Data'],
+      response['result'],
+      response['Result'],
+      response['results'],
+      response['Results'],
+      response['records'],
+      response['Records'],
+      response['items'],
+      response['Items'],
+      response['values'],
+      response['Values'],
+      response['rows'],
+      response['Rows'],
+      response['route'],
+      response['Route'],
+      response['track'],
+      response['Track'],
+    ];
+
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate)) {
+        return candidate;
+      }
+    }
+
+    return [];
+  }
+
+  /**
+   * Aligns irregular historian samples to fixed :00 / :30 time slots.
+   * The closest real GPS point within half an interval is selected; no coordinate
+   * is invented and the same raw sample is never reused for two slots.
+   */
+  private resampleToFixedSlots(
+    points: PastTrackPoint[],
+    startDate: string,
+    endDate: string,
+    intervalMinutes: number
+  ): PastTrackPoint[] {
+    const sorted = this.sanitizeTrack(points)
+      .map((point: PastTrackPoint) => ({
+        point,
+        timestamp: this.parseTimestamp(point.time),
+      }))
+      .filter((item): item is { point: PastTrackPoint; timestamp: number } =>
+        item.timestamp !== null
+      )
+      .sort((a, b) => a.timestamp - b.timestamp);
+
+    if (sorted.length === 0) {
+      return [];
+    }
+
+    const intervalMs = Math.max(1, intervalMinutes) * 60_000;
+    const toleranceMs = Math.min(this.samplingToleranceMs, intervalMs / 2);
+    const rangeStart = this.parseTimestamp(`${startDate} 00:00:00`) ?? sorted[0].timestamp;
+    const configuredEnd = this.parseTimestamp(`${endDate} 23:59:59`) ?? sorted[sorted.length - 1].timestamp;
+    const rangeEnd = this.isToday(endDate)
+      ? Math.min(configuredEnd, Date.now())
+      : configuredEnd;
+    const firstSlot = Math.ceil(rangeStart / intervalMs) * intervalMs;
+    const lastSlot = Math.floor(rangeEnd / intervalMs) * intervalMs;
+    const result: PastTrackPoint[] = [];
+    const usedSamples = new Set<number>();
+    let cursor = 0;
+
+    for (let slot = firstSlot; slot <= lastSlot; slot += intervalMs) {
+      while (cursor + 1 < sorted.length && sorted[cursor + 1].timestamp <= slot) {
+        cursor += 1;
+      }
+
+      const candidates = [sorted[cursor], sorted[cursor + 1]]
+        .filter((item): item is { point: PastTrackPoint; timestamp: number } => !!item)
+        .filter((item) => !usedSamples.has(item.timestamp));
+
+      if (candidates.length === 0) {
+        continue;
+      }
+
+      const nearest = candidates.reduce((best, candidate) =>
+        Math.abs(candidate.timestamp - slot) < Math.abs(best.timestamp - slot)
+          ? candidate
+          : best
+      );
+      const difference = Math.abs(nearest.timestamp - slot);
+
+      if (difference > toleranceMs) {
+        continue;
+      }
+
+      usedSamples.add(nearest.timestamp);
+      result.push({
+        ...nearest.point,
+        no: result.length + 1,
+        recordedTime: nearest.point.recordedTime || nearest.point.time,
+        sampleOffsetMinutes: Number(((nearest.timestamp - slot) / 60_000).toFixed(1)),
+        time: this.formatDisplayTime(new Date(slot)),
+      });
+    }
+
+    return result;
+  }
+
+  private calculateExpectedSlots(
+    startDate: string,
+    endDate: string,
+    intervalMinutes: number
+  ): number {
+    const intervalMs = Math.max(1, intervalMinutes) * 60_000;
+    const start = this.parseTimestamp(`${startDate} 00:00:00`);
+    const configuredEnd = this.parseTimestamp(`${endDate} 23:59:59`);
+
+    if (start === null || configuredEnd === null || configuredEnd < start) {
+      return 0;
+    }
+
+    const end = this.isToday(endDate) ? Math.min(configuredEnd, Date.now()) : configuredEnd;
+    const firstSlot = Math.ceil(start / intervalMs) * intervalMs;
+    const lastSlot = Math.floor(end / intervalMs) * intervalMs;
+
+    return lastSlot >= firstSlot ? Math.floor((lastSlot - firstSlot) / intervalMs) + 1 : 0;
+  }
+
+  private isToday(value: string): boolean {
+    const today = new Date();
+    const key = `${today.getFullYear()}-${this.pad(today.getMonth() + 1)}-${this.pad(today.getDate())}`;
+    return value === key;
+  }
+
+  private buildHistoryRange(startDate: string, endDate: string): {
+    start: string;
+    end: string;
+  } {
+    if (startDate && endDate) {
+      return {
+        start: `${startDate} 00:00:00`,
+        end: `${endDate} 23:59:59`,
+      };
+    }
+
+    const end = new Date();
+    const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
+
+    return {
+      start: this.formatRequestTime(start),
+      end: this.formatRequestTime(end),
+    };
+  }
+
+  private buildResponse(
+    prefix: string,
+    displayPoints: PastTrackPoint[],
+    rawPoints: PastTrackPoint[] = displayPoints,
+    startDate = '',
+    endDate = ''
+  ): PastTrackResponse {
+    return {
+      summary: this.buildSummary(prefix, displayPoints, rawPoints, startDate, endDate),
+      points: displayPoints,
+    };
+  }
+
+  private buildSummary(
+    prefix: string,
+    displayPoints: PastTrackPoint[],
+    rawPoints: PastTrackPoint[],
+    startDate: string,
+    endDate: string
+  ): PastTrackSummary {
+    const vessel = this.getSavedVessel(prefix);
+    const expectedSlots = this.calculateExpectedSlots(
+      startDate,
+      endDate,
+      this.samplingIntervalMinutes
+    );
+    const coveragePercent = expectedSlots > 0
+      ? Math.min(100, Number(((displayPoints.length / expectedSlots) * 100).toFixed(1)))
+      : 0;
+    const metricPoints = rawPoints.length > 0 ? rawPoints : displayPoints;
+
+    return {
+      vesselId: prefix,
+      vesselName: this.getVesselName(prefix, vessel),
+      vesselType: this.getVesselType(vessel),
+      imo: this.getImo(vessel),
+      mmsi: this.getMmsi(vessel),
+      status: displayPoints.length > 0 ? 'Available' : 'No Data',
+      image: this.getVesselImage(vessel),
+      // KPIs use valid raw points for better accuracy. Map/timeline use fixed 30-minute slots.
+      totalDistance: this.calculateTotalDistance(metricPoints),
+      trackPoints: displayPoints.length,
+      rawTrackPoints: rawPoints.length,
+      samplingIntervalMinutes: this.samplingIntervalMinutes,
+      expectedSlots,
+      coveragePercent,
+      rangeStart: startDate,
+      rangeEnd: endDate,
+      avgSpeed: this.calculateAvgSpeed(metricPoints),
+      totalTime: this.calculateTotalTime(metricPoints),
+      lastUpdate: metricPoints.length > 0 ? metricPoints[metricPoints.length - 1].time : '-',
+    };
+  }
+
+  private getSavedVessel(prefix: string): any {
+    const keys = ['pastTrackVessel', 'selectedVessel', 'realtimeVessel'];
+
+    for (const key of keys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) {
+          continue;
         }
 
-        if (typeof res === 'string') {
-            try {
-                res = JSON.parse(res);
-            } catch (error) {
-                return [];
-            }
+        const vessel = JSON.parse(raw);
+        const vesselPrefix = this.readVesselPrefix(vessel);
+
+        if (!prefix || !vesselPrefix || this.normalizeText(vesselPrefix) === this.normalizeText(prefix)) {
+          return vessel;
         }
-
-        if (Array.isArray(res)) { return res; }
-
-        if (Array.isArray(res.points)) { return res.points; }
-        if (Array.isArray(res.Points)) { return res.Points; }
-        if (Array.isArray(res.data)) { return res.data; }
-        if (Array.isArray(res.Data)) { return res.Data; }
-        if (Array.isArray(res.result)) { return res.result; }
-        if (Array.isArray(res.Result)) { return res.Result; }
-        if (Array.isArray(res.rows)) { return res.rows; }
-        if (Array.isArray(res.Rows)) { return res.Rows; }
-        if (Array.isArray(res.route)) { return res.route; }
-        if (Array.isArray(res.Route)) { return res.Route; }
-        if (Array.isArray(res.track)) { return res.track; }
-        if (Array.isArray(res.Track)) { return res.Track; }
-        if (Array.isArray(res.Records)) { return res.Records; }
-        if (Array.isArray(res.records)) { return res.records; }
-
-        return [];
+      } catch {
+        continue;
+      }
     }
 
-    private getLatValue(row: any): any {
-        return this.readFirstDeep(row, [
-            'lat',
-            'Lat',
-            'LAT',
-            'latitude',
-            'Latitude',
-            'LATITUDE',
-            'gpsLat',
-            'GpsLat',
-            'GPS_LAT',
-            'GPSLat',
-            'VES_GPS_LAT',
-            'VES_LAT',
-            'y',
-            'Y'
-        ]);
+    return null;
+  }
+
+  private readVesselPrefix(vessel: any): string {
+    return String(
+      vessel?.prefix ||
+        vessel?.fv?.prefix ||
+        vessel?.fvInfo?.prefix ||
+        vessel?.id ||
+        vessel?.fv?.id ||
+        vessel?.fvInfo?.id ||
+        ''
+    ).trim();
+  }
+
+  private getVesselName(prefix: string, vessel: any): string {
+    return String(
+      vessel?.name ||
+        vessel?.fv?.name ||
+        vessel?.fvInfo?.name ||
+        prefix.replace(/_/g, ' ') ||
+        'VESSEL'
+    );
+  }
+
+  private getVesselType(vessel: any): string {
+    return String(
+      vessel?.desc || vessel?.type || vessel?.fv?.desc || vessel?.fvInfo?.desc || 'AHTS'
+    );
+  }
+
+  private getImo(vessel: any): string {
+    return String(vessel?.imo || vessel?.fv?.imo || vessel?.fvInfo?.imo || '-');
+  }
+
+  private getMmsi(vessel: any): string {
+    return String(vessel?.mmsi || vessel?.fv?.mmsi || vessel?.fvInfo?.mmsi || '-');
+  }
+
+  private getVesselImage(vessel: any): string {
+    return String(
+      vessel?.img ||
+        vessel?.image ||
+        vessel?.fv?.img ||
+        vessel?.fvInfo?.img ||
+        'assets/images/vessel/notfound.png'
+    );
+  }
+
+  private calculateAvgSpeed(points: PastTrackPoint[]): number {
+    const valid = points
+      .map((point: PastTrackPoint) => Number(point.speed))
+      .filter((speed: number) => Number.isFinite(speed) && speed >= 0);
+
+    if (valid.length === 0) {
+      return 0;
     }
 
-    private getLngValue(row: any): any {
-        return this.readFirstDeep(row, [
-            'lng',
-            'Lng',
-            'LNG',
-            'long',
-            'Long',
-            'LONG',
-            'lon',
-            'Lon',
-            'LON',
-            'longitude',
-            'Longitude',
-            'LONGITUDE',
-            'gpsLng',
-            'GpsLng',
-            'GPS_LNG',
-            'GPSLng',
-            'GPS_LONG',
-            'VES_GPS_LONG',
-            'VES_GPS_LNG',
-            'VES_LONG',
-            'VES_LNG',
-            'x',
-            'X'
-        ]);
+    const total = valid.reduce((sum: number, speed: number) => sum + speed, 0);
+    return Number((total / valid.length).toFixed(1));
+  }
+
+  private calculateTotalDistance(points: PastTrackPoint[]): number {
+    let total = 0;
+
+    for (let index = 1; index < points.length; index += 1) {
+      total += this.distanceNm(
+        points[index - 1].lat,
+        points[index - 1].lng,
+        points[index].lat,
+        points[index].lng
+      );
     }
 
-    private getTimeValue(row: any): any {
-        return this.readFirstDeep(row, [
-            'Time',
-            'time',
-            'TIME',
-            'Timestamp',
-            'timestamp',
-            'TIMESTAMP',
-            'DateTime',
-            'dateTime',
-            'datetime',
-            'Date',
-            'date',
-            'CreatedAt',
-            'createdAt',
-            'StartTime',
-            'startTime',
-            'TS',
-            'ts'
-        ]);
+    return Number(total.toFixed(1));
+  }
+
+  private calculateTotalTime(points: PastTrackPoint[]): string {
+    if (points.length < 2) {
+      return '-';
     }
 
-    private getSpeedValue(row: any): any {
-        return this.readFirstDeep(row, [
-            'speed',
-            'Speed',
-            'SPEED',
-            'sog',
-            'SOG',
-            'VES_GPS_SPEED',
-            'VES_GPS_SOG'
-        ]);
+    const first = this.parseTimestamp(points[0].time);
+    const last = this.parseTimestamp(points[points.length - 1].time);
+
+    if (first === null || last === null || last < first) {
+      return '-';
     }
 
-    private getCourseValue(row: any): any {
-        return this.readFirstDeep(row, [
-            'course',
-            'Course',
-            'COURSE',
-            'heading',
-            'Heading',
-            'HEADING',
-            'head',
-            'Head',
-            'HEAD',
-            'VES_GPS_COURSE',
-            'VES_GPS_HEAD',
-            'COG'
-        ]);
+    const totalMinutes = Math.floor((last - first) / 60_000);
+    const days = Math.floor(totalMinutes / 1_440);
+    const hours = Math.floor((totalMinutes % 1_440) / 60);
+    const minutes = totalMinutes % 60;
+
+    return days > 0
+      ? `${days}d ${hours}h ${minutes}m`
+      : `${hours}h ${minutes}m`;
+  }
+
+  private sortAndRemoveDuplicate(points: PastTrackPoint[]): PastTrackPoint[] {
+    const sorted = points.slice().sort((a: PastTrackPoint, b: PastTrackPoint) => {
+      const first = this.parseTimestamp(a.time) ?? 0;
+      const second = this.parseTimestamp(b.time) ?? 0;
+      return first - second;
+    });
+
+    const result: PastTrackPoint[] = [];
+    const seen = new Set<string>();
+
+    for (const point of sorted) {
+      const timestamp = this.parseTimestamp(point.time) ?? 0;
+      const key = `${timestamp}|${point.lat.toFixed(7)}|${point.lng.toFixed(7)}`;
+
+      if (seen.has(key)) {
+        continue;
+      }
+
+      seen.add(key);
+      point.no = result.length + 1;
+      result.push(point);
     }
 
-    private getFuelRateValue(row: any): any {
-        return this.readFirstDeep(row, [
-            'fuelRate',
-            'FuelRate',
-            'fuel_rate',
-            'VES_FUEL_RATE',
-            'fuel',
-            'Fuel',
-            'FUEL'
-        ]);
+    return result;
+  }
+
+  private isTimestampInRange(
+    timestamp: number,
+    startDate: string,
+    endDate: string
+  ): boolean {
+    if (!startDate || !endDate) {
+      return true;
     }
 
-    private readFirst(row: any, keys: string[]): any {
-        if (!row) {
-            return undefined;
-        }
+    const start = this.parseTimestamp(`${startDate} 00:00:00`);
+    const end = this.parseTimestamp(`${endDate} 23:59:59`);
 
-        for (var i = 0; i < keys.length; i++) {
-            var key = keys[i];
-
-            if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
-                return row[key];
-            }
-        }
-
-        return undefined;
+    if (start === null || end === null) {
+      return true;
     }
 
-    private readFirstDeep(row: any, keys: string[]): any {
-        return this.readFirstDeepInternal(row, keys, 0);
+    return timestamp >= start && timestamp <= end;
+  }
+
+  private parseTimestamp(value: any): number | null {
+    if (value === undefined || value === null || value === '') {
+      return null;
     }
 
-    private readFirstDeepInternal(row: any, keys: string[], depth: number): any {
-        if (!row || depth > 3) {
-            return undefined;
-        }
-
-        var value = this.readFirst(row, keys);
-
-        if (value !== undefined && value !== null && value !== '') {
-            return value;
-        }
-
-        if (typeof row !== 'object') {
-            return undefined;
-        }
-
-        var objectKeys = Object.keys(row);
-
-        for (var i = 0; i < objectKeys.length; i++) {
-            var child = row[objectKeys[i]];
-
-            if (child && typeof child === 'object' && !Array.isArray(child)) {
-                var childValue = this.readFirstDeepInternal(child, keys, depth + 1);
-
-                if (childValue !== undefined && childValue !== null && childValue !== '') {
-                    return childValue;
-                }
-            }
-        }
-
-        return undefined;
+    if (value instanceof Date) {
+      const time = value.getTime();
+      return Number.isNaN(time) ? null : time;
     }
 
-    private sortAndRemoveDuplicate(points: PastTrackPoint[]): PastTrackPoint[] {
-        points.sort((a: PastTrackPoint, b: PastTrackPoint) => {
-            var ta = new Date(a.time).getTime();
-            var tb = new Date(b.time).getTime();
-
-            if (isNaN(ta) || isNaN(tb)) {
-                return 0;
-            }
-
-            return ta - tb;
-        });
-
-        var result: PastTrackPoint[] = [];
-        var cache: any = {};
-
-        for (var i = 0; i < points.length; i++) {
-            var p = points[i];
-            var key = p.lat + '|' + p.lng + '|' + p.time;
-
-            if (!cache[key]) {
-                cache[key] = true;
-                p.no = result.length + 1;
-                result.push(p);
-            }
-        }
-
-        return result;
+    if (typeof value === 'number') {
+      const time = Math.abs(value) < 100_000_000_000 ? value * 1000 : value;
+      return Number.isFinite(time) ? time : null;
     }
 
-    private isInDateRange(time: any, startDate: string, endDate: string): boolean {
-        if (!startDate || !endDate) {
-            return true;
-        }
+    const text = String(value).trim();
+    const dotNet = text.match(/^\/Date\((-?\d+)(?:[+-]\d{4})?\)\/$/);
 
-        if (!time) {
-            return true;
-        }
-
-        var pointTime = new Date(time).getTime();
-        var start = new Date(startDate + ' 00:00:00').getTime();
-        var end = new Date(endDate + ' 23:59:59').getTime();
-
-        if (isNaN(pointTime) || isNaN(start) || isNaN(end)) {
-            return true;
-        }
-
-        return pointTime >= start && pointTime <= end;
+    if (dotNet) {
+      return Number(dotNet[1]);
     }
 
-    private calculateAvgSpeed(points: PastTrackPoint[]): number {
-        if (!points || points.length === 0) {
-            return 0;
-        }
-
-        var total = 0;
-
-        for (var i = 0; i < points.length; i++) {
-            total += points[i].speed;
-        }
-
-        return Number((total / points.length).toFixed(1));
+    if (/^-?\d+(?:\.\d+)?$/.test(text)) {
+      const numeric = Number(text);
+      return Math.abs(numeric) < 100_000_000_000 ? numeric * 1000 : numeric;
     }
 
-    private calculateTotalDistance(points: PastTrackPoint[]): number {
-        if (!points || points.length <= 1) {
-            return 0;
-        }
+    const isoLocal = text.match(
+      /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/
+    );
 
-        var total = 0;
-
-        for (var i = 1; i < points.length; i++) {
-            total += this.distanceNm(
-                points[i - 1].lat,
-                points[i - 1].lng,
-                points[i].lat,
-                points[i].lng
-            );
-        }
-
-        return Number(total.toFixed(1));
+    if (isoLocal) {
+      return new Date(
+        Number(isoLocal[1]),
+        Number(isoLocal[2]) - 1,
+        Number(isoLocal[3]),
+        Number(isoLocal[4]),
+        Number(isoLocal[5]),
+        Number(isoLocal[6] || 0),
+        Number(String(isoLocal[7] || '0').padEnd(3, '0'))
+      ).getTime();
     }
 
-    private calculateTotalTime(points: PastTrackPoint[]): string {
-        if (!points || points.length < 2) {
-            return '-';
-        }
+    const displayDate = text.match(
+      /^(\d{1,2})-([A-Za-z]{3})-(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+    );
 
-        var first = new Date(points[0].time).getTime();
-        var last = new Date(points[points.length - 1].time).getTime();
+    if (displayDate) {
+      const months: Record<string, number> = {
+        JAN: 0,
+        FEB: 1,
+        MAR: 2,
+        APR: 3,
+        MAY: 4,
+        JUN: 5,
+        JUL: 6,
+        AUG: 7,
+        SEP: 8,
+        OCT: 9,
+        NOV: 10,
+        DEC: 11,
+      };
+      const month = months[displayDate[2].toUpperCase()];
 
-        if (isNaN(first) || isNaN(last)) {
-            return '-';
-        }
+      if (month === undefined) {
+        return null;
+      }
 
-        var diffMinutes = Math.floor((last - first) / (1000 * 60));
-        var hours = Math.floor(diffMinutes / 60);
-        var minutes = diffMinutes % 60;
-
-        return hours + 'h ' + minutes + 'm';
+      return new Date(
+        Number(displayDate[3]),
+        month,
+        Number(displayDate[1]),
+        Number(displayDate[4]),
+        Number(displayDate[5]),
+        Number(displayDate[6] || 0)
+      ).getTime();
     }
 
-    private distanceNm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-        var r = 6371;
-        var dLat = this.toRad(lat2 - lat1);
-        var dLng = this.toRad(lng2 - lng1);
+    const nativeTime = new Date(text).getTime();
+    return Number.isNaN(nativeTime) ? null : nativeTime;
+  }
 
-        var a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(this.toRad(lat1)) *
-            Math.cos(this.toRad(lat2)) *
-            Math.sin(dLng / 2) *
-            Math.sin(dLng / 2);
+  private formatRequestTime(date: Date): string {
+    return (
+      `${date.getFullYear()}-${this.pad(date.getMonth() + 1)}-${this.pad(date.getDate())} ` +
+      `${this.pad(date.getHours())}:${this.pad(date.getMinutes())}:${this.pad(date.getSeconds())}`
+    );
+  }
 
-        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        var km = r * c;
+  private formatDisplayTime(date: Date): string {
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
 
-        return km * 0.539957;
+    return (
+      `${this.pad(date.getDate())}-${monthNames[date.getMonth()]}-${date.getFullYear()} ` +
+      `${this.pad(date.getHours())}:${this.pad(date.getMinutes())}:${this.pad(date.getSeconds())}`
+    );
+  }
+
+  private ensureVesselPrefix(tagName: string, prefix: string): string {
+    const tag = String(tagName || '').trim();
+
+    if (!tag) {
+      return '';
     }
 
-    private toRad(value: number): number {
-        return value * Math.PI / 180;
+    const normalizedTag = this.normalizeText(tag);
+    const normalizedPrefix = this.normalizeText(prefix);
+
+    if (normalizedPrefix && normalizedTag.startsWith(normalizedPrefix)) {
+      return tag;
     }
 
-    private toNumber(value: any): number {
-        if (value === undefined || value === null || value === '') {
-            return NaN;
+    return `${prefix}-${tag.replace(/^[-_.\s]+/, '')}`;
+  }
+
+  private stripVesselPrefix(tagName: string, prefix: string): string {
+    const tag = String(tagName || '').trim();
+    const normalizedPrefix = this.normalizeText(prefix);
+
+    if (!tag || !normalizedPrefix) {
+      return tag;
+    }
+
+    const parts = tag.split(/[-_.]/);
+    let candidate = '';
+
+    for (let index = 0; index < parts.length; index += 1) {
+      candidate += parts[index];
+      if (this.normalizeText(candidate) === normalizedPrefix) {
+        return parts.slice(index + 1).join('-');
+      }
+    }
+
+    return tag;
+  }
+
+  private getTagAliases(tagName: string): string[] {
+    const aliases = new Set<string>();
+    const normalized = this.normalizeText(tagName);
+
+    if (normalized) {
+      aliases.add(normalized);
+    }
+
+    const index = normalized.indexOf('VESGPS');
+    if (index >= 0) {
+      aliases.add(normalized.slice(index));
+    }
+
+    return Array.from(aliases);
+  }
+
+  private looksLikeRouteTag(key: string): boolean {
+    const text = this.normalizeText(key);
+    return (
+      text.includes('GPSLAT') ||
+      text.includes('GPSLONG') ||
+      text.includes('GPSLNG') ||
+      text.includes('GPSSPEED') ||
+      text.includes('GPSHEAD') ||
+      text.includes('FUEL')
+    );
+  }
+
+  private isValidCoordinate(lat: number, lng: number): boolean {
+    return (
+      Number.isFinite(lat) &&
+      Number.isFinite(lng) &&
+      lat >= -90 &&
+      lat <= 90 &&
+      lng >= -180 &&
+      lng <= 180 &&
+      !(lat === 0 && lng === 0)
+    );
+  }
+
+  private distanceNm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const earthRadiusKm = 6371.0088;
+    const deltaLat = this.toRad(lat2 - lat1);
+    const deltaLng = this.toRad(lng2 - lng1);
+    const firstLat = this.toRad(lat1);
+    const secondLat = this.toRad(lat2);
+    const haversine =
+      Math.sin(deltaLat / 2) ** 2 +
+      Math.cos(firstLat) * Math.cos(secondLat) * Math.sin(deltaLng / 2) ** 2;
+    const angularDistance =
+      2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+
+    return earthRadiusKm * angularDistance * 0.539956803;
+  }
+
+  private toRad(value: number): number {
+    return (value * Math.PI) / 180;
+  }
+
+  private toNumber(value: any): number {
+    if (value === undefined || value === null || value === '') {
+      return Number.NaN;
+    }
+
+    if (typeof value === 'string') {
+      const cleaned = value.trim().replace(/,/g, '.').replace(/[^0-9+\-.eE]/g, '');
+      return Number(cleaned);
+    }
+
+    return Number(value);
+  }
+
+  private getTagName(row: any): string {
+    return String(
+      this.readFirst(row, [
+        'TagName',
+        'tagName',
+        'tagname',
+        'HistorianTagName',
+        'historianTagName',
+        'PointName',
+        'pointName',
+        'Name',
+        'name',
+        'Tag',
+        'tag',
+      ]) || ''
+    );
+  }
+
+  private getTagValue(row: any): any {
+    return this.readFirstDeep(row, [
+      'Value',
+      'value',
+      'Val',
+      'val',
+      'NumericValue',
+      'numericValue',
+      'DataValue',
+      'dataValue',
+      'CurrentValue',
+      'currentValue',
+      'y',
+    ]);
+  }
+
+  private getTimeValue(row: any): any {
+    return this.readFirstDeep(row, [
+      'TimeStamp',
+      'Timestamp',
+      'timeStamp',
+      'timestamp',
+      'Time',
+      'time',
+      'DateTime',
+      'dateTime',
+      'datetime',
+      'Date',
+      'date',
+      'CreatedAt',
+      'createdAt',
+      'RecordTime',
+      'recordTime',
+      'x',
+    ]);
+  }
+
+  private getLatValue(row: any): any {
+    return this.readFirstDeep(row, [
+      'lat',
+      'Lat',
+      'LAT',
+      'latitude',
+      'Latitude',
+      'LATITUDE',
+      'gpsLat',
+      'GpsLat',
+      'GPS_LAT',
+      'VES_GPS_LAT',
+      'y',
+      'Y',
+    ]);
+  }
+
+  private getLngValue(row: any): any {
+    return this.readFirstDeep(row, [
+      'lng',
+      'Lng',
+      'LNG',
+      'long',
+      'Long',
+      'LONG',
+      'lon',
+      'Lon',
+      'LON',
+      'longitude',
+      'Longitude',
+      'LONGITUDE',
+      'gpsLng',
+      'GpsLng',
+      'GPS_LNG',
+      'GPS_LONG',
+      'VES_GPS_LONG',
+      'VES_GPS_LNG',
+      'x',
+      'X',
+    ]);
+  }
+
+  private getSpeedValue(row: any): any {
+    return this.readFirstDeep(row, [
+      'speed',
+      'Speed',
+      'SPEED',
+      'sog',
+      'SOG',
+      'VES_GPS_SPEED',
+    ]);
+  }
+
+  private getCourseValue(row: any): any {
+    return this.readFirstDeep(row, [
+      'course',
+      'Course',
+      'COURSE',
+      'heading',
+      'Heading',
+      'HEADING',
+      'head',
+      'Head',
+      'HEAD',
+      'VES_GPS_HEAD',
+      'COG',
+    ]);
+  }
+
+  private getFuelRateValue(row: any): any {
+    return this.readFirstDeep(row, [
+      'fuelRate',
+      'FuelRate',
+      'fuel_rate',
+      'VES_FUEL_RATE',
+      'fuel',
+      'Fuel',
+      'FUEL',
+    ]);
+  }
+
+  private readFirst(row: any, keys: string[]): any {
+    if (!row || typeof row !== 'object') {
+      return undefined;
+    }
+
+    for (const key of keys) {
+      const value = row[key];
+      if (value !== undefined && value !== null && value !== '') {
+        return value;
+      }
+    }
+
+    return undefined;
+  }
+
+  private readFirstDeep(row: any, keys: string[], depth = 0): any {
+    if (!row || depth > 4) {
+      return undefined;
+    }
+
+    const direct = this.readFirst(row, keys);
+    if (direct !== undefined) {
+      return direct;
+    }
+
+    if (typeof row !== 'object' || Array.isArray(row)) {
+      return undefined;
+    }
+
+    for (const key of Object.keys(row)) {
+      const child = row[key];
+      if (child && typeof child === 'object' && !Array.isArray(child)) {
+        const nested = this.readFirstDeep(child, keys, depth + 1);
+        if (nested !== undefined) {
+          return nested;
         }
-
-        if (typeof value === 'string') {
-            value = value.replace(',', '.');
-        }
-
-        return Number(value);
+      }
     }
 
-    private normalizeText(value: any): string {
-        if (!value) {
-            return '';
-        }
+    return undefined;
+  }
 
-        return String(value)
-            .toUpperCase()
-            .replace(/\s/g, '')
-            .replace(/_/g, '')
-            .replace(/-/g, '')
-            .replace(/\./g, '');
+  private headerToText(header: any): string {
+    if (header === undefined || header === null) {
+      return '';
     }
+
+    if (typeof header === 'string') {
+      return header;
+    }
+
+    return String(
+      this.readFirst(header, [
+        'TagName',
+        'tagName',
+        'Name',
+        'name',
+        'Header',
+        'header',
+        'Key',
+        'key',
+        'Description',
+        'description',
+      ]) || JSON.stringify(header)
+    );
+  }
+
+  private parseJsonValue(value: any): any {
+    if (typeof value !== 'string') {
+      return value;
+    }
+
+    const text = value.trim();
+    if (!text || (!text.startsWith('{') && !text.startsWith('['))) {
+      return value;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return value;
+    }
+  }
+
+  private normalizePrefix(value: string): string {
+    return String(value || '').trim();
+  }
+
+  private normalizeText(value: any): string {
+    return String(value || '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+  }
+
+  private pad(value: number): string {
+    return value < 10 ? `0${value}` : String(value);
+  }
 }

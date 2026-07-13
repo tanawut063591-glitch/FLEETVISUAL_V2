@@ -4,6 +4,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHighcharts } from 'highcharts-angular';
 
 import { App } from './app';
 import { AppRoutingModule } from './app.routes';
@@ -32,6 +33,10 @@ import { errorInterceptor } from './core/interceptors/error.interceptor';
   ],
 
   providers: [
+    provideHighcharts({
+      instance: () => import('highcharts/esm/highcharts').then((module) => module.default),
+      modules: () => [import('highcharts/esm/modules/exporting')],
+    }),
     provideHttpClient(
       withInterceptors([
         tokenInterceptor,

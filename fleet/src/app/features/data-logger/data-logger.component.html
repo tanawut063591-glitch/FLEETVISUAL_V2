@@ -1,0 +1,292 @@
+<div class="data-logger-page">
+
+    <div class="logger-filter">
+        <app-datetime-control
+            [loading]="loading"
+            [selectAll]="false"
+            [searchTitle]="'Export'"
+            [maxSelection]="12"
+            [dialogSubtitle]="'Select sensor parameters for Data Logger'"
+            [badgeLabel]="'HISTORICAL SENSOR DATA'"
+            [pageTitle]="'DATA LOGGER'"
+            [pageSubtitle]="'View and analyze historical data from your vessel sensors.'"
+            [parameterText]="'Choose the sensor tags you want to display in the data logger table.'"
+            (showLoggerEmit)="showLogger($event)"
+            (selectedTimer)="downloadLogger($event)">
+        </app-datetime-control>
+    </div>
+
+    <div class="historian-message" *ngIf="errorMessage && !loading">
+        <span class="historian-message-icon">!</span>
+        <div>
+            <strong>Historian data not found</strong>
+            <p>{{ errorMessage }}</p>
+        </div>
+    </div>
+
+    <div class="quick-tags-card" *ngIf="headers.length > 0">
+        <div class="quick-left">
+            <span class="quick-title">QUICK TAGS</span>
+            <span class="quick-subtitle">Filter sensors by category</span>
+        </div>
+
+        <div class="quick-list">
+            <button
+                type="button"
+                class="quick-chip"
+                *ngFor="let tag of quickTags; trackBy: trackByQuickTag"
+                [ngClass]="{ 'active': selectedQuickTag == tag.key }"
+                (click)="setQuickTag(tag.key)">
+                {{ tag.label }}
+            </button>
+        </div>
+    </div>
+
+    <div class="data-table-card" *ngIf="headers.length > 0">
+
+        <div class="table-topbar">
+            <div class="table-title-wrap">
+                <span class="table-kicker">LOGGER VIEW</span>
+                <h3>DATA TABLE</h3>
+            </div>
+
+            <div class="table-actions">
+                <span class="table-count-badge">
+                    {{ getFilteredCountLabel() }}
+                </span>
+
+                <button
+                    type="button"
+                    class="clear-filter-btn"
+                    (click)="clearTableFilter()">
+                    Clear Filter
+                </button>
+
+                <select class="interval-select" (change)="changeInterval($event)">
+                    <option
+                        *ngFor="let item of intervalOptions"
+                        [value]="item.value"
+                        [selected]="item.value == selectedIntervalMs">
+                        {{ item.label }}
+                    </option>
+                </select>
+
+                <button type="button" class="setting-btn">
+                    ⚙
+                </button>
+            </div>
+        </div>
+
+        <div class="table-scroll">
+
+            <table class="premium-table">
+
+                <thead>
+
+                    <tr>
+                        <th class="time-col">
+                            <button
+                                type="button"
+                                class="th-sort-btn"
+                                (click)="sortByTime()">
+
+                                <div class="th-main">
+                                    TIME
+                                </div>
+
+                                <span class="sort-icon">
+                                    {{ getTimeSortIcon() }}
+                                </span>
+
+                            </button>
+                        </th>
+
+                        <th *ngFor="let h of visibleHeaders; trackBy: trackByHeader">
+                            <button
+                                type="button"
+                                class="th-sort-btn"
+                                (click)="sortByHeader(h)">
+
+                                <div class="sensor-head">
+                                    <span class="sensor-group">{{ h.group }}</span>
+                                    <span class="sensor-name">{{ h.label }}</span>
+                                    <span class="sensor-unit" *ngIf="h.unit">{{ h.unit }}</span>
+                                </div>
+
+                                <span class="sort-icon">
+                                    {{ getHeaderSortIcon(h) }}
+                                </span>
+
+                            </button>
+                        </th>
+
+                        <th class="next-col">›</th>
+                    </tr>
+
+                    <tr class="filter-row">
+
+                        <th class="time-col">
+                            <input
+                                type="text"
+                                class="column-filter"
+                                placeholder="Filter time..."
+                                [(ngModel)]="timeFilter"
+                                (ngModelChange)="onFilterChange()">
+                        </th>
+
+                        <th *ngFor="let h of visibleHeaders; trackBy: trackByHeader">
+                            <input
+                                type="text"
+                                class="column-filter"
+                                placeholder="Filter..."
+                                [(ngModel)]="columnFilters[h.index]"
+                                (ngModelChange)="onFilterChange()">
+                        </th>
+
+                        <th class="next-col"></th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    <tr *ngFor="let data of tableRows; trackBy: trackByRow">
+
+                        <td class="time-cell">
+                            {{ data.timestamp }}
+                        </td>
+
+                        <td
+                            *ngFor="let h of visibleHeaders; trackBy: trackByHeader"
+                            [ngClass]="getCellClass(data.values[h.index], h)"
+                            [title]="getCellTitle(data.values[h.index], h)">
+
+                            {{ displayValue(data.values[h.index]) }}
+
+                        </td>
+
+                        <td class="next-cell"></td>
+
+                    </tr>
+
+                    <tr *ngIf="tableRows.length == 0">
+                        <td
+                            class="table-empty-row"
+                            [attr.colspan]="visibleHeaders.length + 2">
+
+                            No matching data found
+
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="table-footer">
+
+            <div class="legend-wrap">
+
+                <div class="legend-item">
+                    <span class="dot normal"></span>
+                    <div>
+                        <b>Normal</b>
+                        <small>Within range</small>
+                        <em>{{ statusSummary.normal }}</em>
+                    </div>
+                </div>
+
+                <div class="legend-item">
+                    <span class="dot warning"></span>
+                    <div>
+                        <b>Warning</b>
+                        <small>Approaching limit</small>
+                        <em>{{ statusSummary.warning }}</em>
+                    </div>
+                </div>
+
+                <div class="legend-item">
+                    <span class="dot alarm"></span>
+                    <div>
+                        <b>Alarm</b>
+                        <small>Out of range</small>
+                        <em>{{ statusSummary.alarm }}</em>
+                    </div>
+                </div>
+
+                <div class="legend-item">
+                    <span class="dot nodata"></span>
+                    <div>
+                        <b>No Data</b>
+                        <small>No signal</small>
+                        <em>{{ statusSummary.nodata }}</em>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="footer-right">
+
+                <span class="rows-label">Rows per page</span>
+
+                <select class="rows-select" (change)="changeRowsPerPage($event)">
+                    <option
+                        *ngFor="let row of rowOptions"
+                        [value]="row"
+                        [selected]="row == pageRow">
+                        {{ row }}
+                    </option>
+                </select>
+
+                <span class="page-summary">
+                    {{ getRangeLabel() }}
+                </span>
+
+                <button
+                    type="button"
+                    class="page-arrow"
+                    [disabled]="pageActive == 1"
+                    (click)="previous()">
+                    ‹
+                </button>
+
+                <button
+                    type="button"
+                    class="page-number"
+                    *ngFor="let page of pages; trackBy: trackByPage"
+                    [ngClass]="{ 'active': page == pageActive, 'dots': page == '...' }"
+                    (click)="setActive(page)">
+                    {{ page }}
+                </button>
+
+                <button
+                    type="button"
+                    class="page-arrow"
+                    [disabled]="pageActive == pageCount"
+                    (click)="next()">
+                    ›
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="empty-state" *ngIf="headers.length == 0 && !loading">
+        <div class="empty-icon">📊</div>
+        <h3>No Data Table</h3>
+        <p>Please select date range and tags to display logger data.</p>
+    </div>
+
+    <div class="loading-overlay" *ngIf="loading">
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <span>Loading data...</span>
+        </div>
+    </div>
+
+</div>

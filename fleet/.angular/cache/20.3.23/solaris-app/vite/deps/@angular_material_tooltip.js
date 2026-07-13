@@ -11,11 +11,7 @@ import {
   coerceElement,
   coerceNumberProperty,
   supportsScrollBehavior
-} from "./chunk-ILR5HGHR.js";
-import {
-  BidiModule,
-  Directionality
-} from "./chunk-76A2NOZY.js";
+} from "./chunk-KFUSGAL7.js";
 import {
   Platform
 } from "./chunk-MBZQ3IYF.js";
@@ -24,6 +20,10 @@ import {
   NgClass
 } from "./chunk-TRDCCLPD.js";
 import "./chunk-WT4MODDA.js";
+import {
+  BidiModule,
+  Directionality
+} from "./chunk-76A2NOZY.js";
 import {
   ANIMATION_MODULE_TYPE,
   APP_ID,

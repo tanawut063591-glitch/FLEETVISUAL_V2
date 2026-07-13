@@ -90,3 +90,15 @@
     font-size: 12px;
     font-weight: 900;
 }
+
+.source-time {
+    background: #f8fbff;
+}
+
+.source-time b {
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #1769ff;
+}

@@ -1,3 +1,7 @@
+* {
+    box-sizing: border-box;
+}
+
 .timeline-panel {
     background: #ffffff;
     border: 1px solid #dbe7f5;
@@ -7,31 +11,70 @@
 }
 
 .table-title {
-    padding: 14px 16px 8px;
+    min-height: 58px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.table-title strong {
+    display: block;
     color: #0f172a;
     font-size: 14px;
     font-weight: 900;
 }
 
 .table-title span {
+    display: block;
+    margin-top: 4px;
     color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.timeline-hint {
+    color: #64748b;
+    font-size: 11px;
     font-weight: 700;
 }
 
 .table-wrap {
-    overflow-x: auto;
-    padding: 0 16px 14px;
+    max-height: 390px;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #b9c9de transparent;
+}
+
+.table-wrap::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c5d2e2;
 }
 
 table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     font-size: 12px;
 }
 
+thead {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
 th {
-    padding: 9px 10px;
+    padding: 10px;
     border-bottom: 1px solid #e2e8f0;
+    background: #f8fbff;
     text-align: left;
     color: #475569;
     font-weight: 900;
@@ -44,16 +87,21 @@ td {
     color: #1e293b;
     font-weight: 700;
     white-space: nowrap;
+    background: #ffffff;
 }
 
 tbody tr {
     cursor: pointer;
-    transition: 0.18s ease;
+    transition: background 0.18s ease;
 }
 
-tbody tr:hover,
-tbody tr.selected {
+tbody tr:hover td,
+tbody tr.selected td {
     background: #eef6ff;
+}
+
+tbody tr.selected td:first-child {
+    box-shadow: inset 3px 0 #1769ff;
 }
 
 .point-no {
@@ -76,6 +124,25 @@ tbody tr.selected {
     color: #d97706;
     border-color: #f59e0b;
     background: #fff7e6;
+}
+
+.point-no.nodata {
+    color: #64748b;
+    border-color: #94a3b8;
+    background: #f1f5f9;
+}
+
+.slot-time {
+    color: #0f172a;
+    font-weight: 900;
+}
+
+td small {
+    display: block;
+    margin-top: 3px;
+    color: #94a3b8;
+    font-size: 9px;
+    font-weight: 600;
 }
 
 .status {
@@ -101,7 +168,21 @@ tbody tr.selected {
     border-color: #fcd34d;
 }
 
+.status.nodata {
+    color: #64748b;
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
 .more {
     color: #64748b;
     font-size: 18px;
+}
+
+.empty-table {
+    padding: 34px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 700;
 }

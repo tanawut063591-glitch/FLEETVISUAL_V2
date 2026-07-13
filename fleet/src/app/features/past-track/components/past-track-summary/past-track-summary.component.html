@@ -28,7 +28,7 @@
     <div class="kpi-card">
         <small>Track Points</small>
         <strong>{{ summary.trackPoints }}</strong>
-        <span>records</span>
+        <span>{{ summary.samplingIntervalMinutes || 30 }}-min records</span>
     </div>
 
     <div class="kpi-card">

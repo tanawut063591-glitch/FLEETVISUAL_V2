@@ -1,38 +1,65 @@
 <section class="playback-panel">
+  <div class="panel-heading">
+    <div>
+      <h3>PLAYBACK CONTROL</h3>
+      <p>Replay vessel movement</p>
+    </div>
+    <span class="sample-chip">{{ samplingIntervalMinutes }} MIN</span>
+  </div>
 
-    <h3>PLAYBACK CONTROL</h3>
-    <p>Replay vessel movement</p>
+  <div class="selected-time-row">
+    <span>Selected time</span>
+    <strong>{{ getCurrentTime() }}</strong>
+  </div>
 
-    <div class="player-buttons">
-        <button type="button" class="round" (click)="previous()">◀</button>
+  <div class="player-buttons">
+    <button type="button" class="round" (click)="previous()" [disabled]="isAtStart()" aria-label="Previous point">◀</button>
 
-        <button type="button" class="play" (click)="play()">
-            {{ isPlaying ? '❚❚' : '▶' }}
-        </button>
+    <button type="button" class="play" (click)="play()" [disabled]="!trackPoints.length" [attr.aria-label]="isPlaying ? 'Pause playback' : 'Play route'">
+      {{ isPlaying ? '❚❚' : '▶' }}
+    </button>
 
-        <button type="button" class="round" (click)="next()">▶</button>
+    <button type="button" class="round" (click)="next()" [disabled]="isAtEnd()" aria-label="Next point">▶</button>
+  </div>
+
+  <div class="scrubber-wrap">
+    <input
+      class="time-scrubber"
+      type="range"
+      [min]="getSliderMin()"
+      [max]="getSliderMax()"
+      [step]="getSliderStep()"
+      [value]="getSliderValue()"
+      [style.background]="getSliderBackground()"
+      [disabled]="!trackPoints.length"
+      (input)="onScrub($event)"
+      aria-label="Past track time scrubber">
+
+    <div class="date-markers" aria-hidden="true">
+      <span
+        *ngFor="let marker of getDateMarkers(); trackBy: trackMarker"
+        [style.left.%]="marker.percent">
+        <i></i>{{ marker.label }}
+      </span>
+    </div>
+  </div>
+
+  <div class="time-row">
+    <span>{{ getStartTime() }}</span>
+    <span>{{ getEndTime() }}</span>
+  </div>
+
+  <div class="speed-row">
+    <div>
+      <span>Playback Speed</span>
+      <small>1 step = {{ samplingIntervalMinutes }} minutes</small>
     </div>
 
-    <div class="progress-line">
-        <span [style.width.%]="getProgressPercent()"></span>
-    </div>
-
-    <div class="time-row">
-        <span>{{ getStartTime() }}</span>
-        <span>{{ getEndTime() }}</span>
-    </div>
-
-    <div class="speed-row">
-        <span>Playback Speed</span>
-
-        <select
-            [ngModel]="playbackSpeed"
-            (change)="onSpeedSelect($event)">
-            <option value="0.5x">0.5x</option>
-            <option value="1x">1x</option>
-            <option value="1.5x">1.5x</option>
-            <option value="2x">2x</option>
-        </select>
-    </div>
-
+    <select [ngModel]="playbackSpeed" (change)="onSpeedSelect($event)">
+      <option value="0.5x">0.5x</option>
+      <option value="1x">1x</option>
+      <option value="1.5x">1.5x</option>
+      <option value="2x">2x</option>
+    </select>
+  </div>
 </section>
