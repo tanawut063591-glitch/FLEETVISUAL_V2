@@ -1,0 +1,44 @@
+<div class="container-fluid">
+  <div
+    id="gear"
+    [class.running]="isRunning"
+    [class.stopped]="!isRunning"
+  >
+    Motor
+  </div>
+
+  <div id="line-prop-shaft"></div>
+
+  <div id="prop-shaft-title">
+    Motor Shaft
+  </div>
+
+  <div id="line2"></div>
+
+  <div id="speed-prop">
+    <div class="ftd1">
+      <div class="ftd1-name">
+        Speed
+      </div>
+
+      <div
+        class="ftd1-value"
+        [attr.title]="getTooltip(speed)"
+      >
+        {{ displayNumber(speed, 0) }}
+      </div>
+
+      <div class="ftd1-unit">
+        RPM
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="motor-status"
+    [class.running]="isRunning"
+    [class.stopped]="!isRunning"
+  >
+    {{ statusText }}
+  </div>
+</div>

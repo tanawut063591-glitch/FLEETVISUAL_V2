@@ -1,0 +1,59 @@
+<section class="pdf-panel">
+  <ng-container *ngIf="src; else emptyPdf">
+    <div class="pdf-header">
+      <div class="pdf-title">
+        <span>PDF Preview</span>
+        <strong>{{ fileName || 'fleet-report.pdf' }}</strong>
+      </div>
+
+      <div class="pdf-tools">
+        <button type="button" title="Reload" (click)="reload.emit()" [disabled]="loading">
+          <i class="fa fa-refresh" [class.fa-spin]="loading" aria-hidden="true"></i>
+        </button>
+        <button type="button" title="Zoom out" (click)="zoomOut.emit()">
+          <i class="fa fa-minus" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="zoom-label" title="Reset zoom" (click)="resetZoom.emit()">
+          {{ (zoom * 100) | number:'1.0-0' }}%
+        </button>
+        <button type="button" title="Zoom in" (click)="zoomIn.emit()">
+          <i class="fa fa-plus" aria-hidden="true"></i>
+        </button>
+        <button type="button" title="Download PDF" (click)="download.emit()">
+          <i class="fa fa-download" aria-hidden="true"></i>
+        </button>
+        <button type="button" title="Open new tab" (click)="openNewTab.emit()">
+          <i class="fa fa-external-link" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="pdf-viewer-wrap">
+      <pdf-viewer
+        [src]="src"
+        [zoom]="zoom"
+        [show-all]="true"
+        [autoresize]="true"
+        [render-text]="true"
+        (error)="pdfError.emit($event)"
+      ></pdf-viewer>
+    </div>
+  </ng-container>
+
+  <ng-template #emptyPdf>
+    <div class="empty-state">
+      <div class="empty-orbit">
+        <span></span>
+        <div class="empty-icon">
+          <i class="fa fa-file-pdf-o" aria-hidden="true"></i>
+        </div>
+      </div>
+      <h2>{{ emptyTitle }}</h2>
+      <p>{{ emptyMessage }}</p>
+      <button type="button" class="empty-load" [disabled]="!canLoad" (click)="load.emit()">
+        <i class="fa fa-file-pdf-o" aria-hidden="true"></i>
+        Load Report
+      </button>
+    </div>
+  </ng-template>
+</section>

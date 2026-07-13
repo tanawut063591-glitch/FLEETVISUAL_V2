@@ -1,0 +1,107 @@
+.timeline-panel {
+    background: #ffffff;
+    border: 1px solid #dbe7f5;
+    border-radius: 12px;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+}
+
+.table-title {
+    padding: 14px 16px 8px;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.table-title span {
+    color: #64748b;
+    font-weight: 700;
+}
+
+.table-wrap {
+    overflow-x: auto;
+    padding: 0 16px 14px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+th {
+    padding: 9px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+    color: #475569;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+td {
+    padding: 9px 10px;
+    border-bottom: 1px solid #edf2f7;
+    color: #1e293b;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+tbody tr {
+    cursor: pointer;
+    transition: 0.18s ease;
+}
+
+tbody tr:hover,
+tbody tr.selected {
+    background: #eef6ff;
+}
+
+.point-no {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-weight: 900;
+    border: 2px solid;
+}
+
+.point-no.sailing {
+    color: #059669;
+    border-color: #10b981;
+    background: #eafff5;
+}
+
+.point-no.idle {
+    color: #d97706;
+    border-color: #f59e0b;
+    background: #fff7e6;
+}
+
+.status {
+    display: inline-flex;
+    min-width: 72px;
+    justify-content: center;
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 900;
+    border: 1px solid;
+}
+
+.status.sailing {
+    color: #059669;
+    background: #eafff5;
+    border-color: #86efac;
+}
+
+.status.idle {
+    color: #d97706;
+    background: #fff7e6;
+    border-color: #fcd34d;
+}
+
+.more {
+    color: #64748b;
+    font-size: 18px;
+}

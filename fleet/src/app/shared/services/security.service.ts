@@ -1,0 +1,205 @@
+import { Injectable } from '@angular/core';
+
+interface Security {
+  username: string;
+  vesselNames: string[];
+}
+
+@Injectable({
+  providedIn: 'root',
+})
+export class SecurityService {
+  repo: Security[] = [];
+
+  // กลุ่มเรือสำหรับทดสอบ
+  test: string[] = [];
+
+  // กลุ่มเรือ BB
+  bb_chevron: string[] = [];
+
+  bb_ptt: string[] = [
+    'BAHTERA MAKMUR',
+    'BAHTERA INTAN',
+    'BB TONGKAM',
+    'BAHTERA ZAMRUD',
+    'BAHTERA LAZURIT',
+    'BB LIBERTY 233',
+  ];
+
+  // กลุ่มเรือ SC
+  sc_chevron: string[] = [
+    'SC GLORY 2',
+    'SC GLORY 6',
+    'SC GLORY 7',
+    'SC EMERALD',
+    'SC BONGKOT',
+    'SC BRAVE',
+    'SC SULTAN',
+    'SC RAJA',
+  ];
+
+  sc_ptt: string[] = [
+    'SC PAILIN',
+    'SC WINTER',
+    'SC GLORY 1',
+    'SC GLORY 3',
+    'SC CHOLUEDEE',
+    'SC CHOLRUEDEE',
+    'SC BONGKOT',
+  ];
+
+  sc_scena: string[] = [
+    'SC SULTAN',
+    'SC RAJA',
+  ];
+
+  // กลุ่มเรือ MV
+  mv: string[] = [
+    'MV GEMIA',
+  ];
+
+  // เรือที่ไม่ใช้งานแล้ว
+  obsolete: string[] = [
+    'BB BUSSARAKHAM',
+  ];
+
+  // รวมกลุ่มเรือ
+  chevron: string[] = this.getUniqueVessels([
+    ...this.sc_chevron,
+    ...this.bb_chevron,
+  ]);
+
+  ptt: string[] = this.getUniqueVessels([
+    ...this.sc_ptt,
+    ...this.bb_ptt,
+  ]);
+
+  bb: string[] = this.getUniqueVessels([
+    ...this.bb_chevron,
+    ...this.bb_ptt,
+  ]);
+
+  sc: string[] = this.getUniqueVessels([
+    ...this.sc_chevron,
+    ...this.sc_ptt,
+  ]);
+
+  all: string[] = this.getUniqueVessels([
+    ...this.chevron,
+    ...this.ptt,
+    ...this.test,
+    ...this.mv,
+  ]);
+
+  constructor() {
+    // User ที่เห็นเรือเฉพาะลำ
+    this.addPermission('scbrave', ['SC BRAVE']);
+    this.addPermission('scemerald', ['SC EMERALD']);
+    this.addPermission('scglory2', ['SC GLORY 2']);
+    this.addPermission('scglory6', ['SC GLORY 6']);
+    this.addPermission('scglory7', ['SC GLORY 7']);
+    this.addPermission('scsultan', ['SC SULTAN']);
+    this.addPermission('scraja', ['SC RAJA']);
+
+    this.addPermission('bbkaimook', ['BB KAIMOOK']);
+
+    // User ที่เห็นเรือทั้งหมด
+    this.addPermission('systemadmin', this.all);
+    this.addPermission('sat', this.all);
+    this.addPermission('chatri', this.all);
+
+    // User สำหรับ Chevron Customer
+    this.addPermission('sc', this.sc_chevron);
+
+    // User ตามกลุ่มเรือ
+    this.addPermission('bbuser', this.bb);
+    this.addPermission('scuser', this.sc);
+    this.addPermission('chevronuser', this.chevron);
+    this.addPermission('pttuser', this.ptt);
+    this.addPermission('scenauser', this.sc_scena);
+
+    this.addPermission('pttsc', this.sc_ptt);
+
+    this.addPermission('mvuser', this.mv);
+    this.addPermission('mvgemia', ['MV GEMIA']);
+  }
+
+  // เช็กว่า user ปัจจุบันมีสิทธิ์ดูเรือลำนี้ไหม
+  hasAccess(vesselName: string): boolean {
+    const username = localStorage.getItem('username');
+
+    if (!username || !vesselName) {
+      return false;
+    }
+
+    const safeUsername = username.trim().toLowerCase();
+    const safeVesselName = this.normalizeVesselName(vesselName);
+
+    return this.repo.some((item) => {
+      if (!item.username || !Array.isArray(item.vesselNames)) {
+        return false;
+      }
+
+      return (
+        item.username.toLowerCase() === safeUsername &&
+        item.vesselNames.includes(safeVesselName)
+      );
+    });
+  }
+
+  // ดึงรายการเรือที่ user นี้มีสิทธิ์เห็น
+  getAccessibleVessels(username?: string | null): string[] {
+    const currentUsername =
+      username ||
+      localStorage.getItem('username') ||
+      '';
+
+    if (!currentUsername) {
+      return [];
+    }
+
+    const safeUsername = currentUsername.trim().toLowerCase();
+
+    const permission = this.repo.find(
+      (item) => item.username.toLowerCase() === safeUsername
+    );
+
+    return permission?.vesselNames ?? [];
+  }
+
+  // เพิ่มสิทธิ์ให้ user
+  private addPermission(username: string, vesselNames: string[]): void {
+    if (!username || !Array.isArray(vesselNames)) {
+      return;
+    }
+
+    this.repo.push({
+      username: username.trim().toLowerCase(),
+      vesselNames: this.getUniqueVessels(vesselNames),
+    });
+  }
+
+  // จัดชื่อเรือให้เป็นรูปแบบเดียวกัน
+  private normalizeVesselName(vesselName: string): string {
+    return vesselName ? vesselName.trim().toUpperCase() : '';
+  }
+
+  // กันชื่อเรือซ้ำใน array
+  private getUniqueVessels(vesselNames: string[]): string[] {
+    if (!Array.isArray(vesselNames) || vesselNames.length === 0) {
+      return [];
+    }
+
+    const result: string[] = [];
+
+    vesselNames.forEach((name) => {
+      const safeName = this.normalizeVesselName(name);
+
+      if (safeName && !result.includes(safeName)) {
+        result.push(safeName);
+      }
+    });
+
+    return result;
+  }
+} 

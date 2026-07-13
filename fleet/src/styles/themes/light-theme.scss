@@ -1,0 +1,93 @@
+[data-theme='light'] {
+
+  --main-bg: #eeeeee;
+  --card-bg: #f1efef;
+  --primary-bg: #e0e0e0;
+  --primary-bg-50: #e9e9e9;
+  --secondary-bg: #8a8a8a;
+  --secondary-bg-50: #e0e0e0;
+  
+  --primary-txt: #363636;
+  --secondary-txt: #8f8f8f;
+  --active-txt: #FFAE2A;
+  --row-txt: #363636;
+
+  --border-color: #c9c9c9;
+
+  --logo-bg: #8a8a8a8a;
+
+  --highlight: #FBE134;
+
+  --color-gd1: #E4B61A;
+  --color-gd2: #f7e156;
+
+  --header-bg1: #FFAE2A;
+  --header-bg2: #FBE134;
+  --header-txt: #F5F7FB;
+  
+  --map-active: #000000;
+  --map-hover: #c4c4c4;
+  --map-bg: #c4c4c4;
+  --map-txt: #4e4e4e;
+  --map-selected: #34ccfb;
+
+  --thead-bg: #e2e2e2;
+  --thead-txt: #363636;
+  --thead-border: #c9c9c9;
+
+  --trow-bg: #f5f5f5;
+  --trow-txt: #363636;
+  --trow-border: #c9c9c9;
+
+  --btn-bg: #ad8c51;
+  --btn-border: #E7CD47;
+  --btn-color: #F5F7FB;
+
+  --stack-bg: #cfcfcf;
+
+  --chart-brd: #dadada;
+  --chart-txt: #8a949c;
+  --chart-tlp: #ffffff;
+
+  --srch-bg: #e6e6e6;
+  --srch-txt: #8f8f8f;
+  --srch-focus-txt: #74797e;
+
+  --text-xlarge: 18px;
+  --text-large: 16px;
+  --text-medium: 14px;
+  --text-small: 12px;
+  --text-xsmall: 10px;
+  
+  --dropdown-bg: #E0E0E0;
+  --dropdown-hover-bg: #d1d1d1;
+  --dropdown-txt: #363636;
+  --dropdown-border: #b4b4b4;
+
+  --dropdown-menu-bg: #f1efef;
+  --dropdown-menu-hover-bg: #d1d1d1;
+  --dropdown-menu-txt: #363636;
+  --dropdown-menu-border: #f1efef;
+
+  --dropdown-item-bg: #f1efef;
+  --dropdown-item-hover-bg: #d1d1d1;
+  --dropdown-item-hover-txt: #f1efef;
+  --dropdown-item-txt: #8f8f8f;
+
+  --sekeleton-bg1: #dbdbdb;
+  --sekeleton-bg2: #bdbdbd;
+
+  /* Extra theme tokens used by shared premium layouts */
+  --page-bg: #f4f7fb;
+  --surface-bg: #ffffff;
+  --surface-bg-2: #f8fafc;
+  --muted-txt: #64748b;
+  --soft-border: #e5edf8;
+  --shadow-soft: 0 16px 40px rgba(15, 23, 42, 0.08);
+  --shadow-card: 0 10px 24px rgba(15, 23, 42, 0.06);
+  --accent: #2563eb;
+  --accent-2: #0ea5e9;
+  --accent-soft: rgba(37, 99, 235, 0.10);
+  --accent-border: rgba(37, 99, 235, 0.25);
+
+}

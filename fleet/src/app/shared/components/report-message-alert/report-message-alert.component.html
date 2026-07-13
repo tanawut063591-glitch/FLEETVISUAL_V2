@@ -1,0 +1,8 @@
+<div class="report-message-alert" [class.success]="type === 'success'" [class.error]="type === 'error'" [class.warning]="type === 'warning'" [class.info]="type === 'info'">
+  <i [class]="iconClass" aria-hidden="true"></i>
+  <span>{{ message }}</span>
+  <strong *ngIf="meta">{{ meta }}</strong>
+  <button type="button" *ngIf="dismissible" aria-label="Dismiss message" (click)="dismissed.emit()">
+    <i class="fa fa-times" aria-hidden="true"></i>
+  </button>
+</div>

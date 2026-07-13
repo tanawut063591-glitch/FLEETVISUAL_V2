@@ -1,0 +1,19 @@
+<div class="overview-page">
+  <div class="fv-loading" *ngIf="isLoading">
+    <div class="sk-folding-cube">
+      <div class="sk-cube1 sk-cube"></div>
+      <div class="sk-cube2 sk-cube"></div>
+      <div class="sk-cube4 sk-cube"></div>
+      <div class="sk-cube3 sk-cube"></div>
+    </div>
+    <p class="loading-text">Loading Fleet Data...</p>
+  </div>
+
+  <main class="overview-map-area" *ngIf="!isLoading">
+    <app-maps-all
+      #fleetOverviewMap
+      [data]="mapData"
+      class="map-full">
+    </app-maps-all>
+  </main>
+</div>

@@ -1,0 +1,51 @@
+<section class="summary-grid" *ngIf="summary">
+
+    <div class="vessel-card">
+        <div class="ship-box">
+            <img [src]="summary.image" (error)="onImageError($event)">
+        </div>
+
+        <div>
+            <div class="vessel-name">
+                {{ summary.vesselName }}
+                <span>{{ summary.status }}</span>
+            </div>
+
+            <div class="vessel-meta">
+                {{ summary.vesselType }}
+                • IMO {{ summary.imo }}
+                • MMSI {{ summary.mmsi }}
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <small>Total Distance</small>
+        <strong>{{ summary.totalDistance }}</strong>
+        <span>nm</span>
+    </div>
+
+    <div class="kpi-card">
+        <small>Track Points</small>
+        <strong>{{ summary.trackPoints }}</strong>
+        <span>records</span>
+    </div>
+
+    <div class="kpi-card">
+        <small>Avg Speed</small>
+        <strong>{{ summary.avgSpeed }}</strong>
+        <span>knots</span>
+    </div>
+
+    <div class="kpi-card">
+        <small>Total Time</small>
+        <strong>{{ summary.totalTime }}</strong>
+        <span>movement</span>
+    </div>
+
+    <div class="kpi-card">
+        <small>Last Update</small>
+        <strong class="date-text">{{ summary.lastUpdate }}</strong>
+    </div>
+
+</section>
