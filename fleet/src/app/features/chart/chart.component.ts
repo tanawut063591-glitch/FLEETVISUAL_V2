@@ -58,6 +58,7 @@ export class ChartComponent implements OnInit, OnDestroy {
     private refreshTimer: ReturnType<typeof setInterval> | null = null;
     private requestSub: Subscription | null = null;
     private requestVersion = 0;
+    private themeObserver: MutationObserver | null = null;
 
     private readonly refreshMs: number = 60000;
     private readonly maxRenderedPoints: number = 2000;
@@ -73,7 +74,21 @@ export class ChartComponent implements OnInit, OnDestroy {
         private cd: ChangeDetectorRef
     ) { }
 
-    ngOnInit() { }
+    ngOnInit() {
+        if (typeof document !== 'undefined' && typeof MutationObserver !== 'undefined') {
+            this.themeObserver = new MutationObserver(() => {
+                if (this.selectedSeries.length > 0) {
+                    this.rebuildCharts();
+                    this.markView();
+                }
+            });
+
+            this.themeObserver.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['data-theme']
+            });
+        }
+    }
 
     ngOnDestroy() {
         this.clearRefreshTimer();
@@ -81,6 +96,8 @@ export class ChartComponent implements OnInit, OnDestroy {
             this.requestSub.unsubscribe();
         }
         this.requestVersion++;
+        this.themeObserver?.disconnect();
+        this.themeObserver = null;
     }
 
     showLogger(event: any) {
@@ -741,6 +758,14 @@ export class ChartComponent implements OnInit, OnDestroy {
 
     private createChartOptions(title: string, seriesItems: ChartSeriesItem[], height: number): Highcharts.Options {
         var highSeries: any[] = [];
+        var darkTheme = this.isDarkTheme();
+        var chartBackground = darkTheme ? '#070b12' : '#ffffff';
+        var axisColor = darkTheme ? '#2a3748' : '#dbeafe';
+        var gridColor = darkTheme ? '#1c2735' : '#e8eef7';
+        var mutedText = darkTheme ? '#94a3b8' : '#64748b';
+        var primaryText = darkTheme ? '#f8fafc' : '#0f172a';
+        var tooltipBackground = darkTheme ? '#0d1420' : '#ffffff';
+        var tooltipBorder = darkTheme ? '#334155' : '#dbeafe';
 
         for (var i = 0; i < seriesItems.length; i++) {
             var item = seriesItems[i];
@@ -767,7 +792,7 @@ export class ChartComponent implements OnInit, OnDestroy {
                 type: this.chartType === 'area' ? 'area' : 'line',
                 height: height,
                 zoomType: 'x',
-                backgroundColor: '#ffffff',
+                backgroundColor: chartBackground,
                 spacingTop: 16,
                 spacingRight: 20,
                 spacingBottom: 12,
@@ -778,17 +803,17 @@ export class ChartComponent implements OnInit, OnDestroy {
             xAxis: {
                 type: 'datetime',
                 gridLineWidth: 1,
-                lineColor: '#dbeafe',
-                tickColor: '#dbeafe',
+                lineColor: axisColor,
+                tickColor: axisColor,
                 labels: {
-                    style: { color: '#64748b', fontSize: '11px' }
+                    style: { color: mutedText, fontSize: '11px' }
                 }
             },
             yAxis: {
                 title: { text: null },
-                gridLineColor: '#e8eef7',
+                gridLineColor: gridColor,
                 labels: {
-                    style: { color: '#64748b', fontSize: '11px' }
+                    style: { color: mutedText, fontSize: '11px' }
                 }
             },
             legend: {
@@ -796,7 +821,7 @@ export class ChartComponent implements OnInit, OnDestroy {
                 align: 'center',
                 verticalAlign: 'top',
                 itemStyle: {
-                    color: '#0f172a',
+                    color: primaryText,
                     fontWeight: '600',
                     fontSize: '11px'
                 }
@@ -806,10 +831,11 @@ export class ChartComponent implements OnInit, OnDestroy {
                 split: false,
                 useHTML: true,
                 xDateFormat: '%d %b %Y %H:%M',
-                backgroundColor: '#ffffff',
-                borderColor: '#dbeafe',
+                backgroundColor: tooltipBackground,
+                borderColor: tooltipBorder,
                 borderRadius: 10,
                 shadow: true,
+                style: { color: primaryText },
                 valueDecimals: 2
             },
             plotOptions: {
@@ -825,6 +851,14 @@ export class ChartComponent implements OnInit, OnDestroy {
         };
 
         return options as Highcharts.Options;
+    }
+
+    private isDarkTheme(): boolean {
+        if (typeof document === 'undefined') {
+            return false;
+        }
+
+        return document.documentElement.getAttribute('data-theme') === 'dark';
     }
 
     // ============================================================

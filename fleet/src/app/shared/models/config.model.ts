@@ -3,6 +3,7 @@ export interface ConfigModel{
     UrlApiAuthen?: string;
     UrlApiBilling?: string;
     UrlApiNotification?: string;
+    AlertsApiUrl?: string;
     UrlApiMaintenance?: string;
     UrlApiMasterData?: string;
     Timer?: number;

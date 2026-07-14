@@ -3,7 +3,7 @@ export type PastTrackStatus = 'Sailing' | 'Idle' | 'No Data';
 export interface PastTrackPoint {
     no: number;
     vesselId: string;
-    /** Fixed 30-minute display slot, e.g. 13-Jul-2026 08:30:00. */
+    /** Display slot generated from the automatic 5/10/15-minute interval. */
     time: string;
     /** Original historian timestamp before alignment to a display slot. */
     recordedTime?: string;
@@ -27,7 +27,7 @@ export interface PastTrackSummary {
     status: string;
     image: string;
     totalDistance: number;
-    /** Number of 30-minute points rendered on the map and timeline. */
+    /** Number of resampled points rendered on the map and timeline. */
     trackPoints: number;
     /** Number of valid raw historian points used before resampling. */
     rawTrackPoints?: number;

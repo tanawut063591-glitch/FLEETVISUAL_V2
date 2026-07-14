@@ -1,46 +1,113 @@
 <div class="past-track-page">
   <div class="page-header">
     <div class="heading-block">
-      <div class="breadcrumb">
-        Overview
-        <span>›</span>
-        Past Track
-        <span>›</span>
-        <b>{{ vesselId }}</b>
+      <div class="heading-accent" aria-hidden="true"></div>
+      <div class="heading-copy">
+        <h1>PAST TRACK</h1>
+        <p>Historical vessel movement, route checkpoints, point details and time-based playback.</p>
       </div>
-
-      <h1>PAST TRACK</h1>
-      <p>Track vessel movement history and route timeline</p>
     </div>
 
     <div class="header-actions">
-      <div class="date-box" aria-label="Fixed seven-day history range">
-        <span class="calendar-icon">▦</span>
-        <strong>{{ getRangeStartLabel() }}</strong>
-        <span class="arrow">→</span>
-        <strong>{{ getRangeEndLabel() }}</strong>
-        <span class="interval-badge">{{ samplingIntervalMinutes }} MIN</span>
-      </div>
-
       <button type="button" class="btn light" (click)="refreshPastTrack()" [disabled]="loading">
-        <span>↻</span> Refresh
+        <span>↻</span> Refresh Route
+      </button>
+
+      <button
+        type="button"
+        class="btn map-export"
+        (click)="exportMapPng()"
+        [disabled]="!trackPoints.length || mapExporting"
+        [attr.aria-busy]="mapExporting">
+        <span>{{ mapExporting ? '…' : '▣' }}</span>
+        {{ mapExporting ? 'Exporting...' : 'Map PNG' }}
       </button>
 
       <button type="button" class="btn primary" (click)="exportCsv()" [disabled]="!trackPoints.length">
-        <span>⇩</span> Export
+        <span>⇩</span> Export CSV
       </button>
     </div>
   </div>
+
+  <section class="range-toolbar" aria-label="Past Track range selector">
+    <div class="range-copy">
+      <small>HISTORY RANGE</small>
+      <strong>{{ getRangeTitle() }}</strong>
+    </div>
+
+    <div class="range-presets" role="group" aria-label="Select historical range">
+      <button
+        *ngFor="let preset of historyPresets"
+        type="button"
+        class="range-preset"
+        [class.active]="activeRangeMode === preset.days && !customRangeOpen"
+        [disabled]="loading"
+        (click)="selectHistoryDays(preset.days)">
+        {{ preset.label }}
+      </button>
+
+      <button
+        type="button"
+        class="range-preset custom"
+        [class.active]="activeRangeMode === 'custom' || customRangeOpen"
+        [disabled]="loading"
+        (click)="toggleCustomRange()">
+        <span>▦</span> Custom
+      </button>
+    </div>
+
+    <div class="range-display">
+      <span class="calendar-icon">▦</span>
+      <div>
+        <small>{{ getRangeDurationLabel() }}</small>
+        <strong>{{ getRangeStartLabel() }}</strong>
+      </div>
+      <span class="range-arrow">→</span>
+      <div class="range-end">
+        <small>END</small>
+        <strong>{{ getRangeEndLabel() }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="custom-range-panel" *ngIf="customRangeOpen">
+    <div class="custom-range-copy">
+      <strong>Custom Date and Time</strong>
+      <span>Select up to seven days. Data resolution and checkpoint spacing are selected automatically.</span>
+    </div>
+
+    <label class="custom-field">
+      <span>START DATE AND TIME</span>
+      <input
+        type="datetime-local"
+        [(ngModel)]="customStartDate"
+        [max]="maxDateTime">
+    </label>
+
+    <span class="custom-arrow">→</span>
+
+    <label class="custom-field">
+      <span>END DATE AND TIME</span>
+      <input
+        type="datetime-local"
+        [(ngModel)]="customEndDate"
+        [max]="maxDateTime">
+    </label>
+
+    <button type="button" class="btn primary apply-range" (click)="applyCustomRange()">
+      Load Route
+    </button>
+  </section>
 
   <div *ngIf="loading" class="state-box loading-state">
     <span class="spinner"></span>
     <div>
-      <strong>Loading past track data...</strong>
-      <p>Retrieving latitude and longitude history for the last 7 days.</p>
+      <strong>Loading {{ getRangeTitle() }}...</strong>
+      <p>Retrieving valid Latitude / Longitude samples at {{ samplingIntervalMinutes }}-minute intervals.</p>
     </div>
   </div>
 
-  <div *ngIf="errorMessage" class="state-box error">
+  <div *ngIf="errorMessage" class="state-box error" role="alert">
     {{ errorMessage }}
   </div>
 
@@ -52,39 +119,56 @@
         <small>SELECTED TIME</small>
         <strong>{{ getSelectedTimeLabel() }}</strong>
       </div>
+
       <div class="route-info-item">
-        <small>TIME INTERVAL</small>
+        <small>DATA INTERVAL</small>
         <strong>Every {{ samplingIntervalMinutes }} minutes</strong>
       </div>
+
+      <div class="route-info-item">
+        <small>CHECKPOINT SPACING</small>
+        <strong>
+          Every {{ checkpointIntervalMinutes / 60 }} hour{{ checkpointIntervalMinutes > 60 ? 's' : '' }}
+        </strong>
+      </div>
+
       <div class="route-info-item">
         <small>DISPLAY / RAW POINTS</small>
         <strong>{{ summary.trackPoints }} / {{ summary.rawTrackPoints || summary.trackPoints }}</strong>
       </div>
+
       <div class="route-info-item coverage-item">
         <small>DATA COVERAGE</small>
         <div class="coverage-value">
           <strong>{{ summary.coveragePercent || 0 }}%</strong>
-          <span class="coverage-track"><i [style.width.%]="summary.coveragePercent || 0"></i></span>
+          <span class="coverage-track" aria-hidden="true">
+            <i [style.width.%]="summary.coveragePercent || 0"></i>
+          </span>
         </div>
       </div>
     </div>
 
-    <div class="main-grid">
+    <div #routeWorkspace class="main-grid">
       <div class="left-area">
         <app-past-track-map
           [trackPoints]="trackPoints"
           [selectedPoint]="selectedPoint"
+          [samplingIntervalMinutes]="samplingIntervalMinutes"
+          [checkpointIntervalMinutes]="checkpointIntervalMinutes"
           (pointSelected)="selectPoint($event)">
         </app-past-track-map>
 
         <app-past-track-timeline
           [trackPoints]="trackPoints"
           [selectedPoint]="selectedPoint"
-          (pointSelected)="selectPoint($event)">
+          [samplingIntervalMinutes]="samplingIntervalMinutes"
+          [checkpointIntervalMinutes]="checkpointIntervalMinutes"
+          (pointSelected)="selectPoint($event)"
+          (focusRequested)="focusPointOnMap($event)">
         </app-past-track-timeline>
       </div>
 
-      <div class="right-area">
+      <aside class="right-area" aria-label="Selected point and playback controls">
         <app-past-track-detail [point]="selectedPoint"></app-past-track-detail>
 
         <app-past-track-playback
@@ -101,7 +185,7 @@
           (speedChanged)="changePlaybackSpeed($event)"
           (pointScrubbed)="scrubToPoint($event)">
         </app-past-track-playback>
-      </div>
+      </aside>
     </div>
   </ng-container>
 </div>

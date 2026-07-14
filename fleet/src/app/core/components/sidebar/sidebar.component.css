@@ -603,3 +603,28 @@
 :host-context([data-theme='dark']) .search-arrow {
   color: #cbd5e1 !important;
 }
+
+/* Last seen follows the same operational status as the marker/map. */
+.vessel-time.online {
+    color: #0891b2;
+}
+
+.vessel-time.idle {
+    color: #d97706;
+}
+
+.vessel-time.offline {
+    color: #ef4444;
+}
+
+:host-context([data-theme='dark']) .vessel-time.online {
+    color: #22d3ee;
+}
+
+:host-context([data-theme='dark']) .vessel-time.idle {
+    color: #fbbf24;
+}
+
+:host-context([data-theme='dark']) .vessel-time.offline {
+    color: #f87171;
+}

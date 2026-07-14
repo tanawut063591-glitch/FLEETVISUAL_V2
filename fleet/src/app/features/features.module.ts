@@ -6,6 +6,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { PdfViewerModule } from 'ng2-pdf-viewer';
 
 import { SharedComponentsModule } from '../shared/shared-components.module';
@@ -19,6 +20,7 @@ import { OverviewCardComponent } from './overview/summary-overview-card/overview
 import { DiagramComponent } from './diagram/diagram.component';
 import { ReportComponent } from './report/report.component';
 import { NotfoundComponent } from './notfound/notfound.component';
+import { AlertsComponent } from './alerts/alerts.component';
 
 import { RealtimeComponent } from './realtime/realtime.component';
 import { SummaryComponent } from './realtime/summary/summary.component';
@@ -48,6 +50,7 @@ const FEATURE_COMPONENTS = [
   DiagramComponent,
   ReportComponent,
   NotfoundComponent,
+  AlertsComponent,
 
   RealtimeComponent,
   SummaryComponent,
@@ -74,6 +77,7 @@ const FEATURE_COMPONENTS = [
     FormsModule,
     SharedComponentsModule,
     MatTooltipModule,
+    ScrollingModule,
     PdfViewerModule,
   ],
   declarations: [

@@ -1,4 +1,4 @@
-<section class="map-panel">
+<section #mapPanel class="map-panel">
 
     <div class="panel-header">
         <div>
@@ -10,11 +10,27 @@
             <span><i class="dot sailing"></i> Sailing</span>
             <span><i class="dot idle"></i> Idle</span>
             <span><i class="dot nodata"></i> No Data</span>
+            <span><i class="checkpoint-ring"></i> Checkpoint</span>
         </div>
     </div>
 
-    <div class="map-wrap">
+    <div #mapWrap class="map-wrap">
         <div #pastTrackMap class="google-map" [class.hide-map]="useFallbackMap"></div>
+
+        <div class="map-type-switch" *ngIf="!useFallbackMap" role="group" aria-label="Map type">
+            <button
+                type="button"
+                [class.active]="mapType === 'roadmap'"
+                (click)="setMapType('roadmap')">
+                Map
+            </button>
+            <button
+                type="button"
+                [class.active]="mapType === 'satellite'"
+                (click)="setMapType('satellite')">
+                Satellite
+            </button>
+        </div>
 
         <div class="fallback-map" *ngIf="useFallbackMap">
             <div class="map-label thailand">Thailand</div>
@@ -39,8 +55,9 @@
                 [ngClass]="getFallbackPointClass(item.point)"
                 [style.left.%]="item.x"
                 [style.top.%]="item.y"
+                [attr.aria-label]="'Checkpoint '+ item.point.time"
                 (click)="selectFallbackPoint(item.point)">
-                {{ item.point.no }}
+                {{ getFallbackPointLabel(item.point) }}
             </button>
 
             <div class="scale">

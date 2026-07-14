@@ -100,7 +100,7 @@
               {{ vessel.coordinate }}
             </div>
 
-            <div class="vessel-time">
+            <div class="vessel-time" [ngClass]="vessel.statusClass">
               {{ vessel.lastSeen }}
             </div>
           </div>

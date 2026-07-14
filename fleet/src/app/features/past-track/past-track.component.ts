@@ -1,17 +1,25 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 
 import {
   PastTrackPoint,
-  PastTrackSummary,
-  PastTrackStatus,
   PastTrackResponse,
+  PastTrackStatus,
+  PastTrackSummary,
 } from './models/past-track.model';
-
 import { PastTrackService } from '../../shared/services/past-track.service';
+import { PastTrackMapComponent } from './components/past-track-map/past-track-map.component';
 
 type PlaybackSpeed = '0.5x' | '1x' | '1.5x' | '2x';
+type RangeMode = 1 | 3 | 7 | 'custom';
+
+interface HistoryPreset {
+  days: 1 | 3 | 7;
+  label: string;
+  intervalMinutes: number;
+  checkpointMinutes: number;
+}
 
 @Component({
   selector: 'app-past-track',
@@ -20,12 +28,26 @@ type PlaybackSpeed = '0.5x' | '1x' | '1.5x' | '2x';
   styleUrls: ['./past-track.component.css'],
 })
 export class PastTrackComponent implements OnInit, OnDestroy {
-  readonly historyDays = 7;
-  readonly samplingIntervalMinutes = 30;
+  @ViewChild('routeWorkspace') routeWorkspace?: ElementRef<HTMLElement>;
+  @ViewChild(PastTrackMapComponent) pastTrackMapComponent?: PastTrackMapComponent;
+  readonly maxHistoryDays = 7;
+  readonly historyPresets: HistoryPreset[] = [
+    { days: 1, label: '1 Day', intervalMinutes: 10, checkpointMinutes: 60 },
+    { days: 3, label: '3 Days', intervalMinutes: 30, checkpointMinutes: 180 },
+    { days: 7, label: '7 Days', intervalMinutes: 60, checkpointMinutes: 600 },
+  ];
 
   vesselId = '';
   startDate = '';
   endDate = '';
+  customStartDate = '';
+  customEndDate = '';
+  maxDateTime = '';
+
+  activeRangeMode: RangeMode = 1;
+  samplingIntervalMinutes = 10;
+  checkpointIntervalMinutes = 60;
+  customRangeOpen = false;
 
   loading = false;
   errorMessage = '';
@@ -36,6 +58,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
 
   isPlaying = false;
   playbackSpeed: PlaybackSpeed = '1x';
+  mapExporting = false;
 
   private routeSub: Subscription | null = null;
   private loadSub: Subscription | null = null;
@@ -47,12 +70,13 @@ export class PastTrackComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.setFixedSevenDayRange();
+    this.applyPresetConfiguration(1);
+    this.setRollingRange(1);
 
     this.routeSub = this.route.paramMap.subscribe((params) => {
       const idFromUrl = this.decodeValue(params.get('id') || '');
       this.vesselId = this.resolveBackendPrefix(idFromUrl);
-      this.loadPastTrack(false);
+      this.loadPastTrack();
     });
   }
 
@@ -62,17 +86,68 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     this.loadSub?.unsubscribe();
   }
 
-  /** Refresh always reloads the latest seven calendar days. */
-  refreshPastTrack(): void {
-    this.setFixedSevenDayRange();
-    this.loadPastTrack(false);
-  }
-
-  loadPastTrack(resetRange = false): void {
-    if (resetRange) {
-      this.setFixedSevenDayRange();
+  selectHistoryDays(days: 1 | 3 | 7): void {
+    if (this.activeRangeMode === days && !this.customRangeOpen) {
+      return;
     }
 
+    this.activeRangeMode = days;
+    this.customRangeOpen = false;
+    this.applyPresetConfiguration(days);
+    this.setRollingRange(days);
+    this.loadPastTrack();
+  }
+
+  toggleCustomRange(): void {
+    this.customRangeOpen = !this.customRangeOpen;
+
+    if (this.customRangeOpen) {
+      this.syncCustomInputsFromRange();
+      this.refreshMaxDateTime();
+    }
+  }
+
+  applyCustomRange(): void {
+    const start = this.parseInputDate(this.customStartDate);
+    const end = this.parseInputDate(this.customEndDate);
+    const now = new Date();
+
+    if (!start || !end || start.getTime() >= end.getTime()) {
+      this.errorMessage = 'The start date and time must be earlier than the end date and time';
+      return;
+    }
+
+    if (end.getTime() > now.getTime() + 60_000) {
+      this.errorMessage = 'The end time cannot be in the future';
+      return;
+    }
+
+    const durationMs = end.getTime() - start.getTime();
+    const maxDurationMs = this.maxHistoryDays * 24 * 60 * 60 * 1000;
+
+    if (durationMs > maxDurationMs) {
+      this.errorMessage = 'A custom Past Track range cannot exceed seven days';
+      return;
+    }
+
+    this.activeRangeMode = 'custom';
+    this.startDate = this.toRequestDateTime(start);
+    this.endDate = this.toRequestDateTime(end);
+    this.applyAutomaticResolution(durationMs);
+    this.customRangeOpen = false;
+    this.loadPastTrack();
+  }
+
+  refreshPastTrack(): void {
+    if (this.activeRangeMode !== 'custom') {
+      this.applyPresetConfiguration(this.activeRangeMode);
+      this.setRollingRange(this.activeRangeMode);
+    }
+
+    this.loadPastTrack();
+  }
+
+  loadPastTrack(): void {
     this.errorMessage = '';
 
     if (!this.validateDateRange()) {
@@ -97,7 +172,12 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     this.loadSub?.unsubscribe();
 
     this.loadSub = this.pastTrackService
-      .getPastTrack(this.vesselId, this.startDate, this.endDate)
+      .getPastTrack(
+        this.vesselId,
+        this.startDate,
+        this.endDate,
+        this.samplingIntervalMinutes
+      )
       .subscribe({
         next: (response: PastTrackResponse) => {
           const points = this.normalizeTrackPoints(response?.points || []);
@@ -124,6 +204,22 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     }
 
     this.selectedPoint = point;
+  }
+
+  focusPointOnMap(point: PastTrackPoint | null): void {
+    if (!point) {
+      return;
+    }
+
+    this.stopPlayback();
+    this.selectedPoint = point;
+
+    requestAnimationFrame(() => {
+      this.routeWorkspace?.nativeElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
   }
 
   scrubToPoint(point: PastTrackPoint | null): void {
@@ -179,15 +275,71 @@ export class PastTrackComponent implements OnInit, OnDestroy {
   }
 
   getRangeStartLabel(): string {
-    return this.formatRangeDate(this.startDate);
+    return this.formatRangeDateTime(this.startDate);
   }
 
   getRangeEndLabel(): string {
-    return this.formatRangeDate(this.endDate);
+    return this.formatRangeDateTime(this.endDate);
   }
 
   getSelectedTimeLabel(): string {
     return this.selectedPoint?.time || 'No point selected';
+  }
+
+  getRangeTitle(): string {
+    if (this.activeRangeMode === 'custom') {
+      return 'Custom Range';
+    }
+
+    return this.activeRangeMode === 1
+      ? 'Last 24 Hours'
+      : `Last ${this.activeRangeMode} Days`;
+  }
+  
+  getRangeDurationLabel(): string {
+    const start = this.parseInputDate(this.startDate);
+    const end = this.parseInputDate(this.endDate);
+
+    if (!start || !end) {
+      return '-';
+    }
+
+    const hours = Math.max(0, Math.round((end.getTime() - start.getTime()) / 3_600_000));
+    if (hours >= 24) {
+      const days = Math.round(hours / 24);
+      return `${days} day${days === 1 ? '' : 's'}`;
+    }
+
+    return `${hours} hour${hours === 1 ? '' : 's'}`;
+  }
+
+  async exportMapPng(): Promise<void> {
+    if (!this.pastTrackMapComponent || this.trackPoints.length === 0 || this.mapExporting) {
+      return;
+    }
+
+    this.mapExporting = true;
+    this.errorMessage = '';
+
+    try {
+      const vesselName = this.summary?.vesselName || this.vesselId || 'vessel';
+      const fileName = `past-track-map-${this.getExportRangeName()}-${this.toSafeFileName(
+        vesselName
+      )}.png`;
+      const subtitle = `${vesselName} • ${this.getRangeStartLabel()} → ${this.getRangeEndLabel()}`;
+
+      await this.pastTrackMapComponent.exportPng(
+        fileName,
+        'PAST TRACK ROUTE MAP',
+        subtitle
+      );
+    } catch (error: unknown) {
+      console.error('[PastTrackComponent] exportMapPng error:', error);
+      this.errorMessage =
+        'Cannot export the route map image. Please wait for the map to finish loading and try again.';
+    } finally {
+      this.mapExporting = false;
+    }
   }
 
   exportCsv(): void {
@@ -198,7 +350,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
 
     const headers = [
       'No',
-      '30-minute slot',
+      `${this.samplingIntervalMinutes}-minute slot`,
       'Recorded time',
       'Sample offset (minutes)',
       'Latitude',
@@ -234,7 +386,9 @@ export class PastTrackComponent implements OnInit, OnDestroy {
 
     const link = document.createElement('a');
     link.href = url;
-    link.download = `past-track-7-days-${this.toSafeFileName(this.vesselId || 'vessel')}.csv`;
+    link.download = `past-track-${this.getExportRangeName()}-${this.toSafeFileName(
+      this.vesselId || 'vessel'
+    )}.csv`;
     link.style.display = 'none';
 
     document.body.appendChild(link);
@@ -300,33 +454,78 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     return index >= 0 ? index : 0;
   }
 
-  private setFixedSevenDayRange(): void {
+  private applyPresetConfiguration(days: 1 | 3 | 7): void {
+    const preset = this.historyPresets.find((item) => item.days === days);
+
+    this.samplingIntervalMinutes = preset?.intervalMinutes || 60;
+    this.checkpointIntervalMinutes = preset?.checkpointMinutes || 600;
+  }
+
+  private applyAutomaticResolution(durationMs: number): void {
+    const oneDayMs = 24 * 60 * 60 * 1000;
+
+    if (durationMs <= oneDayMs) {
+      this.samplingIntervalMinutes = 10;
+      this.checkpointIntervalMinutes = 60;
+      return;
+    }
+
+    if (durationMs <= 3 * oneDayMs) {
+      this.samplingIntervalMinutes = 30;
+      this.checkpointIntervalMinutes = 180;
+      return;
+    }
+
+    this.samplingIntervalMinutes = 60;
+    this.checkpointIntervalMinutes = 600;
+  }
+
+  private setRollingRange(days: 1 | 3 | 7): void {
     const end = new Date();
-    const start = new Date(end);
+    end.setSeconds(0, 0);
 
-    // Today plus the previous six calendar days = seven-day view.
-    start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - (this.historyDays - 1));
+    const start = new Date(end.getTime() - days * 24 * 60 * 60 * 1000);
 
-    this.startDate = this.toInputDate(start);
-    this.endDate = this.toInputDate(end);
+    this.startDate = this.toRequestDateTime(start);
+    this.endDate = this.toRequestDateTime(end);
+    this.syncCustomInputsFromRange();
+    this.refreshMaxDateTime();
+  }
+
+  private syncCustomInputsFromRange(): void {
+    const start = this.parseInputDate(this.startDate);
+    const end = this.parseInputDate(this.endDate);
+
+    this.customStartDate = start ? this.toDateTimeLocal(start) : '';
+    this.customEndDate = end ? this.toDateTimeLocal(end) : '';
+  }
+
+  private refreshMaxDateTime(): void {
+    this.maxDateTime = this.toDateTimeLocal(new Date());
   }
 
   private validateDateRange(): boolean {
-    const start = new Date(`${this.startDate}T00:00:00`).getTime();
-    const end = new Date(`${this.endDate}T23:59:59`).getTime();
+    const start = this.parseInputDate(this.startDate)?.getTime() ?? Number.NaN;
+    const end = this.parseInputDate(this.endDate)?.getTime() ?? Number.NaN;
 
-    if (Number.isNaN(start) || Number.isNaN(end) || start > end) {
+    if (Number.isNaN(start) || Number.isNaN(end) || start >= end) {
       this.loading = false;
-      this.errorMessage = 'Invalid seven-day date range';
+      this.errorMessage = 'Invalid date range';
       return false;
     }
 
-    const calendarDays = Math.floor((end - start) / 86_400_000) + 1;
+    const durationMs = end - start;
+    const maxDurationMs = this.maxHistoryDays * 24 * 60 * 60 * 1000;
 
-    if (calendarDays > this.historyDays) {
+    if (durationMs > maxDurationMs + 60_000) {
       this.loading = false;
-      this.errorMessage = 'Past Track supports a maximum of seven calendar days';
+      this.errorMessage = 'Past Track supports a maximum of seven days';
+      return false;
+    }
+
+    if (end > Date.now() + 60_000) {
+      this.loading = false;
+      this.errorMessage = 'The end time cannot be in the future';
       return false;
     }
 
@@ -364,6 +563,13 @@ export class PastTrackComponent implements OnInit, OnDestroy {
   }
 
   private buildFallbackSummary(points: PastTrackPoint[]): PastTrackSummary {
+    const start = this.parseInputDate(this.startDate)?.getTime() ?? 0;
+    const end = this.parseInputDate(this.endDate)?.getTime() ?? start;
+    const expectedSlots = Math.max(
+      0,
+      Math.floor((end - start) / (this.samplingIntervalMinutes * 60_000)) + 1
+    );
+
     return {
       vesselId: this.vesselId,
       vesselName: this.vesselId || 'Selected Vessel',
@@ -376,8 +582,8 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       trackPoints: points.length,
       rawTrackPoints: points.length,
       samplingIntervalMinutes: this.samplingIntervalMinutes,
-      expectedSlots: this.historyDays * 48,
-      coveragePercent: 0,
+      expectedSlots,
+      coveragePercent: expectedSlots > 0 ? Math.min(100, (points.length / expectedSlots) * 100) : 0,
       rangeStart: this.startDate,
       rangeEnd: this.endDate,
       avgSpeed: this.calculateAverageSpeed(points),
@@ -506,8 +712,18 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     }
 
     const months: Record<string, number> = {
-      JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
-      JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11,
+      JAN: 0,
+      FEB: 1,
+      MAR: 2,
+      APR: 3,
+      MAY: 4,
+      JUN: 5,
+      JUL: 6,
+      AUG: 7,
+      SEP: 8,
+      OCT: 9,
+      NOV: 10,
+      DEC: 11,
     };
     const month = months[match[2].toUpperCase()];
 
@@ -525,18 +741,54 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     ).getTime();
   }
 
-  private formatRangeDate(value: string): string {
-    const date = new Date(`${value}T00:00:00`);
+  private formatRangeDateTime(value: string): string {
+    const date = this.parseInputDate(value);
 
-    if (Number.isNaN(date.getTime())) {
+    if (!date) {
       return '-';
     }
 
-    return date.toLocaleDateString('en-GB', {
+    return date.toLocaleString('en-GB', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
     });
+  }
+
+  private parseInputDate(value: string): Date | null {
+    if (!value) {
+      return null;
+    }
+
+    const normalized = value.includes('T') ? value : value.replace(' ', 'T');
+    const date = new Date(normalized);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private toRequestDateTime(date: Date): string {
+    return `${date.getFullYear()}-${this.pad(date.getMonth() + 1)}-${this.pad(
+      date.getDate()
+    )} ${this.pad(date.getHours())}:${this.pad(date.getMinutes())}:${this.pad(
+      date.getSeconds()
+    )}`;
+  }
+
+  private toDateTimeLocal(date: Date): string {
+    return `${date.getFullYear()}-${this.pad(date.getMonth() + 1)}-${this.pad(
+      date.getDate()
+    )}T${this.pad(date.getHours())}:${this.pad(date.getMinutes())}`;
+  }
+
+  private getExportRangeName(): string {
+    if (this.activeRangeMode === 'custom') {
+      return 'custom-range';
+    }
+
+    return `${this.activeRangeMode}-day`;
   }
 
   private csvEscape(value: unknown): string {
@@ -568,14 +820,8 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     }
   }
 
-  private toInputDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const mm = month < 10 ? '0' + month : String(month);
-    const dd = day < 10 ? '0' + day : String(day);
-
-    return `${year}-${mm}-${dd}`;
+  private pad(value: number): string {
+    return value < 10 ? `0${value}` : String(value);
   }
 
   private isValidNumber(value: unknown): boolean {

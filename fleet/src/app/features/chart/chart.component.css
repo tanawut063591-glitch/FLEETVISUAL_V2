@@ -503,3 +503,128 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* =========================================================
+   BLACK PRO THEME - Chart
+   Matches the Realtime / Diagram dark visual language.
+   ========================================================= */
+:host-context([data-theme='dark']) {
+    background: #000000 !important;
+    color: #f8fafc !important;
+}
+
+:host-context([data-theme='dark']) .chart-page {
+    background:
+        radial-gradient(circle at 18% -8%, rgba(37, 99, 235, 0.13), transparent 29%),
+        linear-gradient(180deg, #000000 0%, #03050a 46%, #000000 100%) !important;
+    color: #f8fafc !important;
+}
+
+:host-context([data-theme='dark']) .chart-workspace,
+:host-context([data-theme='dark']) .chart-card,
+:host-context([data-theme='dark']) .state-card,
+:host-context([data-theme='dark']) .side-panel {
+    background: linear-gradient(180deg, rgba(14, 20, 30, 0.985) 0%, rgba(6, 10, 16, 0.99) 100%) !important;
+    border-color: rgba(148, 163, 184, 0.22) !important;
+    color: #f8fafc !important;
+    box-shadow:
+        0 18px 44px rgba(0, 0, 0, 0.46),
+        inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+}
+
+:host-context([data-theme='dark']) .chart-toolbar {
+    background: linear-gradient(180deg, #0d131d 0%, #080c12 100%) !important;
+    border-color: rgba(148, 163, 184, 0.20) !important;
+}
+
+:host-context([data-theme='dark']) .chart-meta,
+:host-context([data-theme='dark']) .parameter-strip {
+    background: #070b12 !important;
+    border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+:host-context([data-theme='dark']) .chart-meta div,
+:host-context([data-theme='dark']) .parameter-chip,
+:host-context([data-theme='dark']) .selected-pill,
+:host-context([data-theme='dark']) .mode-switch,
+:host-context([data-theme='dark']) .auto-btn,
+:host-context([data-theme='dark']) .icon-btn,
+:host-context([data-theme='dark']) .side-item,
+:host-context([data-theme='dark']) .side-empty,
+:host-context([data-theme='dark']) .chart-type-grid button {
+    background: linear-gradient(180deg, #101722 0%, #0a0f17 100%) !important;
+    border-color: rgba(148, 163, 184, 0.22) !important;
+    color: #e2e8f0 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+:host-context([data-theme='dark']) .mode-switch button {
+    color: #cbd5e1 !important;
+}
+
+:host-context([data-theme='dark']) .mode-switch button:hover,
+:host-context([data-theme='dark']) .icon-btn:hover,
+:host-context([data-theme='dark']) .auto-btn:hover,
+:host-context([data-theme='dark']) .chart-type-grid button:hover {
+    background: #111c2a !important;
+    color: #93c5fd !important;
+    border-color: rgba(96, 165, 250, 0.46) !important;
+}
+
+:host-context([data-theme='dark']) .mode-switch button.active,
+:host-context([data-theme='dark']) .chart-type-grid button.active {
+    background: linear-gradient(135deg, #2563eb 0%, #0f5de8 100%) !important;
+    color: #ffffff !important;
+    border-color: rgba(96, 165, 250, 0.62) !important;
+    box-shadow: 0 12px 26px rgba(37, 99, 235, 0.25) !important;
+}
+
+:host-context([data-theme='dark']) .tab-title,
+:host-context([data-theme='dark']) .chart-card-head h3,
+:host-context([data-theme='dark']) .state-card strong,
+:host-context([data-theme='dark']) .side-panel h4,
+:host-context([data-theme='dark']) .side-item strong,
+:host-context([data-theme='dark']) .chart-meta strong {
+    color: #ffffff !important;
+}
+
+:host-context([data-theme='dark']) .mode-label,
+:host-context([data-theme='dark']) .chart-card-head p,
+:host-context([data-theme='dark']) .state-card,
+:host-context([data-theme='dark']) .side-head span,
+:host-context([data-theme='dark']) .side-item small,
+:host-context([data-theme='dark']) .side-empty,
+:host-context([data-theme='dark']) .chart-meta span,
+:host-context([data-theme='dark']) .card-tools {
+    color: #94a3b8 !important;
+}
+
+:host-context([data-theme='dark']) .selected-pill,
+:host-context([data-theme='dark']) .parameter-chip em,
+:host-context([data-theme='dark']) .chart-type-grid button i {
+    color: #60a5fa !important;
+}
+
+:host-context([data-theme='dark']) .state-card i {
+    background: rgba(59, 130, 246, 0.16) !important;
+    color: #93c5fd !important;
+    border: 1px solid rgba(96, 165, 250, 0.24);
+}
+
+:host-context([data-theme='dark']) .error-state i {
+    background: rgba(239, 68, 68, 0.14) !important;
+    color: #fca5a5 !important;
+    border-color: rgba(239, 68, 68, 0.28) !important;
+}
+
+:host-context([data-theme='dark']) .toggle-dot {
+    background: #334155 !important;
+}
+
+:host-context([data-theme='dark']) .toggle-dot::after {
+    background: #e2e8f0 !important;
+}
+
+:host-context([data-theme='dark']) .auto-btn.active .toggle-dot {
+    background: #2563eb !important;
+}

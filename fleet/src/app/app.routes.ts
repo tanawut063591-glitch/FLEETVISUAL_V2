@@ -13,6 +13,7 @@ import { NotfoundComponent } from './features/notfound/notfound.component';
 import { DiagramComponent } from './features/diagram/diagram.component';
 import { ReportComponent } from './features/report/report.component';
 import { PastTrackComponent } from './features/past-track/past-track.component';
+import { AlertsComponent } from './features/alerts/alerts.component';
 
 
 import { PermissionGuard } from './core/guards/auth-guard';
@@ -111,7 +112,7 @@ export const routes: Routes = [
       },
       {
         path: 'alerts',
-        component: NotfoundComponent,
+        component: AlertsComponent,
         data: {
           depth: 7,
           title: 'ALERTS',

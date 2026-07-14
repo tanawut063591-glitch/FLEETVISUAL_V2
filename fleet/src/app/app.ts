@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { ThemeModeService } from './shared/services/theme-mode.service';
 
 @Component({
   selector: 'app-root',
@@ -6,6 +7,13 @@ import { Component } from '@angular/core';
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
 })
-export class App {
+export class App implements OnInit {
   title = 'solaris-app';
+
+  constructor(private themeModeService: ThemeModeService) {}
+
+  ngOnInit(): void {
+    // Initialize before routed pages render so Login and Dashboard use one theme state.
+    this.themeModeService.init();
+  }
 }

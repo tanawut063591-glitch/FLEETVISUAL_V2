@@ -44,27 +44,29 @@ export class PastTrackService {
   private readonly pointTimeoutMs = 20_000;
   private readonly historianTimeoutMs = 60_000;
   private readonly pairToleranceMs = 75_000;
-  private readonly samplingIntervalMinutes = 30;
+  private readonly defaultSamplingIntervalMinutes = 30;
   private readonly samplingToleranceMs = 15 * 60_000;
 
   constructor(private readonly newHttp: NewHttpClientService) {}
 
   /**
-   * โหลดเส้นทางย้อนหลังของเรือหนึ่งลำ
-   * 1) โหลด tag ของเรือตาม prefix
-   * 2) เลือก GPS latitude / longitude และ tag ประกอบ
-   * 3) เรียก historian contract เดียวกับ Data Logger
-   * 4) จับคู่ lat/lng ตามเวลา แล้วส่งให้แผนที่วาด polyline
+   * Loads historical route data for a single vessel.
+   * 1) Load the vessel tags by prefix.
+   * 2) Resolve GPS latitude / longitude and supporting tags.
+   * 3) Call the same historian contract used by Data Logger.
+   * 4) Pair latitude and longitude by timestamp and return a route-ready polyline dataset.
    */
   getPastTrack(
     vesselId: string,
     startDate: string,
-    endDate: string
+    endDate: string,
+    samplingIntervalMinutes = this.defaultSamplingIntervalMinutes
   ): Observable<PastTrackResponse> {
     const prefix = this.normalizePrefix(vesselId);
+    const intervalMinutes = this.normalizeSamplingInterval(samplingIntervalMinutes);
 
     if (!prefix) {
-      return of(this.buildResponse('', [], [], startDate, endDate));
+      return of(this.buildResponse('', [], [], startDate, endDate, intervalMinutes));
     }
 
     console.info('[PastTrack] loading vessel:', prefix);
@@ -72,7 +74,7 @@ export class PastTrackService {
     return this.newHttp.getPoints(prefix).pipe(
       timeout(this.pointTimeoutMs),
       catchError((error: any) => {
-        // แม้ /getpoints จะล้มเหลว เรายังลอง tag GPS มาตรฐานของระบบต่อได้
+        // If /getpoints fails, continue with the platform's standard GPS tags.
         console.warn('[PastTrack] getPoints failed; using standard GPS tags', error);
         return of([]);
       }),
@@ -89,12 +91,13 @@ export class PastTrackService {
             directPoints,
             startDate,
             endDate,
-            this.samplingIntervalMinutes
+            intervalMinutes
           );
 
           console.info('[PastTrack] direct route points:', {
             raw: directPoints.length,
             sampled: sampledPoints.length,
+            intervalMinutes,
           });
 
           return of(
@@ -103,7 +106,8 @@ export class PastTrackService {
               sampledPoints,
               directPoints,
               startDate,
-              endDate
+              endDate,
+              intervalMinutes
             )
           );
         }
@@ -133,13 +137,13 @@ export class PastTrackService {
                 points,
                 startDate,
                 endDate,
-                this.samplingIntervalMinutes
+                intervalMinutes
               );
 
               console.info('[PastTrack] normalized route points:', {
                 raw: points.length,
                 sampled: sampledPoints.length,
-                intervalMinutes: this.samplingIntervalMinutes,
+                intervalMinutes,
               });
 
               return this.buildResponse(
@@ -147,18 +151,21 @@ export class PastTrackService {
                 sampledPoints,
                 points,
                 startDate,
-                endDate
+                endDate,
+                intervalMinutes
               );
             }),
             catchError((error: any) => {
               console.error('[PastTrack] historian request failed:', error);
-              return of(this.buildResponse(prefix, [], [], startDate, endDate));
+              return of(
+                this.buildResponse(prefix, [], [], startDate, endDate, intervalMinutes)
+              );
             })
           );
       }),
       catchError((error: any) => {
         console.error('[PastTrack] load failed:', error);
-        return of(this.buildResponse(prefix, [], [], startDate, endDate));
+        return of(this.buildResponse(prefix, [], [], startDate, endDate, intervalMinutes));
       })
     );
   }
@@ -210,7 +217,7 @@ export class PastTrackService {
   ): PastTrackPoint[] {
     const source = this.parseJsonValue(response);
 
-    // รองรับ response แบบ { Headers: [...], Records: [...] }
+    // Supports table responses such as { Headers: [...], Records: [...] }.
     const tablePoints = this.normalizeHeaderTables(
       source,
       vesselId,
@@ -223,7 +230,7 @@ export class PastTrackService {
       return this.sanitizeTrack(tablePoints);
     }
 
-    // รองรับ response แบบ series / flat records / nested objects
+    // Supports series, flat-record and nested-object response formats.
     const samples: HistorianSamples = {
       lat: [],
       lng: [],
@@ -643,7 +650,7 @@ export class PastTrackService {
     const map = new Map<number, HistorianSample>();
 
     for (const sample of sorted) {
-      // Historian ของระบบแสดงผลเป็น 1 นาที จึงรวม millisecond/second ที่ต่างกันเล็กน้อย
+      // The historian is minute-based, so tiny second/millisecond differences share one bucket.
       const bucket = Math.floor(sample.time / 60_000) * 60_000;
       map.set(bucket, { time: sample.time, value: sample.value });
     }
@@ -1032,7 +1039,7 @@ export class PastTrackService {
   }
 
   /**
-   * Aligns irregular historian samples to fixed :00 / :30 time slots.
+   * Aligns irregular historian samples to the display interval selected by Past Track.
    * The closest real GPS point within half an interval is selected; no coordinate
    * is invented and the same raw sample is never reused for two slots.
    */
@@ -1056,13 +1063,16 @@ export class PastTrackService {
       return [];
     }
 
-    const intervalMs = Math.max(1, intervalMinutes) * 60_000;
+    const normalizedInterval = this.normalizeSamplingInterval(intervalMinutes);
+    const intervalMs = normalizedInterval * 60_000;
     const toleranceMs = Math.min(this.samplingToleranceMs, intervalMs / 2);
-    const rangeStart = this.parseTimestamp(`${startDate} 00:00:00`) ?? sorted[0].timestamp;
-    const configuredEnd = this.parseTimestamp(`${endDate} 23:59:59`) ?? sorted[sorted.length - 1].timestamp;
-    const rangeEnd = this.isToday(endDate)
-      ? Math.min(configuredEnd, Date.now())
-      : configuredEnd;
+    const configuredStart = this.parseRangeBoundary(startDate, false);
+    const configuredEnd = this.parseRangeBoundary(endDate, true);
+    const rangeStart = configuredStart ?? sorted[0].timestamp;
+    const rangeEnd = Math.min(
+      configuredEnd ?? sorted[sorted.length - 1].timestamp,
+      Date.now()
+    );
     const firstSlot = Math.ceil(rangeStart / intervalMs) * intervalMs;
     const lastSlot = Math.floor(rangeEnd / intervalMs) * intervalMs;
     const result: PastTrackPoint[] = [];
@@ -1111,35 +1121,32 @@ export class PastTrackService {
     endDate: string,
     intervalMinutes: number
   ): number {
-    const intervalMs = Math.max(1, intervalMinutes) * 60_000;
-    const start = this.parseTimestamp(`${startDate} 00:00:00`);
-    const configuredEnd = this.parseTimestamp(`${endDate} 23:59:59`);
+    const intervalMs = this.normalizeSamplingInterval(intervalMinutes) * 60_000;
+    const start = this.parseRangeBoundary(startDate, false);
+    const configuredEnd = this.parseRangeBoundary(endDate, true);
 
     if (start === null || configuredEnd === null || configuredEnd < start) {
       return 0;
     }
 
-    const end = this.isToday(endDate) ? Math.min(configuredEnd, Date.now()) : configuredEnd;
+    const end = Math.min(configuredEnd, Date.now());
     const firstSlot = Math.ceil(start / intervalMs) * intervalMs;
     const lastSlot = Math.floor(end / intervalMs) * intervalMs;
 
     return lastSlot >= firstSlot ? Math.floor((lastSlot - firstSlot) / intervalMs) + 1 : 0;
   }
 
-  private isToday(value: string): boolean {
-    const today = new Date();
-    const key = `${today.getFullYear()}-${this.pad(today.getMonth() + 1)}-${this.pad(today.getDate())}`;
-    return value === key;
-  }
-
   private buildHistoryRange(startDate: string, endDate: string): {
     start: string;
     end: string;
   } {
-    if (startDate && endDate) {
+    const configuredStart = this.parseRangeBoundary(startDate, false);
+    const configuredEnd = this.parseRangeBoundary(endDate, true);
+
+    if (configuredStart !== null && configuredEnd !== null) {
       return {
-        start: `${startDate} 00:00:00`,
-        end: `${endDate} 23:59:59`,
+        start: this.formatRequestTime(new Date(configuredStart)),
+        end: this.formatRequestTime(new Date(Math.min(configuredEnd, Date.now()))),
       };
     }
 
@@ -1157,10 +1164,18 @@ export class PastTrackService {
     displayPoints: PastTrackPoint[],
     rawPoints: PastTrackPoint[] = displayPoints,
     startDate = '',
-    endDate = ''
+    endDate = '',
+    intervalMinutes = this.defaultSamplingIntervalMinutes
   ): PastTrackResponse {
     return {
-      summary: this.buildSummary(prefix, displayPoints, rawPoints, startDate, endDate),
+      summary: this.buildSummary(
+        prefix,
+        displayPoints,
+        rawPoints,
+        startDate,
+        endDate,
+        intervalMinutes
+      ),
       points: displayPoints,
     };
   }
@@ -1170,13 +1185,15 @@ export class PastTrackService {
     displayPoints: PastTrackPoint[],
     rawPoints: PastTrackPoint[],
     startDate: string,
-    endDate: string
+    endDate: string,
+    intervalMinutes: number
   ): PastTrackSummary {
+    const normalizedInterval = this.normalizeSamplingInterval(intervalMinutes);
     const vessel = this.getSavedVessel(prefix);
     const expectedSlots = this.calculateExpectedSlots(
       startDate,
       endDate,
-      this.samplingIntervalMinutes
+      normalizedInterval
     );
     const coveragePercent = expectedSlots > 0
       ? Math.min(100, Number(((displayPoints.length / expectedSlots) * 100).toFixed(1)))
@@ -1191,11 +1208,11 @@ export class PastTrackService {
       mmsi: this.getMmsi(vessel),
       status: displayPoints.length > 0 ? 'Available' : 'No Data',
       image: this.getVesselImage(vessel),
-      // KPIs use valid raw points for better accuracy. Map/timeline use fixed 30-minute slots.
+      // KPIs use valid raw points. Map/timeline use the automatic display interval.
       totalDistance: this.calculateTotalDistance(metricPoints),
       trackPoints: displayPoints.length,
       rawTrackPoints: rawPoints.length,
-      samplingIntervalMinutes: this.samplingIntervalMinutes,
+      samplingIntervalMinutes: normalizedInterval,
       expectedSlots,
       coveragePercent,
       rangeStart: startDate,
@@ -1204,6 +1221,30 @@ export class PastTrackService {
       totalTime: this.calculateTotalTime(metricPoints),
       lastUpdate: metricPoints.length > 0 ? metricPoints[metricPoints.length - 1].time : '-',
     };
+  }
+
+  private normalizeSamplingInterval(value: number): number {
+    const interval = Math.round(Number(value));
+
+    if (!Number.isFinite(interval)) {
+      return this.defaultSamplingIntervalMinutes;
+    }
+
+    return Math.max(1, Math.min(60, interval));
+  }
+
+  private parseRangeBoundary(value: string, endOfDay: boolean): number | null {
+    if (!value) {
+      return null;
+    }
+
+    const normalized = String(value).trim().replace('T', ' ');
+    const hasTime = /\d{1,2}:\d{2}/.test(normalized);
+    const candidate = hasTime
+      ? normalized
+      : `${normalized} ${endOfDay ? '23:59:59' : '00:00:00'}`;
+
+    return this.parseTimestamp(candidate);
   }
 
   private getSavedVessel(prefix: string): any {
@@ -1361,8 +1402,8 @@ export class PastTrackService {
       return true;
     }
 
-    const start = this.parseTimestamp(`${startDate} 00:00:00`);
-    const end = this.parseTimestamp(`${endDate} 23:59:59`);
+    const start = this.parseRangeBoundary(startDate, false);
+    const end = this.parseRangeBoundary(endDate, true);
 
     if (start === null || end === null) {
       return true;

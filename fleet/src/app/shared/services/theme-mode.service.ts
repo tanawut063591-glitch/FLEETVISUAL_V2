@@ -7,11 +7,11 @@ export type ThemeMode = 'light' | 'dark';
 })
 export class ThemeModeService {
   private readonly storageKey = 'fleet-theme-mode';
-  private readonly defaultMode: ThemeMode = 'dark';
+  private readonly defaultMode: ThemeMode = 'light';
 
   init(): ThemeMode {
     const savedMode = this.getSavedMode();
-    this.applyMode(savedMode);
+    this.applyMode(savedMode, false);
     return savedMode;
   }
 
@@ -27,7 +27,7 @@ export class ThemeModeService {
 
   setMode(mode: ThemeMode): void {
     localStorage.setItem(this.storageKey, mode);
-    this.applyMode(mode);
+    this.applyMode(mode, true);
   }
 
   private getSavedMode(): ThemeMode {
@@ -35,12 +35,18 @@ export class ThemeModeService {
     return mode === 'light' || mode === 'dark' ? mode : this.defaultMode;
   }
 
-  private applyMode(mode: ThemeMode): void {
+  private applyMode(mode: ThemeMode, animate: boolean): void {
     if (typeof document === 'undefined') {
       return;
     }
 
     const root = document.documentElement;
+
+    if (animate) {
+      root.classList.add('theme-changing');
+      window.setTimeout(() => root.classList.remove('theme-changing'), 260);
+    }
+
     root.setAttribute('data-theme', mode);
     root.classList.toggle('theme-dark', mode === 'dark');
     root.classList.toggle('theme-light', mode === 'light');

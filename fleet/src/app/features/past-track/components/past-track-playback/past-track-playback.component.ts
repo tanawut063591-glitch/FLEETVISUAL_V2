@@ -172,7 +172,14 @@ export class PastTrackPlaybackComponent {
 
   private parseDateBoundary(value: string, endOfDay: boolean): number | null {
     if (!value) { return null; }
-    const time = new Date(`${value}T${endOfDay ? '23:59:59' : '00:00:00'}`).getTime();
+
+    const normalized = value.trim().replace(' ', 'T');
+    const hasTime = /T\d{1,2}:\d{2}/.test(normalized);
+    const candidate = hasTime
+      ? normalized
+      : `${normalized}T${endOfDay ? '23:59:59' : '00:00:00'}`;
+    const time = new Date(candidate).getTime();
+
     return Number.isNaN(time) ? null : time;
   }
 

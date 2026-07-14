@@ -1,6 +1,9 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ThemeModeService } from '../../../shared/services/theme-mode.service';
+import { AlertStateService } from '../../../shared/services/alert-state.service';
 
 /*
   รูปแบบข้อมูลของเมนูบน Header
@@ -32,7 +35,7 @@ interface SettingsItem {
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.css'],
 })
-export class HeaderComponent implements OnInit {
+export class HeaderComponent implements OnInit, OnDestroy {
   // ชื่อผู้ใช้ที่แสดงมุมขวาบน
   username = 'sat';
 
@@ -147,9 +150,12 @@ export class HeaderComponent implements OnInit {
     },
   ];
 
+  private readonly destroy$ = new Subject<void>();
+
   constructor(
     private router: Router,
-    private themeModeService: ThemeModeService
+    private themeModeService: ThemeModeService,
+    private alertState: AlertStateService
   ) {}
 
   /*
@@ -159,6 +165,14 @@ export class HeaderComponent implements OnInit {
   ngOnInit(): void {
     this.loadUserData();
     this.initThemeMode();
+    this.alertState.activeCount$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((count) => (this.alertCount = count));
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   /*
@@ -235,7 +249,7 @@ export class HeaderComponent implements OnInit {
 
   /*
     โหลด theme จาก localStorage
-    default เป็น Dark Black เพื่อให้ Dashboard ดูพรีเมียมตั้งแต่เปิดเว็บ
+    default เป็น Light และจำโหมดล่าสุดของผู้ใช้ไว้ใน localStorage
   */
   private initThemeMode(): void {
     const mode = this.themeModeService.init();

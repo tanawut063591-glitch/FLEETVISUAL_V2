@@ -1,40 +1,121 @@
-<section class="timeline-panel">
-  <div class="table-title">
-    <div>
-      <strong>TRACK TIMELINE</strong>
-      <span>{{ trackPoints.length }} fixed 30-minute records</span>
+<section class="timeline-panel" aria-label="Track timeline">
+  <div class="timeline-heading">
+    <div class="title-block">
+      <div class="eyebrow">HISTORICAL DATA</div>
+      <div class="title-row">
+        <h3>TRACK TIMELINE</h3>
+        <span class="point-count">{{ trackPoints.length }} points</span>
+      </div>
+      <p>
+        {{ samplingIntervalMinutes }}-minute data interval ·
+        {{ checkpointIntervalMinutes }}-minute checkpoints
+      </p>
     </div>
-    <div class="timeline-hint">Click a row or drag the playback slider</div>
+
+    <div class="timeline-tools">
+      <div class="selection-summary">
+        <small>SELECTED</small>
+        <strong>{{ getSelectedPositionLabel() }}</strong>
+      </div>
+
+      <button type="button" class="tool-button" (click)="scrollToStart()" [disabled]="!trackPoints.length">
+        First
+      </button>
+      <button type="button" class="tool-button" (click)="scrollToSelected()" [disabled]="!selectedPoint">
+        Selected
+      </button>
+      <button type="button" class="tool-button" (click)="scrollToEnd()" [disabled]="!trackPoints.length">
+        Last
+      </button>
+      <button
+        type="button"
+        class="tool-button primary"
+        (click)="selectedPoint && viewOnMap(selectedPoint)"
+        [disabled]="!selectedPoint">
+        View on Map
+      </button>
+    </div>
   </div>
 
-  <div #tableWrap class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>No.</th><th>30-min Time Slot</th><th>Latitude</th><th>Longitude</th>
-          <th>Status</th><th>Speed (kt)</th><th>Course</th><th>Mode</th><th>Fuel Rate</th><th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          *ngFor="let point of trackPoints; trackBy: trackPoint"
-          [attr.data-point-no]="point.no"
-          [class.selected]="isSelected(point)"
-          (click)="selectPoint(point)">
-          <td><span class="point-no" [ngClass]="getStatusClass(point)">{{ point.no }}</span></td>
-          <td><div class="slot-time">{{ point.time }}</div><small *ngIf="point.recordedTime && point.recordedTime !== point.time">source {{ point.recordedTime }}</small></td>
-          <td>{{ formatLat(point.lat) }}</td>
-          <td>{{ formatLng(point.lng) }}</td>
-          <td><span class="status" [ngClass]="getStatusClass(point)">{{ point.status }}</span></td>
-          <td>{{ point.speed }}</td>
-          <td>{{ point.course }}°</td>
-          <td>{{ point.engine }}</td>
-          <td>{{ point.fuelRate }} L/H</td>
-          <td class="more">⋮</td>
-        </tr>
-      </tbody>
-    </table>
+  <div class="timeline-note">
+    <span class="note-icon">↕</span>
+    Scroll inside the timeline without losing the route map. Click a row to select it, or use
+    <b>View on Map</b> to return to the selected checkpoint above.
+  </div>
 
-    <div class="empty-table" *ngIf="!trackPoints.length">No GPS points are available for this seven-day range.</div>
+  <div class="timeline-scroll-shell">
+    <div class="timeline-table" role="table" aria-label="Historical vessel positions">
+      <div class="timeline-grid timeline-header" role="row">
+        <div role="columnheader">No.</div>
+        <div role="columnheader">{{ samplingIntervalMinutes }}-min Time Slot</div>
+        <div role="columnheader">Latitude</div>
+        <div role="columnheader">Longitude</div>
+        <div role="columnheader">Status</div>
+        <div role="columnheader">Speed</div>
+        <div role="columnheader">Course</div>
+        <div role="columnheader">Engine</div>
+        <div role="columnheader">Fuel Rate</div>
+        <div role="columnheader">Map</div>
+      </div>
+
+      <cdk-virtual-scroll-viewport
+        class="timeline-viewport"
+        [itemSize]="rowHeight"
+        [minBufferPx]="324"
+        [maxBufferPx]="648">
+        <div
+          *cdkVirtualFor="let point of trackPoints; let index = index; trackBy: trackPoint"
+          class="timeline-grid timeline-row"
+          role="row"
+          [class.selected]="isSelected(point)"
+          [class.checkpoint-row]="isCheckpoint(index)"
+          [attr.aria-selected]="isSelected(point)"
+          (click)="selectPoint(point)">
+
+          <div class="number-cell" role="cell">
+            <span class="point-no" [ngClass]="getStatusClass(point)">{{ point.no }}</span>
+          </div>
+
+          <div class="time-cell" role="cell">
+            <div class="time-line">
+              <strong>{{ point.time }}</strong>
+              <span class="checkpoint-badge" *ngIf="isCheckpoint(index)">
+                {{ getCheckpointText(index) }}
+              </span>
+            </div>
+            <small *ngIf="point.recordedTime && point.recordedTime !== point.time">
+              Source: {{ point.recordedTime }}
+            </small>
+          </div>
+
+          <div role="cell">{{ formatLat(point.lat) }}</div>
+          <div role="cell">{{ formatLng(point.lng) }}</div>
+
+          <div role="cell">
+            <span class="status" [ngClass]="getStatusClass(point)">{{ point.status }}</span>
+          </div>
+
+          <div role="cell"><b>{{ formatNumber(point.speed) }}</b> kt</div>
+          <div role="cell"><b>{{ formatNumber(point.course) }}</b>°</div>
+          <div role="cell">{{ point.engine }}</div>
+          <div role="cell"><b>{{ formatNumber(point.fuelRate) }}</b> L/h</div>
+
+          <div class="map-action-cell" role="cell">
+            <button
+              type="button"
+              class="map-action"
+              title="Select this point and scroll to the route map"
+              [attr.aria-label]="'View point ' + point.no + ' on map'"
+              (click)="viewOnMap(point, $event)">
+              ↗
+            </button>
+          </div>
+        </div>
+      </cdk-virtual-scroll-viewport>
+
+      <div class="empty-table" *ngIf="!trackPoints.length">
+        No GPS points are available for the selected range.
+      </div>
+    </div>
   </div>
 </section>

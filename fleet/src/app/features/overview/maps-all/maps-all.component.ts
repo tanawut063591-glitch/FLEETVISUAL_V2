@@ -36,8 +36,10 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
   _data: any[] = [];
 
-  centerPosition = { lat: 9.5, lng: 101 };
-  defaultZoom = 6;
+  // มุมมองเริ่มต้นของหน้า Overview: ซูมเข้ามาที่อ่าวไทยและคาบสมุทรมาเลย์
+  // เพื่อให้ตำแหน่งเรือหลักอ่านง่ายใกล้เคียงภาพตัวอย่างที่ผู้ใช้กำหนด
+  centerPosition = { lat: 10.25, lng: 102.25 };
+  defaultZoom = 7;
 
   activeFilter: 'all' | MapStatus = 'all';
 
@@ -58,7 +60,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   private resizeTimer: ReturnType<typeof setTimeout> | null = null;
   private mapInitRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly idleAfterMinutes = 30;
-  private readonly offlineAfterMinutes = 120;
+  private readonly offlineAfterMinutes = 60;
   private readonly realtimeRefreshMs = 15000; // รีเฟรช popup/map เพื่อให้ Last seen เดินตามข้อมูล
 
   // tag ที่ใช้แสดง Today Summary ใน popup
@@ -321,10 +323,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       this.markers.push(marker);
     });
 
-    if (this.markers.length > 0 && !this.selectedVessel) {
-      this.map.setZoom(this.defaultZoom);
-      this.map.setCenter(this.centerPosition);
-    }
+    // ไม่บังคับ reset zoom/center ทุกครั้งที่ข้อมูล realtime refresh
+    // ผู้ใช้จึงยังสามารถซูมและเลื่อนแผนที่เองได้ โดยค่าเริ่มต้นถูกกำหนดตอน initMap เท่านั้น
   }
 
   bindMarkerClick(marker: any, vessel: any, status: MapStatus): void {
@@ -496,26 +496,39 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getVesselStatus(vessel: any): MapStatus {
+    const timestamp = this.getLatestTimestamp(vessel);
+    let diffMinutes: number | null = null;
+
+    if (timestamp) {
+      const date = new Date(timestamp);
+
+      if (!Number.isNaN(date.getTime())) {
+        diffMinutes = Math.max(0, (Date.now() - date.getTime()) / 60000);
+
+        // ข้อมูลที่เก่าเกินเกณฑ์ต้องเป็น Offline แม้ status เดิมยังค้างว่า Online
+        // ทำให้ Marker บนแผนที่ตรงกับ Sidebar เช่น MV GEMIA 2 H
+        if (diffMinutes >= this.offlineAfterMinutes) {
+          return 'offline';
+        }
+      }
+    }
+
     const textStatus = this.getTextStatus(vessel);
 
     if (textStatus) {
       return textStatus;
     }
 
-    const timestamp = this.getLatestTimestamp(vessel);
-
-    if (timestamp) {
-      const date = new Date(timestamp);
-
-      if (!Number.isNaN(date.getTime())) {
-        const diffMinutes = (Date.now() - date.getTime()) / 60000;
-
-        if (diffMinutes >= this.offlineAfterMinutes) return 'offline';
-        if (diffMinutes >= this.idleAfterMinutes) return 'idle';
-      }
+    // ใช้ Idle จากเวลาเฉพาะเมื่อ Backend ไม่ได้ส่งสถานะมาเท่านั้น
+    // จึงไม่ทำให้เรือที่มี status Online เดิมกลายเป็น Idle จำนวนมาก
+    if (diffMinutes !== null && diffMinutes >= this.idleAfterMinutes) {
+      return 'idle';
     }
 
-    if (this.toNumberOrNull(this.getLatValue(vessel)) === null || this.toNumberOrNull(this.getLngValue(vessel)) === null) {
+    if (
+      this.toNumberOrNull(this.getLatValue(vessel)) === null ||
+      this.toNumberOrNull(this.getLngValue(vessel)) === null
+    ) {
       return 'offline';
     }
 
@@ -523,12 +536,9 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getTextStatus(vessel: any): MapStatus | '' {
+    // ให้สถานะจาก Tag ข้อมูลจริงมาก่อน statusKey/status ที่อาจเป็นค่าค้าง
+    // ใช้ลำดับเดียวกับ Sidebar เพื่อให้สีและสถานะทั้งสองจุดตรงกัน
     const value =
-      this.getObjectValue(vessel, 'statusKey') ||
-      this.getObjectValue(vessel, 'status') ||
-      this.getObjectValue(vessel, 'state') ||
-      this.getObjectValue(vessel, 'fv.status') ||
-      this.getObjectValue(vessel, 'fv.state') ||
       this.getFirstTagValue(vessel, [
         'VES_STATUS_TEXT',
         'STATUS_TEXT',
@@ -536,7 +546,12 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         'STATE',
         'VES_STATUS',
         'STATUS',
-      ]);
+      ]) ||
+      this.getObjectValue(vessel, 'fv.status') ||
+      this.getObjectValue(vessel, 'fv.state') ||
+      this.getObjectValue(vessel, 'status') ||
+      this.getObjectValue(vessel, 'statusKey') ||
+      this.getObjectValue(vessel, 'state');
 
     if (!this.hasValue(value)) {
       return '';
@@ -555,6 +570,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     const color = this.getStatusColor(status);
     const text = this.escapeSvgText(this.truncateText(name, 18));
 
+    // คืน UI Marker แบบเดิม: pin สีตามสถานะ + ป้ายชื่อเรือขนาดเล็ก
     const svg =
       '<svg width="190" height="54" viewBox="0 0 190 54" xmlns="http://www.w3.org/2000/svg">' +
       '<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">' +
@@ -592,9 +608,10 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getMarkerZIndex(status: string): number {
-    if (status === 'online') return 30;
-    if (status === 'idle') return 20;
-    return 10;
+    // ให้ Offline อยู่ด้านบนเมื่อเรือหลายลำมีตำแหน่งใกล้กัน
+    if (status === 'offline') return 40;
+    if (status === 'idle') return 30;
+    return 20;
   }
 
   getVesselName(vessel: any): string {
@@ -913,8 +930,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         item?.DateTime ||
         item?.dateTime ||
         item?.timeStamp ||
-        item?.time ||
-        new Date().toISOString();
+        item?.time;
 
       const tagValue = {
         value,
@@ -968,7 +984,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         return {
           Name: key,
           Value: value,
-          TimeStamp: new Date().toISOString(),
         };
       });
     }
@@ -1036,7 +1051,28 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getLatestTimestamp(vessel: any): any {
+    // ใช้เวลาของข้อมูลตำแหน่ง GPS ก่อนเสมอ เพราะเป็นตัวบอกว่าเรือส่งตำแหน่งล่าสุดเมื่อไร
+    // ห้ามใช้เวลา STATUS / ENGINE LOAD เป็น Last seen ของ Marker เนื่องจาก tag เหล่านี้อาจยังอัปเดต
+    // แม้ข้อมูลตำแหน่งเรือจะหยุดส่งแล้ว ทำให้ Map แสดง Online ทั้งที่ Sidebar เป็น Offline
     return (
+      this.getFirstTagTimestamp(vessel, [
+        'VES_GPS_LAT',
+        'VES_GPS_LONG',
+        'VES_GPS_LNG',
+        'GPS_LAT',
+        'GPS_LONG',
+        'GPS_LNG',
+        'LAT',
+        'LONG',
+        'LNG',
+      ]) ||
+      this.getFirstTagTimestamp(vessel, [
+        'VES_GPS_SPEED',
+        'VES_GPS_SOG',
+        'GPS_SPEED',
+        'SPEED',
+        'SOG',
+      ]) ||
       this.getDirectValue(vessel, [
         'timestamp',
         'lastUpdate',
@@ -1044,15 +1080,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         'lastSeenAt',
         'dateTime',
         'DateTime',
-      ]) ||
-      this.getFirstTagTimestamp(vessel, [
-        'VES_GPS_LAT',
-        'VES_GPS_LONG',
-        'VES_GPS_LNG',
-        'VES_GPS_SPEED',
-        'VES_ENGINE_LOAD',
-        'ENGINE_LOAD',
-        'STATUS',
       ])
     );
   }
@@ -1326,7 +1353,9 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       fuelConsumption: this.getFuelConsumptionText(mergedVessel),
       course: this.getCourseText(mergedVessel),
       distance: this.getDistanceText(mergedVessel),
-      timestamp: this.getLatestTimestamp(mergedVessel),
+      // Last seen ต้องยึด timestamp จาก overview/GPS เดิม ไม่ให้ข้อมูล Summary ที่โหลดตอนเปิด Popup
+      // เข้ามาทำให้เวลาถูกเปลี่ยนเป็น Now และสถานะกลับเป็น Online
+      timestamp: this.getLatestTimestamp(vessel),
       newData: mergedNewData,
     };
   }
