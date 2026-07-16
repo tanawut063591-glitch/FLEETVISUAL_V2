@@ -17,7 +17,10 @@
   <button
     type="button"
     class="mobile-toggler"
+    [class.active]="mobileMenuOpen"
     aria-label="Toggle navigation"
+    aria-controls="mobile-main-navigation"
+    [attr.aria-expanded]="mobileMenuOpen"
     (click)="toggleMobileMenu($event)"
   >
     <span></span>
@@ -25,8 +28,16 @@
     <span></span>
   </button>
 
+  <div
+    class="mobile-menu-backdrop"
+    *ngIf="mobileMenuOpen"
+    (click)="closeMobileMenu()"
+    aria-hidden="true"
+  ></div>
+
   <!-- CENTER MENU -->
   <nav
+    id="mobile-main-navigation"
     class="main-menu"
     [class.open]="mobileMenuOpen"
     aria-label="Main navigation"
@@ -60,7 +71,7 @@
   </nav>
 
   <!-- RIGHT ACTIONS -->
-  <section class="right-menu">
+  <section class="right-menu" [class.mobile-open]="mobileMenuOpen">
     <!-- SETTINGS -->
     <div class="settings-action-wrap" [class.open]="settingsMenuOpen">
       <button

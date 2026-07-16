@@ -12,6 +12,10 @@ import { Subscription } from 'rxjs';
 import { FleetVesselDataService } from '../../shared/services/fleet-vessel-data.service';
 import { FvTimeService } from '../../shared/services/fv-time.service';
 import { CoordinatesService } from '../../shared/services/coordinate.service';
+import {
+  getVesselStatusFromLastSeenLabel,
+  getVesselStatusFromTimestamp,
+} from '../../shared/utils/vessel-status.util';
 
 type VesselStatus = 'online' | 'idle' | 'offline' | 'nodata';
 
@@ -160,7 +164,7 @@ export class OverviewComponent implements OnInit, OnDestroy {
       null;
 
     const lastSeen = r?.lastSeen || r?.time || this.getLastSeenText(timestamp);
-    let statusKey = this.getStatusKey(lastSeen);
+    let statusKey = this.getStatusKey(timestamp, lastSeen);
 
     const rawStatus = String(r?.status || r?.statusClass || r?.state || '').toLowerCase();
     if (rawStatus.includes('offline')) {
@@ -238,12 +242,12 @@ export class OverviewComponent implements OnInit, OnDestroy {
     return '-';
   }
 
-  private getStatusKey(lastSeen: string): VesselStatus {
-    if (!lastSeen || lastSeen === '-') return 'nodata';
-    const text = String(lastSeen).toUpperCase();
-    if (text.includes('D')) return 'idle';
-    if (text.includes('H')) return 'offline';
-    return 'online';
+  private getStatusKey(timestamp: unknown, lastSeen: string): VesselStatus {
+    const timestampStatus = getVesselStatusFromTimestamp(
+      timestamp as string | number | Date | null | undefined
+    );
+    if (timestampStatus !== 'nodata') return timestampStatus;
+    return getVesselStatusFromLastSeenLabel(lastSeen);
   }
 
   private getTagValue(data: any, names: string[], defaultValue: any): any {

@@ -3,22 +3,18 @@ import { Injectable } from '@angular/core';
 import {
   Observable,
   catchError,
-  concatMap,
-  defaultIfEmpty,
-  filter,
-  from,
+  finalize,
   map,
   of,
   shareReplay,
   switchMap,
-  take,
+  tap,
   throwError,
   timeout,
 } from 'rxjs';
 
-import { environment } from '../../../environments/environment';
+import { SKIP_AUTH_REDIRECT } from '../../core/interceptors/http-context.tokens';
 import {
-  AlertEndpointConfig,
   AlertFetchResult,
   AlertQuery,
   AlertRecord,
@@ -26,199 +22,184 @@ import {
   AlertState,
   AlertsRuntimeConfig,
 } from '../models/alert.model';
+import { ResolvedDatabaseEndpoint } from '../models/database-api.model';
 import { AuthService } from './auth.service';
-import { SKIP_AUTH_REDIRECT } from '../../core/interceptors/http-context.tokens';
+import { DatabaseApiConfigService } from './database-api-config.service';
+import { TelemetryAlertsService } from './telemetry-alerts.service';
 
-interface EndpointAttempt {
-  ok: boolean;
-  endpoint?: AlertEndpointConfig;
-  response?: unknown;
-  error?: unknown;
-}
-
-interface PublicConfig {
-  UrlApiNotification?: string;
+interface CacheEntry {
+  expiresAt: number;
+  value: AlertFetchResult;
 }
 
 @Injectable({ providedIn: 'root' })
 export class AlertsService {
-  private activeEndpointName = '';
-  private lastError: unknown = null;
-
-  private readonly runtimeConfig$ = this.loadRuntimeConfig().pipe(
-    shareReplay({ bufferSize: 1, refCount: false })
-  );
+  private readonly cache = new Map<string, CacheEntry>();
+  private readonly inFlight = new Map<string, Observable<AlertFetchResult>>();
+  private readonly runtimeConfig$: Observable<AlertsRuntimeConfig>;
 
   constructor(
     private http: HttpClient,
-    private authService: AuthService
-  ) {}
-
-  fetchAlerts(query: AlertQuery): Observable<AlertFetchResult> {
-    return this.runtimeConfig$.pipe(
-      switchMap((config) => {
-        const endpoints = this.orderEndpoints(config.endpoints || []);
-
-        if (endpoints.length === 0) {
-          return throwError(() => new Error('No alerts backend endpoint is configured.'));
-        }
-
-        this.lastError = null;
-
-        return from(endpoints).pipe(
-          concatMap((endpoint) => this.requestEndpoint(endpoint, query)),
-          filter((attempt) => attempt.ok),
-          take(1),
-          defaultIfEmpty(null),
-          switchMap((attempt) => {
-            if (!attempt?.endpoint) {
-              const detail = this.describeError(this.lastError);
-              return throwError(
-                () => new Error(
-                  detail
-                    ? `Unable to load alerts from the backend. ${detail}`
-                    : 'Unable to load alerts from the configured backend endpoints.'
-                )
-              );
-            }
-
-            this.activeEndpointName = attempt.endpoint.name;
-            const rawRows = this.extractRows(attempt.response);
-            const alerts = this.normalizeRows(rawRows);
-
-            return of({
-              alerts,
-              endpoint: attempt.endpoint.url,
-              fetchedAt: new Date().toISOString(),
-              rawCount: rawRows.length,
-            });
-          })
-        );
-      })
+    private authService: AuthService,
+    private telemetryAlerts: TelemetryAlertsService,
+    private databaseConfig: DatabaseApiConfigService,
+  ) {
+    this.runtimeConfig$ = this.http.get<AlertsRuntimeConfig>('/alerts.config.json').pipe(
+      catchError(() => of({ refreshSeconds: 20 } as AlertsRuntimeConfig)),
+      shareReplay({ bufferSize: 1, refCount: false }),
     );
+  }
+
+  /**
+   * Database-first alert feed. Angular never connects to a SQL database directly;
+   * it calls a backend API which performs the database query. When the database
+   * endpoint is not enabled, the verified telemetry fallback remains available.
+   * Identical requests share one HTTP call and a short memory cache.
+   */
+  fetchAlerts(query: AlertQuery, forceRefresh = false): Observable<AlertFetchResult> {
+    const normalizedQuery = this.normalizeQuery(query);
+    const key = this.queryKey(normalizedQuery);
+
+    if (!forceRefresh) {
+      const cached = this.cache.get(key);
+      if (cached && cached.expiresAt > Date.now()) return of(cached.value);
+      const running = this.inFlight.get(key);
+      if (running) return running;
+    } else {
+      this.cache.delete(key);
+    }
+
+    const request$ = this.databaseConfig.config$.pipe(
+      switchMap((config) => {
+        const source$ = config.alerts.enabled
+          ? this.requestDatabase(config.alerts, normalizedQuery).pipe(
+              catchError((error) => {
+                if (!config.fallback.alertsToTelemetry) return throwError(() => error);
+                return this.telemetryAlerts.fetch(normalizedQuery, forceRefresh).pipe(
+                  map((result) => ({ ...result, sourceType: 'telemetry' as const })),
+                );
+              }),
+            )
+          : config.fallback.alertsToTelemetry
+            ? this.telemetryAlerts.fetch(normalizedQuery, forceRefresh).pipe(
+                map((result) => ({ ...result, sourceType: 'telemetry' as const })),
+              )
+            : throwError(
+                () =>
+                  new Error(
+                    'Database Alerts API is not configured. Set public/database-api.config.json or enable the telemetry fallback.',
+                  ),
+              );
+
+        return source$.pipe(
+          map((result) => ({
+            result,
+            ttl: result.sourceType === 'database'
+              ? config.alerts.cacheSeconds
+              : Math.min(15, config.alerts.cacheSeconds || 15),
+          })),
+        );
+      }),
+      tap(({ result, ttl }) => {
+        this.cache.set(key, { expiresAt: Date.now() + ttl * 1000, value: result });
+        this.pruneCache();
+      }),
+      map(({ result }) => result),
+      finalize(() => this.inFlight.delete(key)),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+
+    this.inFlight.set(key, request$);
+    return request$;
   }
 
   getRefreshSeconds(): Observable<number> {
     return this.runtimeConfig$.pipe(
       map((config) => {
-        const seconds = Number(config.refreshSeconds ?? 30);
-        return Number.isFinite(seconds) ? Math.min(300, Math.max(10, seconds)) : 30;
-      })
+        const preference = Number(localStorage.getItem('fleet-alert-refresh-seconds'));
+        const configured = Number(config.refreshSeconds ?? 20);
+        const seconds = Number.isFinite(preference) && preference > 0 ? preference : configured;
+        return Number.isFinite(seconds) ? Math.min(300, Math.max(10, seconds)) : 20;
+      }),
     );
   }
 
-  private loadRuntimeConfig(): Observable<AlertsRuntimeConfig> {
-    const alertConfig$ = this.http
-      .get<AlertsRuntimeConfig>('/alerts.config.json')
-      .pipe(catchError(() => of({} as AlertsRuntimeConfig)));
-
-    const publicConfig$ = this.http
-      .get<PublicConfig>('/config.json')
-      .pipe(catchError(() => of({} as PublicConfig)));
-
-    return alertConfig$.pipe(
-      switchMap((alertConfig) =>
-        publicConfig$.pipe(
-          map((publicConfig) => {
-            const endpoints = (alertConfig.endpoints?.length
-              ? alertConfig.endpoints
-              : this.defaultEndpoints(publicConfig.UrlApiNotification)
-            )
-              .map((endpoint) => ({
-                ...endpoint,
-                url: this.resolveUrl(endpoint.url, publicConfig.UrlApiNotification),
-              }))
-              .filter((endpoint) => !!endpoint.url);
-
-            return {
-              refreshSeconds: alertConfig.refreshSeconds ?? 30,
-              endpoints,
-            };
-          })
-        )
-      )
-    );
+  clearCache(): void {
+    this.cache.clear();
   }
 
-  private defaultEndpoints(notificationBase?: string): AlertEndpointConfig[] {
-    const endpoints: AlertEndpointConfig[] = [];
-
-    if (notificationBase) {
-      endpoints.push(
-        { name: 'notification-getalerts', url: '{NOTIFICATION_URL}/getalerts', method: 'POST' },
-        { name: 'notification-alerts', url: '{NOTIFICATION_URL}/alerts', method: 'GET' }
-      );
-    }
-
-    endpoints.push(
-      { name: 'api2-getalerts', url: '{API2_URL}/getalerts', method: 'POST' },
-      { name: 'api2-alerts', url: '{API2_URL}/alerts', method: 'GET' },
-      { name: 'gateway-getalerts', url: '{API_URL}/api/vessels/getalerts', method: 'POST' },
-      { name: 'gateway-alerts', url: '{API_URL}/api/alerts', method: 'GET' }
-    );
-
-    return endpoints;
-  }
-
-  private resolveUrl(template: string, notificationBase?: string): string {
-    const trim = (value: string) => String(value || '').replace(/\/+$/, '');
-    const apiUrl = trim(environment.API_URL || '');
-    const api2Url = trim(environment.API2_URL || environment.API_URL || '');
-    const notificationUrl = trim(notificationBase || '');
-
-    const resolved = String(template || '')
-      .replaceAll('{API_URL}', apiUrl)
-      .replaceAll('{API2_URL}', api2Url)
-      .replaceAll('{NOTIFICATION_URL}', notificationUrl)
-      .replace(/([^:]\/)\/{2,}/g, '$1');
-
-    return resolved.includes('{') ? '' : resolved;
-  }
-
-  private orderEndpoints(endpoints: AlertEndpointConfig[]): AlertEndpointConfig[] {
-    if (!this.activeEndpointName) {
-      return endpoints;
-    }
-
-    return [...endpoints].sort((a, b) => {
-      if (a.name === this.activeEndpointName) return -1;
-      if (b.name === this.activeEndpointName) return 1;
-      return 0;
-    });
-  }
-
-  private requestEndpoint(endpoint: AlertEndpointConfig, query: AlertQuery): Observable<EndpointAttempt> {
-    const headers = this.getAuthHeaders();
-    const body = this.buildRequestBody(query);
+  private requestDatabase(
+    endpoint: ResolvedDatabaseEndpoint,
+    query: AlertQuery,
+  ): Observable<AlertFetchResult> {
     const context = new HttpContext().set(SKIP_AUTH_REDIRECT, true);
-
+    const headers = this.getAuthHeaders();
     const request$ = endpoint.method === 'GET'
       ? this.http.get(endpoint.url, {
+          context,
           headers,
           params: this.buildQueryParams(query),
-          context,
         })
-      : this.http.post(endpoint.url, body, { headers, context });
+      : this.http.post(endpoint.url, this.buildRequestBody(query), { context, headers });
 
     return request$.pipe(
-      timeout(8000),
-      map((response) => ({ ok: true, endpoint, response } as EndpointAttempt)),
-      catchError((error) => {
-        this.lastError = error;
-        return of({ ok: false, endpoint, error } as EndpointAttempt);
-      })
+      timeout(endpoint.timeoutMs),
+      map((response) => {
+        const rawRows = this.extractRows(response);
+        return {
+          alerts: this.normalizeRows(rawRows),
+          endpoint: endpoint.url,
+          fetchedAt: new Date().toISOString(),
+          rawCount: rawRows.length,
+          total: this.extractTotal(response, rawRows.length),
+          sourceType: 'database' as const,
+        };
+      }),
+      catchError((error) =>
+        throwError(() => new Error(this.describeDatabaseError(error, endpoint.url))),
+      ),
     );
+  }
+
+  private normalizeQuery(query: AlertQuery): AlertQuery {
+    return {
+      startTime: query.startTime,
+      endTime: query.endTime,
+      vessel: query.vessel || '',
+      search: query.search || '',
+      severity: query.severity || 'all',
+      state: query.state || 'all',
+      module: query.module || '',
+      page: Math.max(1, Number(query.page) || 1),
+      pageSize: Math.min(5000, Math.max(1, Number(query.pageSize) || 500)),
+    };
+  }
+
+  private queryKey(query: AlertQuery): string {
+    return JSON.stringify(query);
   }
 
   private buildRequestBody(query: AlertQuery): Record<string, unknown> {
     return {
+      startTime: query.startTime,
+      endTime: query.endTime,
+      vessel: query.vessel || null,
+      search: query.search || null,
+      severity: query.severity === 'all' ? null : query.severity,
+      status: query.state === 'all' ? null : query.state,
+      module: query.module || null,
+      page: query.page || 1,
+      pageSize: query.pageSize || 500,
+      // PascalCase fields keep compatibility with common ASP.NET DTOs.
       StartTime: query.startTime,
       EndTime: query.endTime,
-      Vessel: query.vessel || '',
-      VesselName: query.vessel || '',
-      Prefix: query.vessel || '',
+      Vessel: query.vessel || null,
+      Search: query.search || null,
+      Severity: query.severity === 'all' ? null : query.severity,
+      Status: query.state === 'all' ? null : query.state,
+      Module: query.module || null,
       Page: query.page || 1,
-      PageSize: query.pageSize || 5000,
+      PageSize: query.pageSize || 500,
     };
   }
 
@@ -227,25 +208,67 @@ export class AlertsService {
       .set('startTime', query.startTime)
       .set('endTime', query.endTime)
       .set('page', String(query.page || 1))
-      .set('pageSize', String(query.pageSize || 5000));
+      .set('pageSize', String(query.pageSize || 500));
 
-    if (query.vessel) {
-      params = params.set('vessel', query.vessel);
-    }
-
+    if (query.vessel) params = params.set('vessel', query.vessel);
+    if (query.search) params = params.set('search', query.search);
+    if (query.severity && query.severity !== 'all') params = params.set('severity', query.severity);
+    if (query.state && query.state !== 'all') params = params.set('status', query.state);
+    if (query.module) params = params.set('module', query.module);
     return params;
   }
 
   private getAuthHeaders(): HttpHeaders {
-    return new HttpHeaders({
-      Authorization: `Bearer ${this.authService.getToken()}`,
-    });
+    const token = this.authService.getToken();
+    return token ? new HttpHeaders({ Authorization: token }) : new HttpHeaders();
+  }
+
+  private extractTotal(response: unknown, fallback: number): number {
+    if (!response || typeof response !== 'object') return fallback;
+    const value = response as Record<string, any>;
+    const candidates = [
+      value['total'],
+      value['Total'],
+      value['totalCount'],
+      value['TotalCount'],
+      value['count'],
+      value['Count'],
+      value['meta']?.total,
+      value['pagination']?.total,
+    ];
+    for (const candidate of candidates) {
+      const total = Number(candidate);
+      if (Number.isFinite(total) && total >= 0) return total;
+    }
+    return fallback;
+  }
+
+  private describeDatabaseError(error: any, endpoint: string): string {
+    if (error?.name === 'TimeoutError') {
+      return `Database Alerts API timed out: ${endpoint}`;
+    }
+    const status = Number(error?.status);
+    const detail = error?.error?.message || error?.message || '';
+    return status
+      ? `Database Alerts API returned HTTP ${status}${detail ? `: ${detail}` : ''}`
+      : `Unable to reach Database Alerts API${detail ? `: ${detail}` : ''}`;
+  }
+
+  private pruneCache(): void {
+    if (this.cache.size <= 40) return;
+    const now = Date.now();
+    for (const [key, entry] of this.cache) {
+      if (entry.expiresAt <= now) this.cache.delete(key);
+    }
+    while (this.cache.size > 40) {
+      const first = this.cache.keys().next().value;
+      if (!first) break;
+      this.cache.delete(first);
+    }
   }
 
   private extractRows(response: unknown, depth = 0): unknown[] {
-    if (response === null || response === undefined || depth > 8) {
-      return [];
-    }
+    if (response === null || response === undefined || depth > 10) return [];
 
     if (typeof response === 'string') {
       const text = response.trim();
@@ -258,33 +281,55 @@ export class AlertsService {
       }
     }
 
-    if (Array.isArray(response)) {
-      return response;
-    }
-
-    if (typeof response !== 'object') {
-      return [];
-    }
+    if (Array.isArray(response)) return response;
+    if (typeof response !== 'object') return [];
 
     const value = response as Record<string, unknown>;
     const keys = [
-      'alerts', 'Alerts', 'alarms', 'Alarms', 'notifications', 'Notifications',
-      'items', 'Items', 'rows', 'Rows', 'records', 'Records', 'data', 'Data',
-      'result', 'Result', 'results', 'Results', 'value', 'Value',
+      'alerts',
+      'Alerts',
+      'alarms',
+      'Alarms',
+      'notifications',
+      'Notifications',
+      'events',
+      'Events',
+      'items',
+      'Items',
+      'rows',
+      'Rows',
+      'records',
+      'Records',
+      'data',
+      'Data',
+      'result',
+      'Result',
+      'results',
+      'Results',
+      'value',
+      'Value',
+      'payload',
+      'Payload',
     ];
 
     for (const key of keys) {
       if (key in value) {
         const rows = this.extractRows(value[key], depth + 1);
-        if (rows.length > 0 || Array.isArray(value[key])) {
-          return rows;
-        }
+        if (rows.length > 0 || Array.isArray(value[key])) return rows;
       }
     }
 
+    const lowerKeys = Object.keys(value).map((key) => key.toLowerCase());
     const looksLikeAlert = [
-      'AlertID', 'AlarmID', 'Severity', 'Message', 'Description', 'TimeStamp', 'TagName',
-    ].some((key) => key in value);
+      'alertid',
+      'alarmid',
+      'severity',
+      'message',
+      'description',
+      'timestamp',
+      'tagname',
+      'alarmname',
+    ].some((key) => lowerKeys.includes(key));
 
     return looksLikeAlert ? [value] : [];
   }
@@ -298,43 +343,100 @@ export class AlertsService {
     const unique = new Map<string, AlertRecord>();
     normalized.forEach((alert) => unique.set(alert.id, alert));
 
-    return Array.from(unique.values()).sort((a, b) => {
-      return this.toEpoch(b.occurredAt) - this.toEpoch(a.occurredAt);
-    });
+    return Array.from(unique.values()).sort(
+      (a, b) => this.toEpoch(b.occurredAt) - this.toEpoch(a.occurredAt)
+    );
   }
 
   private normalizeRow(row: Record<string, unknown>, index: number): AlertRecord {
+    const lookup = this.buildLookup(row);
     const read = (...keys: string[]): unknown => {
       for (const key of keys) {
-        const value = row[key];
+        const direct = row[key];
+        if (direct !== undefined && direct !== null && direct !== '') return direct;
+
+        const value = lookup.get(key.toLowerCase());
         if (value !== undefined && value !== null && value !== '') return value;
       }
       return '';
     };
 
-    const occurredAt = this.toIsoString(read(
-      'OccurredAt', 'occurredAt', 'TimeStamp', 'Timestamp', 'timestamp',
-      'AlarmTime', 'AlertTime', 'EventTime', 'DateTime', 'CreatedAt', 'createdAt', 'Time', 'time'
-    ));
+    const occurredAt = this.toIsoString(
+      read(
+        'OccurredAt',
+        'TimeStamp',
+        'Timestamp',
+        'AlarmTime',
+        'AlertTime',
+        'EventTime',
+        'DateTime',
+        'CreatedAt',
+        'CreatedDate',
+        'StartTime',
+        'Time'
+      )
+    );
 
-    const vesselName = String(read(
-      'VesselName', 'vesselName', 'Vessel', 'vessel', 'FVName', 'fvName',
-      'SiteName', 'siteName', 'PointSource', 'pointSource', 'Prefix', 'prefix'
-    ) || 'Unknown vessel');
+    const vesselName = String(
+      read(
+        'VesselName',
+        'Vessel',
+        'FVName',
+        'SiteName',
+        'ShipName',
+        'PointSource',
+        'Prefix'
+      ) || 'Unknown vessel'
+    );
 
-    const tagName = String(read('TagName', 'tagName', 'Tag', 'tag', 'Address', 'address') || '');
-    const title = String(read('Title', 'title', 'AlarmName', 'alertName', 'Name', 'name') || tagName || 'Alert');
-    const message = String(read('Message', 'message', 'Description', 'description', 'Detail', 'detail', 'Text', 'text') || title);
-    const severity = this.normalizeSeverity(read('Severity', 'severity', 'Priority', 'priority', 'Level', 'level', 'AlarmLevel', 'alarmLevel'));
-    const explicitState = read('State', 'state', 'Status', 'status', 'AlarmStatus', 'alertStatus', 'IsActive', 'isActive');
-    const acknowledged = read('Acknowledged', 'acknowledged', 'IsAcknowledged', 'isAcknowledged', 'Ack', 'ack');
+    const tagName = String(
+      read('TagName', 'Tag', 'PointName', 'Address', 'SignalName', 'ParameterName') || ''
+    );
+    const title = String(
+      read('Title', 'AlarmName', 'AlertName', 'EventName', 'Name', 'Subject') ||
+        tagName ||
+        'Alert'
+    );
+    const message = String(
+      read('Message', 'Description', 'Detail', 'Text', 'Remark', 'AlarmMessage') || title
+    );
+    const severity = this.normalizeSeverity(
+      read('Severity', 'Priority', 'Level', 'AlarmLevel', 'AlertLevel', 'Class')
+    );
+    const explicitState = read(
+      'State',
+      'Status',
+      'AlarmStatus',
+      'AlertStatus',
+      'EventStatus',
+      'IsActive'
+    );
+    const acknowledged = read(
+      'Acknowledged',
+      'IsAcknowledged',
+      'Ack',
+      'AckStatus'
+    );
+    const clearedAt = this.toIsoString(
+      read('ResolvedAt', 'ClearTime', 'ClearedAt', 'EndTime', 'ClosedAt')
+    );
+
     let state = this.normalizeState(explicitState);
-
+    if ((explicitState === '' || explicitState === undefined) && clearedAt) state = 'resolved';
     if ((explicitState === '' || explicitState === undefined) && this.toBoolean(acknowledged)) {
       state = 'acknowledged';
     }
 
-    const rawId = read('AlertID', 'alertId', 'AlarmID', 'alarmId', 'EventID', 'eventId', 'ID', 'Id', 'id', '_id');
+    const rawId = read(
+      'AlertID',
+      'AlarmID',
+      'EventID',
+      'NotificationID',
+      'RecordID',
+      'ID',
+      'Id',
+      '_id'
+    );
     const fallbackId = `${vesselName}|${tagName}|${occurredAt}|${title}|${index}`;
 
     return {
@@ -342,21 +444,51 @@ export class AlertsService {
       title,
       message,
       vesselName,
-      vesselId: String(read('VesselID', 'vesselId', 'SiteID', 'siteId', 'Prefix', 'prefix') || vesselName),
+      vesselId: String(
+        read('VesselID', 'ShipID', 'SiteID', 'Prefix') || vesselName
+      ),
       tagName,
-      equipment: String(read('Equipment', 'equipment', 'Device', 'device', 'Group', 'group') || ''),
+      equipment: String(
+        read('Equipment', 'Module', 'System', 'Device', 'Group', 'Category', 'Subsystem') || ''
+      ),
       severity,
       state,
       occurredAt,
-      acknowledgedAt: this.toIsoString(read('AcknowledgedAt', 'acknowledgedAt', 'AckTime', 'ackTime')) || undefined,
-      resolvedAt: this.toIsoString(read('ResolvedAt', 'resolvedAt', 'ClearTime', 'clearTime', 'EndTime', 'endTime')) || undefined,
-      value: this.optionalValue(read('Value', 'value', 'ActualValue', 'actualValue')),
-      unit: String(read('Unit', 'unit', 'UOM', 'uom') || '') || undefined,
-      source: String(read('Source', 'source', 'PointSource', 'pointSource') || '') || undefined,
+      acknowledgedAt:
+        this.toIsoString(read('AcknowledgedAt', 'AckTime', 'AcceptedAt')) || undefined,
+      resolvedAt: clearedAt || undefined,
+      value: this.optionalValue(
+        read('Value', 'ActualValue', 'CurrentValue', 'TriggerValue', 'AlarmValue')
+      ),
+      unit: String(read('Unit', 'UOM', 'EngineeringUnit') || '') || undefined,
+      source:
+        String(read('Source', 'PointSource', 'Service', 'Origin', 'SystemName') || '') ||
+        undefined,
       raw: row,
     };
   }
 
+  private buildLookup(source: unknown): Map<string, unknown> {
+    const lookup = new Map<string, unknown>();
+
+    const visit = (value: unknown, depth: number): void => {
+      if (!value || typeof value !== 'object' || depth > 4) return;
+
+      Object.entries(value as Record<string, unknown>).forEach(([key, child]) => {
+        const normalized = key.toLowerCase();
+        if (!lookup.has(normalized) && child !== undefined && child !== null && child !== '') {
+          lookup.set(normalized, child);
+        }
+
+        if (child && typeof child === 'object' && !Array.isArray(child)) {
+          visit(child, depth + 1);
+        }
+      });
+    };
+
+    visit(source, 0);
+    return lookup;
+  }
 
   private optionalValue(value: unknown): string | number | undefined {
     if (value === undefined || value === null || value === '') return undefined;
@@ -379,33 +511,42 @@ export class AlertsService {
     }
 
     const text = String(value || '').trim().toLowerCase();
-    if (/(critical|emergency|fatal|very high|danger)/.test(text)) return 'critical';
+    if (/(critical|emergency|fatal|very high|danger|trip)/.test(text)) return 'critical';
     if (/(major|high|alarm)/.test(text)) return 'major';
     if (/(warning|warn|medium|minor)/.test(text)) return 'warning';
-    if (/(info|information|notice|low|normal)/.test(text)) return 'info';
+    if (/(info|information|notice|low|normal|event)/.test(text)) return 'info';
     return 'unknown';
   }
 
   private normalizeState(value: unknown): AlertState {
-    if (typeof value === 'boolean') {
-      return value ? 'active' : 'resolved';
-    }
+    if (typeof value === 'boolean') return value ? 'active' : 'resolved';
 
     const text = String(value || '').trim().toLowerCase();
-    if (/(resolve|resolved|clear|cleared|close|closed|inactive|normal|ended)/.test(text)) {
+    if (/(resolve|resolved|clear|cleared|close|closed|inactive|normal|ended|complete)/.test(text)) {
       return 'resolved';
     }
-    if (/(ack|acknowledged|accepted|confirm)/.test(text)) {
-      return 'acknowledged';
-    }
+    if (/(ack|acknowledged|accepted|confirm)/.test(text)) return 'acknowledged';
     return 'active';
   }
 
   private toIsoString(value: unknown): string {
     if (value === undefined || value === null || value === '') return '';
 
-    const date = value instanceof Date ? value : new Date(String(value));
-    return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
+    if (typeof value === 'number') {
+      const epoch = value < 10_000_000_000 ? value * 1000 : value;
+      const numericDate = new Date(epoch);
+      return Number.isNaN(numericDate.getTime()) ? String(value) : numericDate.toISOString();
+    }
+
+    const text = String(value).trim();
+    const dotNetMatch = /\/Date\((\d+)(?:[+-]\d+)?\)\//.exec(text);
+    if (dotNetMatch) {
+      const dotNetDate = new Date(Number(dotNetMatch[1]));
+      return Number.isNaN(dotNetDate.getTime()) ? text : dotNetDate.toISOString();
+    }
+
+    const date = value instanceof Date ? value : new Date(text);
+    return Number.isNaN(date.getTime()) ? text : date.toISOString();
   }
 
   private toEpoch(value: string): number {

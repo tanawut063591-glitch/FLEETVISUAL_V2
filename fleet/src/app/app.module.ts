@@ -9,7 +9,6 @@ import { provideHighcharts } from 'highcharts-angular';
 import { App } from './app';
 import { AppRoutingModule } from './app.routes';
 import { CoreModule } from './core/core.module';
-import { FeaturesModule } from './features/features.module';
 import { reducers } from './store/reducers/recuder';
 import { FvInfoEffects } from './store/effects/fv-info.effects';
 import { FvOverviewEffects } from './store/effects/fv-overview.effects';
@@ -29,7 +28,6 @@ import { errorInterceptor } from './core/interceptors/error.interceptor';
     StoreModule.forRoot(reducers),
     EffectsModule.forRoot([FvInfoEffects, FvOverviewEffects]),
     CoreModule,
-    FeaturesModule,
   ],
 
   providers: [

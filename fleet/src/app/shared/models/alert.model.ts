@@ -24,6 +24,10 @@ export interface AlertQuery {
   startTime: string;
   endTime: string;
   vessel?: string;
+  search?: string;
+  severity?: AlertSeverity | 'all';
+  state?: AlertState | 'all';
+  module?: string;
   page?: number;
   pageSize?: number;
 }
@@ -36,7 +40,9 @@ export interface AlertEndpointConfig {
 
 export interface AlertsRuntimeConfig {
   refreshSeconds?: number;
+  cacheSeconds?: number;
   endpoints?: AlertEndpointConfig[];
+  telemetryFallback?: boolean;
 }
 
 export interface AlertFetchResult {
@@ -44,4 +50,6 @@ export interface AlertFetchResult {
   endpoint: string;
   fetchedAt: string;
   rawCount: number;
+  total?: number;
+  sourceType?: 'database' | 'telemetry';
 }

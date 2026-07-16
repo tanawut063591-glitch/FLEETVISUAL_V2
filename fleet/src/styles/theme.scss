@@ -7,7 +7,12 @@ body {
   width: 100vw;
   overflow: hidden;
   scroll-behavior: smooth;
-  font-family: "Inter", system-ui, sans-serif !important;
+  font-family: "Segoe UI Variable", "Segoe UI", Inter, system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   background-color: var(--main-bg);
   color: var(--primary-txt);
   box-sizing: border-box;
@@ -87,3 +92,44 @@ html.theme-changing button {
 .brd { border: 1px solid red; box-sizing: border-box; }
 .no-pm { padding: 0 !important; margin: 0 !important; }
 .no-padding { padding: 0 !important; }
+
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Shared FleetVisual page language: the Realtime palette is the source of truth. */
+.alerts-page,
+.activity-page,
+.settings-page,
+.report-page,
+.diagram-page,
+.past-track-page,
+.data-logger-page,
+.chart-page,
+.dl-shell {
+  color: var(--primary-txt);
+  background-color: var(--page-bg);
+}
+
+.card,
+.panel {
+  border-color: var(--border-color);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}

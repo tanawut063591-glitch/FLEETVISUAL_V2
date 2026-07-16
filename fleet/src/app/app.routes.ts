@@ -1,23 +1,17 @@
 import { NgModule } from '@angular/core';
-import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
+import { RouterModule, Routes } from '@angular/router';
 
 import { LoginComponent } from './core/components/login/login.component';
 import { MainComponent } from './core/components/main/main.component';
-import { OverviewComponent } from './features/overview/overview.component';
-import { RealtimeComponent } from './features/realtime/realtime.component';
-import { NotfoundComponent } from './features/notfound/notfound.component';
 
 //import { RealtimeComponent } from './shared/components/realtime/realtime.component';
 //import { DataLoggerComponent } from './shared/components/data-logger/data-logger.component';
 //import { ChartComponent } from './shared/components/chart/chart.component';
-import { DiagramComponent } from './features/diagram/diagram.component';
-import { ReportComponent } from './features/report/report.component';
-import { PastTrackComponent } from './features/past-track/past-track.component';
-import { AlertsComponent } from './features/alerts/alerts.component';
 
 
 import { PermissionGuard } from './core/guards/auth-guard';
 import { LoginGuard } from './core/guards/login-guard';
+import { SelectivePreloadingStrategy } from './core/strategies/selective-preloading.strategy';
 
 export const routes: Routes = [
   {
@@ -45,7 +39,10 @@ export const routes: Routes = [
       },
       {
         path: 'overview',
-        component: OverviewComponent,
+        loadChildren: () =>
+          import('./features/overview/overview.module').then(
+            (module) => module.OverviewFeatureModule
+          ),
         data: {
           depth: 1,
           title: 'OVERVIEW',
@@ -53,18 +50,15 @@ export const routes: Routes = [
       },
       {
         path: 'realtime',
-        component: RealtimeComponent,
+        loadChildren: () =>
+          import('./features/realtime/realtime.module').then(
+            (module) => module.RealtimeFeatureModule
+          ),
         data: {
           depth: 2,
           title: 'REALTIME',
-        },
-      },
-      {
-        path: 'realtime/:id',
-        component: RealtimeComponent,
-        data: {
-          depth: 2,
-          title: 'REALTIME',
+          preload: true,
+          preloadDelayMs: 600,
         },
       },
       {
@@ -96,67 +90,81 @@ export const routes: Routes = [
       },
       {
         path: 'diagram',
-        component: DiagramComponent,
+        loadChildren: () =>
+          import('./features/diagram/diagram.module').then(
+            (module) => module.DiagramFeatureModule
+          ),
         data: {
           depth: 5,
           title: 'DIAGRAM',
+          preload: true,
+          preloadDelayMs: 1800,
         },
       },
       {
         path: 'report',
-        component: ReportComponent,
+        loadChildren: () =>
+          import('./features/report/report.module').then(
+            (module) => module.ReportFeatureModule
+          ),
         data: {
           depth: 6,
           title: 'REPORT',
+          preload: true,
+          preloadDelayMs: 2200,
         },
       },
       {
         path: 'alerts',
-        component: AlertsComponent,
+        loadChildren: () =>
+          import('./features/alerts/alerts.module').then(
+            (module) => module.AlertsFeatureModule
+          ),
         data: {
           depth: 7,
           title: 'ALERTS',
+          preload: true,
+          preloadDelayMs: 900,
         },
       },
       {
         path: 'log',
-        component: NotfoundComponent,
+        loadChildren: () =>
+          import('./features/activity-logs/activity-logs.module').then(
+            (module) => module.ActivityLogsFeatureModule
+          ),
         data: {
           depth: 8,
           title: 'LOG',
+          preload: true,
+          preloadDelayMs: 1200,
         },
       },
       {
         path: 'settings',
-        component: NotfoundComponent,
+        loadChildren: () =>
+          import('./features/settings/settings.module').then(
+            (module) => module.SettingsFeatureModule
+          ),
         data: {
           depth: 10,
           title: 'SETTINGS',
-        },
-      },
-      {
-        path: 'settings/:section',
-        component: NotfoundComponent,
-        data: {
-          depth: 10,
-          title: 'SETTINGS',
+          preload: true,
+          preloadDelayMs: 1500,
         },
       },
   
       {
         path: 'past-track',
-        component: PastTrackComponent,
+        loadChildren: () =>
+          import('./features/past-track/past-track.module').then(
+            (module) => module.PastTrackFeatureModule
+          ),
         data: {
           depth: 9,
           title: 'PAST TRACK',
-        },
-      },
-      {
-        path: 'past-track/:id',
-        component: PastTrackComponent,
-        data: {
-          depth: 9,
-          title: 'PAST TRACK',
+          preload: true,
+          preloadDelayMs: 2600,
         },
       },
       {
@@ -175,7 +183,7 @@ export const routes: Routes = [
   imports: [
     RouterModule.forRoot(routes, {
       useHash: true,
-      preloadingStrategy: PreloadAllModules,
+      preloadingStrategy: SelectivePreloadingStrategy,
     }),
   ],
   exports: [RouterModule],

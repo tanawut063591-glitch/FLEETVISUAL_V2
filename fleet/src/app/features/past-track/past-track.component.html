@@ -1,11 +1,10 @@
 <div class="past-track-page">
   <div class="page-header">
     <div class="heading-block">
-      <div class="heading-accent" aria-hidden="true"></div>
-      <div class="heading-copy">
-        <h1>PAST TRACK</h1>
-        <p>Historical vessel movement, route checkpoints, point details and time-based playback.</p>
-      </div>
+
+
+      <h1>PAST TRACK</h1>
+      <p>Historical vessel movement, route checkpoints, point details and time-based playback.</p>
     </div>
 
     <div class="header-actions">
@@ -13,14 +12,8 @@
         <span>↻</span> Refresh Route
       </button>
 
-      <button
-        type="button"
-        class="btn map-export"
-        (click)="exportMapPng()"
-        [disabled]="!trackPoints.length || mapExporting"
-        [attr.aria-busy]="mapExporting">
-        <span>{{ mapExporting ? '…' : '▣' }}</span>
-        {{ mapExporting ? 'Exporting...' : 'Map PNG' }}
+      <button type="button" class="btn light" (click)="exportMapPng()" [disabled]="!trackPoints.length || exportingMap">
+        <span>{{ exportingMap ? '◌' : '▧' }}</span> {{ exportingMap ? 'Exporting...' : 'Map PNG' }}
       </button>
 
       <button type="button" class="btn primary" (click)="exportCsv()" [disabled]="!trackPoints.length">
@@ -150,13 +143,14 @@
 
     <div #routeWorkspace class="main-grid">
       <div class="left-area">
-        <app-past-track-map
-          [trackPoints]="trackPoints"
-          [selectedPoint]="selectedPoint"
-          [samplingIntervalMinutes]="samplingIntervalMinutes"
-          [checkpointIntervalMinutes]="checkpointIntervalMinutes"
-          (pointSelected)="selectPoint($event)">
-        </app-past-track-map>
+        <div #routeMapExport class="route-map-export-frame">
+          <app-past-track-map
+            [trackPoints]="trackPoints"
+            [selectedPoint]="selectedPoint"
+            [checkpointIntervalMinutes]="checkpointIntervalMinutes"
+            (pointSelected)="selectPoint($event)">
+          </app-past-track-map>
+        </div>
 
         <app-past-track-timeline
           [trackPoints]="trackPoints"

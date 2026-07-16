@@ -10,12 +10,17 @@ import {
   Output,
   EventEmitter,
   ChangeDetectorRef,
+  HostListener,
 } from '@angular/core';
 
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { Subscription } from 'rxjs';
 
 import { CoordinatesService } from '../../../shared/services/coordinate.service';
+import {
+  getVesselStatusFromTimestamp,
+  toVesselStatusLabel,
+} from '../../../shared/utils/vessel-status.util';
 
 // รูปแบบข้อมูลที่เอาไปแสดงใน Sidebar
 interface VesselViewItem {
@@ -139,6 +144,11 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges, DoCheck {
     }
   }
 
+  @HostListener('document:keydown.escape')
+  onEscapePressed(): void {
+    this.closeMobileSidebar();
+  }
+
   onSearch(value: string): void {
     this.keyword = value || '';
     this.buildVisibleVessels();
@@ -227,41 +237,25 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges, DoCheck {
     // ให้ Last seen เดินเอง เช่น 1 M, 2 M, 3 M ตาม timestamp จาก backend
     this.realtimeTimer = setInterval(() => {
       this.buildVisibleVessels();
-    }, 1000);
+    }, 30_000);
   }
 
   getStatus(vessel: any): string {
+    // Timestamp เป็นแหล่งเดียวกันทุกหน้า: Idle 1-24 ชม., Offline เกิน 24 ชม.
+    const timestampStatus = getVesselStatusFromTimestamp(vessel?.timestamp);
+    if (timestampStatus !== 'nodata') {
+      return toVesselStatusLabel(timestampStatus);
+    }
+
+    // รองรับ backend รุ่นเก่าที่ส่งเฉพาะข้อความ status โดยไม่มี timestamp
     const rawStatus = String(
-      vessel?.status ||
-        vessel?.statusKey ||
-        vessel?.state ||
-        ''
+      vessel?.status || vessel?.statusKey || vessel?.state || ''
     ).toLowerCase();
 
-    if (rawStatus.includes('offline')) {
-      return 'Offline';
-    }
-
-    if (rawStatus.includes('idle')) {
-      return 'Idle';
-    }
-
-    if (rawStatus.includes('online')) {
-      return 'Online';
-    }
-
-    // ถ้าไม่มี status จาก backend ให้คำนวณจาก Last seen
-    const minute = this.getLastSeenMinute(vessel);
-
-    if (minute > 120) {
-      return 'Offline';
-    }
-
-    if (minute > 30) {
-      return 'Idle';
-    }
-
-    return 'Online';
+    if (rawStatus.includes('offline')) return 'Offline';
+    if (rawStatus.includes('idle')) return 'Idle';
+    if (rawStatus.includes('online')) return 'Online';
+    return 'Offline';
   }
 
   getStatusClass(status: string): string {

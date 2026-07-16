@@ -129,26 +129,13 @@ export class NewHttpClientService {
       prefix,
     };
 
-    console.log('========== GET POINTS START ==========');
-    console.log('GET POINTS URL:', `${URL2}/getpoints`);
-    console.log('GET POINTS PREFIX:', prefix);
-    console.log('GET POINTS BODY:', body);
-
     return this.http
       .post(`${URL2}/getpoints`, body, {
         headers: this.getAuthHeaders(),
       })
       .pipe(
-        map((res: any) => {
-          console.log('GET POINTS RESPONSE FROM BACKEND:', res);
-          console.log('========== GET POINTS END ==========');
-          return res;
-        }),
-        catchError((err) => {
-          console.error('GET POINTS ERROR:', err);
-          console.log('========== GET POINTS ERROR END ==========');
-          return this.handleError<any>(err);
-        })
+        map((res: any) => res),
+        catchError((err) => this.handleError<any>(err))
       );
   }
 
@@ -369,25 +356,13 @@ export class NewHttpClientService {
       Tags: tagNames,
     };
 
-    console.log('========== GET RAW DATA START ==========');
-    console.log('GET RAW DATA URL:', `${URL2}/loggergethistorianvalues`);
-    console.log('GET RAW DATA BODY:', body);
-
     return this.http
       .post(`${URL2}/loggergethistorianvalues`, body, {
         headers: this.getAuthHeaders(),
       })
       .pipe(
-        map((res: any) => {
-          console.log('GET RAW DATA RESPONSE:', res);
-          console.log('========== GET RAW DATA END ==========');
-          return res;
-        }),
-        catchError((err) => {
-          console.error('GET RAW DATA ERROR:', err);
-          console.log('========== GET RAW DATA ERROR END ==========');
-          return this.handleError<any>(err);
-        })
+        map((res: any) => res),
+        catchError((err) => this.handleError<any>(err))
       );
   }
 

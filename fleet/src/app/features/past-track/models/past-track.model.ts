@@ -3,7 +3,7 @@ export type PastTrackStatus = 'Sailing' | 'Idle' | 'No Data';
 export interface PastTrackPoint {
     no: number;
     vesselId: string;
-    /** Display slot generated from the automatic 5/10/15-minute interval. */
+    /** Display slot generated from the automatic 10/30/60-minute interval. */
     time: string;
     /** Original historian timestamp before alignment to a display slot. */
     recordedTime?: string;

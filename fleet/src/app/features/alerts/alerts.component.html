@@ -1,43 +1,80 @@
 <div class="alerts-page">
-  <section class="alerts-hero">
-    <div class="hero-copy">
-      <span class="eyebrow"><i class="fa fa-shield"></i> OPERATIONS CENTER</span>
-      <h1>ALERTS</h1>
-      <p>Live operational alerts and historical alarm events received from the Fleet Visual backend.</p>
+  <header class="page-toolbar">
+    <div class="page-heading">
+      <h1>Alerts Center</h1>
+      <p>Overview <i class="fa fa-angle-right"></i> Alerts Center</p>
     </div>
 
-    <div class="hero-actions">
-      <button
-        type="button"
-        class="action-btn auto-refresh-btn"
-        [class.active]="autoRefresh"
-        (click)="toggleAutoRefresh()"
-      >
-        <span class="live-dot"></span>
-        Auto refresh {{ refreshSeconds }}s
-      </button>
-
-      <button
-        type="button"
-        class="action-btn"
+    <div class="toolbar-actions">
+      <app-date-range-toolbar
+        #dateRange
+        initialPreset="24h"
+        storageKey="alerts"
+        [showThreeDays]="true"
         [disabled]="loading || refreshing"
-        (click)="loadAlerts(true)"
-      >
-        <i class="fa fa-refresh" [class.fa-spin]="refreshing"></i>
-        Refresh
-      </button>
+        [busy]="loading || refreshing"
+        (rangeChange)="onRangeChange($event)"
+        (applied)="onRangeApplied($event)"
+        (validationError)="onRangeError($event)"
+      ></app-date-range-toolbar>
+
+      <label class="top-search">
+        <i class="fa fa-search"></i>
+        <input
+          type="search"
+          placeholder="Search alerts..."
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="onFilterChanged()"
+        />
+      </label>
 
       <button
         type="button"
-        class="action-btn primary"
+        class="toolbar-btn export-btn"
         [disabled]="filteredAlerts.length === 0"
         (click)="exportCsv()"
       >
-        <i class="fa fa-download"></i>
-        Export CSV
+        <i class="fa fa-plus"></i>
+        Export
       </button>
     </div>
-  </section>
+  </header>
+
+  <div class="connection-strip">
+    <div class="connection-left">
+      <span class="live-indicator" [class.connected]="!!backendEndpoint">
+        <span class="pulse-dot"></span>
+        {{ connectionLabel }}
+      </span>
+      <span class="endpoint-name" *ngIf="connectedHost" [title]="backendEndpoint">
+        {{ connectedHost }}
+      </span>
+    </div>
+
+    <div class="connection-actions">
+      <span class="updated-label" *ngIf="lastUpdatedAt">
+        Updated {{ relativeTime(lastUpdatedAt) }}
+      </span>
+      <button
+        type="button"
+        class="auto-refresh-toggle"
+        [class.active]="autoRefresh"
+        (click)="toggleAutoRefresh()"
+      >
+        <i class="fa" [class.fa-toggle-on]="autoRefresh" [class.fa-toggle-off]="!autoRefresh"></i>
+        Auto {{ refreshSeconds }}s
+      </button>
+      <button
+        type="button"
+        class="refresh-btn"
+        [disabled]="loading || refreshing"
+        (click)="loadAlerts(true)"
+        title="Refresh alerts"
+      >
+        <i class="fa fa-refresh" [class.fa-spin]="refreshing"></i>
+      </button>
+    </div>
+  </div>
 
   <section class="summary-grid" aria-label="Alert summary">
     <article
@@ -46,7 +83,7 @@
       [attr.data-tone]="card.tone"
     >
       <div class="summary-icon"><i [class]="card.icon"></i></div>
-      <div class="summary-copy">
+      <div class="summary-content">
         <span>{{ card.label }}</span>
         <strong>{{ card.value }}</strong>
         <small>{{ card.caption }}</small>
@@ -54,279 +91,283 @@
     </article>
   </section>
 
-  <section class="filters-card">
-    <div class="range-section">
-      <div class="section-heading">
-        <span class="section-kicker">TIME RANGE</span>
-        <strong>
-          {{ rangePreset === '24h' ? 'Last 24 Hours' : rangePreset === '3d' ? 'Last 3 Days' : rangePreset === '7d' ? 'Last 7 Days' : 'Custom Range' }}
-        </strong>
-      </div>
+  <section class="filter-panel">
+    <label class="feed-search">
+      <i class="fa fa-search"></i>
+      <input
+        type="search"
+        placeholder="Search alert, vessel, module or system..."
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onFilterChanged()"
+      />
+    </label>
 
-      <div class="preset-group" role="group" aria-label="Alert date range">
-        <button type="button" [class.active]="rangePreset === '24h'" (click)="applyPreset('24h')">24H</button>
-        <button type="button" [class.active]="rangePreset === '3d'" (click)="applyPreset('3d')">3 Days</button>
-        <button type="button" [class.active]="rangePreset === '7d'" (click)="applyPreset('7d')">7 Days</button>
-        <button type="button" [class.active]="rangePreset === 'custom'" (click)="rangePreset = 'custom'">Custom</button>
-      </div>
+    <label class="filter-control">
+      <span>Severity</span>
+      <select [(ngModel)]="severityFilter" (ngModelChange)="onFilterChanged()">
+        <option value="all">All Severity</option>
+        <option value="critical">Critical</option>
+        <option value="major">Major</option>
+        <option value="warning">Warning</option>
+        <option value="info">Information</option>
+        <option value="unknown">Unclassified</option>
+      </select>
+    </label>
 
-      <div class="date-range">
-        <label>
-          <span>START</span>
-          <input type="datetime-local" [(ngModel)]="startInput" />
-        </label>
-        <span class="range-arrow"><i class="fa fa-long-arrow-right"></i></span>
-        <label>
-          <span>END</span>
-          <input type="datetime-local" [(ngModel)]="endInput" />
-        </label>
-        <button type="button" class="apply-range" (click)="applyCustomRange()">
-          <i class="fa fa-check"></i> Apply
-        </button>
+    <label class="filter-control">
+      <span>Status</span>
+      <select [(ngModel)]="stateFilter" (ngModelChange)="onFilterChanged()">
+        <option value="all">All Status</option>
+        <option value="active">Active</option>
+        <option value="acknowledged">Acknowledged</option>
+        <option value="resolved">Resolved</option>
+      </select>
+    </label>
+
+    <label class="filter-control">
+      <span>Vessel</span>
+      <select [(ngModel)]="vesselFilter" (ngModelChange)="onFilterChanged()">
+        <option value="all">All Vessel</option>
+        <option *ngFor="let vessel of vesselOptions" [value]="vessel">{{ vessel }}</option>
+      </select>
+    </label>
+
+    <label class="filter-control">
+      <span>Module</span>
+      <select [(ngModel)]="moduleFilter" (ngModelChange)="onFilterChanged()">
+        <option value="all">All Modules</option>
+        <option *ngFor="let module of moduleOptions" [value]="module">{{ module }}</option>
+      </select>
+    </label>
+
+    <button type="button" class="reset-btn" (click)="resetFilters()">
+      Reset
+    </button>
+  </section>
+
+  <section class="alerts-feed-card">
+    <header class="feed-header">
+      <div>
+        <h2>Alerts Feed</h2>
+        <p>{{ feedDescription }}</p>
       </div>
+      <div class="feed-header-meta">
+        <span class="range-pill"><i class="fa fa-clock-o"></i> {{ rangeLabel }}</span>
+        <span class="event-count">{{ filteredAlerts.length }} events</span>
+      </div>
+    </header>
+
+    <div class="loading-state" *ngIf="loading">
+      <div class="spinner"></div>
+      <strong>Loading alert records</strong>
+      <p>Reading the configured database API or verified live server fallback.</p>
     </div>
 
-    <div class="filter-divider"></div>
-
-    <div class="filter-row">
-      <label class="search-field">
-        <i class="fa fa-search"></i>
-        <input
-          type="search"
-          placeholder="Search vessel, alarm, tag or message..."
-          [(ngModel)]="searchTerm"
-          (ngModelChange)="onFilterChanged()"
-        />
-      </label>
-
-      <label class="select-field">
-        <span>VESSEL</span>
-        <select [(ngModel)]="vesselFilter" (ngModelChange)="onFilterChanged()">
-          <option value="all">All vessels</option>
-          <option *ngFor="let vessel of vesselOptions" [value]="vessel">{{ vessel }}</option>
-        </select>
-      </label>
-
-      <label class="select-field">
-        <span>SEVERITY</span>
-        <select [(ngModel)]="severityFilter" (ngModelChange)="onFilterChanged()">
-          <option value="all">All severities</option>
-          <option value="critical">Critical</option>
-          <option value="major">Major</option>
-          <option value="warning">Warning</option>
-          <option value="info">Information</option>
-          <option value="unknown">Unclassified</option>
-        </select>
-      </label>
-
-      <label class="select-field">
-        <span>STATUS</span>
-        <select [(ngModel)]="stateFilter" (ngModelChange)="onFilterChanged()">
-          <option value="all">All statuses</option>
-          <option value="active">Active</option>
-          <option value="acknowledged">Acknowledged</option>
-          <option value="resolved">Resolved</option>
-        </select>
-      </label>
-
-      <button type="button" class="clear-filter" (click)="clearFilters()">
-        <i class="fa fa-eraser"></i>
-        Clear
+    <div class="error-state" *ngIf="!loading && errorMessage" role="alert">
+      <div class="state-icon error"><i class="fa fa-chain-broken"></i></div>
+      <div>
+        <strong>Unable to load alerts from the backend</strong>
+        <p>{{ errorMessage }}</p>
+        <small>
+          Confirm that the logged-in token can access vessel current information and current telemetry values.
+        </small>
+      </div>
+      <button type="button" (click)="loadAlerts()">
+        <i class="fa fa-refresh"></i> Retry
       </button>
     </div>
+
+    <div
+      class="empty-state"
+      *ngIf="!loading && !errorMessage && filteredAlerts.length === 0"
+    >
+      <div class="state-icon success"><i class="fa fa-check"></i></div>
+      <strong>No alerts found</strong>
+      <p>No live server condition exceeded an alert rule for the selected range and filters.</p>
+    </div>
+
+    <div
+      class="alert-table-wrap"
+      *ngIf="!loading && !errorMessage && filteredAlerts.length > 0"
+    >
+      <table class="alert-table">
+        <thead>
+          <tr>
+            <th class="timestamp-column">Timestamp</th>
+            <th class="severity-column">Severity</th>
+            <th class="vessel-column">Vessel</th>
+            <th class="module-column">Module / System</th>
+            <th>Message</th>
+            <th class="status-column">Status</th>
+            <th class="duration-column">Duration</th>
+            <th class="actions-column"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let alert of pagedAlerts; trackBy: trackByAlert"
+            [attr.data-severity]="alert.severity"
+            [class.critical-row]="
+              (alert.severity === 'critical' || alert.severity === 'major') &&
+              alert.state !== 'resolved'
+            "
+            (click)="openAlert(alert)"
+          >
+            <td class="timestamp-cell">
+              <span class="row-dot"></span>
+              <strong>{{ formatDateTime(alert.occurredAt) }}</strong>
+            </td>
+
+            <td>
+              <span class="severity-badge" [attr.data-severity]="alert.severity">
+                {{ severityLabel(alert.severity) }}
+              </span>
+            </td>
+
+            <td class="vessel-cell">
+              <strong>{{ alert.vesselName }}</strong>
+              <small>{{ alert.vesselId || 'Fleet Visual' }}</small>
+            </td>
+
+            <td class="module-cell">
+              <strong>{{ alertModule(alert) }}</strong>
+              <small>{{ alert.tagName || alert.source || 'System' }}</small>
+            </td>
+
+            <td class="message-cell">
+              <strong>{{ alert.message || alert.title }}</strong>
+              <small *ngIf="alert.title && alert.title !== alert.message">{{ alert.title }}</small>
+            </td>
+
+            <td>
+              <span class="status-badge" [attr.data-state]="alert.state">
+                {{ stateLabel(alert.state) }}
+              </span>
+            </td>
+
+            <td class="duration-cell">{{ durationLabel(alert) }}</td>
+
+            <td class="actions-cell">
+              <button
+                type="button"
+                title="View alert details"
+                (click)="openAlert(alert, $event)"
+              >
+                <i class="fa fa-ellipsis-h"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer
+      class="feed-footer"
+      *ngIf="!loading && !errorMessage && filteredAlerts.length > 0"
+    >
+      <div class="footer-left">
+        <strong>Showing {{ pageStart }} to {{ pageEnd }} of {{ filteredAlerts.length }} alerts</strong>
+        <div class="mini-summary">
+          <span class="mini-critical">Critical {{ summaryCards[0].value }}</span>
+          <span class="mini-warning">Warnings {{ summaryCards[1].value }}</span>
+          <span class="mini-info">Information {{ summaryCards[2].value }}</span>
+          <span class="mini-resolved">Resolved {{ summaryCards[3].value }}</span>
+        </div>
+      </div>
+
+      <div class="pagination">
+        <label class="rows-select">
+          <span>Rows</span>
+          <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChanged()">
+            <option *ngFor="let option of pageSizeOptions" [ngValue]="option">
+              {{ option }}
+            </option>
+          </select>
+        </label>
+
+        <button type="button" [disabled]="page <= 1" (click)="previousPage()">
+          <i class="fa fa-angle-left"></i>
+        </button>
+
+        <button
+          type="button"
+          *ngFor="let pageNumber of pageNumbers"
+          [class.active]="page === pageNumber"
+          (click)="goToPage(pageNumber)"
+        >
+          {{ pageNumber }}
+        </button>
+
+        <button type="button" [disabled]="page >= totalPages" (click)="nextPage()">
+          <i class="fa fa-angle-right"></i>
+        </button>
+      </div>
+    </footer>
   </section>
 
-  <section class="alerts-workspace">
-    <article class="alerts-stream-card">
-      <header class="card-header">
-        <div>
-          <span class="section-kicker">BACKEND EVENT STREAM</span>
-          <div class="title-line">
-            <h2>Alert Timeline</h2>
-            <span class="count-pill">{{ filteredAlerts.length }} events</span>
-          </div>
-        </div>
+  <div class="detail-backdrop" *ngIf="detailOpen" (click)="closeAlertDetail()"></div>
 
-        <div class="backend-meta" *ngIf="backendEndpoint">
-          <span><i class="fa fa-database"></i> Connected</span>
-          <small [title]="backendEndpoint">{{ backendEndpoint }}</small>
+  <aside class="alert-detail-drawer" [class.open]="detailOpen" aria-label="Alert details">
+    <ng-container *ngIf="selectedAlert as alert">
+      <header class="detail-header">
+        <div>
+          <span>Alert Details</span>
+          <h2>{{ alert.title }}</h2>
         </div>
+        <button type="button" (click)="closeAlertDetail()" aria-label="Close alert details">
+          <i class="fa fa-times"></i>
+        </button>
       </header>
 
-      <div class="loading-state" *ngIf="loading">
-        <div class="spinner"></div>
-        <strong>Loading alerts from backend</strong>
-        <span>No sample or generated records are being used.</span>
-      </div>
-
-      <div class="error-state" *ngIf="!loading && errorMessage" role="alert">
-        <div class="state-icon"><i class="fa fa-plug"></i></div>
+      <div class="detail-severity" [attr.data-severity]="alert.severity">
+        <div class="detail-icon"><i [class]="severityIcon(alert.severity)"></i></div>
         <div>
-          <strong>Backend alert feed is unavailable</strong>
-          <p>{{ errorMessage }}</p>
-          <small>Configure the real endpoint in <code>public/alerts.config.json</code>. This page intentionally does not fall back to mock alerts.</small>
+          <span>{{ severityLabel(alert.severity) }} Alert</span>
+          <strong>{{ alert.message }}</strong>
         </div>
-        <button type="button" (click)="loadAlerts()"><i class="fa fa-refresh"></i> Retry</button>
       </div>
 
-      <div class="empty-state" *ngIf="!loading && !errorMessage && filteredAlerts.length === 0">
-        <div class="state-icon success"><i class="fa fa-check"></i></div>
-        <strong>No alerts found</strong>
-        <p>The backend returned no alert records for the selected filters and time range.</p>
-      </div>
-
-      <div class="alert-table-wrap" *ngIf="!loading && !errorMessage && filteredAlerts.length > 0">
-        <table class="alert-table">
-          <thead>
-            <tr>
-              <th class="severity-column">Severity</th>
-              <th>Time</th>
-              <th>Vessel / Source</th>
-              <th>Alert</th>
-              <th>Status</th>
-              <th class="value-column">Value</th>
-              <th class="open-column"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              *ngFor="let alert of pagedAlerts; trackBy: trackByAlert"
-              [class.selected]="selectedAlert?.id === alert.id"
-              [attr.data-severity]="alert.severity"
-              (click)="selectAlert(alert)"
-            >
-              <td class="severity-cell">
-                <span class="severity-badge" [attr.data-severity]="alert.severity">
-                  <i class="fa fa-circle"></i>
-                  {{ severityLabel(alert.severity) }}
-                </span>
-              </td>
-              <td class="time-cell">
-                <strong>{{ formatDateTime(alert.occurredAt) }}</strong>
-                <small>{{ relativeTime(alert.occurredAt) }}</small>
-              </td>
-              <td class="vessel-cell">
-                <strong>{{ alert.vesselName }}</strong>
-                <small>{{ alert.equipment || alert.source || 'Fleet Visual' }}</small>
-              </td>
-              <td class="message-cell">
-                <strong>{{ alert.title }}</strong>
-                <small>{{ alert.message }}</small>
-                <span *ngIf="alert.tagName" class="tag-chip">{{ alert.tagName }}</span>
-              </td>
-              <td>
-                <span class="state-badge" [attr.data-state]="alert.state">
-                  {{ stateLabel(alert.state) }}
-                </span>
-              </td>
-              <td class="value-cell">
-                <strong *ngIf="alert.value !== undefined; else noValue">
-                  {{ alert.value }} <small>{{ alert.unit }}</small>
-                </strong>
-                <ng-template #noValue>—</ng-template>
-              </td>
-              <td class="open-cell"><i class="fa fa-angle-right"></i></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <footer class="table-footer" *ngIf="!loading && !errorMessage && filteredAlerts.length > 0">
-        <span>Showing {{ pageStart }}–{{ pageEnd }} of {{ filteredAlerts.length }}</span>
-
-        <div class="pagination">
-          <label>
-            <span>Rows</span>
-            <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChanged()">
-              <option *ngFor="let option of pageSizeOptions" [ngValue]="option">{{ option }}</option>
-            </select>
-          </label>
-
-          <button type="button" [disabled]="page <= 1" (click)="previousPage()">
-            <i class="fa fa-angle-left"></i>
-          </button>
-          <strong>{{ page }} / {{ totalPages }}</strong>
-          <button type="button" [disabled]="page >= totalPages" (click)="nextPage()">
-            <i class="fa fa-angle-right"></i>
-          </button>
-        </div>
-      </footer>
-    </article>
-
-    <aside class="alert-detail-card">
-      <header class="card-header detail-header">
-        <div>
-          <span class="section-kicker">SELECTED EVENT</span>
-          <h2>Alert Detail</h2>
-        </div>
-        <span class="detail-live" *ngIf="lastUpdatedAt">
-          Updated {{ relativeTime(lastUpdatedAt) }}
+      <div class="detail-status-line">
+        <span class="status-badge" [attr.data-state]="alert.state">
+          {{ stateLabel(alert.state) }}
         </span>
-      </header>
-
-      <div class="detail-empty" *ngIf="!selectedAlert">
-        <div class="state-icon"><i class="fa fa-mouse-pointer"></i></div>
-        <strong>Select an alert</strong>
-        <p>Choose a row from the event stream to inspect the backend payload.</p>
+        <time>{{ formatDateTime(alert.occurredAt) }}</time>
       </div>
 
-      <ng-container *ngIf="selectedAlert as alert">
-        <div class="detail-hero" [attr.data-severity]="alert.severity">
-          <div class="detail-severity-icon">
-            <i class="fa fa-exclamation"></i>
-          </div>
-          <div>
-            <span>{{ severityLabel(alert.severity) }} alert</span>
-            <h3>{{ alert.title }}</h3>
-            <p>{{ alert.message }}</p>
-          </div>
+      <dl class="detail-list">
+        <div><dt>Vessel</dt><dd>{{ alert.vesselName }}</dd></div>
+        <div><dt>Module / System</dt><dd>{{ alertModule(alert) }}</dd></div>
+        <div><dt>Tag</dt><dd class="mono">{{ alert.tagName || '—' }}</dd></div>
+        <div>
+          <dt>Value</dt>
+          <dd>{{ alert.value !== undefined ? alert.value : '—' }} {{ alert.unit || '' }}</dd>
         </div>
-
-        <div class="detail-status-row">
-          <span class="state-badge" [attr.data-state]="alert.state">{{ stateLabel(alert.state) }}</span>
-          <time>{{ formatDateTime(alert.occurredAt) }}</time>
+        <div><dt>Duration</dt><dd>{{ durationLabel(alert) }}</dd></div>
+        <div><dt>Source</dt><dd>{{ alert.source || 'Backend alert service' }}</dd></div>
+        <div><dt>Alert ID</dt><dd class="mono">{{ alert.id }}</dd></div>
+        <div *ngIf="alert.acknowledgedAt">
+          <dt>Acknowledged</dt><dd>{{ formatDateTime(alert.acknowledgedAt) }}</dd>
         </div>
+        <div *ngIf="alert.resolvedAt">
+          <dt>Resolved</dt><dd>{{ formatDateTime(alert.resolvedAt) }}</dd>
+        </div>
+      </dl>
 
-        <dl class="detail-list">
-          <div>
-            <dt>Vessel</dt>
-            <dd>{{ alert.vesselName }}</dd>
-          </div>
-          <div>
-            <dt>Equipment</dt>
-            <dd>{{ alert.equipment || '—' }}</dd>
-          </div>
-          <div>
-            <dt>Tag</dt>
-            <dd>{{ alert.tagName || '—' }}</dd>
-          </div>
-          <div>
-            <dt>Value</dt>
-            <dd>{{ alert.value !== undefined ? alert.value : '—' }} {{ alert.unit || '' }}</dd>
-          </div>
-          <div>
-            <dt>Source</dt>
-            <dd>{{ alert.source || 'Backend alert service' }}</dd>
-          </div>
-          <div>
-            <dt>Alert ID</dt>
-            <dd class="mono">{{ alert.id }}</dd>
-          </div>
-          <div *ngIf="alert.acknowledgedAt">
-            <dt>Acknowledged</dt>
-            <dd>{{ formatDateTime(alert.acknowledgedAt) }}</dd>
-          </div>
-          <div *ngIf="alert.resolvedAt">
-            <dt>Resolved</dt>
-            <dd>{{ formatDateTime(alert.resolvedAt) }}</dd>
-          </div>
-        </dl>
+      <details class="raw-payload">
+        <summary><i class="fa fa-code"></i> Raw backend payload</summary>
+        <pre>{{ alert.raw | json }}</pre>
+      </details>
+    </ng-container>
+  </aside>
 
-        <details class="raw-payload">
-          <summary><i class="fa fa-code"></i> Raw backend payload</summary>
-          <pre>{{ alert.raw | json }}</pre>
-        </details>
-      </ng-container>
-    </aside>
-  </section>
+  <div class="new-alert-toast" *ngIf="newAlertNotice > 0 && latestNewAlert as alert">
+    <div class="toast-icon" [attr.data-severity]="alert.severity">
+      <i [class]="severityIcon(alert.severity)"></i>
+    </div>
+    <div class="toast-copy">
+      <strong>{{ newAlertNotice }} new alert{{ newAlertNotice > 1 ? 's' : '' }}</strong>
+      <span>{{ alert.vesselName }} · {{ alert.message }}</span>
+    </div>
+    <button type="button" (click)="dismissNewAlertNotice()"><i class="fa fa-times"></i></button>
+  </div>
 </div>

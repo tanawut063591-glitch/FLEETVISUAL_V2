@@ -13,6 +13,10 @@ import * as fvInfoReducer from '../../store/reducers/fv-info.reducer';
 import * as fvInfoActions from '../../store/actions/fv-info.action';
 
 import { FvRealtimeService } from '../../shared/services/fv-realtime.service';
+import {
+  getVesselStatusFromTimestamp,
+  toVesselStatusLabel,
+} from '../../shared/utils/vessel-status.util';
 
 import { CardInfo, CardDetail } from './models/card-info.model';
 import { CardConfiguration } from './card-config';
@@ -336,28 +340,8 @@ export class RealtimeComponent implements OnInit, OnDestroy {
 
   getRealtimeStatus(active: any): string {
     const fv = this.getActiveVesselInfo(active);
-
-    if (!fv || !fv.timestamp) {
-      return 'Offline';
-    }
-
-    const last = new Date(fv.timestamp).getTime();
-
-    if (Number.isNaN(last)) {
-      return 'Offline';
-    }
-
-    const diffMinutes = Math.floor((Date.now() - last) / 60000);
-
-    if (diffMinutes > 120) {
-      return 'Offline';
-    }
-
-    if (diffMinutes > 30) {
-      return 'Idle';
-    }
-
-    return 'Online';
+    const status = getVesselStatusFromTimestamp(fv?.timestamp);
+    return status === 'nodata' ? 'Offline' : toVesselStatusLabel(status);
   }
 
   getRealtimeStatusClass(active: any): string {

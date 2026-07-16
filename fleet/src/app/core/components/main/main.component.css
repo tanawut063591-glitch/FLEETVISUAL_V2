@@ -4,7 +4,7 @@
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: #eef5ff;
+  background: var(--main-bg, #eef5ff);
 }
 
 :host,
@@ -38,7 +38,7 @@
   grid-template-columns: var(--fleet-sidebar-width) minmax(0, 1fr);
   grid-template-rows: var(--fleet-header-height) minmax(0, 1fr);
   overflow: hidden;
-  background: #eef5ff;
+  background: var(--main-bg, #eef5ff);
 }
 
 .grid-header {
@@ -61,7 +61,7 @@
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: #f3f6fb;
+  background: var(--surface-bg-2, #f3f6fb);
 }
 
 .grid-content {
@@ -73,7 +73,7 @@
   min-height: 0;
   height: 100%;
   overflow: auto;
-  background: linear-gradient(180deg, #f7fbff 0%, #eef5ff 100%);
+  background: linear-gradient(180deg, var(--surface-bg-2, #f7fbff) 0%, var(--page-bg, #eef5ff) 100%);
   isolation: isolate;
 }
 
@@ -84,24 +84,52 @@
 
 @media screen and (max-width: 991px) {
   .main {
-    grid-template-columns: 1fr;
+    --fleet-header-height: 64px;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: var(--fleet-header-height) minmax(0, 1fr);
     grid-template-areas:
       "grid-header"
       "grid-content";
+    width: 100%;
+    max-width: 100%;
   }
 
+  /*
+    The sidebar component becomes an overlay drawer on mobile.  The grid cell
+    itself must collapse to zero; otherwise its old 310px width remains in the
+    layout and covers half of a phone screen with a blank panel.
+  */
   .grid-sidenav {
     position: fixed;
-    left: 0;
-    top: var(--fleet-header-height);
-    bottom: 0;
-    width: var(--fleet-sidebar-width);
-    min-width: var(--fleet-sidebar-width);
-    max-width: var(--fleet-sidebar-width);
-    height: calc(100vh - var(--fleet-header-height));
-    height: calc(100dvh - var(--fleet-header-height));
-    z-index: 1100;
+    inset: 0 auto auto 0;
+    z-index: 2400;
+    width: 0;
+    min-width: 0;
+    max-width: 0;
+    height: 0;
+    min-height: 0;
+    overflow: visible;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .grid-sidenav > * {
+    pointer-events: auto;
+  }
+
+  .grid-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: max(76px, env(safe-area-inset-bottom));
+  }
+
+  .grid-content.is-overview {
+    padding-bottom: 0;
   }
 }
 

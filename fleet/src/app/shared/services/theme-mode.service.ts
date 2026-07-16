@@ -7,7 +7,7 @@ export type ThemeMode = 'light' | 'dark';
 })
 export class ThemeModeService {
   private readonly storageKey = 'fleet-theme-mode';
-  private readonly defaultMode: ThemeMode = 'light';
+  private readonly defaultMode: ThemeMode = 'dark';
 
   init(): ThemeMode {
     const savedMode = this.getSavedMode();

@@ -19,7 +19,7 @@ import {
   ɵɵloadQuery,
   ɵɵqueryRefresh,
   ɵɵviewQuery
-} from "./chunk-5PYD7ZWX.js";
+} from "./chunk-M2DAZTYR.js";
 import {
   fromEvent
 } from "./chunk-HWYXSU2G.js";
@@ -41,7 +41,7 @@ import {
   __publicField,
   __spreadProps,
   __spreadValues
-} from "./chunk-PCCZHGCK.js";
+} from "./chunk-GDDGRWFQ.js";
 
 // node_modules/pdfjs-dist/build/pdf.mjs
 var pdf_exports = {};
@@ -5759,16 +5759,16 @@ if (isNodeJS) {
   const loadPackages = async () => {
     const fs = await import(
       /*webpackIgnore: true*/
-      "./fs-YLOVRJ3V.js"
+      "./fs-M5K5NDZ7.js"
     ), http = await import(
       /*webpackIgnore: true*/
-      "./http-3Y2OVHDV.js"
+      "./http-TY4OBK4P.js"
     ), https = await import(
       /*webpackIgnore: true*/
-      "./https-TXQI6BGQ.js"
+      "./https-H4I5RWH5.js"
     ), url = await import(
       /*webpackIgnore: true*/
-      "./url-26QW6IDG.js"
+      "./url-APR2KECB.js"
     );
     let canvas, path2d;
     return new Map(Object.entries({

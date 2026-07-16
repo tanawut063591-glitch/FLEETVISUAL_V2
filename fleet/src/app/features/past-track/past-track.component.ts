@@ -9,7 +9,6 @@ import {
   PastTrackSummary,
 } from './models/past-track.model';
 import { PastTrackService } from '../../shared/services/past-track.service';
-import { PastTrackMapComponent } from './components/past-track-map/past-track-map.component';
 
 type PlaybackSpeed = '0.5x' | '1x' | '1.5x' | '2x';
 type RangeMode = 1 | 3 | 7 | 'custom';
@@ -29,7 +28,7 @@ interface HistoryPreset {
 })
 export class PastTrackComponent implements OnInit, OnDestroy {
   @ViewChild('routeWorkspace') routeWorkspace?: ElementRef<HTMLElement>;
-  @ViewChild(PastTrackMapComponent) pastTrackMapComponent?: PastTrackMapComponent;
+  @ViewChild('routeMapExport') routeMapExport?: ElementRef<HTMLElement>;
   readonly maxHistoryDays = 7;
   readonly historyPresets: HistoryPreset[] = [
     { days: 1, label: '1 Day', intervalMinutes: 10, checkpointMinutes: 60 },
@@ -48,6 +47,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
   samplingIntervalMinutes = 10;
   checkpointIntervalMinutes = 60;
   customRangeOpen = false;
+  exportingMap = false;
 
   loading = false;
   errorMessage = '';
@@ -58,7 +58,6 @@ export class PastTrackComponent implements OnInit, OnDestroy {
 
   isPlaying = false;
   playbackSpeed: PlaybackSpeed = '1x';
-  mapExporting = false;
 
   private routeSub: Subscription | null = null;
   private loadSub: Subscription | null = null;
@@ -106,7 +105,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       this.refreshMaxDateTime();
     }
   }
-
+  
   applyCustomRange(): void {
     const start = this.parseInputDate(this.customStartDate);
     const end = this.parseInputDate(this.customEndDate);
@@ -313,35 +312,6 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     return `${hours} hour${hours === 1 ? '' : 's'}`;
   }
 
-  async exportMapPng(): Promise<void> {
-    if (!this.pastTrackMapComponent || this.trackPoints.length === 0 || this.mapExporting) {
-      return;
-    }
-
-    this.mapExporting = true;
-    this.errorMessage = '';
-
-    try {
-      const vesselName = this.summary?.vesselName || this.vesselId || 'vessel';
-      const fileName = `past-track-map-${this.getExportRangeName()}-${this.toSafeFileName(
-        vesselName
-      )}.png`;
-      const subtitle = `${vesselName} • ${this.getRangeStartLabel()} → ${this.getRangeEndLabel()}`;
-
-      await this.pastTrackMapComponent.exportPng(
-        fileName,
-        'PAST TRACK ROUTE MAP',
-        subtitle
-      );
-    } catch (error: unknown) {
-      console.error('[PastTrackComponent] exportMapPng error:', error);
-      this.errorMessage =
-        'Cannot export the route map image. Please wait for the map to finish loading and try again.';
-    } finally {
-      this.mapExporting = false;
-    }
-  }
-
   exportCsv(): void {
     if (!this.trackPoints.length) {
       console.warn('[PastTrackComponent] No past track data to export');
@@ -395,6 +365,166 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
+  }
+
+  async exportMapPng(): Promise<void> {
+    if (!this.routeMapExport?.nativeElement || this.trackPoints.length === 0 || this.exportingMap) {
+      return;
+    }
+
+    this.exportingMap = true;
+
+    try {
+      const html2canvasModule = await import('html2canvas/dist/html2canvas.esm.js');
+      const html2canvas = html2canvasModule.default;
+      const canvas = await html2canvas(this.routeMapExport.nativeElement, {
+        backgroundColor: '#eaf4fb',
+        scale: Math.min(2, window.devicePixelRatio || 1.5),
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        imageTimeout: 7000,
+      });
+
+      if (!canvas.width || !canvas.height) {
+        throw new Error('Map capture returned an empty canvas');
+      }
+
+      this.downloadCanvas(canvas, this.getMapExportFileName());
+    } catch (error) {
+      console.warn('[PastTrackComponent] Google map capture unavailable. Using vector fallback.', error);
+      const fallback = this.buildVectorMapCanvas();
+      this.downloadCanvas(fallback, this.getMapExportFileName());
+    } finally {
+      this.exportingMap = false;
+    }
+  }
+
+  private buildVectorMapCanvas(): HTMLCanvasElement {
+    const width = 1600;
+    const height = 920;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      return canvas;
+    }
+
+    ctx.fillStyle = '#eaf6fb';
+    ctx.fillRect(0, 0, width, height);
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, '#dff3fb');
+    gradient.addColorStop(1, '#bfe6f4');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 110, width, height - 110);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, 110);
+    ctx.fillStyle = '#0f2344';
+    ctx.font = '700 32px Segoe UI, Arial';
+    ctx.fillText(`${this.summary?.vesselName || this.vesselId} · PAST TRACK`, 46, 48);
+    ctx.fillStyle = '#60708a';
+    ctx.font = '600 18px Segoe UI, Arial';
+    ctx.fillText(`${this.getRangeStartLabel()}  →  ${this.getRangeEndLabel()}   ·   Every ${this.samplingIntervalMinutes} min`, 46, 82);
+
+    const valid = this.trackPoints.filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+    if (valid.length === 0) {
+      return canvas;
+    }
+
+    const latitudes = valid.map((point) => point.lat);
+    const longitudes = valid.map((point) => point.lng);
+    let minLat = Math.min(...latitudes);
+    let maxLat = Math.max(...latitudes);
+    let minLng = Math.min(...longitudes);
+    let maxLng = Math.max(...longitudes);
+
+    if (minLat === maxLat) { minLat -= 0.01; maxLat += 0.01; }
+    if (minLng === maxLng) { minLng -= 0.01; maxLng += 0.01; }
+
+    const padX = 90;
+    const padTop = 170;
+    const padBottom = 80;
+    const plotWidth = width - padX * 2;
+    const plotHeight = height - padTop - padBottom;
+    const project = (point: PastTrackPoint) => ({
+      x: padX + ((point.lng - minLng) / (maxLng - minLng)) * plotWidth,
+      y: padTop + (1 - (point.lat - minLat) / (maxLat - minLat)) * plotHeight,
+    });
+
+    ctx.strokeStyle = 'rgba(70, 126, 158, 0.20)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 8; i += 1) {
+      const x = padX + (plotWidth / 8) * i;
+      const y = padTop + (plotHeight / 8) * i;
+      ctx.beginPath(); ctx.moveTo(x, padTop); ctx.lineTo(x, padTop + plotHeight); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(padX + plotWidth, y); ctx.stroke();
+    }
+
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 7;
+    for (let i = 1; i < valid.length; i += 1) {
+      const a = project(valid[i - 1]);
+      const b = project(valid[i]);
+      ctx.strokeStyle = valid[i].status === 'Idle' ? '#f59e0b' : valid[i].status === 'No Data' ? '#94a3b8' : '#12ad71';
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+
+    const drawMarker = (point: PastTrackPoint, label: string, color: string) => {
+      const pos = project(point);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(pos.x, pos.y, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(pos.x, pos.y, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 15px Segoe UI, Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, pos.x, pos.y + 1);
+    };
+
+    drawMarker(valid[0], 'S', '#12ad71');
+    drawMarker(valid[valid.length - 1], 'E', '#ef4455');
+
+    if (this.selectedPoint) {
+      drawMarker(this.selectedPoint, '•', '#2563eb');
+    }
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.fillRect(45, height - 58, width - 90, 38);
+    ctx.fillStyle = '#38506b';
+    ctx.font = '600 15px Segoe UI, Arial';
+    ctx.fillText('Vector route export is used when browser security blocks Google map tiles. Route coordinates are preserved.', 62, height - 33);
+
+    return canvas;
+  }
+
+  private downloadCanvas(canvas: HTMLCanvasElement, filename: string): void {
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }, 'image/png', 1);
+  }
+
+  private getMapExportFileName(): string {
+    return `past-track-map-${this.getExportRangeName()}-${this.toSafeFileName(this.vesselId || 'vessel')}.png`;
   }
 
   private startPlayback(): void {

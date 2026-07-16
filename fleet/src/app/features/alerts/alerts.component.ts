@@ -1,11 +1,9 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Subscription, timer } from 'rxjs';
 
-import {
-  AlertRecord,
-  AlertSeverity,
-  AlertState,
-} from '../../shared/models/alert.model';
+import { AlertRecord, AlertSeverity, AlertState } from '../../shared/models/alert.model';
+import { DateRangeToolbarComponent } from '../../shared/components/date-range-toolbar/date-range-toolbar.component';
+import { DateRangeSelection } from '../../shared/models/date-range.model';
 import { AlertStateService } from '../../shared/services/alert-state.service';
 import { AlertsService } from '../../shared/services/alerts.service';
 
@@ -13,11 +11,9 @@ interface AlertSummaryCard {
   label: string;
   value: number;
   icon: string;
-  tone: 'critical' | 'major' | 'warning' | 'info' | 'resolved';
+  tone: 'critical' | 'warning' | 'info' | 'resolved';
   caption: string;
 }
-
-type RangePreset = '24h' | '3d' | '7d' | 'custom';
 
 @Component({
   selector: 'app-alerts',
@@ -26,43 +22,58 @@ type RangePreset = '24h' | '3d' | '7d' | 'custom';
   standalone: false,
 })
 export class AlertsComponent implements OnInit, OnDestroy {
+  @ViewChild('dateRange') dateRange?: DateRangeToolbarComponent;
   alerts: AlertRecord[] = [];
   selectedAlert: AlertRecord | null = null;
+  detailOpen = false;
 
   loading = false;
   refreshing = false;
   errorMessage = '';
   backendEndpoint = '';
   lastUpdatedAt = '';
+  sourceType: 'database' | 'telemetry' | '' = '';
 
-  rangePreset: RangePreset = '24h';
-  startInput = '';
-  endInput = '';
+  currentRange: DateRangeSelection | null = null;
 
   searchTerm = '';
   severityFilter: AlertSeverity | 'all' = 'all';
-  stateFilter: AlertState | 'all' = 'active';
+  stateFilter: AlertState | 'all' = 'all';
   vesselFilter = 'all';
+  moduleFilter = 'all';
 
   autoRefresh = true;
-  refreshSeconds = 30;
+  refreshSeconds = 15;
 
   page = 1;
-  pageSize = 25;
-  readonly pageSizeOptions = [10, 25, 50, 100];
+  pageSize = 20;
+  readonly pageSizeOptions = [10, 20, 50, 100];
+
+  newAlertNotice = 0;
+  latestNewAlert: AlertRecord | null = null;
 
   private autoRefreshSub?: Subscription;
   private requestSub?: Subscription;
   private configSub?: Subscription;
+  private noticeTimer?: ReturnType<typeof setTimeout>;
+  private knownActiveAlertIds = new Set<string>();
+  private hasLoadedOnce = false;
+
+  private filteredCacheSource?: AlertRecord[];
+  private filteredCacheKey = '';
+  private filteredCache: AlertRecord[] = [];
+  private derivedCacheSource?: AlertRecord[];
+  private vesselOptionsCache: string[] = [];
+  private moduleOptionsCache: string[] = [];
+  private summaryCardsCache: AlertSummaryCard[] = [];
+  private activeCountCache = 0;
 
   constructor(
     private alertsService: AlertsService,
-    private alertState: AlertStateService
+    private alertState: AlertStateService,
   ) {}
 
   ngOnInit(): void {
-    this.applyPreset('24h', false);
-
     this.configSub = this.alertsService.getRefreshSeconds().subscribe((seconds) => {
       this.refreshSeconds = seconds;
       this.restartAutoRefresh();
@@ -75,44 +86,50 @@ export class AlertsComponent implements OnInit, OnDestroy {
     this.autoRefreshSub?.unsubscribe();
     this.requestSub?.unsubscribe();
     this.configSub?.unsubscribe();
+    if (this.noticeTimer) clearTimeout(this.noticeTimer);
   }
 
   get filteredAlerts(): AlertRecord[] {
+    const key = [
+      this.searchTerm.trim().toLowerCase(),
+      this.severityFilter,
+      this.stateFilter,
+      this.vesselFilter,
+      this.moduleFilter,
+    ].join('|');
+
+    if (this.filteredCacheSource === this.alerts && this.filteredCacheKey === key) {
+      return this.filteredCache;
+    }
+
     const search = this.searchTerm.trim().toLowerCase();
-
-    return this.alerts.filter((alert) => {
-      if (this.severityFilter !== 'all' && alert.severity !== this.severityFilter) {
+    this.filteredCache = this.alerts.filter((alert) => {
+      if (this.severityFilter !== 'all' && alert.severity !== this.severityFilter) return false;
+      if (this.stateFilter !== 'all' && alert.state !== this.stateFilter) return false;
+      if (this.vesselFilter !== 'all' && alert.vesselName !== this.vesselFilter) return false;
+      if (this.moduleFilter !== 'all' && this.alertModule(alert) !== this.moduleFilter)
         return false;
-      }
+      if (!search) return true;
 
-      if (this.stateFilter !== 'all' && alert.state !== this.stateFilter) {
-        return false;
-      }
-
-      if (this.vesselFilter !== 'all' && alert.vesselName !== this.vesselFilter) {
-        return false;
-      }
-
-      if (!search) {
-        return true;
-      }
-
-      const haystack = [
+      return [
         alert.title,
         alert.message,
         alert.vesselName,
         alert.tagName,
         alert.equipment,
+        alert.source,
         alert.severity,
         alert.state,
       ]
         .join(' ')
-        .toLowerCase();
-
-      return haystack.includes(search);
+        .toLowerCase()
+        .includes(search);
     });
+    this.filteredCacheSource = this.alerts;
+    this.filteredCacheKey = key;
+    return this.filteredCache;
   }
-
+  
   get pagedAlerts(): AlertRecord[] {
     const start = (this.page - 1) * this.pageSize;
     return this.filteredAlerts.slice(start, start + this.pageSize);
@@ -130,134 +147,149 @@ export class AlertsComponent implements OnInit, OnDestroy {
     return Math.min(this.page * this.pageSize, this.filteredAlerts.length);
   }
 
+  get pageNumbers(): number[] {
+    const visible = 5;
+    let start = Math.max(1, this.page - Math.floor(visible / 2));
+    let end = Math.min(this.totalPages, start + visible - 1);
+    start = Math.max(1, end - visible + 1);
+
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }
+
   get vesselOptions(): string[] {
-    return Array.from(new Set(this.alerts.map((alert) => alert.vesselName)))
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
+    this.ensureAlertDerivatives();
+    return this.vesselOptionsCache;
+  }
+
+  get moduleOptions(): string[] {
+    this.ensureAlertDerivatives();
+    return this.moduleOptionsCache;
   }
 
   get activeCount(): number {
-    return this.alerts.filter((alert) => alert.state === 'active').length;
+    this.ensureAlertDerivatives();
+    return this.activeCountCache;
   }
 
   get summaryCards(): AlertSummaryCard[] {
-    return [
-      {
-        label: 'Active Alerts',
-        value: this.activeCount,
-        icon: 'fa fa-bell',
-        tone: 'critical',
-        caption: 'Requires attention',
-      },
-      {
-        label: 'Critical / Major',
-        value: this.countSeverity('critical') + this.countSeverity('major'),
-        icon: 'fa fa-exclamation-triangle',
-        tone: 'major',
-        caption: 'Highest priority',
-      },
-      {
-        label: 'Warning',
-        value: this.countSeverity('warning'),
-        icon: 'fa fa-warning',
-        tone: 'warning',
-        caption: 'Operational warning',
-      },
-      {
-        label: 'Information',
-        value: this.countSeverity('info'),
-        icon: 'fa fa-info-circle',
-        tone: 'info',
-        caption: 'Advisory events',
-      },
-      {
-        label: 'Resolved',
-        value: this.alerts.filter((alert) => alert.state === 'resolved').length,
-        icon: 'fa fa-check-circle',
-        tone: 'resolved',
-        caption: 'Cleared in range',
-      },
-    ];
+    this.ensureAlertDerivatives();
+    return this.summaryCardsCache;
   }
 
-  applyPreset(preset: RangePreset, load = true): void {
-    this.rangePreset = preset;
+  get rangeLabel(): string {
+    return this.currentRange?.label || 'Last 24 Hours';
+  }
 
-    if (preset !== 'custom') {
-      const end = new Date();
-      const start = new Date(end);
+  get connectionLabel(): string {
+    if (this.sourceType === 'database') return 'Database API connected';
+    if (this.sourceType === 'telemetry') return 'Live telemetry connected';
+    return this.loading ? 'Connecting to backend' : 'Backend disconnected';
+  }
 
-      if (preset === '24h') start.setHours(end.getHours() - 24);
-      if (preset === '3d') start.setDate(end.getDate() - 3);
-      if (preset === '7d') start.setDate(end.getDate() - 7);
+  get feedDescription(): string {
+    return this.sourceType === 'database'
+      ? 'Persisted alert records returned by the server database API'
+      : 'Verified alerts calculated from live vessel status and telemetry returned by the server';
+  }
 
-      this.startInput = this.toDateTimeLocal(start);
-      this.endInput = this.toDateTimeLocal(end);
+  get connectedHost(): string {
+    if (!this.backendEndpoint) return '';
+    if (this.backendEndpoint.startsWith('/fleet-api')) return 'fleetvisual.com · live proxy';
+    if (this.backendEndpoint.startsWith('/api2')) return 'FleetVisual API2 · live proxy';
+
+    try {
+      return new URL(this.backendEndpoint).host;
+    } catch {
+      return this.backendEndpoint;
     }
+  }
 
+  onRangeChange(range: DateRangeSelection): void {
+    const isInitialRange = !this.currentRange;
+    this.currentRange = range;
     this.page = 1;
-    if (load) this.loadAlerts();
+    if (isInitialRange) this.loadAlerts();
   }
 
-  applyCustomRange(): void {
-    if (!this.startInput || !this.endInput) {
-      this.errorMessage = 'Select both start and end date/time.';
-      return;
-    }
-
-    const start = new Date(this.startInput).getTime();
-    const end = new Date(this.endInput).getTime();
-
-    if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) {
-      this.errorMessage = 'The start date/time must be earlier than the end date/time.';
-      return;
-    }
-
-    this.rangePreset = 'custom';
+  onRangeApplied(range: DateRangeSelection): void {
+    this.currentRange = range;
     this.page = 1;
     this.loadAlerts();
   }
 
+  onRangeError(message: string): void {
+    this.errorMessage = message;
+  }
+
   loadAlerts(silent = false): void {
-    if (!this.startInput || !this.endInput) return;
+    if (silent && (this.loading || this.refreshing)) return;
+
+    if (silent) {
+      const refreshedRange = this.dateRange?.getSelection(true);
+      if (refreshedRange) this.currentRange = refreshedRange;
+    }
+
+    if (!this.currentRange) return;
 
     this.requestSub?.unsubscribe();
     this.errorMessage = '';
-
-    if (silent) {
+    const keepVisibleData = silent || this.hasLoadedOnce;
+    if (keepVisibleData) {
       this.refreshing = true;
     } else {
       this.loading = true;
+      this.alerts = [];
+      this.backendEndpoint = '';
+      this.sourceType = '';
+      this.lastUpdatedAt = '';
+      this.alertState.setActiveCount(0);
     }
 
     const query = {
-      startTime: new Date(this.startInput).toISOString(),
-      endTime: new Date(this.endInput).toISOString(),
+      startTime: this.currentRange.startTime,
+      endTime: this.currentRange.endTime,
       page: 1,
-      pageSize: 5000,
+      pageSize: 1000,
     };
 
-    this.requestSub = this.alertsService.fetchAlerts(query).subscribe({
+    this.requestSub = this.alertsService.fetchAlerts(query, silent).subscribe({
       next: (result) => {
+        const incomingActive = result.alerts.filter((alert) => alert.state !== 'resolved');
+        const newActiveAlerts = this.hasLoadedOnce
+          ? incomingActive.filter((alert) => !this.knownActiveAlertIds.has(alert.id))
+          : [];
+
         this.alerts = result.alerts;
         this.backendEndpoint = result.endpoint;
         this.lastUpdatedAt = result.fetchedAt;
+        this.sourceType = result.sourceType || 'telemetry';
         this.loading = false;
         this.refreshing = false;
         this.page = Math.min(this.page, this.totalPages);
 
-        const currentSelected = this.selectedAlert
-          ? this.alerts.find((alert) => alert.id === this.selectedAlert?.id)
-          : null;
+        this.knownActiveAlertIds = new Set(incomingActive.map((alert) => alert.id));
+        this.hasLoadedOnce = true;
 
-        this.selectedAlert = currentSelected || this.filteredAlerts[0] || this.alerts[0] || null;
+        if (newActiveAlerts.length > 0) {
+          this.showNewAlertNotice(newActiveAlerts);
+        }
+
+        if (this.selectedAlert) {
+          this.selectedAlert =
+            this.alerts.find((alert) => alert.id === this.selectedAlert?.id) || this.selectedAlert;
+        }
+
         this.alertState.setActiveCount(this.activeCount);
       },
       error: (error) => {
-        this.alerts = [];
-        this.selectedAlert = null;
         this.loading = false;
         this.refreshing = false;
+        this.alerts = [];
+        this.backendEndpoint = '';
+        this.lastUpdatedAt = '';
+        this.knownActiveAlertIds.clear();
+        this.selectedAlert = null;
+        this.detailOpen = false;
         this.alertState.setActiveCount(0);
         this.errorMessage = error?.message || 'Unable to load alerts from the backend.';
       },
@@ -269,33 +301,49 @@ export class AlertsComponent implements OnInit, OnDestroy {
     this.restartAutoRefresh();
   }
 
-  selectAlert(alert: AlertRecord): void {
+  openAlert(alert: AlertRecord, event?: Event): void {
+    event?.stopPropagation();
     this.selectedAlert = alert;
+    this.detailOpen = true;
   }
 
-  clearFilters(): void {
+  closeAlertDetail(): void {
+    this.detailOpen = false;
+  }
+
+  resetFilters(): void {
     this.searchTerm = '';
     this.severityFilter = 'all';
     this.stateFilter = 'all';
     this.vesselFilter = 'all';
+    this.moduleFilter = 'all';
     this.page = 1;
   }
 
   onFilterChanged(): void {
     this.page = 1;
-    this.selectedAlert = this.filteredAlerts[0] || null;
   }
 
   onPageSizeChanged(): void {
     this.page = 1;
   }
 
+  goToPage(page: number): void {
+    this.page = Math.min(this.totalPages, Math.max(1, page));
+  }
+
   previousPage(): void {
-    this.page = Math.max(1, this.page - 1);
+    this.goToPage(this.page - 1);
   }
 
   nextPage(): void {
-    this.page = Math.min(this.totalPages, this.page + 1);
+    this.goToPage(this.page + 1);
+  }
+
+  dismissNewAlertNotice(): void {
+    this.newAlertNotice = 0;
+    this.latestNewAlert = null;
+    if (this.noticeTimer) clearTimeout(this.noticeTimer);
   }
 
   exportCsv(): void {
@@ -307,12 +355,13 @@ export class AlertsComponent implements OnInit, OnDestroy {
       'Severity',
       'State',
       'Vessel',
+      'Module / System',
       'Title',
       'Message',
-      'Equipment',
       'Tag',
       'Value',
       'Unit',
+      'Duration',
       'Source',
     ];
 
@@ -321,12 +370,13 @@ export class AlertsComponent implements OnInit, OnDestroy {
       alert.severity,
       alert.state,
       alert.vesselName,
+      this.alertModule(alert),
       alert.title,
       alert.message,
-      alert.equipment,
       alert.tagName,
       alert.value ?? '',
       alert.unit ?? '',
+      this.durationLabel(alert),
       alert.source ?? '',
     ]);
 
@@ -343,17 +393,30 @@ export class AlertsComponent implements OnInit, OnDestroy {
     URL.revokeObjectURL(url);
   }
 
+  alertModule(alert: AlertRecord): string {
+    if (alert.equipment) return alert.equipment;
+    if (alert.source) return alert.source;
+
+    const tag = String(alert.tagName || '');
+    const separator = tag.indexOf('-');
+    return separator > 0 ? tag.slice(0, separator) : 'System';
+  }
+
   severityLabel(severity: AlertSeverity): string {
-    return severity === 'unknown'
-      ? 'Unclassified'
-      : severity.charAt(0).toUpperCase() + severity.slice(1);
+    return severity === 'unknown' ? 'Info' : severity.charAt(0).toUpperCase() + severity.slice(1);
+  }
+
+  severityIcon(severity: AlertSeverity): string {
+    if (severity === 'critical' || severity === 'major') return 'fa fa-exclamation';
+    if (severity === 'warning') return 'fa fa-warning';
+    return 'fa fa-info';
   }
 
   stateLabel(state: AlertState): string {
     return state.charAt(0).toUpperCase() + state.slice(1);
   }
 
-  formatDateTime(value: string): string {
+  formatDateTime(value?: string): string {
     if (!value) return '—';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
@@ -383,29 +446,111 @@ export class AlertsComponent implements OnInit, OnDestroy {
     return formatter.format(Math.round(diffSeconds / 86400), 'day');
   }
 
+  durationLabel(alert: AlertRecord): string {
+    const start = new Date(alert.occurredAt).getTime();
+    if (!Number.isFinite(start)) return '—';
+
+    const endValue = alert.resolvedAt || (alert.state === 'active' ? new Date().toISOString() : '');
+    const end = endValue ? new Date(endValue).getTime() : start;
+    if (!Number.isFinite(end) || end < start) return '—';
+
+    let seconds = Math.floor((end - start) / 1000);
+    const days = Math.floor(seconds / 86400);
+    seconds %= 86400;
+    const hours = Math.floor(seconds / 3600);
+    seconds %= 3600;
+    const minutes = Math.floor(seconds / 60);
+    seconds %= 60;
+
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
   trackByAlert(_: number, alert: AlertRecord): string {
     return alert.id;
   }
 
-  private countSeverity(severity: AlertSeverity): number {
-    return this.alerts.filter(
-      (alert) => alert.severity === severity && alert.state !== 'resolved'
-    ).length;
+  private ensureAlertDerivatives(): void {
+    if (this.derivedCacheSource === this.alerts) return;
+
+    const vessels = new Set<string>();
+    const modules = new Set<string>();
+    let critical = 0;
+    let warnings = 0;
+    let information = 0;
+    let resolved = 0;
+    let active = 0;
+
+    for (const alert of this.alerts) {
+      if (alert.vesselName) vessels.add(alert.vesselName);
+      const moduleName = this.alertModule(alert);
+      if (moduleName) modules.add(moduleName);
+
+      if (alert.state === 'resolved') {
+        resolved += 1;
+        continue;
+      }
+
+      active += 1;
+      if (alert.severity === 'critical' || alert.severity === 'major') critical += 1;
+      else if (alert.severity === 'warning') warnings += 1;
+      else information += 1;
+    }
+
+    this.vesselOptionsCache = Array.from(vessels).sort((a, b) => a.localeCompare(b));
+    this.moduleOptionsCache = Array.from(modules).sort((a, b) => a.localeCompare(b));
+    this.activeCountCache = active;
+    this.summaryCardsCache = [
+      {
+        label: 'Critical Alerts',
+        value: critical,
+        icon: 'fa fa-exclamation-triangle',
+        tone: 'critical',
+        caption: 'High-priority events',
+      },
+      {
+        label: 'Warnings',
+        value: warnings,
+        icon: 'fa fa-warning',
+        tone: 'warning',
+        caption: 'Operational warnings',
+      },
+      {
+        label: 'Information',
+        value: information,
+        icon: 'fa fa-info-circle',
+        tone: 'info',
+        caption: 'System information',
+      },
+      {
+        label: 'Resolved',
+        value: resolved,
+        icon: 'fa fa-check-circle',
+        tone: 'resolved',
+        caption: 'Server-confirmed only',
+      },
+    ];
+    this.derivedCacheSource = this.alerts;
   }
 
   private restartAutoRefresh(): void {
     this.autoRefreshSub?.unsubscribe();
-
     if (!this.autoRefresh) return;
 
-    this.autoRefreshSub = timer(this.refreshSeconds * 1000, this.refreshSeconds * 1000)
-      .subscribe(() => this.loadAlerts(true));
+    this.autoRefreshSub = timer(this.refreshSeconds * 1000, this.refreshSeconds * 1000).subscribe(
+      () => this.loadAlerts(true),
+    );
   }
 
-  private toDateTimeLocal(date: Date): string {
-    const pad = (value: number) => String(value).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
-      `T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  private showNewAlertNotice(alerts: AlertRecord[]): void {
+    this.newAlertNotice = alerts.length;
+    this.latestNewAlert =
+      alerts.find((alert) => alert.severity === 'critical' || alert.severity === 'major') ||
+      alerts[0];
+
+    if (this.noticeTimer) clearTimeout(this.noticeTimer);
+    this.noticeTimer = setTimeout(() => this.dismissNewAlertNotice(), 8000);
   }
 
   private escapeCsv(value: unknown): string {

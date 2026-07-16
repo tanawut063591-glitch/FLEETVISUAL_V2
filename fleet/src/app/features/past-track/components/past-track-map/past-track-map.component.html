@@ -1,4 +1,4 @@
-<section #mapPanel class="map-panel">
+<section class="map-panel">
 
     <div class="panel-header">
         <div>
@@ -14,7 +14,7 @@
         </div>
     </div>
 
-    <div #mapWrap class="map-wrap">
+    <div class="map-wrap">
         <div #pastTrackMap class="google-map" [class.hide-map]="useFallbackMap"></div>
 
         <div class="map-type-switch" *ngIf="!useFallbackMap" role="group" aria-label="Map type">

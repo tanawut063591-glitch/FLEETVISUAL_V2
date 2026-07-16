@@ -1,9 +1,10 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subject, of, timer } from 'rxjs';
+import { catchError, exhaustMap, switchMap, takeUntil } from 'rxjs/operators';
 import { ThemeModeService } from '../../../shared/services/theme-mode.service';
 import { AlertStateService } from '../../../shared/services/alert-state.service';
+import { AlertsService } from '../../../shared/services/alerts.service';
 
 /*
   รูปแบบข้อมูลของเมนูบน Header
@@ -155,7 +156,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private themeModeService: ThemeModeService,
-    private alertState: AlertStateService
+    private alertState: AlertStateService,
+    private alertsService: AlertsService
   ) {}
 
   /*
@@ -168,6 +170,50 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.alertState.activeCount$
       .pipe(takeUntil(this.destroy$))
       .subscribe((count) => (this.alertCount = count));
+
+    this.startAlertMonitor();
+  }
+
+  /**
+   * Polls the real alert feed while the main layout is open so the Alerts badge
+   * stays current even before the user visits the Alerts page. Failures are kept
+   * silent here; the full error is shown inside the Alerts Center page.
+   */
+  private startAlertMonitor(): void {
+    this.alertsService
+      .getRefreshSeconds()
+      .pipe(
+        switchMap((seconds) => timer(0, Math.max(30, seconds) * 1000)),
+        exhaustMap(() => {
+          // Alerts/Log pages already refresh the same source themselves. Avoid
+          // duplicate fleet-wide telemetry requests while either page is open.
+          if (/\/main\/(alerts|log)/.test(this.router.url)) {
+            return of(null);
+          }
+          const end = new Date();
+          const start = new Date(end);
+          start.setDate(end.getDate() - 7);
+
+          return this.alertsService
+            .fetchAlerts({
+              startTime: start.toISOString(),
+              endTime: end.toISOString(),
+              page: 1,
+              pageSize: 1000,
+            })
+            .pipe(catchError(() => of(null)));
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((result) => {
+        if (!result) return;
+
+        const activeCount = result.alerts.filter(
+          (alert) => alert.state !== 'resolved'
+        ).length;
+
+        this.alertState.setActiveCount(activeCount);
+      });
   }
 
   ngOnDestroy(): void {
@@ -206,13 +252,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
       this.userImage = savedUserImage;
     }
 
-    const savedAlertCount =
-      localStorage.getItem('alertCount') ||
-      sessionStorage.getItem('alertCount');
-
-    if (savedAlertCount) {
-      this.alertCount = Number(savedAlertCount) || 0;
-    }
   }
 
   /*
@@ -249,7 +288,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   /*
     โหลด theme จาก localStorage
-    default เป็น Light และจำโหมดล่าสุดของผู้ใช้ไว้ใน localStorage
+    default เป็น Dark และจำโหมดล่าสุดของผู้ใช้ไว้ใน localStorage
   */
   private initThemeMode(): void {
     const mode = this.themeModeService.init();

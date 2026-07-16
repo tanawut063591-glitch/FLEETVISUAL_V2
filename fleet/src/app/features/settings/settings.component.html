@@ -1,0 +1,267 @@
+<div class="settings-page">
+  <header class="settings-header">
+    <div>
+      <h1>Settings</h1>
+      <p>Manage system preferences and data configuration</p>
+    </div>
+  </header>
+
+  <nav class="settings-tabs" aria-label="Settings sections">
+    <button
+      type="button"
+      *ngFor="let tab of tabs"
+      [class.active]="activeTab === tab.id"
+      (click)="selectTab(tab.id)"
+    >
+      <i [class]="tab.icon"></i>
+      {{ tab.label }}
+    </button>
+  </nav>
+
+  <section class="general-panel" *ngIf="activeTab === 'general'">
+    <div class="panel-heading">
+      <div>
+        <h2>General Preferences</h2>
+        <p>Shared display and monitoring preferences for this browser.</p>
+      </div>
+    </div>
+    <div class="preference-grid">
+      <label class="preference-card">
+        <span class="preference-icon"><i class="fa fa-adjust"></i></span>
+        <span>
+          <strong>Default theme</strong>
+          <small>Choose the interface appearance.</small>
+        </span>
+        <select [(ngModel)]="theme">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </label>
+      <label class="preference-card">
+        <span class="preference-icon"><i class="fa fa-refresh"></i></span>
+        <span>
+          <strong>Alert refresh interval</strong>
+          <small>Between 10 and 300 seconds.</small>
+        </span>
+        <input type="number" min="10" max="300" [(ngModel)]="alertRefreshSeconds" />
+      </label>
+    </div>
+    <div class="panel-actions">
+      <span class="save-notice" *ngIf="saveNotice">{{ saveNotice }}</span>
+      <button type="button" class="primary-btn" (click)="saveGeneral()">Save Preferences</button>
+    </div>
+  </section>
+
+  <section class="users-panel" *ngIf="activeTab === 'users'">
+    <div class="panel-heading">
+      <div>
+        <h2>User Management</h2>
+        <p>Current authenticated account and permission source.</p>
+      </div>
+    </div>
+    <article class="user-card">
+      <div class="avatar">{{ username.charAt(0).toUpperCase() }}</div>
+      <div>
+        <strong>{{ username }}</strong>
+        <span>Administrator</span>
+        <small>Loaded from the active FleetVisual session.</small>
+      </div>
+      <span class="source-chip">Session user</span>
+    </article>
+    <div class="integration-note">
+      <i class="fa fa-info-circle"></i>
+      User create, role and permission changes require a dedicated management endpoint from the backend.
+    </div>
+  </section>
+
+  <section class="groups-panel" *ngIf="activeTab === 'groups'">
+    <div class="panel-heading">
+      <div>
+        <h2>Vessel Groups</h2>
+        <p>Groups are calculated from the backend vessel records and local settings changes.</p>
+      </div>
+      <button type="button" class="ghost-btn" (click)="loadVessels(true)">
+        <i class="fa fa-refresh" [class.fa-spin]="loading || refreshing"></i> Refresh
+      </button>
+    </div>
+    <div class="group-grid">
+      <article *ngFor="let group of groupSummary">
+        <span class="group-icon"><i class="fa fa-object-group"></i></span>
+        <strong>{{ group.name }}</strong>
+        <b>{{ group.count }}</b>
+        <small>vessels</small>
+      </article>
+      <div class="empty-inline" *ngIf="!loading && groupSummary.length === 0">No group data available.</div>
+    </div>
+  </section>
+
+  <section class="vessel-panel" *ngIf="activeTab === 'vessels'">
+    <div class="panel-heading">
+      <div>
+        <h2>Vessel Management</h2>
+        <p>Manage and configure all vessels in the system.</p>
+      </div>
+      <div class="heading-actions">
+        <span class="backend-label"><i class="fa fa-database"></i> Optimized backend read + local workspace</span>
+        <button type="button" class="primary-btn" (click)="openAdd()">
+          <i class="fa fa-plus"></i> Add Vessel
+        </button>
+      </div>
+    </div>
+
+    <div class="table-tools">
+      <label class="table-search">
+        <i class="fa fa-search"></i>
+        <input type="search" placeholder="Search vessel..." [(ngModel)]="searchTerm" (ngModelChange)="page = 1" />
+      </label>
+      <button type="button" class="ghost-btn" (click)="loadVessels(true)">
+        <i class="fa fa-refresh" [class.fa-spin]="loading || refreshing"></i> Refresh
+      </button>
+    </div>
+
+    <div class="loading-box" *ngIf="loading">
+      <span class="spinner"></span>
+      <strong>Loading vessel records...</strong>
+    </div>
+
+    <div class="error-box" *ngIf="!loading && errorMessage">
+      <i class="fa fa-exclamation-circle"></i>
+      <span>{{ errorMessage }}</span>
+      <button type="button" (click)="loadVessels(true)">Retry</button>
+    </div>
+
+    <div class="vessel-table-wrap" *ngIf="!loading && !errorMessage">
+      <table class="vessel-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Image</th>
+            <th>Name</th>
+            <th>Prefix</th>
+            <th>Nationality</th>
+            <th>Customer</th>
+            <th>Owner</th>
+            <th>Agency</th>
+            <th>Group</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let vessel of pagedVessels; trackBy: trackByVessel">
+            <td data-label="ID">{{ vessel.id }}</td>
+            <td data-label="Image">
+              <div class="vessel-thumb">
+                <img *ngIf="vessel.image" [src]="vessel.image" alt="" />
+                <i *ngIf="!vessel.image" class="fa fa-ship"></i>
+              </div>
+            </td>
+            <td data-label="Name">
+              <strong>{{ vessel.name }}</strong>
+              <small [attr.data-status]="vessel.status">{{ vessel.status }}</small>
+            </td>
+            <td data-label="Prefix"><span class="prefix-chip">{{ vessel.prefix }}</span></td>
+            <td data-label="Nationality">{{ vessel.nationality || '—' }}</td>
+            <td data-label="Customer">{{ vessel.customer || '—' }}</td>
+            <td data-label="Owner">{{ vessel.owner || '—' }}</td>
+            <td data-label="Agency">{{ vessel.agency || '—' }}</td>
+            <td data-label="Group"><span class="group-count">{{ vessel.groups.length }}</span></td>
+            <td data-label="Action">
+              <div class="row-actions">
+                <button type="button" class="edit" title="Edit vessel" (click)="openEdit(vessel)">
+                  <i class="fa fa-pencil"></i>
+                </button>
+                <button type="button" class="delete" title="Remove vessel" (click)="deleteVessel(vessel)">
+                  <i class="fa fa-trash-o"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="pagedVessels.length === 0">
+            <td colspan="10" class="empty-table">No vessel records match this search.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="table-footer" *ngIf="!loading && !errorMessage">
+      <span>Showing {{ pageStart }} to {{ pageEnd }} of {{ filteredVessels.length }} vessels</span>
+      <div class="pagination">
+        <button type="button" (click)="goToPage(page - 1)" [disabled]="page === 1"><i class="fa fa-angle-left"></i></button>
+        <button type="button" *ngFor="let number of pageNumbers" [class.active]="page === number" (click)="goToPage(number)">{{ number }}</button>
+        <button type="button" (click)="goToPage(page + 1)" [disabled]="page === totalPages"><i class="fa fa-angle-right"></i></button>
+      </div>
+      <select [(ngModel)]="pageSize" (ngModelChange)="page = 1">
+        <option [ngValue]="10">10 / page</option>
+        <option [ngValue]="20">20 / page</option>
+        <option [ngValue]="50">50 / page</option>
+      </select>
+    </footer>
+
+    <div class="summary-cards">
+      <article><span class="summary-icon total"><i class="fa fa-ship"></i></span><div><small>Total Vessels</small><strong>{{ vessels.length }}</strong><p>Backend and local records</p></div></article>
+      <article><span class="summary-icon online"><i class="fa fa-bell-o"></i></span><div><small>Online Vessels</small><strong>{{ onlineCount }}</strong><p>Currently online</p></div></article>
+      <article><span class="summary-icon offline"><i class="fa fa-bell-o"></i></span><div><small>Offline Vessels</small><strong>{{ offlineCount }}</strong><p>Currently offline</p></div></article>
+      <article><span class="summary-icon groups"><i class="fa fa-users"></i></span><div><small>Groups</small><strong>{{ groupSummary.length }}</strong><p>Vessel groups</p></div></article>
+    </div>
+  </section>
+
+  <div class="drawer-backdrop" *ngIf="drawerOpen" (click)="closeDrawer()"></div>
+  <aside class="vessel-drawer" [class.open]="drawerOpen" aria-label="Vessel editor">
+    <header>
+      <div>
+        <h2>{{ editingId ? 'Edit Vessel' : 'Add Vessel' }}</h2>
+        <p>{{ editingId ? 'Update local vessel settings' : 'Create a vessel workspace record' }}</p>
+      </div>
+      <button type="button" (click)="closeDrawer()"><i class="fa fa-times"></i></button>
+    </header>
+
+    <div class="drawer-content">
+      <h3>Basic Information</h3>
+      <label>Vessel ID <em>*</em><input type="text" [(ngModel)]="form.id" [disabled]="!!editingId" placeholder="Enter vessel ID" /></label>
+      <label>Vessel Name <em>*</em><input type="text" [(ngModel)]="form.name" placeholder="Enter vessel name" /></label>
+      <label>Prefix <em>*</em><input type="text" [(ngModel)]="form.prefix" placeholder="Enter telemetry prefix" /></label>
+
+      <label class="image-upload">
+        <input type="file" accept="image/png,image/jpeg" (change)="onImageSelected($event)" />
+        <img *ngIf="form.image" [src]="form.image" alt="Vessel preview" />
+        <span *ngIf="!form.image"><i class="fa fa-cloud-upload"></i><strong>Click to upload image</strong><small>PNG, JPG up to 5 MB</small></span>
+      </label>
+
+      <label>Description<textarea rows="3" [(ngModel)]="form.description" placeholder="Enter vessel description"></textarea></label>
+
+      <h3>Additional Information</h3>
+      <div class="form-grid">
+        <label>Nationality<select [(ngModel)]="form.nationality"><option value="">Select nationality</option><option *ngFor="let option of nationalityOptions" [value]="option">{{ option }}</option></select></label>
+        <label>Customer<input type="text" [(ngModel)]="form.customer" placeholder="Enter customer" /></label>
+        <label>Owner<input type="text" [(ngModel)]="form.owner" placeholder="Enter owner" /></label>
+        <label>Agency<input type="text" [(ngModel)]="form.agency" placeholder="Enter agency" /></label>
+      </div>
+
+      <h3>Groups</h3>
+      <div class="group-options">
+        <label *ngFor="let group of groupOptions">
+          <input type="checkbox" [checked]="form.groups.includes(group)" (change)="toggleGroup(group, $any($event.target).checked)" />
+          {{ group }}
+        </label>
+      </div>
+
+      <h3>Engine</h3>
+      <div class="engine-add">
+        <input type="text" [(ngModel)]="newEngine" (keyup.enter)="addEngine()" placeholder="Enter engine" />
+        <button type="button" (click)="addEngine()"><i class="fa fa-plus"></i> Add Engine</button>
+      </div>
+      <div class="engine-list">
+        <div *ngFor="let engine of form.engines; let index = index">
+          <span>{{ index + 1 }}</span><strong>{{ engine }}</strong><button type="button" (click)="removeEngine(index)"><i class="fa fa-times"></i></button>
+        </div>
+      </div>
+
+      <div class="save-message" *ngIf="saveNotice">{{ saveNotice }}</div>
+    </div>
+
+    <footer>
+      <button type="button" class="cancel-btn" (click)="closeDrawer()">Cancel</button>
+      <button type="button" class="primary-btn" (click)="saveVessel()">Save Vessel</button>
+    </footer>
+  </aside>
+</div>

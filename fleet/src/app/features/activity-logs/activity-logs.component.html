@@ -1,0 +1,227 @@
+<div class="activity-page">
+  <header class="page-toolbar">
+    <div class="page-heading">
+      <h1>Activity Logs</h1>
+      <p>Overview <i class="fa fa-angle-right"></i> Activity Logs</p>
+    </div>
+
+    <div class="toolbar-actions">
+      <app-date-range-toolbar
+        #dateRange
+        initialPreset="24h"
+        storageKey="activity-logs"
+        [showThreeDays]="false"
+        [showThirtyDays]="true"
+        [disabled]="loading || refreshing"
+        [busy]="loading || refreshing"
+        (rangeChange)="onRangeChange($event)"
+        (applied)="onRangeApplied($event)"
+        (validationError)="onRangeError($event)"
+      ></app-date-range-toolbar>
+      <label class="toolbar-search">
+        <i class="fa fa-search"></i>
+        <input
+          type="search"
+          placeholder="Search logs..."
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="onFilterChange()"
+        />
+      </label>
+      <button
+        class="export-btn"
+        type="button"
+        (click)="exportCsv()"
+        [disabled]="!filteredLogs.length"
+      >
+        <i class="fa fa-plus"></i> Export
+      </button>
+    </div>
+  </header>
+
+  <div class="connection-strip">
+    <div>
+      <span class="connection-dot" [class.connected]="backendConnected"></span>
+      <strong>{{ connectionLabel }}</strong>
+      <small *ngIf="source" [title]="source">{{ source }}</small>
+    </div>
+    <div class="refresh-actions">
+      <span *ngIf="lastUpdatedAt">Updated {{ formatTime(lastUpdatedAt) }}</span>
+      <button type="button" [class.active]="autoRefresh" (click)="toggleAutoRefresh()">
+        <i class="fa" [class.fa-toggle-on]="autoRefresh" [class.fa-toggle-off]="!autoRefresh"></i>
+        Auto 20s
+      </button>
+      <button
+        type="button"
+        (click)="loadLogs(true)"
+        [disabled]="loading || refreshing"
+        title="Refresh"
+      >
+        <i class="fa fa-refresh" [class.fa-spin]="refreshing"></i>
+      </button>
+    </div>
+  </div>
+
+  <section class="overview-grid">
+    <article class="system-map-card">
+      <div class="section-title">
+        <div>
+          <h2>GRID MAP <span>(SYSTEM STATUS)</span></h2>
+          <p>Health checks calculated from the latest database or verified server response</p>
+        </div>
+        <span class="range-pill"><i class="fa fa-clock-o"></i> {{ rangeLabel }}</span>
+      </div>
+
+      <div class="status-grid">
+        <div class="status-card" *ngFor="let status of statuses" [attr.data-state]="status.state">
+          <i [class]="statusIcon(status)"></i>
+          <strong>{{ status.label }}</strong>
+          <small>{{ status.detail }}</small>
+        </div>
+      </div>
+
+      <div class="status-legend">
+        <span><i class="normal"></i> Normal</span>
+        <span><i class="warning"></i> Warning</span>
+        <span><i class="critical"></i> Critical</span>
+        <span><i class="offline"></i> Offline</span>
+      </div>
+    </article>
+
+    <div class="metric-grid">
+      <article class="metric-card total">
+        <div class="metric-icon"><i class="fa fa-file-text-o"></i></div>
+        <span>Total Logs</span>
+        <strong>{{ logs.length | number }}</strong>
+        <small>Records in selected range</small>
+      </article>
+      <article class="metric-card critical">
+        <div class="metric-icon"><i class="fa fa-exclamation-triangle"></i></div>
+        <span>Critical Events</span>
+        <strong>{{ criticalCount | number }}</strong>
+        <small>Immediate attention required</small>
+      </article>
+      <article class="metric-card warning">
+        <div class="metric-icon"><i class="fa fa-warning"></i></div>
+        <span>Warnings</span>
+        <strong>{{ warningCount | number }}</strong>
+        <small>Operational conditions</small>
+      </article>
+      <article class="metric-card success">
+        <div class="metric-icon"><i class="fa fa-check-circle-o"></i></div>
+        <span>Success Rate</span>
+        <strong>{{ successRate | number: '1.1-1' }}%</strong>
+        <small>Healthy and informational events</small>
+      </article>
+    </div>
+  </section>
+
+  <section class="feed-card">
+    <header class="feed-header">
+      <div>
+        <h2>Activity Feed</h2>
+        <p>{{ feedDescription }}</p>
+      </div>
+      <div class="feed-filters">
+        <label>
+          <i class="fa fa-search"></i>
+          <input
+            type="search"
+            placeholder="Search event, vessel, module..."
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onFilterChange()"
+          />
+        </label>
+        <select [(ngModel)]="severityFilter" (ngModelChange)="onFilterChange()">
+          <option value="all">All Severity</option>
+          <option value="critical">Critical</option>
+          <option value="warning">Warning</option>
+          <option value="info">Information</option>
+          <option value="success">Success</option>
+        </select>
+        <select [(ngModel)]="categoryFilter" (ngModelChange)="onFilterChange()">
+          <option value="all">All Modules</option>
+          <option *ngFor="let category of categories" [value]="category">{{ category }}</option>
+        </select>
+        <button type="button" class="reset-btn" (click)="resetFilters()">Reset</button>
+      </div>
+    </header>
+
+    <div class="loading-state" *ngIf="loading">
+      <div class="spinner"></div>
+      <strong>Loading backend activity</strong>
+      <p>Reading live alert and vessel status sources from the server.</p>
+    </div>
+
+    <div class="error-state" *ngIf="!loading && errorMessage">
+      <i class="fa fa-chain-broken"></i>
+      <div>
+        <strong>Unable to load activity logs</strong>
+        <p>{{ errorMessage }}</p>
+      </div>
+      <button type="button" (click)="loadLogs()">Retry</button>
+    </div>
+
+    <div class="empty-state" *ngIf="!loading && !errorMessage && !filteredLogs.length">
+      <i class="fa fa-check-circle-o"></i>
+      <strong>No activity found</strong>
+      <p>No live server events matched this date range and filter.</p>
+    </div>
+
+    <div class="activity-table" *ngIf="!loading && !errorMessage && filteredLogs.length">
+      <div class="table-head">
+        <span>Timestamp</span>
+        <span>Severity</span>
+        <span>Message</span>
+        <span>Module / Source</span>
+      </div>
+
+      <article
+        class="activity-row"
+        *ngFor="let row of pagedLogs; trackBy: trackByLog"
+        [attr.data-severity]="row.severity"
+      >
+        <div class="timestamp-cell">
+          <i class="event-dot"></i>
+          <strong>{{ formatTime(row.timestamp) }}</strong>
+          <small>{{ formatDate(row.timestamp) }}</small>
+        </div>
+        <div>
+          <span class="severity-badge" [attr.data-severity]="row.severity">{{
+            severityLabel(row.severity)
+          }}</span>
+        </div>
+        <div class="message-cell">
+          <strong>{{ row.message }}</strong>
+          <small
+            >{{ row.detail
+            }}<ng-container *ngIf="row.vesselName"> · {{ row.vesselName }}</ng-container></small
+          >
+        </div>
+        <div class="module-cell">
+          <strong>{{ row.module }}</strong>
+          <small>{{ row.source }}</small>
+        </div>
+      </article>
+    </div>
+
+    <footer class="feed-footer" *ngIf="filteredLogs.length">
+      <span>Showing {{ pageStart }} to {{ pageEnd }} of {{ filteredLogs.length }} events</span>
+      <div class="pagination">
+        <button type="button" (click)="goToPage(page - 1)" [disabled]="page === 1">
+          <i class="fa fa-angle-left"></i>
+        </button>
+        <button
+          type="button"
+          *ngFor="let pageNumber of pageNumbers"
+          [class.active]="page === pageNumber"
+          (click)="goToPage(pageNumber)"
+        >
+          {{ pageNumber }}
+        </button>
+        <button type="button" (click)="goToPage(page + 1)" [disabled]="page === totalPages">
+          <i class="fa fa-angle-right"></i>
+        </button>
+      </div>
+    </footer>
+  </section>
+</div>

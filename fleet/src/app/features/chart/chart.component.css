@@ -628,3 +628,143 @@
 :host-context([data-theme='dark']) .auto-btn.active .toggle-dot {
     background: #2563eb !important;
 }
+
+
+/* MOBILE PRO LAYOUT */
+@media screen and (max-width: 860px) {
+  .chart-page {
+    min-height: 100%;
+    padding: 8px;
+  }
+
+  .chart-workspace {
+    margin-top: 8px;
+    border-radius: 16px;
+  }
+
+  .chart-toolbar {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .toolbar-left,
+  .toolbar-actions {
+    width: 100%;
+  }
+
+  .toolbar-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px 44px;
+    gap: 8px;
+  }
+
+  .mode-label {
+    grid-column: 1 / -1;
+  }
+
+  .mode-switch {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 44px;
+  }
+
+  .mode-switch button {
+    min-width: 0;
+    padding: 0 8px;
+  }
+
+  .auto-btn {
+    width: 100%;
+    height: 44px;
+    justify-content: space-between;
+  }
+
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .chart-meta {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 10px 12px;
+  }
+
+  .chart-meta div {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .parameter-strip {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 10px 12px 12px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .parameter-chip {
+    flex: 0 0 auto;
+    max-width: 84vw;
+    scroll-snap-align: start;
+  }
+
+  .parameter-chip span:not(.chip-color) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .chart-content {
+    min-height: 0;
+  }
+
+  .chart-main {
+    padding: 10px;
+  }
+
+  .chart-card-head {
+    padding: 12px 12px 6px;
+  }
+
+  .chart-card-head h3 {
+    font-size: 14px;
+  }
+
+  .card-tools {
+    display: none;
+  }
+
+  .big-chart {
+    height: clamp(320px, 58vh, 440px);
+  }
+
+  .group-chart {
+    height: 320px;
+  }
+
+  .state-card {
+    min-height: 330px;
+    padding: 24px 14px;
+  }
+
+  .chart-side {
+    padding: 0 10px 12px;
+  }
+
+  .side-panel {
+    padding: 13px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .chart-page { padding: 6px; }
+  .chart-workspace { border-radius: 14px; }
+  .tab-title, .selected-pill { width: 100%; }
+  .tab-title { justify-content: flex-start; }
+  .toolbar-actions { grid-template-columns: minmax(0, 1fr) 42px 42px; }
+  .auto-btn span { font-size: 11px; }
+  .big-chart { height: 340px; }
+  .group-chart { height: 300px; }
+}

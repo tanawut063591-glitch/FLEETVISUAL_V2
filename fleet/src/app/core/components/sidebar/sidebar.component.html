@@ -2,9 +2,14 @@
   class="sidebar-toggle-btn"
   type="button"
   *ngIf="isSm"
+  aria-label="Open vessel selector"
+  aria-controls="mobile-vessel-drawer"
+  [attr.aria-expanded]="isShowMenu"
   (click)="toggle()"
 >
-  <i class="fa fa-bars"></i>
+  <i class="fa fa-ship" aria-hidden="true"></i>
+  <span>Vessels</span>
+  <strong>{{ visibleVessels.length }}</strong>
 </button>
 
 <div
@@ -13,7 +18,7 @@
   (click)="closeMobileSidebar()"
 ></div>
 
-<div class="main" [class.is-open]="isShowMenu">
+<div id="mobile-vessel-drawer" class="main" [class.is-open]="isShowMenu" [attr.aria-hidden]="isSm && !isShowMenu">
   <aside class="vessel-sidebar">
     <!-- Header -->
     <div class="sidebar-header">
@@ -29,9 +34,10 @@
         class="close-btn"
         type="button"
         *ngIf="isSm"
-        (click)="toggle()"
+        aria-label="Close vessel selector"
+        (click)="closeMobileSidebar()"
       >
-        <i class="fa fa-times"></i>
+        <i class="fa fa-times" aria-hidden="true"></i>
       </button>
     </div>
 

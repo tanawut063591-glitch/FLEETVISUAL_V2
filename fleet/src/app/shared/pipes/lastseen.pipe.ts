@@ -1,38 +1,21 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { isDate } from 'moment';
 
 @Pipe({
   name: 'lastseen',
-  standalone: false
+  standalone: false,
 })
 export class LastseenPipe implements PipeTransform {
+  transform(timestamp: string, nowTime: Date): string {
+    if (!timestamp || timestamp === '---') return '---';
 
-  transform(timestamp: string, nowtinme: Date): unknown {
-    if(timestamp && timestamp !== '---' && isDate(new Date(timestamp))){
-      const ts = new Date(timestamp);
-      if(nowtinme > ts ){
-        const time = nowtinme.getTime() - (ts.getTime());
-        const m = time/(60 * 1000);
-        let lastTime: string = "0";
-        switch(true){
-          case m >= 60 && m < 1440:
-            lastTime = parseInt((m/60).toString())+"H";
-            break;
-          case m >= 1440:
-            lastTime = parseInt((m/1440).toString())+"D";
-            break;
-          default:
-            lastTime = parseInt(m.toString())+"M";
-            break;
-        }
-        return lastTime;
-      } else {
-        return "0M";
-      }
-    } else {
-      //console.log("---")
-      return "---";
-    }
+    const seenAt = new Date(timestamp);
+    const now = nowTime instanceof Date ? nowTime : new Date(nowTime);
+    if (Number.isNaN(seenAt.getTime()) || Number.isNaN(now.getTime())) return '---';
+    if (now.getTime() <= seenAt.getTime()) return '0M';
+
+    const minutes = Math.max(0, Math.floor((now.getTime() - seenAt.getTime()) / 60_000));
+    if (minutes >= 1440) return `${Math.floor(minutes / 1440)}D`;
+    if (minutes >= 60) return `${Math.floor(minutes / 60)}H`;
+    return `${minutes}M`;
   }
-
 }

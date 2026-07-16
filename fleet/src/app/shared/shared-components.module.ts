@@ -22,6 +22,7 @@ import { ReportMessageAlertComponent } from './components/report-message-alert/r
 import { SelectedVesselCardComponent } from './components/selected-vessel-card/selected-vessel-card.component';
 import { ReportPdfViewerComponent } from './components/report-pdf-viewer/report-pdf-viewer.component';
 import { ReportInfoBarComponent } from './components/report-info-bar/report-info-bar.component';
+import { DateRangeToolbarComponent } from './components/date-range-toolbar/date-range-toolbar.component';
 
 const SHARED_DECLARATIONS = [
   BillingStatusPipe,
@@ -37,6 +38,7 @@ const SHARED_DECLARATIONS = [
   SelectedVesselCardComponent,
   ReportPdfViewerComponent,
   ReportInfoBarComponent,
+  DateRangeToolbarComponent,
 ];
 
 @NgModule({

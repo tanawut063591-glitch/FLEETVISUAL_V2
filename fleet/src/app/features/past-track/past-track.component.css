@@ -22,38 +22,31 @@
 }
 
 .heading-block {
-  position: relative;
   min-width: 0;
-  flex: 1 1 auto;
-  max-width: 760px;
-  min-height: 82px;
-  padding: 15px 18px 15px 22px;
-  border: 1px solid var(--border-color);
-  border-radius: 14px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 58%),
-    var(--card-bg);
-  box-shadow: var(--shadow-card);
+}
+
+.breadcrumb {
+  min-width: 340px;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--soft-border);
+  border-radius: 9px;
+  background: var(--surface-bg-2);
+  color: var(--muted-txt);
   display: flex;
   align-items: center;
-  overflow: hidden;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.heading-accent {
-  position: absolute;
-  inset: 12px auto 12px 0;
-  width: 4px;
-  border-radius: 0 999px 999px 0;
-  background: linear-gradient(180deg, var(--accent), var(--accent-2));
-  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 42%, transparent);
-}
-
-.heading-copy {
-  min-width: 0;
+.breadcrumb b {
+  color: var(--primary-txt);
+  font-weight: 900;
 }
 
 .page-header h1 {
-  margin: 0 0 7px;
+  margin: 10px 0 4px;
   font-size: 30px;
   line-height: 1;
   font-weight: 900;
@@ -64,8 +57,7 @@
   margin: 0;
   color: var(--muted-txt);
   font-size: 13px;
-  line-height: 1.45;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .header-actions {
@@ -514,9 +506,9 @@
     padding: 14px;
   }
 
-  .heading-block {
+  .breadcrumb {
+    min-width: 0;
     width: 100%;
-    max-width: none;
   }
 
   .header-actions {
@@ -605,23 +597,22 @@
   }
 }
 
-/* Map PNG export action */
-.btn.map-export {
-  background: color-mix(in srgb, #10b981 9%, var(--card-bg));
-  color: #047857;
-  border-color: color-mix(in srgb, #10b981 38%, var(--border-color));
-  box-shadow: 0 10px 22px rgba(16, 185, 129, 0.10);
+.route-map-export-frame {
+  display: block;
+  min-width: 0;
+  border-radius: inherit;
 }
 
-.btn.map-export:hover:not(:disabled) {
-  color: #065f46;
-  border-color: #10b981;
-  box-shadow: 0 14px 28px rgba(16, 185, 129, 0.16);
+.heading-block {
+  padding: 14px 17px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-left: 4px solid #2563eb;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.75);
 }
 
-:host-context([data-theme='dark']) .btn.map-export {
-  background: rgba(16, 185, 129, 0.10);
-  color: #6ee7b7;
-  border-color: rgba(52, 211, 153, 0.34);
-  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.30);
+:host-context([data-theme='dark']) .heading-block {
+  border-color: rgba(148, 163, 184, 0.18);
+  border-left-color: #3b82f6;
+  background: rgba(10, 15, 24, 0.86);
 }

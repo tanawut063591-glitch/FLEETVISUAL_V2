@@ -15,6 +15,7 @@ import { Subscription } from 'rxjs';
 import { VesselPopupService } from '../../../shared/services/vessel-popup.service';
 import { FvRealtimeService } from '../../../shared/services/fv-realtime.service';
 import { NewHttpClientService } from '../../../shared/services/http-client1.service';
+import { getVesselStatusFromTimestamp } from '../../../shared/utils/vessel-status.util';
 
 declare var google: any;
 
@@ -59,8 +60,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   private resizeObserver?: ResizeObserver;
   private resizeTimer: ReturnType<typeof setTimeout> | null = null;
   private mapInitRetryTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly idleAfterMinutes = 30;
-  private readonly offlineAfterMinutes = 60;
   private readonly realtimeRefreshMs = 15000; // รีเฟรช popup/map เพื่อให้ Last seen เดินตามข้อมูล
 
   // tag ที่ใช้แสดง Today Summary ใน popup
@@ -504,11 +503,11 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
       if (!Number.isNaN(date.getTime())) {
         diffMinutes = Math.max(0, (Date.now() - date.getTime()) / 60000);
+        const timestampStatus = getVesselStatusFromTimestamp(timestamp);
 
-        // ข้อมูลที่เก่าเกินเกณฑ์ต้องเป็น Offline แม้ status เดิมยังค้างว่า Online
-        // ทำให้ Marker บนแผนที่ตรงกับ Sidebar เช่น MV GEMIA 2 H
-        if (diffMinutes >= this.offlineAfterMinutes) {
-          return 'offline';
+        // Timestamp ใช้เกณฑ์เดียวกับ Sidebar และ Realtime
+        if (timestampStatus === 'offline' || timestampStatus === 'idle') {
+          return timestampStatus;
         }
       }
     }
@@ -517,12 +516,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
     if (textStatus) {
       return textStatus;
-    }
-
-    // ใช้ Idle จากเวลาเฉพาะเมื่อ Backend ไม่ได้ส่งสถานะมาเท่านั้น
-    // จึงไม่ทำให้เรือที่มี status Online เดิมกลายเป็น Idle จำนวนมาก
-    if (diffMinutes !== null && diffMinutes >= this.idleAfterMinutes) {
-      return 'idle';
     }
 
     if (

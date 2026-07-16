@@ -1,7 +1,7 @@
 import {
   isPlatformServer
-} from "./chunk-TRDCCLPD.js";
-import "./chunk-WT4MODDA.js";
+} from "./chunk-LWHMQREU.js";
+import "./chunk-XVQ4GNIA.js";
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,7 +11,7 @@ import {
   Injectable,
   InjectionToken,
   PLATFORM_ID,
-  computed,
+  PendingTasks,
   effect,
   inject,
   input,
@@ -25,11 +25,11 @@ import {
   ɵɵdefineComponent,
   ɵɵdefineDirective,
   ɵɵdefineInjectable
-} from "./chunk-5PYD7ZWX.js";
+} from "./chunk-M2DAZTYR.js";
 import "./chunk-HWYXSU2G.js";
 import "./chunk-JRFR6BLO.js";
 import "./chunk-MARUHEWW.js";
-import "./chunk-PCCZHGCK.js";
+import "./chunk-GDDGRWFQ.js";
 
 // node_modules/highcharts-angular/fesm2022/highcharts-angular.mjs
 var HIGHCHARTS_LOADER = new InjectionToken("HIGHCHARTS_LOADER");
@@ -47,19 +47,58 @@ var _HighchartsChartService = class _HighchartsChartService {
     this.globalModules = inject(HIGHCHARTS_ROOT_MODULES, {
       optional: true
     });
+    this.sharedHighchartsPromise = null;
+    this.moduleLoadCache = /* @__PURE__ */ new WeakMap();
   }
-  async loadHighchartsWithModules(partialConfig) {
-    const highcharts = await this.loader();
-    await Promise.allSettled([...this.globalModules?.() ?? [], ...partialConfig?.modules?.() ?? []]);
-    return highcharts;
-  }
-  load(partialConfig) {
-    this.loadHighchartsWithModules(partialConfig).then((highcharts) => {
-      if (this.globalOptions) {
-        highcharts.setOptions(this.globalOptions);
+  async loadModules(modulesFactory) {
+    if (!modulesFactory) {
+      return;
+    }
+    const cachedLoad = this.moduleLoadCache.get(modulesFactory);
+    if (cachedLoad) {
+      return cachedLoad;
+    }
+    const moduleLoad = Promise.allSettled(modulesFactory()).then((moduleResults) => {
+      const rejectedModules = moduleResults.filter((result) => result.status === "rejected");
+      if (rejectedModules.length) {
+        const reasons = rejectedModules.map(({
+          reason
+        }) => reason instanceof Error ? reason.message : String(reason));
+        throw new Error(`Failed to load Highcharts modules: ${reasons.join("; ")}`);
       }
-      this.highcharts.set(highcharts);
     });
+    this.moduleLoadCache.set(modulesFactory, moduleLoad);
+    moduleLoad.catch(() => {
+      if (this.moduleLoadCache.get(modulesFactory) === moduleLoad) {
+        this.moduleLoadCache.delete(modulesFactory);
+      }
+    });
+    return moduleLoad;
+  }
+  async ensureSharedHighcharts() {
+    if (!this.sharedHighchartsPromise) {
+      const load = (async () => {
+        const highcharts = await this.loader();
+        await this.loadModules(this.globalModules);
+        if (this.globalOptions) {
+          highcharts.setOptions(this.globalOptions);
+        }
+        return highcharts;
+      })();
+      this.sharedHighchartsPromise = load;
+      load.catch(() => {
+        if (this.sharedHighchartsPromise === load) {
+          this.sharedHighchartsPromise = null;
+        }
+      });
+    }
+    return this.sharedHighchartsPromise;
+  }
+  async load(partialConfig) {
+    const highcharts = await this.ensureSharedHighcharts();
+    await this.loadModules(partialConfig?.modules);
+    this.highcharts.set(highcharts);
+    return highcharts;
   }
 };
 _HighchartsChartService.ɵfac = function HighchartsChartService_Factory(__ngFactoryType__) {
@@ -83,20 +122,76 @@ var _HighchartsChartDirective = class _HighchartsChartDirective {
   delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
+  getChartFactory(highcharts, constructorType) {
+    if (constructorType === "chart") {
+      return highcharts.chart;
+    }
+    const highchartsWithModuleConstructors = highcharts;
+    const chartFactory = highchartsWithModuleConstructors[constructorType];
+    if (!chartFactory) {
+      throw new Error(`Highcharts constructor "${constructorType}" is not available. Did you load the required module?`);
+    }
+    return chartFactory;
+  }
+  createChart() {
+    effect((onCleanup) => {
+      const highcharts = this.loadedHighcharts();
+      const constructorType = this.constructorType();
+      if (!highcharts || this.isDestroyed) {
+        return;
+      }
+      const callback = (chart2) => {
+        if (chart2.renderer.forExport || this.isDestroyed) return;
+        return this.chartInstance.emit(chart2);
+      };
+      const chart = this.getChartFactory(highcharts, constructorType)(
+        this.el.nativeElement,
+        // Read options without tracking them here: option changes should update
+        // the existing chart, not tear it down and create a new one.
+        untracked(() => this.options()),
+        callback
+      );
+      this.chart.set(chart);
+      onCleanup(() => {
+        if (this.chart() === chart) {
+          this.chart.set(null);
+        }
+        chart.destroy();
+      });
+    });
+  }
   keepChartUpToDate() {
-    effect(async () => {
+    let lastChart = null;
+    effect(() => {
+      const chart = this.chart();
       const update = this.update();
       const oneToOne = this.oneToOne();
       const options = this.options();
-      this._chartInstance = await this.chart();
-      if (!this.chartCreated) {
-        if (this._chartInstance) {
-          this.chartCreated = true;
+      if (!chart) {
+        return;
+      }
+      if (chart !== lastChart) {
+        lastChart = chart;
+        return;
+      }
+      if (update) {
+        chart.update(options, true, oneToOne);
+      }
+    });
+  }
+  async initializeHighcharts() {
+    await this.pendingTasks.run(async () => {
+      try {
+        const highcharts = await this.highchartsChartService.load(this.relativeConfig);
+        const delayMs = this.relativeConfig?.timeout ?? this.timeout ?? 0;
+        if (delayMs > 0) {
+          await this.delay(delayMs);
         }
-      } else {
-        if (update) {
-          this._chartInstance?.update(options, true, oneToOne);
+        if (!this.isDestroyed) {
+          this.loadedHighcharts.set(highcharts);
         }
+      } catch (error) {
+        console.error("Highcharts failed to load; chart was not created.", error);
       }
     });
   }
@@ -116,40 +211,19 @@ var _HighchartsChartDirective = class _HighchartsChartDirective {
       optional: true
     });
     this.highchartsChartService = inject(HighchartsChartService);
-    this.chartCreated = false;
-    this.chart = computed(async () => {
-      const highCharts = this.highchartsChartService.highcharts();
-      const constructorType = this.constructorType();
-      await this.delay(this.relativeConfig?.timeout ?? this.timeout ?? 500);
-      if (!highCharts) return;
-      const callback = (chart) => {
-        return this.chartInstance.emit(chart);
-      };
-      const chartFactories = {
-        chart: highCharts.chart,
-        ganttChart: highCharts.ganttChart,
-        mapChart: highCharts.mapChart,
-        stockChart: highCharts.stockChart
-      };
-      return chartFactories[constructorType](
-        this.el.nativeElement,
-        // Use untracked, so we don't re-create new chart everytime options change
-        untracked(() => this.options()),
-        // Use Highcharts callback to emit chart instance, so it is available as early
-        // as possible. So that Angular is already aware of the instance if Highcharts raise
-        // events during the initialization that happens before coming back to Angular
-        callback
-      );
-    });
+    this.pendingTasks = inject(PendingTasks);
+    this.loadedHighcharts = signal(null);
+    this.chart = signal(null);
+    this.isDestroyed = false;
     if (this.platformId && isPlatformServer(this.platformId)) {
       return;
     }
-    this.highchartsChartService.load(this.relativeConfig);
     this.destroyRef.onDestroy(() => {
-      this._chartInstance?.destroy();
-      this._chartInstance = void 0;
+      this.isDestroyed = true;
     });
+    this.createChart();
     this.keepChartUpToDate();
+    void this.initializeHighcharts();
   }
 };
 _HighchartsChartDirective.ɵfac = function HighchartsChartDirective_Factory(__ngFactoryType__) {

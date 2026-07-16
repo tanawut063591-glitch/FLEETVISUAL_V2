@@ -20,21 +20,19 @@ export class HttpClientService {
     private http: HttpClient,
     private router: Router,
     private securityService: SecurityService,
-    private authService: AuthService
+    private authService: AuthService,
   ) {}
 
   // โหลดไฟล์ JSON เช่น dashboard.tag.json / overview.tag.json
   getJsonFile(path: string): Observable<any> {
-    return this.http.get(path).pipe(
-      catchError((err) => this.handleError<any>(err))
-    );
+    return this.http.get(path).pipe(catchError((err) => this.handleError<any>(err)));
   }
 
   // ดึงข้อมูลเรือทั้งหมด
   getVesselInfo(isRetry = false): Observable<any[]> {
     return this.http
       .post<any[]>(`${URL}/api/vessels/getvesselcurrentInfo`, null, {
-        headers: this.getAuthHeaders(),
+        headers: this.getAuthHeaders().set('Cache-Control', 'no-cache').set('Pragma', 'no-cache'),
       })
       .pipe(
         map((res: any[]) => {
@@ -47,12 +45,8 @@ export class HttpClientService {
             .sort(this.compare);
         }),
         catchError((err) =>
-          this.handleAuthError<any[]>(
-            err,
-            () => this.getVesselInfo(true),
-            isRetry
-          )
-        )
+          this.handleAuthError<any[]>(err, () => this.getVesselInfo(true), isRetry),
+        ),
       );
   }
 
@@ -75,9 +69,7 @@ export class HttpClientService {
       `?latlng=${encodeURIComponent(lat)},${encodeURIComponent(long)}` +
       `&key=${encodeURIComponent(apiKey)}`;
 
-    return this.http.get(url).pipe(
-      catchError((err) => this.handleError<any>(err))
-    );
+    return this.http.get(url).pipe(catchError((err) => this.handleError<any>(err)));
   }
 
   // ดึงจุดพิกัด / เส้นทางของเรือ
@@ -92,27 +84,18 @@ export class HttpClientService {
         { prefix },
         {
           headers: this.getAuthHeaders(),
-        }
+        },
       )
       .pipe(
         map((res: any) => res),
         catchError((err) =>
-          this.handleAuthError<any>(
-            err,
-            () => this.getPoints(prefix, true),
-            isRetry
-          )
-        )
+          this.handleAuthError<any>(err, () => this.getPoints(prefix, true), isRetry),
+        ),
       );
   }
 
   // ขอ key สำหรับโหลดไฟล์ logger
-  getLoggerKey(
-    start: string,
-    end: string,
-    tags: string[],
-    isRetry = false
-  ): Observable<any> {
+  getLoggerKey(start: string, end: string, tags: string[], isRetry = false): Observable<any> {
     if (!start || !end || !Array.isArray(tags) || tags.length === 0) {
       return of(null);
     }
@@ -130,12 +113,8 @@ export class HttpClientService {
       .pipe(
         map((res: any) => res),
         catchError((err) =>
-          this.handleAuthError<any>(
-            err,
-            () => this.getLoggerKey(start, end, tags, true),
-            isRetry
-          )
-        )
+          this.handleAuthError<any>(err, () => this.getLoggerKey(start, end, tags, true), isRetry),
+        ),
       );
   }
 
@@ -148,19 +127,11 @@ export class HttpClientService {
     const safeKey = encodeURIComponent(key);
     const safeName = encodeURIComponent(name);
 
-    window.open(
-      `${URL}/api/vessels/GetLoggerFile/${safeKey}/${safeName}`,
-      '_self'
-    );
+    window.open(`${URL}/api/vessels/GetLoggerFile/${safeKey}/${safeName}`, '_self');
   }
 
   // ดึงข้อมูลย้อนหลังแบบ raw data
-  getRawData(
-    start: string,
-    end: string,
-    tags: any[],
-    isRetry = false
-  ): Observable<any> {
+  getRawData(start: string, end: string, tags: any[], isRetry = false): Observable<any> {
     if (!start || !end || !Array.isArray(tags) || tags.length === 0) {
       return of([]);
     }
@@ -178,22 +149,13 @@ export class HttpClientService {
       .pipe(
         map((res: any) => res),
         catchError((err) =>
-          this.handleAuthError<any>(
-            err,
-            () => this.getRawData(start, end, tags, true),
-            isRetry
-          )
-        )
+          this.handleAuthError<any>(err, () => this.getRawData(start, end, tags, true), isRetry),
+        ),
       );
   }
 
   // ดึงข้อมูลย้อนหลังสำหรับกราฟ
-  getChartRawData(
-    start: string,
-    end: string,
-    tags: any[],
-    isRetry = false
-  ): Observable<any> {
+  getChartRawData(start: string, end: string, tags: any[], isRetry = false): Observable<any> {
     if (!start || !end || !Array.isArray(tags) || tags.length === 0) {
       return of([]);
     }
@@ -214,9 +176,9 @@ export class HttpClientService {
           this.handleAuthError<any>(
             err,
             () => this.getChartRawData(start, end, tags, true),
-            isRetry
-          )
-        )
+            isRetry,
+          ),
+        ),
       );
   }
 
@@ -225,7 +187,7 @@ export class HttpClientService {
     reportType: string,
     timestamp: string,
     fvName: string,
-    isRetry = false
+    isRetry = false,
   ): Observable<Blob> {
     if (!reportType || !timestamp || !fvName) {
       return of(new Blob([], { type: 'application/pdf' }));
@@ -250,9 +212,9 @@ export class HttpClientService {
           this.handleAuthError<Blob>(
             err,
             () => this.getReport(reportType, timestamp, fvName, true),
-            isRetry
-          )
-        )
+            isRetry,
+          ),
+        ),
       );
   }
 
@@ -264,25 +226,18 @@ export class HttpClientService {
 
     return this.http
       .post(`${URL}/api/vessels/getcurrentvalues`, tagNames, {
-        headers: this.getAuthHeaders(),
+        headers: this.getAuthHeaders().set('Cache-Control', 'no-cache').set('Pragma', 'no-cache'),
       })
       .pipe(
         map((res: any) => res),
         catchError((err) =>
-          this.handleAuthError<any>(
-            err,
-            () => this.getCurrentValues(tagNames, true),
-            isRetry
-          )
-        )
+          this.handleAuthError<any>(err, () => this.getCurrentValues(tagNames, true), isRetry),
+        ),
       );
   }
 
   // ดึงค่าปัจจุบันของ Overview หลายเรือ
-  getOverviewCurrentsValues(
-    tagNames: any[],
-    isRetry = false
-  ): Observable<any> {
+  getOverviewCurrentsValues(tagNames: any[], isRetry = false): Observable<any> {
     const tags = this.flattenOverviewTags(tagNames);
 
     if (tags.length === 0) {
@@ -299,9 +254,9 @@ export class HttpClientService {
           this.handleAuthError<any>(
             err,
             () => this.getOverviewCurrentsValues(tagNames, true),
-            isRetry
-          )
-        )
+            isRetry,
+          ),
+        ),
       );
   }
 
@@ -340,7 +295,7 @@ export class HttpClientService {
   private handleAuthError<T>(
     err: any,
     retryFn: () => Observable<T>,
-    isRetry: boolean
+    isRetry: boolean,
   ): Observable<T> {
     if (err?.status === 401 && !isRetry) {
       return from(this.authService.tryLogin()).pipe(
@@ -355,7 +310,7 @@ export class HttpClientService {
         catchError(() => {
           this.forceLogout();
           return throwError(() => err);
-        })
+        }),
       );
     }
 
