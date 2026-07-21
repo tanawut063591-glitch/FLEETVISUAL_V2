@@ -25,7 +25,6 @@ export class PastTrackTimelineComponent implements OnChanges {
   @Input() trackPoints: PastTrackPoint[] = [];
   @Input() selectedPoint: PastTrackPoint | null = null;
   @Input() samplingIntervalMinutes = 30;
-  @Input() checkpointIntervalMinutes = 60;
 
   @Output() pointSelected = new EventEmitter<PastTrackPoint>();
   @Output() focusRequested = new EventEmitter<PastTrackPoint>();
@@ -72,31 +71,6 @@ export class PastTrackTimelineComponent implements OnChanges {
     return !!this.selectedPoint && this.selectedPoint.no === point.no;
   }
 
-  isCheckpoint(index: number): boolean {
-    if (!this.trackPoints.length) {
-      return false;
-    }
-
-    if (index === 0 || index === this.trackPoints.length - 1) {
-      return true;
-    }
-
-    const every = this.getCheckpointStep();
-    return every > 0 && index % every === 0;
-  }
-
-  getCheckpointText(index: number): string {
-    if (index === 0) {
-      return 'Start';
-    }
-
-    if (index === this.trackPoints.length - 1) {
-      return 'End';
-    }
-
-    return 'Checkpoint';
-  }
-
   getSelectedPositionLabel(): string {
     if (!this.selectedPoint || !this.trackPoints.length) {
       return 'No point selected';
@@ -131,12 +105,6 @@ export class PastTrackTimelineComponent implements OnChanges {
       idle: point.status === 'Idle',
       nodata: point.status === 'No Data',
     };
-  }
-
-  private getCheckpointStep(): number {
-    const sample = Math.max(1, Number(this.samplingIntervalMinutes) || 1);
-    const checkpoint = Math.max(sample, Number(this.checkpointIntervalMinutes) || sample);
-    return Math.max(1, Math.round(checkpoint / sample));
   }
 
   private findSelectedIndex(): number {

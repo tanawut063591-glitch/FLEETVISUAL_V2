@@ -1189,3 +1189,92 @@ tr[data-severity='unknown'] .row-dot { background: var(--alert-info); }
     gap: 12px;
   }
 }
+
+/* Keep the alert drawer below the global Fleet header. The main shell exposes
+   --fleet-header-height, so desktop and mobile stay aligned without hardcoding
+   two unrelated offsets. */
+.detail-backdrop {
+  top: var(--fleet-header-height, 68px);
+}
+
+.alert-detail-drawer {
+  top: var(--fleet-header-height, 68px);
+  overscroll-behavior: contain;
+}
+
+.open-realtime-btn {
+  width: 100%;
+  min-height: 62px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border-color));
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 9%, var(--card-bg)), var(--card-bg));
+  color: var(--primary-txt);
+  text-align: left;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 10%, transparent);
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.open-realtime-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent-border);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.open-realtime-btn:focus-visible {
+  outline: 3px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+.open-realtime-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.open-realtime-copy {
+  min-width: 0;
+}
+
+.open-realtime-copy strong,
+.open-realtime-copy small {
+  display: block;
+}
+
+.open-realtime-copy strong {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.open-realtime-copy small {
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--muted-txt);
+  font-size: 10px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.open-realtime-arrow {
+  color: var(--active-txt);
+  font-size: 17px;
+}
+
+@media (max-width: 991px) {
+  .detail-backdrop,
+  .alert-detail-drawer {
+    top: var(--fleet-header-height, 64px);
+  }
+}

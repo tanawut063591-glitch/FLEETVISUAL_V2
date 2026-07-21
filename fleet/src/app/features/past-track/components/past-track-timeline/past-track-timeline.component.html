@@ -6,10 +6,7 @@
         <h3>TRACK TIMELINE</h3>
         <span class="point-count">{{ trackPoints.length }} points</span>
       </div>
-      <p>
-        {{ samplingIntervalMinutes }}-minute data interval ·
-        {{ checkpointIntervalMinutes }}-minute checkpoints
-      </p>
+      <p>{{ samplingIntervalMinutes }}-minute data interval · continuous route line</p>
     </div>
 
     <div class="timeline-tools">
@@ -40,7 +37,7 @@
   <div class="timeline-note">
     <span class="note-icon">↕</span>
     Scroll inside the timeline without losing the route map. Click a row to select it, or use
-    <b>View on Map</b> to return to the selected checkpoint above.
+    <b>View on Map</b> to return to the selected route position above.
   </div>
 
   <div class="timeline-scroll-shell">
@@ -68,7 +65,6 @@
           class="timeline-grid timeline-row"
           role="row"
           [class.selected]="isSelected(point)"
-          [class.checkpoint-row]="isCheckpoint(index)"
           [attr.aria-selected]="isSelected(point)"
           (click)="selectPoint(point)">
 
@@ -79,9 +75,6 @@
           <div class="time-cell" role="cell">
             <div class="time-line">
               <strong>{{ point.time }}</strong>
-              <span class="checkpoint-badge" *ngIf="isCheckpoint(index)">
-                {{ getCheckpointText(index) }}
-              </span>
             </div>
             <small *ngIf="point.recordedTime && point.recordedTime !== point.time">
               Source: {{ point.recordedTime }}

@@ -1,8 +1,8 @@
 <div class="alerts-page">
   <header class="page-toolbar">
     <div class="page-heading">
-      <h1>Alerts Center</h1>
-      <p>Overview <i class="fa fa-angle-right"></i> Alerts Center</p>
+      <h1>Alarm Center</h1>
+      <p>Overview <i class="fa fa-angle-right"></i> Alarm Center</p>
     </div>
 
     <div class="toolbar-actions">
@@ -148,7 +148,7 @@
   <section class="alerts-feed-card">
     <header class="feed-header">
       <div>
-        <h2>Alerts Feed</h2>
+        <h2>Alarm Feed</h2>
         <p>{{ feedDescription }}</p>
       </div>
       <div class="feed-header-meta">
@@ -266,7 +266,7 @@
       *ngIf="!loading && !errorMessage && filteredAlerts.length > 0"
     >
       <div class="footer-left">
-        <strong>Showing {{ pageStart }} to {{ pageEnd }} of {{ filteredAlerts.length }} alerts</strong>
+        <strong>Showing {{ pageStart }} to {{ pageEnd }} of {{ filteredAlerts.length }} alarms</strong>
         <div class="mini-summary">
           <span class="mini-critical">Critical {{ summaryCards[0].value }}</span>
           <span class="mini-warning">Warnings {{ summaryCards[1].value }}</span>
@@ -333,6 +333,19 @@
         </span>
         <time>{{ formatDateTime(alert.occurredAt) }}</time>
       </div>
+
+      <button
+        type="button"
+        class="open-realtime-btn"
+        (click)="openAlertRealtime(alert)"
+      >
+        <span class="open-realtime-icon"><i class="fa fa-bolt"></i></span>
+        <span class="open-realtime-copy">
+          <strong>View Vessel Realtime</strong>
+          <small>{{ alert.vesselName }} · Live telemetry</small>
+        </span>
+        <i class="fa fa-angle-right open-realtime-arrow"></i>
+      </button>
 
       <dl class="detail-list">
         <div><dt>Vessel</dt><dd>{{ alert.vesselName }}</dd></div>

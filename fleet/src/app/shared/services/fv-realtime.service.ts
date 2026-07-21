@@ -234,17 +234,22 @@ export class FvRealtimeService {
         },
         error: (error: any) => {
           console.error('[FvRealtimeService] live realtime error:', error);
+          this.finishRealtimeRequest();
         },
         complete: () => {
-          this.isRequesting = false;
-          this.loadingSource.next(false);
-
-          if (this.refreshAgainAfterRequest) {
-            this.refreshAgainAfterRequest = false;
-            this.refreshActiveData();
-          }
+          this.finishRealtimeRequest();
         },
       });
+  }
+
+  private finishRealtimeRequest(): void {
+    this.isRequesting = false;
+    this.loadingSource.next(false);
+
+    if (this.refreshAgainAfterRequest) {
+      this.refreshAgainAfterRequest = false;
+      this.refreshActiveData();
+    }
   }
 
   private normalizeRealtimeResponse(response: any, prefix: string): Record<string, any> {

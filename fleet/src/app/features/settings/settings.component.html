@@ -2,7 +2,7 @@
   <header class="settings-header">
     <div>
       <h1>Settings</h1>
-      <p>Manage system preferences and data configuration</p>
+      <p>Manage system preferences, users and vessel configuration</p>
     </div>
   </header>
 
@@ -17,14 +17,15 @@
       {{ tab.label }}
     </button>
   </nav>
-
+  
   <section class="general-panel" *ngIf="activeTab === 'general'">
     <div class="panel-heading">
       <div>
         <h2>General Preferences</h2>
-        <p>Shared display and monitoring preferences for this browser.</p>
+        <p>Display and monitoring preferences for this browser.</p>
       </div>
     </div>
+
     <div class="preference-grid">
       <label class="preference-card">
         <span class="preference-icon"><i class="fa fa-adjust"></i></span>
@@ -37,15 +38,40 @@
           <option value="dark">Dark</option>
         </select>
       </label>
+
+      <label class="preference-card">
+        <span class="preference-icon"><i class="fa fa-home"></i></span>
+        <span>
+          <strong>Page after sign in</strong>
+          <small>Open this page after a successful login.</small>
+        </span>
+        <select [(ngModel)]="defaultLandingPage">
+          <option *ngFor="let option of landingPageOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </label>
+
       <label class="preference-card">
         <span class="preference-icon"><i class="fa fa-refresh"></i></span>
         <span>
-          <strong>Alert refresh interval</strong>
-          <small>Between 10 and 300 seconds.</small>
+          <strong>Alarm refresh interval</strong>
+          <small>Refresh Alarm Center every 10–300 seconds.</small>
         </span>
         <input type="number" min="10" max="300" [(ngModel)]="alertRefreshSeconds" />
       </label>
+
+      <label class="preference-card preference-toggle">
+        <span class="preference-icon"><i class="fa fa-bell-o"></i></span>
+        <span>
+          <strong>Alarm auto refresh</strong>
+          <small>Automatically retrieve new alarms in the background.</small>
+        </span>
+        <input class="toggle-input" type="checkbox" [(ngModel)]="alarmAutoRefresh" />
+      </label>
+
     </div>
+
     <div class="panel-actions">
       <span class="save-notice" *ngIf="saveNotice">{{ saveNotice }}</span>
       <button type="button" class="primary-btn" (click)="saveGeneral()">Save Preferences</button>
@@ -55,22 +81,114 @@
   <section class="users-panel" *ngIf="activeTab === 'users'">
     <div class="panel-heading">
       <div>
-        <h2>User Management</h2>
-        <p>Current authenticated account and permission source.</p>
+        <h2>User Sessions</h2>
+        <p>Admin view of users who are online, idle or recently offline.</p>
+      </div>
+      <div class="heading-actions">
+        <span class="backend-label" [class.session-source]="!userPresenceIsBackend">
+          <i class="fa" [class.fa-database]="userPresenceIsBackend" [class.fa-desktop]="!userPresenceIsBackend"></i>
+          {{ userPresenceIsBackend ? 'Backend session tracking' : 'Current browser session only' }}
+        </span>
+        <button type="button" class="ghost-btn" (click)="loadUserSessions(true)">
+          <i class="fa fa-refresh" [class.fa-spin]="usersLoading || usersRefreshing"></i> Refresh
+        </button>
       </div>
     </div>
-    <article class="user-card">
-      <div class="avatar">{{ username.charAt(0).toUpperCase() }}</div>
-      <div>
-        <strong>{{ username }}</strong>
-        <span>Administrator</span>
-        <small>Loaded from the active FleetVisual session.</small>
-      </div>
-      <span class="source-chip">Session user</span>
-    </article>
-    <div class="integration-note">
-      <i class="fa fa-info-circle"></i>
-      User create, role and permission changes require a dedicated management endpoint from the backend.
+
+    <div class="user-summary-grid">
+      <article>
+        <span class="summary-icon total"><i class="fa fa-users"></i></span>
+        <div><small>Total Sessions</small><strong>{{ userSessions.length }}</strong><p>Visible to this admin view</p></div>
+      </article>
+      <article>
+        <span class="summary-icon online"><i class="fa fa-circle"></i></span>
+        <div><small>Online</small><strong>{{ userOnlineCount }}</strong><p>Active within 5 minutes</p></div>
+      </article>
+      <article>
+        <span class="summary-icon idle"><i class="fa fa-clock-o"></i></span>
+        <div><small>Idle</small><strong>{{ userIdleCount }}</strong><p>Inactive for 5–30 minutes</p></div>
+      </article>
+      <article>
+        <span class="summary-icon offline"><i class="fa fa-power-off"></i></span>
+        <div><small>Offline</small><strong>{{ userOfflineCount }}</strong><p>No recent heartbeat</p></div>
+      </article>
+    </div>
+
+    <div class="table-tools user-tools">
+      <label class="table-search">
+        <i class="fa fa-search"></i>
+        <input type="search" placeholder="Search user, role, device or IP..." [(ngModel)]="userSearchTerm" />
+      </label>
+      <label class="filter-select">
+        <span>Status</span>
+        <select [(ngModel)]="userStatusFilter">
+          <option value="all">All Status</option>
+          <option value="online">Online</option>
+          <option value="idle">Idle</option>
+          <option value="offline">Offline</option>
+          <option value="unknown">No Data</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="loading-box" *ngIf="usersLoading">
+      <span class="spinner"></span>
+      <strong>Loading user sessions...</strong>
+    </div>
+
+    <div class="error-box" *ngIf="!usersLoading && usersError">
+      <i class="fa fa-exclamation-circle"></i>
+      <span>{{ usersError }}</span>
+      <button type="button" (click)="loadUserSessions(true)">Retry</button>
+    </div>
+
+    <div class="user-table-wrap" *ngIf="!usersLoading && !usersError">
+      <table class="user-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Signed In</th>
+            <th>Last Activity</th>
+            <th>Device</th>
+            <th>IP Address</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of filteredUsers; trackBy: trackByUser">
+            <td data-label="User">
+              <div class="user-identity">
+                <span class="avatar small">{{ user.displayName.charAt(0).toUpperCase() }}</span>
+                <span><strong>{{ user.displayName }}</strong><small>{{ user.username }}</small></span>
+              </div>
+            </td>
+            <td data-label="Role"><span class="role-chip">{{ user.role }}</span></td>
+            <td data-label="Status">
+              <span class="status-pill" [attr.data-status]="user.status">
+                <i></i>{{ statusLabel(user.status) }}
+              </span>
+            </td>
+            <td data-label="Signed In">{{ formatDateTime(user.loginAt) }}</td>
+            <td data-label="Last Activity">{{ formatDateTime(user.lastActiveAt) }}</td>
+            <td data-label="Device">{{ userDevice(user) }}</td>
+            <td data-label="IP Address">{{ user.ipAddress || '—' }}</td>
+          </tr>
+          <tr *ngIf="filteredUsers.length === 0">
+            <td colspan="7" class="empty-table">No user sessions match this filter.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="integration-note" [class.backend-ready]="userPresenceIsBackend">
+      <i class="fa" [class.fa-check-circle]="userPresenceIsBackend" [class.fa-info-circle]="!userPresenceIsBackend"></i>
+      <span *ngIf="userPresenceIsBackend">
+        Live session data is supplied by the configured backend endpoint and refreshes automatically.
+      </span>
+      <span *ngIf="!userPresenceIsBackend">
+        Start the local database with <code>npm run start:local</code> to record login, logout and heartbeat activity. If the API is unavailable, this page safely shows only the current browser session.
+      </span>
     </div>
   </section>
 
@@ -78,20 +196,39 @@
     <div class="panel-heading">
       <div>
         <h2>Vessel Groups</h2>
-        <p>Groups are calculated from the backend vessel records and local settings changes.</p>
+        <p>Create groups and assign vessels for faster fleet management.</p>
       </div>
-      <button type="button" class="ghost-btn" (click)="loadVessels(true)">
-        <i class="fa fa-refresh" [class.fa-spin]="loading || refreshing"></i> Refresh
-      </button>
+      <div class="heading-actions">
+        <button type="button" class="ghost-btn" (click)="loadVessels(true)">
+          <i class="fa fa-refresh" [class.fa-spin]="loading || refreshing"></i> Refresh
+        </button>
+        <button type="button" class="primary-btn" (click)="openAddGroup()">
+          <i class="fa fa-plus"></i> Add Group
+        </button>
+      </div>
     </div>
-    <div class="group-grid">
-      <article *ngFor="let group of groupSummary">
+
+    <div class="loading-box" *ngIf="loading">
+      <span class="spinner"></span>
+      <strong>Loading vessel groups...</strong>
+    </div>
+
+    <div class="group-grid" *ngIf="!loading">
+      <article *ngFor="let group of groupSummary; trackBy: trackByGroup">
         <span class="group-icon"><i class="fa fa-object-group"></i></span>
+        <div class="group-card-actions" *ngIf="group.editable">
+          <button type="button" title="Edit group" (click)="openEditGroup(group)"><i class="fa fa-pencil"></i></button>
+          <button type="button" class="danger" title="Delete group" (click)="deleteGroup(group)"><i class="fa fa-trash-o"></i></button>
+        </div>
         <strong>{{ group.name }}</strong>
+        <p>{{ group.description || 'Custom vessel group' }}</p>
         <b>{{ group.count }}</b>
-        <small>vessels</small>
+        <small>{{ group.count === 1 ? 'vessel' : 'vessels' }}</small>
+        <span class="group-vessel-preview">{{ groupVesselNames(group) }}</span>
       </article>
-      <div class="empty-inline" *ngIf="!loading && groupSummary.length === 0">No group data available.</div>
+      <div class="empty-inline" *ngIf="groupSummary.length === 0">
+        No groups yet. Select <strong>Add Group</strong> to create the first group.
+      </div>
     </div>
   </section>
 
@@ -99,24 +236,36 @@
     <div class="panel-heading">
       <div>
         <h2>Vessel Management</h2>
-        <p>Manage and configure all vessels in the system.</p>
+        <p>Manage vessel details and monitor Online, Idle and Offline status.</p>
       </div>
       <div class="heading-actions">
-        <span class="backend-label"><i class="fa fa-database"></i> Optimized backend read + local workspace</span>
+        <span class="backend-label"><i class="fa fa-database"></i> Live telemetry + SQLite admin database</span>
         <button type="button" class="primary-btn" (click)="openAdd()">
           <i class="fa fa-plus"></i> Add Vessel
         </button>
       </div>
     </div>
 
-    <div class="table-tools">
+    <div class="table-tools vessel-tools">
       <label class="table-search">
         <i class="fa fa-search"></i>
         <input type="search" placeholder="Search vessel..." [(ngModel)]="searchTerm" (ngModelChange)="page = 1" />
       </label>
-      <button type="button" class="ghost-btn" (click)="loadVessels(true)">
-        <i class="fa fa-refresh" [class.fa-spin]="loading || refreshing"></i> Refresh
-      </button>
+      <div class="tool-actions">
+        <label class="filter-select">
+          <span>Status</span>
+          <select [(ngModel)]="vesselStatusFilter" (ngModelChange)="page = 1">
+            <option value="all">All Status</option>
+            <option value="online">Online</option>
+            <option value="idle">Idle</option>
+            <option value="offline">Offline</option>
+            <option value="unknown">No Data</option>
+          </select>
+        </label>
+        <button type="button" class="ghost-btn" (click)="loadVessels(true)">
+          <i class="fa fa-refresh" [class.fa-spin]="loading || refreshing"></i> Refresh
+        </button>
+      </div>
     </div>
 
     <div class="loading-box" *ngIf="loading">
@@ -136,7 +285,7 @@
           <tr>
             <th>ID</th>
             <th>Image</th>
-            <th>Name</th>
+            <th>Name / Status</th>
             <th>Prefix</th>
             <th>Nationality</th>
             <th>Customer</th>
@@ -157,14 +306,18 @@
             </td>
             <td data-label="Name">
               <strong>{{ vessel.name }}</strong>
-              <small [attr.data-status]="vessel.status">{{ vessel.status }}</small>
+              <span class="vessel-status-line">
+                <span class="status-pill compact" [attr.data-status]="vessel.status">
+                  <i></i>{{ statusLabel(vessel.status) }}
+                </span>
+              </span>
             </td>
             <td data-label="Prefix"><span class="prefix-chip">{{ vessel.prefix }}</span></td>
             <td data-label="Nationality">{{ vessel.nationality || '—' }}</td>
             <td data-label="Customer">{{ vessel.customer || '—' }}</td>
             <td data-label="Owner">{{ vessel.owner || '—' }}</td>
             <td data-label="Agency">{{ vessel.agency || '—' }}</td>
-            <td data-label="Group"><span class="group-count">{{ vessel.groups.length }}</span></td>
+            <td data-label="Group"><span class="group-count">{{ vesselGroupCount(vessel) }}</span></td>
             <td data-label="Action">
               <div class="row-actions">
                 <button type="button" class="edit" title="Edit vessel" (click)="openEdit(vessel)">
@@ -197,20 +350,76 @@
       </select>
     </footer>
 
-    <div class="summary-cards">
+    <div class="summary-cards vessel-summary-cards">
       <article><span class="summary-icon total"><i class="fa fa-ship"></i></span><div><small>Total Vessels</small><strong>{{ vessels.length }}</strong><p>Backend and local records</p></div></article>
-      <article><span class="summary-icon online"><i class="fa fa-bell-o"></i></span><div><small>Online Vessels</small><strong>{{ onlineCount }}</strong><p>Currently online</p></div></article>
-      <article><span class="summary-icon offline"><i class="fa fa-bell-o"></i></span><div><small>Offline Vessels</small><strong>{{ offlineCount }}</strong><p>Currently offline</p></div></article>
-      <article><span class="summary-icon groups"><i class="fa fa-users"></i></span><div><small>Groups</small><strong>{{ groupSummary.length }}</strong><p>Vessel groups</p></div></article>
+      <article><span class="summary-icon online"><i class="fa fa-circle"></i></span><div><small>Online Vessels</small><strong>{{ onlineCount }}</strong><p>Telemetry within 1 hour</p></div></article>
+      <article><span class="summary-icon idle"><i class="fa fa-clock-o"></i></span><div><small>Idle Vessels</small><strong>{{ idleCount }}</strong><p>No data for 1–24 hours</p></div></article>
+      <article><span class="summary-icon offline"><i class="fa fa-power-off"></i></span><div><small>Offline Vessels</small><strong>{{ offlineCount }}</strong><p>No data for over 24 hours</p></div></article>
+      <article><span class="summary-icon groups"><i class="fa fa-object-group"></i></span><div><small>Groups</small><strong>{{ managedGroupCount }}</strong><p>Vessel groups</p></div></article>
     </div>
   </section>
+
+  <div class="drawer-backdrop" *ngIf="groupDrawerOpen" (click)="closeGroupDrawer()"></div>
+  <aside class="group-drawer" [class.open]="groupDrawerOpen" aria-label="Vessel group editor">
+    <header>
+      <div>
+        <h2>{{ editingGroupId ? 'Edit Group' : 'Add Group' }}</h2>
+        <p>Create a group and choose the vessels that belong to it.</p>
+      </div>
+      <button type="button" (click)="closeGroupDrawer()"><i class="fa fa-times"></i></button>
+    </header>
+
+    <div class="drawer-content">
+      <h3>Group Information</h3>
+      <label>Group Name <em>*</em><input type="text" [(ngModel)]="groupForm.name" placeholder="Example: Offshore Fleet" /></label>
+      <label>Description<textarea rows="3" [(ngModel)]="groupForm.description" placeholder="Describe the purpose of this group"></textarea></label>
+
+      <div class="group-assignment-heading">
+        <div>
+          <h3>Assign Vessels</h3>
+          <small>{{ groupForm.vesselIds.length }} selected</small>
+        </div>
+        <label class="group-vessel-search">
+          <i class="fa fa-search"></i>
+          <input type="search" [(ngModel)]="groupVesselSearchTerm" placeholder="Search vessel..." />
+        </label>
+      </div>
+
+      <div class="group-vessel-list">
+        <label *ngFor="let vessel of groupVesselOptions; trackBy: trackByVessel" [class.selected]="groupVesselSelected(vessel.id)">
+          <input
+            type="checkbox"
+            [checked]="groupVesselSelected(vessel.id)"
+            (change)="toggleGroupVessel(vessel.id, $any($event.target).checked)"
+          />
+          <span class="group-vessel-thumb">
+            <img *ngIf="vessel.image" [src]="vessel.image" alt="" />
+            <i *ngIf="!vessel.image" class="fa fa-ship"></i>
+          </span>
+          <span class="group-vessel-info">
+            <strong>{{ vessel.name }}</strong>
+            <small>{{ vessel.prefix }}</small>
+          </span>
+          <span class="status-pill compact" [attr.data-status]="vessel.status"><i></i>{{ statusLabel(vessel.status) }}</span>
+        </label>
+        <div class="empty-inline compact-empty" *ngIf="groupVesselOptions.length === 0">No vessels match this search.</div>
+      </div>
+
+      <div class="save-message" *ngIf="groupSaveNotice">{{ groupSaveNotice }}</div>
+    </div>
+
+    <footer>
+      <button type="button" class="cancel-btn" (click)="closeGroupDrawer()">Cancel</button>
+      <button type="button" class="primary-btn" (click)="saveGroup()">{{ editingGroupId ? 'Save Changes' : 'Create Group' }}</button>
+    </footer>
+  </aside>
 
   <div class="drawer-backdrop" *ngIf="drawerOpen" (click)="closeDrawer()"></div>
   <aside class="vessel-drawer" [class.open]="drawerOpen" aria-label="Vessel editor">
     <header>
       <div>
         <h2>{{ editingId ? 'Edit Vessel' : 'Add Vessel' }}</h2>
-        <p>{{ editingId ? 'Update local vessel settings' : 'Create a vessel workspace record' }}</p>
+        <p>{{ editingId ? 'Update vessel database record' : 'Create a vessel database record' }}</p>
       </div>
       <button type="button" (click)="closeDrawer()"><i class="fa fa-times"></i></button>
     </header>

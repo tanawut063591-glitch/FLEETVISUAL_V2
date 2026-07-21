@@ -1143,3 +1143,26 @@
   border-color: rgba(148, 163, 184, 0.24) !important;
   color: #ffffff !important;
 }
+
+/* Realtime alarm badge */
+.alert-count {
+  animation: alarm-badge-pulse 1.9s ease-out infinite;
+  transform-origin: center;
+}
+
+@keyframes alarm-badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 3px #ffffff, 0 8px 18px rgba(239, 68, 68, 0.28);
+  }
+  45% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 3px #ffffff, 0 0 0 8px rgba(239, 68, 68, 0.08), 0 8px 18px rgba(239, 68, 68, 0.34);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alert-count {
+    animation: none;
+  }
+}

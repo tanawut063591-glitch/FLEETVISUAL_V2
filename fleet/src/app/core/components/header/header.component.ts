@@ -5,6 +5,7 @@ import { catchError, exhaustMap, switchMap, takeUntil } from 'rxjs/operators';
 import { ThemeModeService } from '../../../shared/services/theme-mode.service';
 import { AlertStateService } from '../../../shared/services/alert-state.service';
 import { AlertsService } from '../../../shared/services/alerts.service';
+import { UserPresenceService } from '../../../shared/services/user-presence.service';
 
 /*
   รูปแบบข้อมูลของเมนูบน Header
@@ -101,7 +102,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
       show: true,
     },
     {
-      label: 'ALERTS',
+      label: 'ALARM',
       icon: 'fa fa-bell-o',
       route: '/main/alerts',
       show: true,
@@ -152,12 +153,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
   ];
 
   private readonly destroy$ = new Subject<void>();
+  private readonly alarmBadgeWindowMs = 24 * 60 * 60 * 1000;
 
   constructor(
     private router: Router,
     private themeModeService: ThemeModeService,
     private alertState: AlertStateService,
-    private alertsService: AlertsService
+    private alertsService: AlertsService,
+    private userPresence: UserPresenceService
   ) {}
 
   /*
@@ -175,24 +178,26 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Polls the real alert feed while the main layout is open so the Alerts badge
+   * Polls the real alarm feed while the main layout is open so the Alarm badge
    * stays current even before the user visits the Alerts page. Failures are kept
-   * silent here; the full error is shown inside the Alerts Center page.
+   * silent here; the full error is shown inside the Alarm Center page.
    */
   private startAlertMonitor(): void {
     this.alertsService
       .getRefreshSeconds()
       .pipe(
-        switchMap((seconds) => timer(0, Math.max(30, seconds) * 1000)),
+        switchMap((seconds) => timer(0, Math.max(10, seconds) * 1000)),
         exhaustMap(() => {
-          // Alerts/Log pages already refresh the same source themselves. Avoid
-          // duplicate fleet-wide telemetry requests while either page is open.
-          if (/\/main\/(alerts|log)/.test(this.router.url)) {
+          // The Alarm page refreshes this source itself. Avoid a duplicate request
+          // while that page is open; all other pages keep the badge live.
+          if (this.isAlarmPage()) {
             return of(null);
           }
+          // Keep the header badge on the same default window as the Alarm page
+          // (Last 24 Hours). Using seven days here made the badge include older
+          // unresolved alarms that were not visible in the Alarm Feed.
           const end = new Date();
-          const start = new Date(end);
-          start.setDate(end.getDate() - 7);
+          const start = new Date(end.getTime() - this.alarmBadgeWindowMs);
 
           return this.alertsService
             .fetchAlerts({
@@ -206,7 +211,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe((result) => {
-        if (!result) return;
+        // A request may have started just before navigation to Alarm.
+        // Do not let that older header response overwrite the count loaded by
+        // the Alarm page after navigation has completed.
+        if (!result || this.isAlarmPage()) return;
 
         const activeCount = result.alerts.filter(
           (alert) => alert.state !== 'resolved'
@@ -214,6 +222,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
         this.alertState.setActiveCount(activeCount);
       });
+  }
+
+  private isAlarmPage(): boolean {
+    return /^\/main\/alerts(?:[/?#]|$)/.test(this.router.url);
   }
 
   ngOnDestroy(): void {
@@ -341,6 +353,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   */
   logout(): void {
     const themeMode = localStorage.getItem('fleet-theme-mode');
+    this.userPresence.signOut();
 
     localStorage.clear();
     sessionStorage.clear();

@@ -10,6 +10,7 @@ import { FvRealtimeService } from '../../../shared/services/fv-realtime.service'
 import { FvOverviewService } from '../../../shared/services/fv-overview.service';
 import { FleetVesselDataService } from '../../../shared/services/fleet-vessel-data.service';
 import { VesselPopupService } from '../../../shared/services/vessel-popup.service';
+import { UserPresenceService } from '../../../shared/services/user-presence.service';
 
 import { Animaions } from './main.animation';
 
@@ -27,10 +28,10 @@ export class MainComponent implements OnInit, OnDestroy {
 
   vessels: any[] = [];
   selectedVessel: any = null;
-
+  
   private destroy$ = new Subject<void>();
   private readonly defaultTimer = 5000;
-  
+
   constructor(
     public fvTimeService: FvTimeService,
     public coordinatesService: CoordinatesService,
@@ -40,7 +41,8 @@ export class MainComponent implements OnInit, OnDestroy {
     private fvInfoService: FvInfoService,
     private fvRealtimeService: FvRealtimeService,
     private vesselData: FleetVesselDataService,
-    private vesselPopup: VesselPopupService
+    private vesselPopup: VesselPopupService,
+    private userPresence: UserPresenceService
   ) {}
 
   ngOnInit(): void {
@@ -49,8 +51,10 @@ export class MainComponent implements OnInit, OnDestroy {
     this.fvInfoService.start(timer);
     this.fvRealtimeService.start(timer);
     this.fvOverviewService.start(timer);
+    this.userPresence.start();
 
     this.loadSidebarVessels();
+    this.watchActiveVesselSelection();
     this.updateLayout(this.router.url);
 
     this.router.events
@@ -67,6 +71,7 @@ export class MainComponent implements OnInit, OnDestroy {
     this.fvInfoService.stop();
     this.fvRealtimeService.stop();
     this.fvOverviewService.stop();
+    this.userPresence.stop();
 
     this.destroy$.next();
     this.destroy$.complete();
@@ -132,7 +137,13 @@ export class MainComponent implements OnInit, OnDestroy {
           this.vessels = Array.isArray(rows) ? rows : [];
           this.fvOverviewService.setVessels(this.vessels);
 
-          if (!this.selectedVessel && this.vessels.length > 0) {
+          const selectedMatch = this.findMatchingVessel(this.selectedVessel, this.vessels);
+
+          if (selectedMatch) {
+            // Keep the active vessel attached to the latest backend row so the
+            // Sidebar, Overview popup, Realtime and Past Track all share one selection.
+            this.selectedVessel = selectedMatch;
+          } else if (!this.selectedVessel && this.vessels.length > 0) {
             this.selectedVessel = this.vessels[0];
             this.fvRealtimeService.setActiveVessel(this.selectedVessel);
           }
@@ -142,6 +153,84 @@ export class MainComponent implements OnInit, OnDestroy {
           this.vessels = [];
         },
       });
+  }
+
+
+  /**
+   * Central selection bridge.
+   * Sidebar clicks, Overview map markers and Alarm -> Realtime navigation all
+   * publish the selected vessel through FvRealtimeService.  MainComponent then
+   * updates the Sidebar highlight from the same source of truth.
+   */
+  private watchActiveVesselSelection(): void {
+    this.fvRealtimeService.activeVessel$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((vessel) => {
+        if (!vessel) {
+          return;
+        }
+
+        const match = this.findMatchingVessel(vessel, this.vessels) || vessel;
+        const nextKey = this.normalizeVesselIdentity(match);
+        const currentKey = this.normalizeVesselIdentity(this.selectedVessel);
+
+        if (nextKey && nextKey !== currentKey) {
+          this.selectedVessel = match;
+        }
+      });
+  }
+
+  private findMatchingVessel(target: any, rows: any[]): any | null {
+    if (!target || !Array.isArray(rows) || rows.length === 0) {
+      return null;
+    }
+
+    const targetKeys = this.collectVesselIdentities(target);
+    if (targetKeys.size === 0) {
+      return null;
+    }
+
+    return (
+      rows.find((row) => {
+        const rowKeys = this.collectVesselIdentities(row);
+        return Array.from(targetKeys).some((key) => rowKeys.has(key));
+      }) || null
+    );
+  }
+
+  private collectVesselIdentities(vessel: any): Set<string> {
+    const sources = [vessel, vessel?.fv, vessel?.fvInfo];
+    const values: unknown[] = [];
+
+    for (const source of sources) {
+      if (!source) continue;
+      values.push(
+        source.id,
+        source._id,
+        source.vesselId,
+        source.shipId,
+        source.prefix,
+        source.name,
+        source.vesselName,
+      );
+    }
+
+    return new Set(
+      values
+        .map((value) => this.normalizeIdentityPart(value))
+        .filter((value) => value.length > 0),
+    );
+  }
+
+  private normalizeVesselIdentity(vessel: any): string {
+    return Array.from(this.collectVesselIdentities(vessel))[0] || '';
+  }
+
+  private normalizeIdentityPart(value: unknown): string {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
   }
 
   private updateLayout(url: string): void {

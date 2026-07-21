@@ -243,7 +243,7 @@ export class DiagramComponent implements OnInit, OnDestroy {
       if (!id || !Array.isArray(vessels) || vessels.length === 0) {
         return;
       }
-
+      
       const match = vessels.find((item: any) => {
         const info = this.getVesselInfo(item);
 

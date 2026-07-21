@@ -204,16 +204,6 @@
     margin-bottom: -2px;
 }
 
-.checkpoint-ring {
-    width: 11px;
-    height: 11px;
-    border: 2px solid #10b981;
-    border-radius: 50%;
-    display: inline-block;
-    margin-right: 5px;
-    background: transparent;
-}
-
 .map-point {
     width: 14px;
     height: 14px;

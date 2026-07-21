@@ -122,7 +122,7 @@ export const routes: Routes = [
           ),
         data: {
           depth: 7,
-          title: 'ALERTS',
+          title: 'ALARM',
           preload: true,
           preloadDelayMs: 900,
         },

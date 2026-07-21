@@ -33,7 +33,6 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
 
   @Input() trackPoints: PastTrackPoint[] = [];
   @Input() selectedPoint: PastTrackPoint | null = null;
-  @Input() checkpointIntervalMinutes = 60;
 
   @Output() pointSelected = new EventEmitter<PastTrackPoint>();
 
@@ -51,7 +50,6 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
   uiRoutePoints = '';
 
   private readonly maxPolylinePoints = 5_000;
-  private readonly maxClickableMarkers = 90;
   private readonly maxFallbackPoints = 500;
   private markerAnimationFrame: number | null = null;
 
@@ -72,8 +70,14 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
       return;
     }
 
-    if (changes['selectedPoint'] && this.mapReady) {
-      this.updateSelectedMarker(true);
+    if (changes['selectedPoint']) {
+      if (this.useFallbackMap) {
+        this.buildFallbackMap();
+      }
+
+      if (this.mapReady) {
+        this.updateSelectedMarker(true);
+      }
     }
   }
 
@@ -173,25 +177,8 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
       this.polylines.push(halo, polyline);
     }
 
-    // The full route uses every display point, while markers are intentionally sparse.
-    const clickablePoints = this.buildCheckpointPoints(validPoints).slice(1, -1);
-
-    for (const point of clickablePoints) {
-      const marker = new google.maps.Marker({
-        position: { lat: Number(point.lat), lng: Number(point.lng) },
-        map: this.map,
-        title: `${point.time} • ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`,
-        icon: this.getRoutePointIcon(point, false),
-        zIndex: 20,
-        optimized: true,
-      });
-
-      marker.addListener('click', () => {
-        this.zone.run(() => this.pointSelected.emit(point));
-      });
-
-      this.markers.push(marker);
-    }
+    // Keep the map clean: the historical path is rendered as a continuous line.
+    // Only route endpoints and the currently selected playback position remain visible.
 
     this.addEndpointMarker(validPoints[0], 'START', '#10b981', 40);
 
@@ -465,16 +452,13 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
       color = '#1769ff';
     }
 
-    const size = selected ? 42 : 18;
-    const radius = selected ? 16 : 5;
+    const size = selected ? 30 : 18;
+    const radius = selected ? 8 : 5;
     const center = size / 2;
-    const label = selected ? String(point.no) : '';
     const svg =
       `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">` +
-      `<circle cx="${center}" cy="${center}" r="${radius}" fill="${selected ? '#ffffff' : color}" stroke="${color}" stroke-width="${selected ? 4 : 2}"/>` +
-      (selected
-        ? `<text x="${center}" y="${center + 4}" text-anchor="middle" font-family="Arial" font-size="11" font-weight="700" fill="${color}">${label}</text>`
-        : '') +
+      `<circle cx="${center}" cy="${center}" r="${radius + (selected ? 4 : 0)}" fill="${selected ? 'rgba(23,105,255,0.18)' : '#ffffff'}" stroke="none"/>` +
+      `<circle cx="${center}" cy="${center}" r="${radius}" fill="${color}" stroke="#ffffff" stroke-width="${selected ? 3 : 2}"/>` +
       '</svg>';
 
     return {
@@ -534,35 +518,27 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
     this.uiRoutePoints = routeUiPoints
       .map((mapPoint: UiMapPoint) => `${mapPoint.x},${mapPoint.y}`)
       .join(' ');
-    this.uiMapPoints = this.buildCheckpointPoints(validPoints).map(toUiPoint);
+    this.uiMapPoints = this.buildFallbackDisplayPoints(validPoints).map(toUiPoint);
   }
 
-  private buildCheckpointPoints(points: PastTrackPoint[]): PastTrackPoint[] {
-    if (points.length <= 2) {
-      return points.slice();
+  private buildFallbackDisplayPoints(points: PastTrackPoint[]): PastTrackPoint[] {
+    if (!points.length) {
+      return [];
     }
 
-    const maxMarkers = Math.max(2, this.maxClickableMarkers);
-    const intervalMs = Math.max(1, this.checkpointIntervalMinutes) * 60_000;
-    const result: PastTrackPoint[] = [points[0]];
-    let lastCheckpointTime = this.parseTrackTime(points[0].time);
+    const candidates: PastTrackPoint[] = [points[0]];
 
-    for (let index = 1; index < points.length - 1; index += 1) {
-      const point = points[index];
-      const pointTime = this.parseTrackTime(point.time);
-
-      if (pointTime === null || lastCheckpointTime === null) {
-        continue;
-      }
-
-      if (pointTime - lastCheckpointTime >= intervalMs) {
-        result.push(point);
-        lastCheckpointTime = pointTime;
-      }
+    if (this.selectedPoint && this.isValidPoint(this.selectedPoint)) {
+      candidates.push(this.selectedPoint);
     }
 
-    result.push(points[points.length - 1]);
-    return this.downsample(result, maxMarkers);
+    if (points.length > 1) {
+      candidates.push(points[points.length - 1]);
+    }
+
+    return candidates.filter((point, index, items) =>
+      items.findIndex((item) => item.no === point.no && item.time === point.time) === index
+    );
   }
 
   private downsample(points: PastTrackPoint[], maxPoints: number): PastTrackPoint[] {

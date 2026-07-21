@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Router } from '@angular/router';
 import { Subscription, timer } from 'rxjs';
 
 import { AlertRecord, AlertSeverity, AlertState } from '../../shared/models/alert.model';
@@ -6,6 +7,8 @@ import { DateRangeToolbarComponent } from '../../shared/components/date-range-to
 import { DateRangeSelection } from '../../shared/models/date-range.model';
 import { AlertStateService } from '../../shared/services/alert-state.service';
 import { AlertsService } from '../../shared/services/alerts.service';
+import { FleetVesselDataService } from '../../shared/services/fleet-vessel-data.service';
+import { FvRealtimeService } from '../../shared/services/fv-realtime.service';
 
 interface AlertSummaryCard {
   label: string;
@@ -71,9 +74,13 @@ export class AlertsComponent implements OnInit, OnDestroy {
   constructor(
     private alertsService: AlertsService,
     private alertState: AlertStateService,
+    private fleetVesselData: FleetVesselDataService,
+    private fvRealtimeService: FvRealtimeService,
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
+    this.autoRefresh = localStorage.getItem('fleet-alert-auto-refresh') !== 'false';
     this.configSub = this.alertsService.getRefreshSeconds().subscribe((seconds) => {
       this.refreshSeconds = seconds;
       this.restartAutoRefresh();
@@ -210,7 +217,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
     this.page = 1;
     if (isInitialRange) this.loadAlerts();
   }
-
+  
   onRangeApplied(range: DateRangeSelection): void {
     this.currentRange = range;
     this.page = 1;
@@ -258,7 +265,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
         const newActiveAlerts = this.hasLoadedOnce
           ? incomingActive.filter((alert) => !this.knownActiveAlertIds.has(alert.id))
           : [];
-
+        
         this.alerts = result.alerts;
         this.backendEndpoint = result.endpoint;
         this.lastUpdatedAt = result.fetchedAt;
@@ -298,6 +305,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
 
   toggleAutoRefresh(): void {
     this.autoRefresh = !this.autoRefresh;
+    localStorage.setItem('fleet-alert-auto-refresh', String(this.autoRefresh));
     this.restartAutoRefresh();
   }
 
@@ -309,6 +317,124 @@ export class AlertsComponent implements OnInit, OnDestroy {
 
   closeAlertDetail(): void {
     this.detailOpen = false;
+  }
+
+  /**
+   * Open the exact vessel that raised this alarm in the Realtime page.
+   * The method resolves the alert's vessel id/name against the shared vessel
+   * snapshot first, then publishes the same object used by the Sidebar.
+   */
+  openAlertRealtime(alert: AlertRecord): void {
+    const vessel = this.resolveAlertVessel(alert);
+
+    if (vessel) {
+      try {
+        localStorage.setItem('selectedVessel', JSON.stringify(vessel));
+        localStorage.setItem('realtimeVessel', JSON.stringify(vessel));
+      } catch {}
+
+      this.fvRealtimeService.setActiveVessel(vessel);
+    }
+
+    this.closeAlertDetail();
+
+    this.router.navigate(['/main/realtime']).then(() => {
+      // Re-emit after navigation so a lazy-loaded RealtimeComponent receives
+      // the selected vessel even on its first render.
+      if (vessel) {
+        setTimeout(() => this.fvRealtimeService.setActiveVessel(vessel), 60);
+      }
+    });
+  }
+
+  private resolveAlertVessel(alert: AlertRecord): any | null {
+    const rows = this.fleetVesselData.getSnapshot();
+    const alertKeys = this.collectAlertVesselKeys(alert);
+
+    const match = rows.find((row: any) => {
+      const rowKeys = this.collectVesselKeys(row);
+      return Array.from(alertKeys).some((key) => rowKeys.has(key));
+    });
+
+    if (match) {
+      return match;
+    }
+
+    // A safe fallback keeps navigation functional while the vessel snapshot is
+    // still loading. Realtime will replace it with the full backend row when available.
+    const fallbackPrefix = String(alert.vesselId || alert.vesselName || '').trim();
+    if (!fallbackPrefix && !alert.vesselName) {
+      return null;
+    }
+
+    const info = {
+      id: alert.vesselId || fallbackPrefix,
+      prefix: fallbackPrefix,
+      name: alert.vesselName || fallbackPrefix,
+      desc: 'Vessel',
+    };
+
+    return { fv: info, fvInfo: info, ...info };
+  }
+
+  private collectAlertVesselKeys(alert: AlertRecord): Set<string> {
+    const raw = alert.raw && typeof alert.raw === 'object'
+      ? (alert.raw as Record<string, any>)
+      : {};
+
+    const values: unknown[] = [
+      alert.vesselId,
+      alert.vesselName,
+      raw['VesselID'],
+      raw['vesselId'],
+      raw['ShipID'],
+      raw['shipId'],
+      raw['Prefix'],
+      raw['prefix'],
+      raw['VesselName'],
+      raw['vesselName'],
+      raw['ShipName'],
+      raw['shipName'],
+      raw['PointSource'],
+      raw['pointSource'],
+    ];
+
+    return new Set(
+      values
+        .map((value) => this.normalizeVesselKey(value))
+        .filter((value) => value.length > 0),
+    );
+  }
+
+  private collectVesselKeys(vessel: any): Set<string> {
+    const sources = [vessel, vessel?.fv, vessel?.fvInfo];
+    const values: unknown[] = [];
+
+    for (const source of sources) {
+      if (!source) continue;
+      values.push(
+        source.id,
+        source._id,
+        source.vesselId,
+        source.shipId,
+        source.prefix,
+        source.name,
+        source.vesselName,
+      );
+    }
+
+    return new Set(
+      values
+        .map((value) => this.normalizeVesselKey(value))
+        .filter((value) => value.length > 0),
+    );
+  }
+
+  private normalizeVesselKey(value: unknown): string {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
   }
 
   resetFilters(): void {

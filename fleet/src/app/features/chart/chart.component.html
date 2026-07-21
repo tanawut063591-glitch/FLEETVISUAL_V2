@@ -58,17 +58,39 @@
         </div>
 
         <div class="chart-meta" *ngIf="lastStartLabel || lastEndLabel || lastUpdatedLabel">
-            <div>
+            <div class="meta-card">
                 <span>Range</span>
                 <strong>{{ lastStartLabel || '-' }} → {{ lastEndLabel || '-' }}</strong>
             </div>
-            <div>
+            <div class="meta-card">
                 <span>Mode</span>
                 <strong>{{ getModeLabel() }}</strong>
             </div>
-            <div>
+            <div class="meta-card">
                 <span>Last Update</span>
                 <strong>{{ lastUpdatedLabel || '-' }}</strong>
+            </div>
+
+            <div class="chart-meta-controls" aria-label="Chart type controls">
+                <span class="chart-type-label">CHART TYPE</span>
+                <div class="chart-type-switch">
+                    <button
+                        type="button"
+                        title="Display as line chart"
+                        [ngClass]="{ 'active': chartType == 'line' }"
+                        (click)="setChartType('line')">
+                        <i class="fa fa-line-chart"></i>
+                        <span>Line</span>
+                    </button>
+                    <button
+                        type="button"
+                        title="Display as area chart"
+                        [ngClass]="{ 'active': chartType == 'area' }"
+                        (click)="setChartType('area')">
+                        <i class="fa fa-area-chart"></i>
+                        <span>Area</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -111,14 +133,50 @@
                             <p>Combined trend view with every selected tag in one chart.</p>
                         </div>
                         <div class="card-tools">
-                            <i class="fa fa-search-plus"></i>
-                            <i class="fa fa-expand"></i>
-                            <i class="fa fa-ellipsis-h"></i>
+                            <button
+                                type="button"
+                                class="card-tool-btn"
+                                title="Zoom in"
+                                aria-label="Zoom in chart"
+                                (click)="zoomChart('main', $event)">
+                                <i class="fa fa-search-plus"></i>
+                            </button>
+                            <button
+                                type="button"
+                                class="card-tool-btn"
+                                title="Full screen"
+                                aria-label="Open chart in full screen"
+                                (click)="toggleChartFullscreen('main', $event)">
+                                <i class="fa fa-expand"></i>
+                            </button>
+                            <div class="chart-menu-wrap">
+                                <button
+                                    type="button"
+                                    class="card-tool-btn"
+                                    title="More chart actions"
+                                    aria-label="Open chart actions"
+                                    [ngClass]="{ 'active': activeChartMenu == 'main' }"
+                                    (click)="toggleChartMenu('main', $event)">
+                                    <i class="fa fa-ellipsis-h"></i>
+                                </button>
+                                <div class="chart-action-menu" *ngIf="activeChartMenu == 'main'" (click)="$event.stopPropagation()">
+                                    <button type="button" (click)="resetChartZoom('main', $event)">
+                                        <i class="fa fa-arrows-h"></i><span>Reset zoom</span>
+                                    </button>
+                                    <button type="button" (click)="downloadChartPng('main', $event)">
+                                        <i class="fa fa-download"></i><span>Download PNG</span>
+                                    </button>
+                                    <button type="button" (click)="exportChartCsv(); closeChartMenus()">
+                                        <i class="fa fa-file-excel-o"></i><span>Export CSV</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <highcharts-chart
                         *ngIf="mainChartOptions as options"
                         [options]="options"
+                        (chartInstance)="onMainChartInstance($event)"
                         class="chart-instance big-chart">
                     </highcharts-chart>
                 </div>
@@ -131,13 +189,49 @@
                                 <p>{{ group.count }} parameters in this group</p>
                             </div>
                             <div class="card-tools">
-                                <i class="fa fa-eye"></i>
-                                <i class="fa fa-expand"></i>
-                                <i class="fa fa-ellipsis-h"></i>
+                                <button
+                                    type="button"
+                                    class="card-tool-btn"
+                                    title="Zoom in"
+                                    aria-label="Zoom in group chart"
+                                    (click)="zoomChart('group:' + group.key, $event)">
+                                    <i class="fa fa-search-plus"></i>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="card-tool-btn"
+                                    title="Full screen"
+                                    aria-label="Open group chart in full screen"
+                                    (click)="toggleChartFullscreen('group:' + group.key, $event)">
+                                    <i class="fa fa-expand"></i>
+                                </button>
+                                <div class="chart-menu-wrap">
+                                    <button
+                                        type="button"
+                                        class="card-tool-btn"
+                                        title="More chart actions"
+                                        aria-label="Open group chart actions"
+                                        [ngClass]="{ 'active': activeChartMenu == ('group:' + group.key) }"
+                                        (click)="toggleChartMenu('group:' + group.key, $event)">
+                                        <i class="fa fa-ellipsis-h"></i>
+                                    </button>
+                                    <div
+                                        class="chart-action-menu"
+                                        *ngIf="activeChartMenu == ('group:' + group.key)"
+                                        (click)="$event.stopPropagation()">
+                                        <button type="button" (click)="resetChartZoom('group:' + group.key, $event)">
+                                            <i class="fa fa-arrows-h"></i><span>Reset zoom</span>
+                                        </button>
+                                        <button type="button" (click)="downloadChartPng('group:' + group.key, $event)">
+                                            <i class="fa fa-download"></i><span>Download PNG</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <highcharts-chart
                             [options]="group.chartOptions"
+                            (chartInstance)="onGroupChartInstance(group.key, $event)"
                             class="chart-instance group-chart">
                         </highcharts-chart>
                     </div>
@@ -168,21 +262,6 @@
                     </div>
                 </div>
 
-                <div class="side-panel chart-type-panel">
-                    <h4>CHART TYPE</h4>
-
-                    <div class="chart-type-grid">
-                        <button type="button" [ngClass]="{ 'active': chartType == 'line' }" (click)="setChartType('line')">
-                            <i class="fa fa-line-chart"></i>
-                            <span>Line</span>
-                        </button>
-
-                        <button type="button" [ngClass]="{ 'active': chartType == 'area' }" (click)="setChartType('area')">
-                            <i class="fa fa-area-chart"></i>
-                            <span>Area</span>
-                        </button>
-                    </div>
-                </div>
 
             </aside>
 

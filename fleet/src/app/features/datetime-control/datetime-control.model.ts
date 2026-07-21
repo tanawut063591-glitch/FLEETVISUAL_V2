@@ -3,6 +3,8 @@ export interface TimerPayload {
     end: number;
     tags: any[];
     fvInfo: any;
+    period?: string;
+    movingWindow?: boolean;
 }
 
 export interface QuickPeriodOption {

@@ -41,10 +41,6 @@ import {
   v,
   z
 } from "./chunk-QEE326W4.js";
-import {
-  NG_VALUE_ACCESSOR,
-  NgControl
-} from "./chunk-6HT2FO2K.js";
 import "./chunk-5IUH2VBJ.js";
 import {
   animate,
@@ -53,6 +49,10 @@ import {
   transition,
   trigger
 } from "./chunk-IGKMVEUV.js";
+import {
+  NG_VALUE_ACCESSOR,
+  NgControl
+} from "./chunk-6HT2FO2K.js";
 import {
   CommonModule,
   NgClass,

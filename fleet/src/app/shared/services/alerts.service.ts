@@ -45,7 +45,7 @@ export class AlertsService {
     private databaseConfig: DatabaseApiConfigService,
   ) {
     this.runtimeConfig$ = this.http.get<AlertsRuntimeConfig>('/alerts.config.json').pipe(
-      catchError(() => of({ refreshSeconds: 20 } as AlertsRuntimeConfig)),
+      catchError(() => of({ refreshSeconds: 10 } as AlertsRuntimeConfig)),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
   }
@@ -117,9 +117,9 @@ export class AlertsService {
     return this.runtimeConfig$.pipe(
       map((config) => {
         const preference = Number(localStorage.getItem('fleet-alert-refresh-seconds'));
-        const configured = Number(config.refreshSeconds ?? 20);
+        const configured = Number(config.refreshSeconds ?? 10);
         const seconds = Number.isFinite(preference) && preference > 0 ? preference : configured;
-        return Number.isFinite(seconds) ? Math.min(300, Math.max(10, seconds)) : 20;
+        return Number.isFinite(seconds) ? Math.min(300, Math.max(10, seconds)) : 10;
       }),
     );
   }

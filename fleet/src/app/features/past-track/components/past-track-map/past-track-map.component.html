@@ -10,7 +10,6 @@
             <span><i class="dot sailing"></i> Sailing</span>
             <span><i class="dot idle"></i> Idle</span>
             <span><i class="dot nodata"></i> No Data</span>
-            <span><i class="checkpoint-ring"></i> Checkpoint</span>
         </div>
     </div>
 
@@ -55,7 +54,7 @@
                 [ngClass]="getFallbackPointClass(item.point)"
                 [style.left.%]="item.x"
                 [style.top.%]="item.y"
-                [attr.aria-label]="'Checkpoint '+ item.point.time"
+                [attr.aria-label]="'Route position ' + item.point.time"
                 (click)="selectFallbackPoint(item.point)">
                 {{ getFallbackPointLabel(item.point) }}
             </button>

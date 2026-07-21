@@ -50,6 +50,20 @@ export class DatabaseApiConfigService {
         publicConfig,
       ),
       vessels: this.resolveEndpoint(config.vessels, globallyEnabled, defaultTimeout, 60, publicConfig),
+      vesselGroups: this.resolveEndpoint(
+        config.vesselGroups,
+        globallyEnabled,
+        defaultTimeout,
+        10,
+        publicConfig,
+      ),
+      userSessions: this.resolveEndpoint(
+        config.userSessions,
+        globallyEnabled,
+        defaultTimeout,
+        10,
+        publicConfig,
+      ),
       fallback: {
         alertsToTelemetry: config.fallback?.alertsToTelemetry !== false,
         logsToAlerts: config.fallback?.logsToAlerts !== false,

@@ -347,6 +347,10 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         localStorage.setItem('pastTrackVessel', JSON.stringify(normalizedVessel));
       } catch {}
 
+      // Publish the map selection to the shared vessel state. MainComponent
+      // listens to this stream and immediately updates the active Sidebar card.
+      this.fvRealtimeService.setActiveVessel(normalizedVessel);
+
       this.loadPopupSummary(normalizedVessel);
 
       if (this.map && marker) {

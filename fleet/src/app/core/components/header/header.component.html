@@ -59,8 +59,10 @@
         <span
           class="alert-count"
           *ngIf="item.isAlert && alertCount > 0"
+          aria-live="polite"
+          [attr.aria-label]="alertCount + ' active alarms'"
         >
-          {{ alertCount }}
+          {{ alertCount > 99 ? '99+' : alertCount }}
         </span>
       </div>
 

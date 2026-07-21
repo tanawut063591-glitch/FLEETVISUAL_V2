@@ -17,7 +17,6 @@ interface HistoryPreset {
   days: 1 | 3 | 7;
   label: string;
   intervalMinutes: number;
-  checkpointMinutes: number;
 }
 
 @Component({
@@ -31,9 +30,9 @@ export class PastTrackComponent implements OnInit, OnDestroy {
   @ViewChild('routeMapExport') routeMapExport?: ElementRef<HTMLElement>;
   readonly maxHistoryDays = 7;
   readonly historyPresets: HistoryPreset[] = [
-    { days: 1, label: '1 Day', intervalMinutes: 10, checkpointMinutes: 60 },
-    { days: 3, label: '3 Days', intervalMinutes: 30, checkpointMinutes: 180 },
-    { days: 7, label: '7 Days', intervalMinutes: 60, checkpointMinutes: 600 },
+    { days: 1, label: '1 Day', intervalMinutes: 10 },
+    { days: 3, label: '3 Days', intervalMinutes: 30 },
+    { days: 7, label: '7 Days', intervalMinutes: 60 },
   ];
 
   vesselId = '';
@@ -45,7 +44,6 @@ export class PastTrackComponent implements OnInit, OnDestroy {
 
   activeRangeMode: RangeMode = 1;
   samplingIntervalMinutes = 10;
-  checkpointIntervalMinutes = 60;
   customRangeOpen = false;
   exportingMap = false;
 
@@ -588,7 +586,6 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     const preset = this.historyPresets.find((item) => item.days === days);
 
     this.samplingIntervalMinutes = preset?.intervalMinutes || 60;
-    this.checkpointIntervalMinutes = preset?.checkpointMinutes || 600;
   }
 
   private applyAutomaticResolution(durationMs: number): void {
@@ -596,18 +593,15 @@ export class PastTrackComponent implements OnInit, OnDestroy {
 
     if (durationMs <= oneDayMs) {
       this.samplingIntervalMinutes = 10;
-      this.checkpointIntervalMinutes = 60;
       return;
     }
 
     if (durationMs <= 3 * oneDayMs) {
       this.samplingIntervalMinutes = 30;
-      this.checkpointIntervalMinutes = 180;
       return;
     }
 
     this.samplingIntervalMinutes = 60;
-    this.checkpointIntervalMinutes = 600;
   }
 
   private setRollingRange(days: 1 | 3 | 7): void {

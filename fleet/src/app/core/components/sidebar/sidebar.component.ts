@@ -11,6 +11,9 @@ import {
   EventEmitter,
   ChangeDetectorRef,
   HostListener,
+  ElementRef,
+  QueryList,
+  ViewChildren,
 } from '@angular/core';
 
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
@@ -55,6 +58,9 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges, DoCheck {
   // ส่งเรือที่เลือกกลับไปให้ parent
   @Output() selectedVessel = new EventEmitter<any>();
 
+  @ViewChildren('vesselCard', { read: ElementRef })
+  vesselCardElements?: QueryList<ElementRef<HTMLElement>>;
+
   keyword = '';
   isShowMenu = true;
   isSm = false;
@@ -67,6 +73,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges, DoCheck {
   private breakpointSub: Subscription | null = null;
   private realtimeTimer: ReturnType<typeof setInterval> | null = null;
   private lastVesselSignature = '';
+  private lastAutoScrolledVesselKey = '';
 
   constructor(
     private coordinatesService: CoordinatesService,
@@ -384,7 +391,28 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges, DoCheck {
 
     // sync เรือที่ active มาจาก parent
     const active = this.normalizeVessel(this.activeVessel);
-    this.selectedVesselKey = this.getVesselKey(active, 0);
+    const nextKey = this.getVesselKey(active, 0);
+    const selectionChanged = nextKey !== this.selectedVesselKey;
+    this.selectedVesselKey = nextKey;
+
+    if (selectionChanged) {
+      this.scheduleActiveVesselScroll(nextKey);
+    }
+  }
+
+  private scheduleActiveVesselScroll(vesselKey: string): void {
+    if (!vesselKey || vesselKey === this.lastAutoScrolledVesselKey) {
+      return;
+    }
+
+    this.lastAutoScrolledVesselKey = vesselKey;
+
+    setTimeout(() => {
+      const index = this.visibleVessels.findIndex((item) => item.key === vesselKey);
+      const element = index >= 0 ? this.vesselCardElements?.get(index)?.nativeElement : null;
+
+      element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 0);
   }
 
   private normalizeVessel(vessel: any): any {

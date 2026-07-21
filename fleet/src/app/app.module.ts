@@ -33,7 +33,15 @@ import { errorInterceptor } from './core/interceptors/error.interceptor';
   providers: [
     provideHighcharts({
       instance: () => import('highcharts/esm/highcharts').then((module) => module.default),
-      modules: () => [import('highcharts/esm/modules/exporting')],
+      // Exporting modules depend on one another. Load them sequentially
+      // inside a single promise to avoid a first-load race that can leave
+      // <highcharts-chart> blank after Apply.
+      modules: () => [
+        (async () => {
+          await import('highcharts/esm/modules/exporting');
+          return import('highcharts/esm/modules/offline-exporting');
+        })(),
+      ],
     }),
     provideHttpClient(
       withInterceptors([

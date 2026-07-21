@@ -55,6 +55,7 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
     @Input() pageSubtitle = 'View, export and analyze historical sensor values from the selected vessel.';
     @Input() badgeLabel = 'HISTORICAL SENSOR DATA';
     @Input() parameterText = 'Choose the sensor tags you want to display in the logger table.';
+    @Input() compactLegacy = false;
 
     prefix: string = '';
     vesselInfoActive: any;
@@ -647,6 +648,18 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         this.markView();
     }
 
+    private isMovingWindow(period: string, endTs: number): boolean {
+        if (period === 'Y') {
+            return false;
+        }
+
+        if (period === 'T' || period === 'M' || /H$/.test(period) || /W$/.test(period)) {
+            return true;
+        }
+
+        return Math.abs(Date.now() - endTs) <= 2 * 60 * 1000;
+    }
+
     private getValidatedPayload(): TimerPayload | null {
         var startTs = this.start ? this.start.getTime() : NaN;
         var endTs = this.end ? this.end.getTime() : NaN;
@@ -677,7 +690,9 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
             start: startTs,
             end: endTs,
             tags: tags,
-            fvInfo: this.vesselInfoActive
+            fvInfo: this.vesselInfoActive,
+            period: this.period || 'CUSTOM',
+            movingWindow: this.isMovingWindow(this.period, endTs)
         };
     }
 

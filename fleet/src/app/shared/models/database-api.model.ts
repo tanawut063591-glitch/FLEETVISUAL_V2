@@ -21,6 +21,8 @@ export interface DatabaseApiConfig {
   alerts?: DatabaseEndpointConfig;
   activityLogs?: DatabaseEndpointConfig;
   vessels?: DatabaseEndpointConfig;
+  vesselGroups?: DatabaseEndpointConfig;
+  userSessions?: DatabaseEndpointConfig;
   fallback?: DatabaseFallbackConfig;
 }
 
@@ -37,5 +39,7 @@ export interface ResolvedDatabaseApiConfig {
   alerts: ResolvedDatabaseEndpoint;
   activityLogs: ResolvedDatabaseEndpoint;
   vessels: ResolvedDatabaseEndpoint;
+  vesselGroups: ResolvedDatabaseEndpoint;
+  userSessions: ResolvedDatabaseEndpoint;
   fallback: Required<DatabaseFallbackConfig>;
 }

@@ -59,6 +59,7 @@
     <!-- Vessel List -->
     <div class="vessel-list" *ngIf="visibleVessels.length > 0">
       <div
+        #vesselCard
         class="vessel-card"
         *ngFor="let vessel of visibleVessels; trackBy: trackByVessel"
         [class.active]="vessel.isActive"

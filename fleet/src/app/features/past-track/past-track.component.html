@@ -4,10 +4,18 @@
 
 
       <h1>PAST TRACK</h1>
-      <p>Historical vessel movement, route checkpoints, point details and time-based playback.</p>
+      <p>Historical vessel movement, continuous route line, point details and time-based playback.</p>
     </div>
 
     <div class="header-actions">
+      <button
+        type="button"
+        class="btn back-overview"
+        [routerLink]="['/main/overview']"
+        aria-label="Back to Overview">
+        <span aria-hidden="true">←</span> Back to Overview
+      </button>
+
       <button type="button" class="btn light" (click)="refreshPastTrack()" [disabled]="loading">
         <span>↻</span> Refresh Route
       </button>
@@ -66,7 +74,7 @@
   <section class="custom-range-panel" *ngIf="customRangeOpen">
     <div class="custom-range-copy">
       <strong>Custom Date and Time</strong>
-      <span>Select up to seven days. Data resolution and checkpoint spacing are selected automatically.</span>
+      <span>Select up to seven days. Data resolution is selected automatically.</span>
     </div>
 
     <label class="custom-field">
@@ -119,13 +127,6 @@
       </div>
 
       <div class="route-info-item">
-        <small>CHECKPOINT SPACING</small>
-        <strong>
-          Every {{ checkpointIntervalMinutes / 60 }} hour{{ checkpointIntervalMinutes > 60 ? 's' : '' }}
-        </strong>
-      </div>
-
-      <div class="route-info-item">
         <small>DISPLAY / RAW POINTS</small>
         <strong>{{ summary.trackPoints }} / {{ summary.rawTrackPoints || summary.trackPoints }}</strong>
       </div>
@@ -147,7 +148,6 @@
           <app-past-track-map
             [trackPoints]="trackPoints"
             [selectedPoint]="selectedPoint"
-            [checkpointIntervalMinutes]="checkpointIntervalMinutes"
             (pointSelected)="selectPoint($event)">
           </app-past-track-map>
         </div>
@@ -156,7 +156,6 @@
           [trackPoints]="trackPoints"
           [selectedPoint]="selectedPoint"
           [samplingIntervalMinutes]="samplingIntervalMinutes"
-          [checkpointIntervalMinutes]="checkpointIntervalMinutes"
           (pointSelected)="selectPoint($event)"
           (focusRequested)="focusPointOnMap($event)">
         </app-past-track-timeline>

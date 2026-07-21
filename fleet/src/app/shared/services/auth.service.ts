@@ -156,7 +156,16 @@ export class AuthService {
       return redirect;
     }
 
-    return '/main/overview';
+    const preferredPage = localStorage.getItem('fleet-default-landing-page') || 'overview';
+    const allowedPages = new Set([
+      'overview',
+      'realtime',
+      'data-logger',
+      'chart',
+      'diagram',
+      'alerts',
+    ]);
+    return `/main/${allowedPages.has(preferredPage) ? preferredPage : 'overview'}`;
   }
 
   // เช็กว่า token เดิมยังใช้ได้ไหม

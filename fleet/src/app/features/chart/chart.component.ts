@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import type Highcharts from 'highcharts';
 import { NewHttpClientService } from '../../shared/services/http-client1.service';
@@ -45,7 +45,13 @@ export class ChartComponent implements OnInit, OnDestroy {
 
     displayMode: string = 'all';
     chartType: string = 'line';
-    autoRefresh: boolean = false;
+    autoRefresh: boolean = true;
+    isRealtimeRange: boolean = false;
+    liveClockLabel: string = '';
+
+    activeChartMenu: string | null = null;
+    private mainChartInstance: Highcharts.Chart | null = null;
+    private groupChartInstances: { [key: string]: Highcharts.Chart } = {};
 
     selectedTags: any[] = [];
     selectedSeries: ChartSeriesItem[] = [];
@@ -56,12 +62,15 @@ export class ChartComponent implements OnInit, OnDestroy {
     lastUpdatedLabel: string = '';
 
     private refreshTimer: ReturnType<typeof setInterval> | null = null;
+    private clockTimer: ReturnType<typeof setInterval> | null = null;
+    private chartRangeStart = 0;
+    private chartRangeEnd = 0;
     private requestSub: Subscription | null = null;
     private requestVersion = 0;
     private themeObserver: MutationObserver | null = null;
 
-    private readonly refreshMs: number = 60000;
-    private readonly maxRenderedPoints: number = 2000;
+    private readonly refreshMs: number = 30000;
+    private readonly maxRenderedPoints: number = 1200;
 
     private readonly palette: string[] = [
         '#2563eb', '#16a34a', '#f97316', '#8b5cf6', '#ef4444', '#06b6d4',
@@ -75,6 +84,12 @@ export class ChartComponent implements OnInit, OnDestroy {
     ) { }
 
     ngOnInit() {
+        this.updateLiveClock();
+        this.clockTimer = setInterval(() => {
+            this.updateLiveClock();
+            this.markView();
+        }, 1000);
+
         if (typeof document !== 'undefined' && typeof MutationObserver !== 'undefined') {
             this.themeObserver = new MutationObserver(() => {
                 if (this.selectedSeries.length > 0) {
@@ -92,12 +107,19 @@ export class ChartComponent implements OnInit, OnDestroy {
 
     ngOnDestroy() {
         this.clearRefreshTimer();
+        if (this.clockTimer) {
+            clearInterval(this.clockTimer);
+            this.clockTimer = null;
+        }
         if (this.requestSub) {
             this.requestSub.unsubscribe();
         }
         this.requestVersion++;
         this.themeObserver?.disconnect();
         this.themeObserver = null;
+        this.mainChartInstance = null;
+        this.groupChartInstances = {};
+        this.activeChartMenu = null;
     }
 
     showLogger(event: any) {
@@ -112,17 +134,29 @@ export class ChartComponent implements OnInit, OnDestroy {
 
         var requestVersion = ++this.requestVersion;
 
-        this.selectedEvent = event;
-        this.selectedTags = (event.tags || []).slice(0, 10);
+        this.selectedEvent = {
+            ...event,
+            tags: (event.tags || []).slice(0, 10)
+        };
+        this.selectedTags = this.selectedEvent.tags;
         this.errorMessage = '';
 
-        var start = this.toRequestTime(event.start);
-        var end = this.toRequestTime(event.end);
+        var requestEvent = this.resolveRequestEvent(this.selectedEvent);
+        this.isRealtimeRange = !!requestEvent.movingWindow;
+        this.chartRangeStart = Number(requestEvent.start) || 0;
+        this.chartRangeEnd = Number(requestEvent.end) || 0;
 
-        this.lastStartLabel = this.toDisplayTime(event.start);
-        this.lastEndLabel = this.toDisplayTime(event.end);
+        var start = this.toRequestTime(requestEvent.start);
+        var end = this.toRequestTime(requestEvent.end);
+
+        this.lastStartLabel = this.toDisplayTime(requestEvent.start);
+        this.lastEndLabel = this.toDisplayTime(requestEvent.end);
 
         if (!silent) {
+            this.autoRefresh = this.isRealtimeRange;
+            if (!this.autoRefresh) {
+                this.clearRefreshTimer();
+            }
             this.loading = true;
             this.markView();
         }
@@ -140,8 +174,14 @@ export class ChartComponent implements OnInit, OnDestroy {
                 var raw = this.extractSeriesEntries(res, this.selectedTags);
                 this.selectedSeries = this.buildSeries(raw, this.selectedTags);
                 this.rebuildCharts();
-                this.lastUpdatedLabel = this.toDisplayTime(new Date());
+                this.lastUpdatedLabel = this.toDisplayTimeWithSeconds(new Date());
                 this.loading = false;
+
+                if (this.autoRefresh && this.isRealtimeRange) {
+                    this.ensureRefreshTimer();
+                } else if (!this.autoRefresh) {
+                    this.clearRefreshTimer();
+                }
 
                 if (this.selectedSeries.length === 0) {
                     this.errorMessage = 'No historian values were found for the selected range.';
@@ -192,6 +232,183 @@ export class ChartComponent implements OnInit, OnDestroy {
         this.markView();
     }
 
+    onMainChartInstance(chart: Highcharts.Chart): void {
+        this.mainChartInstance = chart;
+    }
+
+    onGroupChartInstance(key: string, chart: Highcharts.Chart): void {
+        if (!key || !chart) {
+            return;
+        }
+        this.groupChartInstances[key] = chart;
+    }
+
+    toggleChartMenu(target: string, event?: MouseEvent): void {
+        event?.stopPropagation();
+        this.activeChartMenu = this.activeChartMenu === target ? null : target;
+        this.markView();
+    }
+
+    @HostListener('document:click')
+    closeChartMenus(): void {
+        if (this.activeChartMenu !== null) {
+            this.activeChartMenu = null;
+            this.markView();
+        }
+    }
+
+    zoomChart(target: string, event?: MouseEvent): void {
+        event?.stopPropagation();
+        this.activeChartMenu = null;
+
+        var chart = this.getChartInstance(target);
+        var axis = chart && chart.xAxis ? chart.xAxis[0] : null;
+        if (!chart || !axis) {
+            return;
+        }
+
+        var extremes = axis.getExtremes();
+        var dataMin = Number(extremes.dataMin);
+        var dataMax = Number(extremes.dataMax);
+        var currentMin = Number(extremes.min);
+        var currentMax = Number(extremes.max);
+
+        if (!Number.isFinite(dataMin) || !Number.isFinite(dataMax) || dataMax <= dataMin) {
+            return;
+        }
+
+        if (!Number.isFinite(currentMin)) {
+            currentMin = dataMin;
+        }
+        if (!Number.isFinite(currentMax)) {
+            currentMax = dataMax;
+        }
+
+        var currentSpan = Math.max(1, currentMax - currentMin);
+        var minimumSpan = Math.max(1000, (dataMax - dataMin) * 0.02);
+        var nextSpan = Math.max(minimumSpan, currentSpan * 0.65);
+        var centre = currentMin + currentSpan / 2;
+        var nextMin = Math.max(dataMin, centre - nextSpan / 2);
+        var nextMax = Math.min(dataMax, centre + nextSpan / 2);
+
+        if (nextMax - nextMin < nextSpan) {
+            if (nextMin <= dataMin) {
+                nextMax = Math.min(dataMax, dataMin + nextSpan);
+            } else if (nextMax >= dataMax) {
+                nextMin = Math.max(dataMin, dataMax - nextSpan);
+            }
+        }
+
+        axis.setExtremes(nextMin, nextMax, true, undefined, { trigger: 'fleet-toolbar-zoom' } as any);
+    }
+
+    resetChartZoom(target: string, event?: MouseEvent): void {
+        event?.stopPropagation();
+        this.activeChartMenu = null;
+
+        var chart = this.getChartInstance(target);
+        var axis = chart && chart.xAxis ? chart.xAxis[0] : null;
+        if (!chart || !axis) {
+            return;
+        }
+
+        axis.setExtremes(undefined, undefined, true, undefined, { trigger: 'fleet-toolbar-reset' } as any);
+        chart.redraw();
+        this.markView();
+    }
+
+    toggleChartFullscreen(target: string, event?: MouseEvent): void {
+        event?.stopPropagation();
+        this.activeChartMenu = null;
+
+        var chart = this.getChartInstance(target);
+        if (!chart) {
+            return;
+        }
+
+        var activeChart = chart as Highcharts.Chart;
+        var chartWithFullscreen = activeChart as any;
+        if (chartWithFullscreen.fullscreen && typeof chartWithFullscreen.fullscreen.toggle === 'function') {
+            chartWithFullscreen.fullscreen.toggle();
+            setTimeout(() => activeChart.reflow(), 120);
+            return;
+        }
+
+        var chartElement = chartWithFullscreen.renderTo || activeChart.container;
+        var doc = document as any;
+        if (doc.fullscreenElement && typeof doc.exitFullscreen === 'function') {
+            doc.exitFullscreen().finally(() => setTimeout(() => activeChart.reflow(), 120));
+        } else if (chartElement && typeof chartElement.requestFullscreen === 'function') {
+            chartElement.requestFullscreen().then(() => setTimeout(() => activeChart.reflow(), 120));
+        }
+    }
+
+    downloadChartPng(target: string, event?: MouseEvent): void {
+        event?.stopPropagation();
+        this.activeChartMenu = null;
+
+        var chart = this.getChartInstance(target) as any;
+        if (!chart) {
+            return;
+        }
+
+        var suffix = this.datePipe.transform(new Date(), 'yyyyMMdd-HHmmss') || 'chart';
+        var isGroupChart = target.indexOf('group:') === 0;
+        var groupSuffix = isGroupChart ? '-' + target.substring(6) : '';
+
+        // Export every chart as a wide 2:1 landscape image. Highcharts normally
+        // uses the on-screen chart size (600 x 550 for All Lines), which creates
+        // an almost portrait PNG. An explicit source size keeps All Lines and
+        // Separate Groups consistent, wide and presentation-ready.
+        var sourceWidth = 1800;
+        var sourceHeight = 900;
+        var exportOptions = {
+            type: 'image/png',
+            filename: 'fleet-chart' + groupSuffix + '-' + suffix,
+            sourceWidth: sourceWidth,
+            sourceHeight: sourceHeight,
+            scale: 1,
+            fallbackToExportServer: false
+        };
+
+        var exportChartOptions: Highcharts.Options = {
+            chart: {
+                width: sourceWidth,
+                height: sourceHeight
+            },
+            legend: {
+                enabled: true,
+                align: 'center',
+                verticalAlign: 'top',
+                layout: 'horizontal',
+                itemDistance: 24,
+                itemMarginBottom: 8,
+                itemStyle: {
+                    fontSize: isGroupChart ? '14px' : '13px',
+                    fontWeight: '700'
+                }
+            }
+        };
+
+        if (typeof chart.exportChartLocal === 'function') {
+            chart.exportChartLocal(exportOptions, exportChartOptions);
+        } else if (typeof chart.exportChart === 'function') {
+            chart.exportChart(exportOptions, exportChartOptions);
+        }
+    }
+
+    private getChartInstance(target: string): Highcharts.Chart | null {
+        if (target === 'main') {
+            return this.mainChartInstance;
+        }
+
+        if (target && target.indexOf('group:') === 0) {
+            return this.groupChartInstances[target.substring(6)] || null;
+        }
+
+        return null;
+    }
+
     toggleAutoRefresh() {
         this.autoRefresh = !this.autoRefresh;
 
@@ -218,10 +435,16 @@ export class ChartComponent implements OnInit, OnDestroy {
         this.selectedSeries = [];
         this.mainChartOptions = null;
         this.groupCharts = [];
+        this.mainChartInstance = null;
+        this.groupChartInstances = {};
+        this.activeChartMenu = null;
         this.errorMessage = '';
         this.lastStartLabel = '';
         this.lastEndLabel = '';
         this.lastUpdatedLabel = '';
+        this.isRealtimeRange = false;
+        this.chartRangeStart = 0;
+        this.chartRangeEnd = 0;
         this.markView();
     }
 
@@ -723,7 +946,7 @@ export class ChartComponent implements OnInit, OnDestroy {
             return;
         }
 
-        this.mainChartOptions = this.createChartOptions('All Selected Parameters', this.selectedSeries, 440);
+        this.mainChartOptions = this.createChartOptions('All Selected Parameters', this.selectedSeries, 550);
         this.groupCharts = this.createGroupedCharts(this.selectedSeries);
     }
 
@@ -748,7 +971,7 @@ export class ChartComponent implements OnInit, OnDestroy {
                 key: this.normalizeTagName(groupName),
                 label: groupName,
                 count: groupSeries.length,
-                chartOptions: this.createChartOptions(groupName, groupSeries, 260),
+                chartOptions: this.createChartOptions(groupName, groupSeries, 300),
                 seriesNames: groupSeries.map((x: ChartSeriesItem) => x.label)
             });
         }
@@ -760,12 +983,14 @@ export class ChartComponent implements OnInit, OnDestroy {
         var highSeries: any[] = [];
         var darkTheme = this.isDarkTheme();
         var chartBackground = darkTheme ? '#070b12' : '#ffffff';
-        var axisColor = darkTheme ? '#2a3748' : '#dbeafe';
-        var gridColor = darkTheme ? '#1c2735' : '#e8eef7';
-        var mutedText = darkTheme ? '#94a3b8' : '#64748b';
+        var axisColor = darkTheme ? '#334155' : '#cbd5e1';
+        var gridColor = darkTheme ? '#1f2937' : '#e5e7eb';
+        var mutedText = darkTheme ? '#a7b4c7' : '#475569';
         var primaryText = darkTheme ? '#f8fafc' : '#0f172a';
         var tooltipBackground = darkTheme ? '#0d1420' : '#ffffff';
-        var tooltipBorder = darkTheme ? '#334155' : '#dbeafe';
+        var tooltipBorder = darkTheme ? '#475569' : '#bfdbfe';
+        var axisLayout = this.createReadableAxisLayout(seriesItems, mutedText, gridColor, axisColor);
+        var tickInterval = this.getReadableTimeTickInterval();
 
         for (var i = 0; i < seriesItems.length; i++) {
             var item = seriesItems[i];
@@ -774,83 +999,374 @@ export class ChartComponent implements OnInit, OnDestroy {
                 name: item.label + (item.unit ? ' (' + item.unit + ')' : ''),
                 data: item.data,
                 color: item.color,
-                fillColor: this.chartType === 'area' ? this.hexToRgba(item.color, 0.15) : undefined,
-                lineWidth: 2,
+                yAxis: axisLayout.seriesAxis[i],
+                // Slightly stronger area fill so each series remains easy to read
+                // without hiding grid lines or nearby series.
+                fillColor: this.chartType === 'area' ? this.hexToRgba(item.color, 0.14) : undefined,
+                fillOpacity: this.chartType === 'area' ? 1 : undefined,
+                lineWidth: this.chartType === 'area' ? 1.8 : 1.9,
                 turboThreshold: 0,
+                connectNulls: false,
                 marker: {
                     enabled: false,
                     symbol: 'circle',
-                    radius: 2
+                    radius: 2.5,
+                    states: { hover: { enabled: true, radius: 4.5 } }
                 }
             });
         }
 
         var options: any = {
+            time: { useUTC: false },
             credits: { enabled: false },
-            exporting: { enabled: true, fallbackToExportServer: false },
+            exporting: { enabled: false, fallbackToExportServer: false },
             chart: {
                 type: this.chartType === 'area' ? 'area' : 'line',
                 height: height,
                 zoomType: 'x',
+                panning: { enabled: true, type: 'x' },
+                panKey: 'shift',
                 backgroundColor: chartBackground,
-                spacingTop: 16,
-                spacingRight: 20,
-                spacingBottom: 12,
-                spacingLeft: 8
+                alignTicks: false,
+                spacingTop: 10,
+                spacingRight: 20 + axisLayout.rightOffset,
+                spacingBottom: 10,
+                spacingLeft: 12 + axisLayout.leftOffset
             },
             title: { text: null },
             subtitle: { text: null },
             xAxis: {
                 type: 'datetime',
-                gridLineWidth: 1,
+                min: this.chartRangeStart || undefined,
+                max: this.chartRangeEnd || undefined,
                 lineColor: axisColor,
                 tickColor: axisColor,
+                tickInterval: tickInterval,
+                tickPixelInterval: 115,
+                gridLineWidth: 0,
+                minorGridLineWidth: 0,
+                dateTimeLabelFormats: {
+                    millisecond: '%H:%M:%S',
+                    second: '%H:%M:%S',
+                    minute: '%H:%M',
+                    hour: '%H:%M',
+                    day: '%e %b',
+                    week: '%e %b',
+                    month: '%b %Y',
+                    year: '%Y'
+                },
+                crosshair: {
+                    width: 1,
+                    color: darkTheme ? '#64748b' : '#94a3b8',
+                    dashStyle: 'ShortDash'
+                },
                 labels: {
-                    style: { color: mutedText, fontSize: '11px' }
-                }
+                    autoRotation: [-35],
+                    style: { color: mutedText, fontSize: '11px', fontWeight: '600' },
+                    formatter: function (this: any) {
+                        var date = new Date(Number(this.value));
+                        var hh = String(date.getHours()).padStart(2, '0');
+                        var mm = String(date.getMinutes()).padStart(2, '0');
+                        if (date.getHours() === 0 && date.getMinutes() === 0) {
+                            return date.getDate() + ' ' + date.toLocaleString('en-US', { month: 'short' });
+                        }
+                        return hh + ':' + mm;
+                    }
+                },
+                plotLines: this.isRealtimeRange && this.chartRangeEnd
+                    ? [{
+                        value: this.chartRangeEnd,
+                        color: '#22c55e',
+                        width: 1,
+                        dashStyle: 'ShortDash',
+                        zIndex: 4,
+                        label: {
+                            text: 'LIVE',
+                            rotation: 0,
+                            align: 'right',
+                            x: -5,
+                            y: 12,
+                            style: { color: '#16a34a', fontSize: '10px', fontWeight: '800' }
+                        }
+                    }]
+                    : []
             },
-            yAxis: {
-                title: { text: null },
-                gridLineColor: gridColor,
-                labels: {
-                    style: { color: mutedText, fontSize: '11px' }
-                }
-            },
+            yAxis: axisLayout.axes,
             legend: {
                 enabled: true,
                 align: 'center',
                 verticalAlign: 'top',
+                layout: 'horizontal',
+                symbolWidth: 24,
+                itemDistance: 18,
+                itemMarginBottom: 5,
                 itemStyle: {
                     color: primaryText,
-                    fontWeight: '600',
-                    fontSize: '11px'
-                }
+                    fontWeight: '700',
+                    fontSize: '11px',
+                    textOverflow: 'ellipsis'
+                },
+                itemHoverStyle: { color: '#2563eb' }
             },
             tooltip: {
                 shared: true,
                 split: false,
                 useHTML: true,
-                xDateFormat: '%d %b %Y %H:%M',
                 backgroundColor: tooltipBackground,
                 borderColor: tooltipBorder,
-                borderRadius: 10,
+                borderRadius: 8,
                 shadow: true,
-                style: { color: primaryText },
-                valueDecimals: 2
+                style: { color: primaryText, fontSize: '12px' },
+                formatter: function (this: any) {
+                    var date = new Date(Number(this.x));
+                    var timestamp = date.toLocaleString('en-GB', {
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                    });
+                    var rows = (this.points || []).map((point: any) => {
+                        var rawName = String(point.series.name || '');
+                        var unitMatch = rawName.match(/\(([^()]*)\)\s*$/);
+                        var unit = unitMatch ? unitMatch[1] : '';
+                        var value = Number(point.y);
+                        var decimals = Math.abs(value) >= 100 ? 0 : Math.abs(value) >= 10 ? 1 : 2;
+                        var formatted = Number.isFinite(value)
+                            ? value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: decimals })
+                            : '-';
+                        return '<div style="display:flex;align-items:center;gap:8px;margin-top:5px">' +
+                            '<span style="width:8px;height:8px;border-radius:50%;background:' + point.color + '"></span>' +
+                            '<span style="min-width:180px">' + rawName.replace(/\s*\([^()]*\)\s*$/, '') + '</span>' +
+                            '<strong style="margin-left:auto">' + formatted + (unit ? ' ' + unit : '') + '</strong></div>';
+                    }).join('');
+                    return '<div style="min-width:310px"><strong>' + timestamp + '</strong>' + rows + '</div>';
+                }
             },
             plotOptions: {
                 series: {
                     animation: false,
-                    states: { hover: { lineWidthPlus: 1 } }
+                    states: {
+                        hover: { lineWidthPlus: 0.8, halo: { size: 5 } },
+                        inactive: { opacity: 0.16 }
+                    }
                 },
-                area: {
-                    threshold: null
-                }
+                area: { threshold: null, lineWidth: 1.65 }
             },
             series: highSeries
         };
 
         return options as Highcharts.Options;
+    }
+
+    private createReadableAxisLayout(
+        seriesItems: ChartSeriesItem[],
+        mutedText: string,
+        gridColor: string,
+        axisColor: string
+    ): { axes: any[]; seriesAxis: number[]; leftOffset: number; rightOffset: number } {
+        // With four parameters or fewer, each line receives its own axis. This keeps
+        // counters, rates and totals readable even when their numeric ranges differ.
+        if (seriesItems.length <= 4) {
+            var dedicatedAxes: any[] = [];
+            var dedicatedMap: number[] = [];
+            var leftCount = 0;
+            var rightCount = 0;
+            var compactFormatter = (value: number) => this.formatCompactNumber(value);
+
+            for (var i = 0; i < seriesItems.length; i++) {
+                var item = seriesItems[i];
+                var opposite = i % 2 === 1;
+                var sideIndex = opposite ? rightCount++ : leftCount++;
+                var stats = this.getSeriesRange(item.rawData);
+
+                dedicatedMap[i] = i;
+                dedicatedAxes.push({
+                    title: {
+                        text: item.unit || null,
+                        margin: 8,
+                        style: { color: item.color, fontSize: '10px', fontWeight: '800' }
+                    },
+                    opposite: opposite,
+                    offset: sideIndex * 54,
+                    lineWidth: 1,
+                    lineColor: item.color || axisColor,
+                    tickColor: item.color || axisColor,
+                    tickWidth: 1,
+                    tickLength: 4,
+                    gridLineColor: i === 0 ? gridColor : 'transparent',
+                    gridLineWidth: i === 0 ? 1 : 0,
+                    minorGridLineWidth: 0,
+                    labels: {
+                        x: opposite ? 6 : -6,
+                        reserveSpace: true,
+                        style: { color: item.color || mutedText, fontSize: '11px', fontWeight: '700' },
+                        formatter: function (this: any) { return compactFormatter(Number(this.value)); }
+                    },
+                    minPadding: 0.08,
+                    maxPadding: 0.12,
+                    softMin: stats.softMin,
+                    softMax: stats.softMax,
+                    tickAmount: 6,
+                    startOnTick: true,
+                    endOnTick: true,
+                    softThreshold: false,
+                    showEmpty: false
+                });
+            }
+
+            return {
+                axes: dedicatedAxes,
+                seriesAxis: dedicatedMap,
+                leftOffset: Math.max(0, leftCount - 1) * 54,
+                rightOffset: Math.max(0, rightCount - 1) * 54
+            };
+        }
+
+        // For larger selections, group compatible units/scales so the chart does not
+        // create too many axes around the plotting area.
+        var groups: Array<{ unit: string; bucket: number; color: string; series: number[] }> = [];
+        var seriesAxis: number[] = [];
+
+        for (var s = 0; s < seriesItems.length; s++) {
+            var seriesItem = seriesItems[s];
+            var scale = this.getSeriesScale(seriesItem.rawData);
+            var unit = seriesItem.unit || 'value';
+            var bestIndex = -1;
+            var bestDistance = Number.POSITIVE_INFINITY;
+
+            for (var g = 0; g < groups.length; g++) {
+                var distance = Math.abs(groups[g].bucket - scale);
+                if (groups[g].unit === unit && distance <= 1 && distance < bestDistance) {
+                    bestIndex = g;
+                    bestDistance = distance;
+                }
+            }
+
+            if (bestIndex < 0 && groups.length < 4) {
+                bestIndex = groups.length;
+                groups.push({ unit: unit, bucket: scale, color: seriesItem.color, series: [] });
+            }
+
+            if (bestIndex < 0) {
+                for (var fallback = 0; fallback < groups.length; fallback++) {
+                    var fallbackDistance = Math.abs(groups[fallback].bucket - scale) +
+                        (groups[fallback].unit === unit ? 0 : 3);
+                    if (fallbackDistance < bestDistance) {
+                        bestIndex = fallback;
+                        bestDistance = fallbackDistance;
+                    }
+                }
+            }
+
+            groups[bestIndex].series.push(s);
+            seriesAxis[s] = bestIndex;
+        }
+
+        var formatAxisValue = (value: number) => this.formatCompactNumber(value);
+        var axes = groups.map((group, index) => {
+            var opposite = index % 2 === 1;
+            var sidePosition = Math.floor(index / 2);
+            return {
+                title: {
+                    text: group.unit === 'value' ? null : group.unit,
+                    style: { color: group.color, fontSize: '10px', fontWeight: '800' }
+                },
+                opposite: opposite,
+                offset: sidePosition * 54,
+                lineWidth: 1,
+                lineColor: group.color || axisColor,
+                tickColor: group.color || axisColor,
+                gridLineColor: index === 0 ? gridColor : 'transparent',
+                gridLineWidth: index === 0 ? 1 : 0,
+                minorGridLineWidth: 0,
+                labels: {
+                    x: opposite ? 6 : -6,
+                    style: { color: group.color || mutedText, fontSize: '11px', fontWeight: '700' },
+                    formatter: function (this: any) { return formatAxisValue(Number(this.value)); }
+                },
+                minPadding: 0.08,
+                maxPadding: 0.12,
+                tickAmount: 6,
+                startOnTick: true,
+                endOnTick: true,
+                softThreshold: false,
+                showEmpty: false
+            };
+        });
+
+        var leftAxes = groups.filter((_, index) => index % 2 === 0).length;
+        var rightAxes = groups.filter((_, index) => index % 2 === 1).length;
+        return {
+            axes: axes.length > 0 ? axes : [{ title: { text: null }, gridLineColor: gridColor }],
+            seriesAxis: seriesAxis,
+            leftOffset: Math.max(0, leftAxes - 1) * 54,
+            rightOffset: Math.max(0, rightAxes - 1) * 54
+        };
+    }
+
+    private getSeriesRange(points: ChartPoint[]): { softMin?: number; softMax?: number } {
+        if (!points || points.length === 0) {
+            return {};
+        }
+
+        var min = Number.POSITIVE_INFINITY;
+        var max = Number.NEGATIVE_INFINITY;
+
+        for (var i = 0; i < points.length; i++) {
+            var value = Number(points[i].y);
+            if (!Number.isFinite(value)) {
+                continue;
+            }
+            min = Math.min(min, value);
+            max = Math.max(max, value);
+        }
+
+        if (!Number.isFinite(min) || !Number.isFinite(max)) {
+            return {};
+        }
+
+        var span = Math.max(Math.abs(max - min), Math.max(Math.abs(max), Math.abs(min), 1) * 0.08);
+        var pad = span * 0.08;
+        var softMin = min - pad;
+        var softMax = max + pad;
+
+        if (min >= 0 && softMin < 0 && min <= span * 0.15) {
+            softMin = 0;
+        }
+
+        return { softMin: softMin, softMax: softMax };
+    }
+
+    private getReadableTimeTickInterval(): number | undefined {
+        var duration = Math.max(0, this.chartRangeEnd - this.chartRangeStart);
+        var minute = 60 * 1000;
+        var hour = 60 * minute;
+        var day = 24 * hour;
+
+        if (!duration) { return undefined; }
+        if (duration <= 2 * hour) { return 15 * minute; }
+        if (duration <= 6 * hour) { return 30 * minute; }
+        if (duration <= 24 * hour) { return 2 * hour; }
+        if (duration <= 3 * day) { return 6 * hour; }
+        if (duration <= 7 * day) { return 12 * hour; }
+        if (duration <= 31 * day) { return day; }
+        return 7 * day;
+    }
+
+    private getSeriesScale(points: ChartPoint[]): number {
+        var max = 0;
+        for (var i = 0; i < points.length; i++) {
+            max = Math.max(max, Math.abs(Number(points[i].y) || 0));
+        }
+        return max > 0 ? Math.floor(Math.log(max) / Math.LN10) : 0;
+    }
+
+    private formatCompactNumber(value: number): string {
+        if (!Number.isFinite(value)) return '-';
+        var abs = Math.abs(value);
+        if (abs >= 1000000000) return (value / 1000000000).toFixed(abs >= 10000000000 ? 0 : 1) + 'B';
+        if (abs >= 1000000) return (value / 1000000).toFixed(abs >= 10000000 ? 0 : 1) + 'M';
+        if (abs >= 1000) return (value / 1000).toFixed(abs >= 10000 ? 0 : 1) + 'k';
+        if (abs >= 100) return Math.round(value).toString();
+        return value.toLocaleString('en-US', { maximumFractionDigits: 2 });
     }
 
     private isDarkTheme(): boolean {
@@ -864,6 +1380,12 @@ export class ChartComponent implements OnInit, OnDestroy {
     // ============================================================
     // Timer / helpers
     // ============================================================
+
+    private ensureRefreshTimer() {
+        if (!this.refreshTimer) {
+            this.startRefreshTimer();
+        }
+    }
 
     private startRefreshTimer() {
         this.clearRefreshTimer();
@@ -881,6 +1403,47 @@ export class ChartComponent implements OnInit, OnDestroy {
         }
     }
 
+    private resolveRequestEvent(event: any): any {
+        var start = Number(event.start);
+        var end = Number(event.end);
+        var now = Date.now();
+        var period = String(event.period || '').toUpperCase();
+        var movingWindow = event.movingWindow === true || Math.abs(now - end) <= 2 * 60 * 1000;
+
+        if (!movingWindow || period === 'Y') {
+            return { ...event, start: start, end: end, movingWindow: false };
+        }
+
+        var nextEnd = now;
+        var nextStart = start;
+        var numeric = parseFloat(period.replace(/[^0-9.]+/g, ''));
+        if (!Number.isFinite(numeric) || numeric <= 0) numeric = 1;
+
+        if (period === 'T') {
+            var today = new Date(now);
+            today.setHours(0, 0, 0, 0);
+            nextStart = today.getTime();
+        } else if (period === 'M') {
+            var month = new Date(now);
+            month.setDate(1);
+            month.setHours(0, 0, 0, 0);
+            nextStart = month.getTime();
+        } else if (/H$/.test(period)) {
+            nextStart = nextEnd - numeric * 60 * 60 * 1000;
+        } else if (/W$/.test(period)) {
+            nextStart = nextEnd - numeric * 7 * 24 * 60 * 60 * 1000;
+        } else {
+            var duration = Math.max(60 * 1000, end - start);
+            nextStart = nextEnd - duration;
+        }
+
+        return { ...event, start: nextStart, end: nextEnd, movingWindow: true };
+    }
+
+    private updateLiveClock(): void {
+        this.liveClockLabel = this.toDisplayTimeWithSeconds(new Date());
+    }
+
     private toRequestTime(value: any): string {
         var date = new Date(value);
         return this.datePipe.transform(date, 'yyyy-MM-dd HH:mm:00') || '';
@@ -889,6 +1452,11 @@ export class ChartComponent implements OnInit, OnDestroy {
     private toDisplayTime(value: any): string {
         var date = new Date(value);
         return this.datePipe.transform(date, 'dd MMM yyyy HH:mm') || '';
+    }
+
+    private toDisplayTimeWithSeconds(value: any): string {
+        var date = new Date(value);
+        return this.datePipe.transform(date, 'dd MMM yyyy HH:mm:ss') || '';
     }
 
     private hexToRgba(hex: string, alpha: number): string {

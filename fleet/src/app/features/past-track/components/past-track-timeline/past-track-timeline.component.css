@@ -224,10 +224,6 @@
   box-shadow: inset 3px 0 var(--accent, #1769ff);
 }
 
-.timeline-row.checkpoint-row:not(.selected) {
-  background: color-mix(in srgb, #10b981 4%, var(--card-bg, #ffffff));
-}
-
 .number-cell,
 .map-action-cell {
   display: flex;
@@ -292,17 +288,6 @@
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.checkpoint-badge {
-  flex: 0 0 auto;
-  padding: 3px 6px;
-  border: 1px solid #86efac;
-  border-radius: 999px;
-  background: #ecfdf5;
-  color: #059669;
-  font-size: 8px;
-  font-weight: 900;
 }
 
 .status {
