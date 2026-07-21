@@ -14,7 +14,7 @@
         [matTooltip]="getTooltip(speedCurr)"
         matTooltipPosition="above"
       >
-        {{ displayNumber(speedCurr, 1) }}
+        {{ displayNumber(speedCurr, 2) }}
       </div>
       <div class="unit">
         <span>knot</span>
@@ -28,7 +28,7 @@
         [matTooltip]="getTooltip(speedAvg)"
         matTooltipPosition="above"
       >
-        {{ displayNumber(speedAvg, 1) }}
+        {{ displayNumber(speedAvg, 2) }}
       </div>
       <div class="unit">
         <span>knot</span>
@@ -42,7 +42,7 @@
         [matTooltip]="getTooltip(speedMax)"
         matTooltipPosition="above"
       >
-        {{ displayNumber(speedMax, 1) }}
+        {{ displayNumber(speedMax, 2) }}
       </div>
       <div class="unit">
         <span>knot</span>
@@ -66,7 +66,7 @@
             [matTooltip]="getTooltip(distance)"
             matTooltipPosition="above"
           >
-            {{ displayNumber(distance, 1) }}
+            {{ displayNumber(distance, 2) }}
           </div>
           <div class="unit">mile</div>
         </div>
@@ -85,7 +85,7 @@
             [matTooltip]="getTooltip(heading)"
             matTooltipPosition="above"
           >
-            {{ displayNumber(heading, 1) }}
+            {{ displayNumber(heading, 2, '0.00') }}
           </div>
           <div class="unit">degree</div>
         </div>
@@ -136,7 +136,7 @@
         [matTooltip]="getTooltip(fuel_cons)"
         matTooltipPosition="above"
       >
-        {{ displayNumber(fuel_cons, 1) }}
+        {{ displayNumber(fuel_cons, 2) }}
       </div>
       <div class="unit">
         <span>L/h</span>
@@ -150,7 +150,7 @@
         [matTooltip]="getTooltip(fuelAvg)"
         matTooltipPosition="above"
       >
-        {{ displayNumber(fuelAvg, 1) }}
+        {{ displayNumber(fuelAvg, 2) }}
       </div>
       <div class="unit">
         <span>L/h</span>
@@ -164,7 +164,7 @@
         [matTooltip]="getTooltip(fuelTotal)"
         matTooltipPosition="above"
       >
-        {{ displayNumber(fuelTotal, 0) }}
+        {{ displayNumber(fuelTotal, 2) }}
       </div>
       <div class="unit">
         <span>L</span>

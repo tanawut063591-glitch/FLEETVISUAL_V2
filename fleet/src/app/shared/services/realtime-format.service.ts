@@ -66,12 +66,12 @@ export class RealtimeFormatService {
     return timestamp instanceof Date ? timestamp.toISOString() : String(timestamp);
   }
 
-  displayNumber(input: RealtimeInput, digits = 1, fallback = '0'): string {
+  displayNumber(input: RealtimeInput, digits = 2, fallback = '0.00'): string {
     const value = this.getNumber(input);
     return value === null ? fallback : value.toFixed(digits);
   }
 
-  displayAbsNumber(input: RealtimeInput, digits = 1, fallback = '0'): string {
+  displayAbsNumber(input: RealtimeInput, digits = 2, fallback = '0.00'): string {
     const value = this.getNumber(input);
     return value === null ? fallback : Math.abs(value).toFixed(digits);
   }
@@ -105,13 +105,17 @@ export class RealtimeFormatService {
       return '';
     }
 
-    if (tagName && tagName.startsWith('A01')) {
-      const numberValue = Number(value);
-      if (Number.isFinite(numberValue)) {
-        return (numberValue - 272.15).toFixed(2);
-      }
+    const numberValue = Number(value);
+
+    if (!Number.isFinite(numberValue)) {
+      return value;
     }
 
-    return value;
+    const normalizedValue =
+      tagName && tagName.startsWith('A01')
+        ? numberValue - 272.15
+        : numberValue;
+
+    return normalizedValue.toFixed(2);
   }
 }

@@ -120,8 +120,8 @@ export class DieselGeneratorNoRpmComponent {
    */
   displayNumber(
     input: GeneratorInput,
-    digits: number = 1,
-    fallback: string = '0'
+    digits: number = 2,
+    fallback: string = '0.00'
   ): string {
     const value = Number(this.getValue(input));
 
@@ -137,8 +137,8 @@ export class DieselGeneratorNoRpmComponent {
    */
   displayAbsNumber(
     input: GeneratorInput,
-    digits: number = 1,
-    fallback: string = '0'
+    digits: number = 2,
+    fallback: string = '0.00'
   ): string {
     const value = Math.abs(Number(this.getValue(input)));
 

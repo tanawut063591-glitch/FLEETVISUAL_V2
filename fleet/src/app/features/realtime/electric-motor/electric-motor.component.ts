@@ -75,7 +75,7 @@ export class ElectricMotorComponent {
     );
   }
 
-  displayNumber(input: MotorInput, digits = 0, fallback = '0'): string {
+  displayNumber(input: MotorInput, digits = 2, fallback = '0.00'): string {
     const value = Number(this.getValue(input));
 
     if (!Number.isFinite(value)) {

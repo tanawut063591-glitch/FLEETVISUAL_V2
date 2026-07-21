@@ -335,7 +335,14 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       return '-';
     }
 
-    return `${lat}, ${lng}`;
+    const latitude = Number(lat);
+    const longitude = Number(lng);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return '-';
+    }
+
+    return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
   }
 
   getRealtimeStatus(active: any): string {
@@ -402,6 +409,47 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     return value.toFixed(2);
   }
 
+
+  /**
+   * แสดงค่า direction/course เป็นทศนิยม 2 ตำแหน่ง
+   */
+  getRealtimeDirection(
+    rtData: any,
+    key: string,
+    fallback: string = '0.00'
+  ): string {
+    const value = Number(this.getRealtimeValue(rtData, key, fallback));
+
+    if (!Number.isFinite(value)) {
+      const fallbackValue = Number(fallback);
+      return Number.isFinite(fallbackValue)
+        ? fallbackValue.toFixed(2)
+        : '0.00';
+    }
+
+    return value.toFixed(2);
+  }
+
+  /**
+   * แสดง Latitude/Longitude เป็นทศนิยม 6 ตำแหน่ง
+   */
+  getRealtimeCoordinateNumber(
+    rtData: any,
+    key: string,
+    fallback: string = '0.000000'
+  ): string {
+    const value = Number(this.getRealtimeValue(rtData, key, fallback));
+
+    if (!Number.isFinite(value)) {
+      const fallbackValue = Number(fallback);
+      return Number.isFinite(fallbackValue)
+        ? fallbackValue.toFixed(6)
+        : '0.000000';
+    }
+
+    return value.toFixed(6);
+  }
+
   pad(value: number): string {
     return value < 10 ? `0${value}` : String(value);
   }
@@ -443,7 +491,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
         name: '',
         tagName: `${data.tagName}-AVG`,
         timestamp: new Date(),
-        value: Number.isFinite(value) ? value.toFixed(2) : '0',
+        value: Number.isFinite(value) ? value.toFixed(2) : '0.00',
         cal: false,
       };
     }

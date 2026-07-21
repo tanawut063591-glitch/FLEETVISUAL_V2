@@ -116,7 +116,7 @@ export class MainEngineElectricComponent implements OnChanges {
     );
   }
 
-  displayNumber(input: EngineInput, digits = 1, fallback = '0'): string {
+  displayNumber(input: EngineInput, digits = 2, fallback = '0.00'): string {
     const value = Number(this.getValue(input));
 
     if (!Number.isFinite(value)) {
@@ -126,7 +126,7 @@ export class MainEngineElectricComponent implements OnChanges {
     return value.toFixed(digits);
   }
 
-  displayAbsNumber(input: EngineInput, digits = 1, fallback = '0'): string {
+  displayAbsNumber(input: EngineInput, digits = 2, fallback = '0.00'): string {
     const value = Math.abs(Number(this.getValue(input)));
 
     if (!Number.isFinite(value)) {
@@ -141,14 +141,17 @@ export class MainEngineElectricComponent implements OnChanges {
       return '';
     }
 
-    if (tagName && tagName.startsWith('A01')) {
-      const numberValue = Number(value);
+    const numberValue = Number(value);
 
-      if (Number.isFinite(numberValue)) {
-        return (numberValue - 272.15).toFixed(2);
-      }
+    if (!Number.isFinite(numberValue)) {
+      return value;
     }
 
-    return value;
+    const normalizedValue =
+      tagName && tagName.startsWith('A01')
+        ? numberValue - 272.15
+        : numberValue;
+
+    return normalizedValue.toFixed(2);
   }
 }

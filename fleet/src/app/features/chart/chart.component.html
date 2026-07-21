@@ -35,7 +35,7 @@
 
                 <div class="mode-switch">
                     <button type="button" [ngClass]="{ 'active': displayMode == 'all' }" (click)="setDisplayMode('all')">
-                        All Lines
+                        All Series
                     </button>
                     <button type="button" [ngClass]="{ 'active': displayMode == 'groups' }" (click)="setDisplayMode('groups')">
                         Separate Groups
@@ -77,6 +77,7 @@
                     <button
                         type="button"
                         title="Display as line chart"
+                        [attr.aria-pressed]="chartType == 'line'"
                         [ngClass]="{ 'active': chartType == 'line' }"
                         (click)="setChartType('line')">
                         <i class="fa fa-line-chart"></i>
@@ -85,10 +86,29 @@
                     <button
                         type="button"
                         title="Display as area chart"
+                        [attr.aria-pressed]="chartType == 'area'"
                         [ngClass]="{ 'active': chartType == 'area' }"
                         (click)="setChartType('area')">
                         <i class="fa fa-area-chart"></i>
                         <span>Area</span>
+                    </button>
+                    <button
+                        type="button"
+                        title="Display as step chart"
+                        [attr.aria-pressed]="chartType == 'step'"
+                        [ngClass]="{ 'active': chartType == 'step' }"
+                        (click)="setChartType('step')">
+                        <i class="fa fa-signal"></i>
+                        <span>Step</span>
+                    </button>
+                    <button
+                        type="button"
+                        title="Display as column chart"
+                        [attr.aria-pressed]="chartType == 'column'"
+                        [ngClass]="{ 'active': chartType == 'column' }"
+                        (click)="setChartType('column')">
+                        <i class="fa fa-bar-chart"></i>
+                        <span>Column</span>
                     </button>
                 </div>
             </div>
@@ -123,14 +143,14 @@
                 <div class="state-card empty-state" *ngIf="!loading && !errorMessage && selectedSeries.length == 0">
                     <i class="fa fa-line-chart"></i>
                     <strong>Select tags and click Apply</strong>
-                    <span>Choose parameters, select a time range and visualize data as line or area charts.</span>
+                    <span>Choose parameters, select a time range and visualize data as line, area, step or column charts.</span>
                 </div>
 
                 <div class="chart-card" *ngIf="!loading && selectedSeries.length > 0 && displayMode == 'all'">
                     <div class="chart-card-head">
                         <div>
                             <h3>All selected parameters</h3>
-                            <p>Combined trend view with every selected tag in one chart.</p>
+                            <p>{{ getMainChartDescription() }}</p>
                         </div>
                         <div class="card-tools">
                             <button
@@ -174,14 +194,14 @@
                         </div>
                     </div>
                     <highcharts-chart
-                        *ngIf="mainChartOptions as options"
+                        *ngIf="chartsVisible && mainChartOptions as options"
                         [options]="options"
                         (chartInstance)="onMainChartInstance($event)"
                         class="chart-instance big-chart">
                     </highcharts-chart>
                 </div>
 
-                <div class="group-stack" *ngIf="!loading && selectedSeries.length > 0 && displayMode == 'groups'">
+                <div class="group-stack" *ngIf="chartsVisible && !loading && selectedSeries.length > 0 && displayMode == 'groups'">
                     <div class="chart-card group-card" *ngFor="let group of groupCharts; trackBy: trackByGroup">
                         <div class="chart-card-head compact">
                             <div>

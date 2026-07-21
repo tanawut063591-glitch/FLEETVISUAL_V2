@@ -15,8 +15,8 @@ import { RealtimeInput } from '../models/realtime-value.model';
 })
 export class RealtimeValueDirective implements OnChanges {
   @Input('appRealtimeValue') value: RealtimeInput = null;
-  @Input() digits = 1;
-  @Input() fallback = '0';
+  @Input() digits = 2;
+  @Input() fallback = '0.00';
 
   constructor(
     private elementRef: ElementRef<HTMLElement>,
@@ -34,7 +34,7 @@ export class RealtimeValueDirective implements OnChanges {
     this.renderer.setProperty(this.elementRef.nativeElement, 'textContent', text);
   }
 
-  private displayNumber(input: RealtimeInput, digits = 1, fallback = '0'): string {
+  private displayNumber(input: RealtimeInput, digits = 2, fallback = '0.00'): string {
     const value = this.getNumber(input);
 
     if (value === null) {

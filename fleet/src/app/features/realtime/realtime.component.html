@@ -85,7 +85,7 @@
           <div class="kpi-data">
             <span class="kpi-title">COURSE</span>
             <div class="kpi-val">
-              {{ getRealtimeNumber(rtData, 'VES_GPS_HEAD', 0) }}°
+              {{ getRealtimeDirection(rtData, 'VES_GPS_HEAD', '0.00') }}°
             </div>
           </div>
         </div>
@@ -122,7 +122,7 @@
                   rtData['DG2_CONS_RATE'],
                   rtData['DG3_CONS_RATE'],
                   rtData['DG4_CONS_RATE']
-                )?.value | number : '1.0-2') || '0'
+                )?.value | number : '1.2-2') || '0.00'
               }}
               <small>L/h</small>
             </div>
@@ -157,7 +157,7 @@
       <div class="main-split">
         <!-- LEFT -->
         <div class="col-left">
-          <div class="premium-card">
+          <div class="premium-card today-summary-card">
             <div class="card-header">TODAY SUMMARY</div>
 
             <div class="card-body pd-0-summary">
@@ -194,9 +194,9 @@
               </div>
 
               <div class="sum-row">
-                <div class="nav-item">
-                  <i class="fa fa-arrows-alt nav-icon"></i>
-                  <div class="nav-text">
+                <div class="summary-nav-item">
+                  <i class="fa fa-arrows-alt summary-nav-icon"></i>
+                  <div class="summary-nav-text">
                     <span class="st-val txt-blue block">
                       {{ getRealtimeNumber(rtData, 'VES_GPS_DIS_TODAY', 0) }}
                     </span>
@@ -204,24 +204,24 @@
                   </div>
                 </div>
 
-                <div class="nav-item">
-                  <i class="fa fa-compass nav-icon"></i>
-                  <div class="nav-text">
+                <div class="summary-nav-item">
+                  <i class="fa fa-compass summary-nav-icon"></i>
+                  <div class="summary-nav-text">
                     <span class="st-val txt-blue block">
-                      {{ getRealtimeNumber(rtData, 'VES_GPS_HEAD', 0) }}
+                      {{ getRealtimeDirection(rtData, 'VES_GPS_HEAD', '0.00') }}
                     </span>
                     <span class="st-unit">degree</span>
                   </div>
                 </div>
 
-                <div class="nav-item">
-                  <i class="fa fa-map-marker nav-icon"></i>
-                  <div class="nav-text">
+                <div class="summary-nav-item">
+                  <i class="fa fa-map-marker summary-nav-icon"></i>
+                  <div class="summary-nav-text">
                     <span class="st-val txt-blue coord block">
-                      {{ getRealtimeValue(rtData, 'VES_GPS_LAT', '0.000000') }}
+                      {{ getRealtimeCoordinateNumber(rtData, 'VES_GPS_LAT', '0.000000') }}
                     </span>
                     <span class="st-val txt-blue coord block">
-                      {{ getRealtimeValue(rtData, 'VES_GPS_LONG', '0.000000') }}
+                      {{ getRealtimeCoordinateNumber(rtData, 'VES_GPS_LONG', '0.000000') }}
                     </span>
                   </div>
                 </div>
@@ -248,7 +248,7 @@
                           rtData['DG2_CONS_RATE'],
                           rtData['DG3_CONS_RATE'],
                           rtData['DG4_CONS_RATE']
-                        )?.value | number : '1.0-2') || '0'
+                        )?.value | number : '1.2-2') || '0.00'
                       }}
                     </span>
                     <span class="st-unit">L/h</span>
@@ -259,7 +259,7 @@
                     <span class="st-val txt-blue">
                       {{
                         (getAvg(rtData['VES_CONS_TODAY'])?.value
-                          | number : '1.0-2') || '0'
+                          | number : '1.2-2') || '0.00'
                       }}
                     </span>
                     <span class="st-unit">L/h</span>

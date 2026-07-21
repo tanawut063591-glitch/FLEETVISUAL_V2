@@ -217,7 +217,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
     this.page = 1;
     if (isInitialRange) this.loadAlerts();
   }
-  
+
   onRangeApplied(range: DateRangeSelection): void {
     this.currentRange = range;
     this.page = 1;
@@ -265,7 +265,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
         const newActiveAlerts = this.hasLoadedOnce
           ? incomingActive.filter((alert) => !this.knownActiveAlertIds.has(alert.id))
           : [];
-        
+
         this.alerts = result.alerts;
         this.backendEndpoint = result.endpoint;
         this.lastUpdatedAt = result.fetchedAt;

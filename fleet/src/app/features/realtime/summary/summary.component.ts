@@ -137,7 +137,7 @@ export class SummaryComponent {
   /**
    * แสดงตัวเลข เช่น 6.5, 309.33
    */
-  displayNumber(input: SummaryInput, digits = 1, fallback = '0'): string {
+  displayNumber(input: SummaryInput, digits = 2, fallback = '0.00'): string {
     const value = Number(this.getValue(input));
 
     if (!Number.isFinite(value)) {

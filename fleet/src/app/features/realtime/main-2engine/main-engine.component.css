@@ -301,3 +301,14 @@
         width: 141px;
     }
 }
+
+/* Realtime numeric formatting safeguard */
+.ftd1-value,
+.kpi-val,
+.st-val,
+.value,
+.value-mile,
+.coordinate {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

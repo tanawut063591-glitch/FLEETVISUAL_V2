@@ -4,6 +4,9 @@ import type Highcharts from 'highcharts';
 import { NewHttpClientService } from '../../shared/services/http-client1.service';
 import { Subscription } from 'rxjs';
 
+type ChartDisplayType = 'line' | 'area' | 'step' | 'column';
+type ColumnAggregationMode = 'average' | 'last';
+
 interface ChartPoint {
     x: number;
     y: number;
@@ -42,9 +45,10 @@ export class ChartComponent implements OnInit, OnDestroy {
 
     mainChartOptions: Highcharts.Options | null = null;
     groupCharts: ChartGroupItem[] = [];
+    chartsVisible: boolean = true;
 
     displayMode: string = 'all';
-    chartType: string = 'line';
+    chartType: ChartDisplayType = 'line';
     autoRefresh: boolean = true;
     isRealtimeRange: boolean = false;
     liveClockLabel: string = '';
@@ -63,6 +67,7 @@ export class ChartComponent implements OnInit, OnDestroy {
 
     private refreshTimer: ReturnType<typeof setInterval> | null = null;
     private clockTimer: ReturnType<typeof setInterval> | null = null;
+    private chartRebuildTimer: ReturnType<typeof setTimeout> | null = null;
     private chartRangeStart = 0;
     private chartRangeEnd = 0;
     private requestSub: Subscription | null = null;
@@ -71,6 +76,11 @@ export class ChartComponent implements OnInit, OnDestroy {
 
     private readonly refreshMs: number = 30000;
     private readonly maxRenderedPoints: number = 1200;
+    private readonly maxStepBucketsPerSeries: number = 320;
+    private readonly maxColumnTotalBuckets: number = 180;
+    private readonly maxColumnBucketsPerSeries: number = 96;
+    private readonly minColumnBucketsPerSeries: number = 36;
+    private readonly maxDynamicColumnBucketsPerSeries: number = 360;
 
     private readonly palette: string[] = [
         '#2563eb', '#16a34a', '#f97316', '#8b5cf6', '#ef4444', '#06b6d4',
@@ -107,6 +117,10 @@ export class ChartComponent implements OnInit, OnDestroy {
 
     ngOnDestroy() {
         this.clearRefreshTimer();
+        if (this.chartRebuildTimer) {
+            clearTimeout(this.chartRebuildTimer);
+            this.chartRebuildTimer = null;
+        }
         if (this.clockTimer) {
             clearInterval(this.clockTimer);
             this.clockTimer = null;
@@ -222,18 +236,48 @@ export class ChartComponent implements OnInit, OnDestroy {
         this.markView();
     }
 
-    setChartType(type: string) {
+    setChartType(type: ChartDisplayType) {
         if (this.chartType === type) {
             return;
         }
 
         this.chartType = type;
-        this.rebuildCharts();
+        this.recreateChartsForTypeChange();
+    }
+
+    /**
+     * Highcharts can keep the existing line-series renderer when a chart is
+     * updated from Line to Area in place. In that case the button changes but
+     * the SVG area path is never created, so Area looks identical to Line.
+     *
+     * Remove the chart components for one render cycle and create fresh chart
+     * instances. This is deterministic for every type transition and avoids
+     * stale series graphics, event handlers and clipped SVG paths.
+     */
+    private recreateChartsForTypeChange(): void {
+        if (this.chartRebuildTimer) {
+            clearTimeout(this.chartRebuildTimer);
+            this.chartRebuildTimer = null;
+        }
+
+        this.chartsVisible = false;
+        this.mainChartOptions = null;
+        this.groupCharts = [];
+        this.mainChartInstance = null;
+        this.groupChartInstances = {};
         this.markView();
+
+        this.chartRebuildTimer = setTimeout(() => {
+            this.chartRebuildTimer = null;
+            this.chartsVisible = true;
+            this.rebuildCharts();
+            this.markView();
+        }, 0);
     }
 
     onMainChartInstance(chart: Highcharts.Chart): void {
         this.mainChartInstance = chart;
+        this.enforceAreaRendering(chart);
     }
 
     onGroupChartInstance(key: string, chart: Highcharts.Chart): void {
@@ -241,6 +285,48 @@ export class ChartComponent implements OnInit, OnDestroy {
             return;
         }
         this.groupChartInstances[key] = chart;
+        this.enforceAreaRendering(chart);
+    }
+
+    /**
+     * Highcharts normally creates the area path from the supplied options. In a
+     * long-lived Angular chart, however, an existing Line series can occasionally
+     * survive a type switch and keep only its graph path. Apply the Area options
+     * once more to the actual chart instance so the SVG fill path is guaranteed
+     * to exist in both All Series and Separate Groups modes.
+     */
+    private enforceAreaRendering(chart: Highcharts.Chart): void {
+        if (!chart || this.chartType !== 'area') {
+            return;
+        }
+
+        var darkTheme = this.isDarkTheme();
+        var fillOpacity = darkTheme ? 0.24 : 0.17;
+        var changed = false;
+
+        for (var i = 0; i < chart.series.length; i++) {
+            var series = chart.series[i] as any;
+            var configuredColor = series && series.options ? series.options.color : null;
+            var color = typeof configuredColor === 'string' && configuredColor.charAt(0) === '#'
+                ? configuredColor
+                : this.palette[i % this.palette.length];
+
+            series.update({
+                type: 'area',
+                color: color,
+                fillColor: this.hexToRgba(color, fillOpacity),
+                threshold: null,
+                softThreshold: false,
+                trackByArea: true,
+                lineWidth: 1.9,
+                step: undefined
+            }, false);
+            changed = true;
+        }
+
+        if (changed) {
+            chart.redraw(false);
+        }
     }
 
     toggleChartMenu(target: string, event?: MouseEvent): void {
@@ -491,7 +577,7 @@ export class ChartComponent implements OnInit, OnDestroy {
     }
 
     getModeLabel(): string {
-        return this.displayMode === 'groups' ? 'Separate Groups' : 'All Lines';
+        return this.displayMode === 'groups' ? 'Separate Groups' : 'All Series';
     }
 
     trackBySeries(index: number, item: ChartSeriesItem) {
@@ -991,23 +1077,54 @@ export class ChartComponent implements OnInit, OnDestroy {
         var tooltipBorder = darkTheme ? '#475569' : '#bfdbfe';
         var axisLayout = this.createReadableAxisLayout(seriesItems, mutedText, gridColor, axisColor);
         var tickInterval = this.getReadableTimeTickInterval();
+        var highchartsType = this.getHighchartsSeriesType();
+        var isAreaChart = this.chartType === 'area';
+        var isStepChart = this.chartType === 'step';
+        var isColumnChart = this.chartType === 'column';
+        var fullRangeMs = this.getSeriesCollectionRangeMs(seriesItems);
+        var columnBucketMs = isColumnChart
+            ? this.getColumnBucketInterval(fullRangeMs, seriesItems.length)
+            : undefined;
+        var stepBucketMs = isStepChart
+            ? this.getStepBucketInterval(fullRangeMs)
+            : undefined;
+
+        if (isColumnChart) {
+            this.applyColumnAxisBaseline(axisLayout, seriesItems);
+        }
 
         for (var i = 0; i < seriesItems.length; i++) {
             var item = seriesItems[i];
+            var chartData = this.getChartData(item, seriesItems.length, columnBucketMs, stepBucketMs);
             highSeries.push({
-                type: this.chartType === 'area' ? 'area' : 'line',
+                type: highchartsType,
                 name: item.label + (item.unit ? ' (' + item.unit + ')' : ''),
-                data: item.data,
+                data: chartData,
                 color: item.color,
                 yAxis: axisLayout.seriesAxis[i],
-                // Slightly stronger area fill so each series remains easy to read
-                // without hiding grid lines or nearby series.
-                fillColor: this.chartType === 'area' ? this.hexToRgba(item.color, 0.14) : undefined,
-                fillOpacity: this.chartType === 'area' ? 1 : undefined,
-                lineWidth: this.chartType === 'area' ? 1.8 : 1.9,
-                turboThreshold: 0,
+                // Area uses a translucent fill, Step preserves each value until the
+                // next sample, and Column renders discrete historian samples.
+                step: isStepChart ? 'left' : undefined,
+                // Use a solid RGBA fill instead of an SVG gradient. This matches
+                // the proven Area rendering used by the original chart and avoids
+                // browsers retaining only the line path after a runtime type switch.
+                fillColor: isAreaChart
+                    ? this.hexToRgba(item.color, darkTheme ? 0.24 : 0.17)
+                    : undefined,
+                lineWidth: isColumnChart ? undefined : (isAreaChart ? 1.9 : 1.9),
+                trackByArea: isAreaChart ? true : undefined,
+                pointRange: isColumnChart && columnBucketMs ? columnBucketMs * 0.82 : undefined,
+                // Every Column series uses the same visual zero baseline. This keeps
+                // columns with very different units/scales anchored to the bottom of
+                // the plot instead of floating around an automatically selected axis
+                // threshold when historian data contains negative/outlier values.
+                threshold: isAreaChart ? null : (isColumnChart ? 0 : undefined),
+                softThreshold: (isAreaChart || isColumnChart) ? false : undefined,
+                borderColor: isColumnChart ? this.hexToRgba(item.color, 0.9) : undefined,
+                borderWidth: isColumnChart ? 0 : undefined,
+                turboThreshold: 5000,
                 connectNulls: false,
-                marker: {
+                marker: isColumnChart ? undefined : {
                     enabled: false,
                     symbol: 'circle',
                     radius: 2.5,
@@ -1021,7 +1138,7 @@ export class ChartComponent implements OnInit, OnDestroy {
             credits: { enabled: false },
             exporting: { enabled: false, fallbackToExportServer: false },
             chart: {
-                type: this.chartType === 'area' ? 'area' : 'line',
+                type: highchartsType,
                 height: height,
                 zoomType: 'x',
                 panning: { enabled: true, type: 'x' },
@@ -1071,6 +1188,16 @@ export class ChartComponent implements OnInit, OnDestroy {
                             return date.getDate() + ' ' + date.toLocaleString('en-US', { month: 'short' });
                         }
                         return hh + ':' + mm;
+                    }
+                },
+                events: {
+                    afterSetExtremes: (event: any) => {
+                        var chart = event && event.target ? event.target.chart as Highcharts.Chart : null;
+                        var min = Number(event && event.min);
+                        var max = Number(event && event.max);
+                        if (chart && Number.isFinite(min) && Number.isFinite(max) && max > min) {
+                            this.refreshVisibleChartDensity(chart, seriesItems, min, max);
+                        }
                     }
                 },
                 plotLines: this.isRealtimeRange && this.chartRangeEnd
@@ -1148,12 +1275,387 @@ export class ChartComponent implements OnInit, OnDestroy {
                         inactive: { opacity: 0.16 }
                     }
                 },
-                area: { threshold: null, lineWidth: 1.65 }
+                line: {
+                    linecap: 'round'
+                },
+                area: {
+                    // null fills from each line to its own Y-axis minimum, which is
+                    // visually the bottom edge of the shared plotting area.
+                    threshold: null,
+                    softThreshold: false,
+                    fillOpacity: darkTheme ? 0.24 : 0.17,
+                    lineWidth: 1.9,
+                    trackByArea: true,
+                    states: {
+                        hover: { lineWidthPlus: 0.7 },
+                        inactive: { opacity: 0.32 }
+                    }
+                },
+                column: {
+                    grouping: true,
+                    threshold: 0,
+                    softThreshold: false,
+                    groupPadding: seriesItems.length > 6 ? 0.08 : 0.14,
+                    pointPadding: seriesItems.length > 6 ? 0.015 : 0.035,
+                    maxPointWidth: seriesItems.length > 4 ? 14 : 24,
+                    minPointLength: 1,
+                    borderWidth: 0,
+                    borderRadius: 2,
+                    shadow: false
+                }
             },
             series: highSeries
         };
 
         return options as Highcharts.Options;
+    }
+
+    private getHighchartsSeriesType(): 'line' | 'area' | 'column' {
+        if (this.chartType === 'area') {
+            return 'area';
+        }
+
+        if (this.chartType === 'column') {
+            return 'column';
+        }
+
+        // Step Chart is a Highcharts line series with step interpolation.
+        return 'line';
+    }
+
+    private getChartData(
+        item: ChartSeriesItem,
+        seriesCount: number,
+        columnBucketMs?: number,
+        stepBucketMs?: number
+    ): any[] {
+        if (this.chartType === 'column') {
+            var columnInterval = columnBucketMs || this.getColumnBucketInterval(
+                this.getPointsRangeMs(item.rawData),
+                seriesCount
+            );
+            return this.aggregateColumnBuckets(
+                item.rawData,
+                columnInterval,
+                this.getColumnAggregationMode(item)
+            );
+        }
+
+        if (this.chartType === 'step') {
+            var stepInterval = stepBucketMs || this.getStepBucketInterval(this.getPointsRangeMs(item.rawData));
+            return this.sampleStepBuckets(item.rawData, stepInterval);
+        }
+
+        return item.data;
+    }
+
+    /**
+     * Uses the visible time span to select a finer resolution after zooming.
+     * The complete requested range remains in every series, so reset zoom and
+     * panning continue to work without downloading historian data again.
+     */
+    private refreshVisibleChartDensity(
+        chart: Highcharts.Chart,
+        seriesItems: ChartSeriesItem[],
+        min: number,
+        max: number
+    ): void {
+        if (this.chartType !== 'column' && this.chartType !== 'step') {
+            return;
+        }
+
+        var chartState = chart as any;
+        if (chartState.__fleetDensityUpdating) {
+            return;
+        }
+
+        var visibleRangeMs = Math.max(1, max - min);
+        var fullRangeMs = this.getSeriesCollectionRangeMs(seriesItems);
+        var requestedInterval = this.chartType === 'column'
+            ? this.getColumnBucketInterval(visibleRangeMs, seriesItems.length)
+            : this.getStepBucketInterval(visibleRangeMs);
+        var safeFullRangeInterval = this.chartType === 'column'
+            ? this.getNiceTimeInterval(fullRangeMs / this.maxDynamicColumnBucketsPerSeries)
+            : this.getNiceTimeInterval(fullRangeMs / this.maxRenderedPoints);
+        var intervalMs = Math.max(requestedInterval, safeFullRangeInterval);
+        var densityKey = this.chartType + ':' + intervalMs;
+
+        if (chartState.__fleetDensityKey === densityKey) {
+            return;
+        }
+
+        chartState.__fleetDensityUpdating = true;
+        chartState.__fleetDensityKey = densityKey;
+
+        try {
+            for (var i = 0; i < seriesItems.length && i < chart.series.length; i++) {
+                var source = seriesItems[i].rawData;
+                var nextData = this.chartType === 'column'
+                    ? this.aggregateColumnBuckets(source, intervalMs, this.getColumnAggregationMode(seriesItems[i]))
+                    : this.sampleStepBuckets(source, intervalMs);
+                var chartSeries = chart.series[i] as any;
+
+                if (this.chartType === 'column') {
+                    chartSeries.update({ pointRange: intervalMs * 0.82 }, false);
+                }
+                chartSeries.setData(nextData, false, false, false);
+            }
+
+            chart.redraw(false);
+        } finally {
+            chartState.__fleetDensityUpdating = false;
+        }
+    }
+
+    private aggregateColumnBuckets(
+        points: ChartPoint[],
+        bucketMs: number,
+        mode: ColumnAggregationMode
+    ): any[] {
+        if (!points || points.length === 0) {
+            return [];
+        }
+
+        var safeBucketMs = Math.max(1, bucketMs);
+        var origin = this.getBucketOrigin(safeBucketMs, points);
+        var buckets: { [key: string]: { sum: number; count: number; lastY: number } } = {};
+        var order: number[] = [];
+
+        for (var i = 0; i < points.length; i++) {
+            var point = points[i];
+            var bucketIndex = Math.floor((point.x - origin) / safeBucketMs);
+            var key = String(bucketIndex);
+
+            if (!buckets[key]) {
+                buckets[key] = { sum: 0, count: 0, lastY: point.y };
+                order.push(bucketIndex);
+            }
+
+            buckets[key].sum += point.y;
+            buckets[key].count++;
+            buckets[key].lastY = point.y;
+        }
+
+        order.sort((a: number, b: number) => a - b);
+        return order.map((bucketIndex: number) => {
+            var bucket = buckets[String(bucketIndex)];
+            var x = origin + (bucketIndex * safeBucketMs) + (safeBucketMs / 2);
+            var y = mode === 'last' ? bucket.lastY : bucket.sum / Math.max(1, bucket.count);
+            return [x, y];
+        });
+    }
+
+    private sampleStepBuckets(points: ChartPoint[], bucketMs: number): any[] {
+        if (!points || points.length === 0) {
+            return [];
+        }
+
+        if (points.length <= this.maxStepBucketsPerSeries) {
+            return points.map((point: ChartPoint) => [point.x, point.y]);
+        }
+
+        var safeBucketMs = Math.max(1, bucketMs);
+        var origin = this.getBucketOrigin(safeBucketMs, points);
+        var latestByBucket: { [key: string]: ChartPoint } = {};
+        var order: number[] = [];
+
+        for (var i = 0; i < points.length; i++) {
+            var point = points[i];
+            var bucketIndex = Math.floor((point.x - origin) / safeBucketMs);
+            var key = String(bucketIndex);
+            if (!latestByBucket[key]) {
+                order.push(bucketIndex);
+            }
+            latestByBucket[key] = point;
+        }
+
+        order.sort((a: number, b: number) => a - b);
+        var sampled: ChartPoint[] = [];
+        var first = points[0];
+        sampled.push(first);
+
+        for (var o = 0; o < order.length; o++) {
+            var candidate = latestByBucket[String(order[o])];
+            var previous = sampled[sampled.length - 1];
+            if (!previous || previous.x !== candidate.x) {
+                sampled.push(candidate);
+            }
+        }
+
+        var last = points[points.length - 1];
+        if (sampled[sampled.length - 1].x !== last.x) {
+            sampled.push(last);
+        }
+
+        return sampled.map((point: ChartPoint) => [point.x, point.y]);
+    }
+
+    private getColumnAggregationMode(item: ChartSeriesItem): ColumnAggregationMode {
+        var normalized = this.normalizeTagName(item.name + ' ' + item.label);
+
+        // Cumulative counters must show the latest value in each interval. Instantaneous
+        // sensors and rates are represented by their interval average to reduce noise.
+        if (
+            normalized.indexOf('TOTAL') >= 0 ||
+            normalized.indexOf('TODAY') >= 0 ||
+            normalized.indexOf('COUNTER') >= 0 ||
+            normalized.indexOf('ACCUM') >= 0 ||
+            normalized.indexOf('METER') >= 0
+        ) {
+            return 'last';
+        }
+
+        return 'average';
+    }
+
+    private getColumnBucketInterval(rangeMs: number, seriesCount: number): number {
+        var safeSeriesCount = Math.max(1, seriesCount);
+        var targetPerSeries = Math.floor(this.maxColumnTotalBuckets / safeSeriesCount);
+        targetPerSeries = Math.max(
+            this.minColumnBucketsPerSeries,
+            Math.min(this.maxColumnBucketsPerSeries, targetPerSeries)
+        );
+        return this.getNiceTimeInterval(Math.max(1, rangeMs) / targetPerSeries);
+    }
+
+    private getStepBucketInterval(rangeMs: number): number {
+        return this.getNiceTimeInterval(
+            Math.max(1, rangeMs) / this.maxStepBucketsPerSeries
+        );
+    }
+
+    private getNiceTimeInterval(rawMs: number): number {
+        var intervals = [
+            250, 500,
+            1000, 2000, 5000, 10000, 15000, 30000,
+            60000, 120000, 300000, 600000, 900000, 1800000,
+            3600000, 7200000, 10800000, 21600000, 43200000, 86400000
+        ];
+
+        for (var i = 0; i < intervals.length; i++) {
+            if (intervals[i] >= rawMs) {
+                return intervals[i];
+            }
+        }
+
+        var dayMs = 86400000;
+        return Math.ceil(rawMs / dayMs) * dayMs;
+    }
+
+    private getSeriesCollectionRangeMs(seriesItems: ChartSeriesItem[]): number {
+        if (this.chartRangeEnd > this.chartRangeStart) {
+            return this.chartRangeEnd - this.chartRangeStart;
+        }
+
+        var min = Number.POSITIVE_INFINITY;
+        var max = Number.NEGATIVE_INFINITY;
+
+        for (var i = 0; i < seriesItems.length; i++) {
+            var points = seriesItems[i].rawData || [];
+            if (points.length === 0) {
+                continue;
+            }
+            min = Math.min(min, points[0].x);
+            max = Math.max(max, points[points.length - 1].x);
+        }
+
+        return Number.isFinite(min) && Number.isFinite(max) && max > min ? max - min : 1;
+    }
+
+    private getPointsRangeMs(points: ChartPoint[]): number {
+        if (!points || points.length < 2) {
+            return 1;
+        }
+        return Math.max(1, points[points.length - 1].x - points[0].x);
+    }
+
+    private getBucketOrigin(bucketMs: number, points: ChartPoint[]): number {
+        var start = this.chartRangeEnd > this.chartRangeStart
+            ? this.chartRangeStart
+            : points[0].x;
+        return Math.floor(start / bucketMs) * bucketMs;
+    }
+
+    getMainChartDescription(): string {
+        if (!this.selectedSeries || this.selectedSeries.length === 0) {
+            return 'Combined trend view with every selected tag in one chart.';
+        }
+
+        var rangeMs = this.getSeriesCollectionRangeMs(this.selectedSeries);
+        if (this.chartType === 'column') {
+            var columnInterval = this.getColumnBucketInterval(rangeMs, this.selectedSeries.length);
+            return 'Auto-grouped into ' + this.formatDurationLabel(columnInterval) +
+                ' intervals with every axis anchored at zero. Rates use averages; counters use the latest value. Zoom for finer detail.';
+        }
+
+        if (this.chartType === 'step') {
+            var stepInterval = this.getStepBucketInterval(rangeMs);
+            return 'Step density is optimized at about ' + this.formatDurationLabel(stepInterval) +
+                ' per sample. Zoom automatically reveals finer detail.';
+        }
+
+        if (this.chartType === 'area') {
+            return 'Translucent fills extend from every trend line to the bottom of its Y-axis, matching the original Area view.';
+        }
+
+        return 'Combined trend view with every selected tag in one chart.';
+    }
+
+    private formatDurationLabel(milliseconds: number): string {
+        if (milliseconds < 1000) {
+            return milliseconds + ' ms';
+        }
+        if (milliseconds < 60000) {
+            return Math.round(milliseconds / 1000) + ' sec';
+        }
+        if (milliseconds < 3600000) {
+            return Math.round(milliseconds / 60000) + ' min';
+        }
+        if (milliseconds < 86400000) {
+            return Math.round((milliseconds / 3600000) * 10) / 10 + ' hr';
+        }
+        return Math.round((milliseconds / 86400000) * 10) / 10 + ' day';
+    }
+
+    private applyColumnAxisBaseline(
+        axisLayout: { axes: any[]; seriesAxis: number[] },
+        seriesItems: ChartSeriesItem[]
+    ): void {
+        // Column comparison is easiest to read when every independent Y axis starts
+        // at the same visual origin. Use an exact zero floor for every populated
+        // axis, even when raw historian data contains a negative spike/outlier.
+        // This rule is intentionally limited to Column Chart; Line, Area and Step
+        // continue to show their complete positive/negative ranges.
+        var populatedAxes: boolean[] = axisLayout.axes.map(() => false);
+
+        for (var i = 0; i < seriesItems.length; i++) {
+            var axisIndex = axisLayout.seriesAxis[i] ?? 0;
+            if (axisIndex >= 0 && axisIndex < populatedAxes.length) {
+                populatedAxes[axisIndex] = true;
+            }
+        }
+
+        for (var axis = 0; axis < axisLayout.axes.length; axis++) {
+            if (!populatedAxes[axis]) {
+                continue;
+            }
+
+            var options = axisLayout.axes[axis];
+            options.min = 0;
+            options.softMin = 0;
+            options.floor = 0;
+            options.minPadding = 0;
+            options.startOnTick = true;
+            options.endOnTick = true;
+            options.softThreshold = false;
+
+            // Remove a negative range hint calculated for Line/Area/Step axes. The
+            // upper bound remains automatic so each parameter keeps its own useful
+            // scale while all zero labels line up along the bottom edge.
+            if (typeof options.softMax === 'number' && options.softMax < 0) {
+                delete options.softMax;
+            }
+        }
     }
 
     private createReadableAxisLayout(

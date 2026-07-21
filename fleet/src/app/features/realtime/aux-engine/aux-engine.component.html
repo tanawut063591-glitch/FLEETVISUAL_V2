@@ -8,7 +8,7 @@
         class="ftd1-value"
         [attr.title]="getTooltip(flow_supply)"
       >
-        {{ displayNumber(flow_supply, 1) }}
+        {{ displayNumber(flow_supply, 2) }}
       </div>
 
       <div class="ftd1-unit">L/h</div>
@@ -21,7 +21,7 @@
         class="ftd1-value"
         [attr.title]="getTooltip(temp_supply)"
       >
-        {{ displayTempSupply || displayNumber(temp_supply, 1) }}
+        {{ displayTempSupply || displayNumber(temp_supply, 2) }}
       </div>
 
       <div class="ftd1-unit">°C</div>
@@ -34,7 +34,7 @@
         class="ftd1-value"
         [attr.title]="getTooltip(dens_supply)"
       >
-        {{ displayNumber(dens_supply, 1) }}
+        {{ displayNumber(dens_supply, 2) }}
       </div>
 
       <div class="ftd1-unit">kg/m3</div>
@@ -50,7 +50,7 @@
         class="ftd1-value"
         [attr.title]="getTooltip(flow_return)"
       >
-        {{ displayNumber(flow_return, 1) }}
+        {{ displayNumber(flow_return, 2) }}
       </div>
 
       <div class="ftd1-unit">L/h</div>
@@ -63,7 +63,7 @@
         class="ftd1-value"
         [attr.title]="getTooltip(temp_return)"
       >
-        {{ displayTempReturn || displayNumber(temp_return, 1) }}
+        {{ displayTempReturn || displayNumber(temp_return, 2) }}
       </div>
 
       <div class="ftd1-unit">°C</div>
@@ -76,7 +76,7 @@
         class="ftd1-value"
         [attr.title]="getTooltip(dens_return)"
       >
-        {{ displayNumber(dens_return, 1) }}
+        {{ displayNumber(dens_return, 2) }}
       </div>
 
       <div class="ftd1-unit">kg/m3</div>
@@ -92,7 +92,7 @@
         class="ftd1-value"
         [attr.title]="getTooltip(cons)"
       >
-        {{ displayAbsNumber(cons, 1) }}
+        {{ displayAbsNumber(cons, 2) }}
       </div>
 
       <div class="ftd1-unit">L/h</div>
@@ -108,7 +108,7 @@
         class="ftd1-value"
         [attr.title]="getTooltip(consL)"
       >
-        {{ displayNumber(consL, 0) }}
+        {{ displayNumber(consL, 2) }}
       </div>
 
       <div class="ftd1-unit">L</div>
@@ -172,7 +172,7 @@
         class="ftd1-value"
         [attr.title]="getTooltip(speed_eng)"
       >
-        {{ displayNumber(speed_eng, 0) }}
+        {{ displayNumber(speed_eng, 2) }}
       </div>
 
       <div class="ftd1-unit">RPM</div>
