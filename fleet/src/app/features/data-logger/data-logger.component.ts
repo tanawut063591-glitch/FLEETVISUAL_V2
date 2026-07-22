@@ -31,6 +31,9 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
 
     loading: boolean = false;
     errorMessage: string = '';
+    autoRefresh: boolean = false;
+    isRealtimeRange: boolean = false;
+    lastUpdatedLabel: string = '';
 
     start: Date = new Date();
     end: Date = new Date();
@@ -70,6 +73,10 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
     private sortDesc: boolean = true;
     private requestSub: Subscription | null = null;
     private requestVersion = 0;
+    private requestPending = false;
+    private selectedEvent: any = null;
+    private refreshTimer: ReturnType<typeof setInterval> | null = null;
+    private readonly refreshMs: number = 30000;
 
     sortColumnType: DataLoggerSortColumnType = 'time';
     sortHeaderIndex: number = -1;
@@ -94,6 +101,7 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
     ngOnInit() {}
 
     ngOnDestroy(): void {
+        this.clearRefreshTimer();
         this.requestSub?.unsubscribe();
         this.requestVersion += 1;
     }
@@ -103,14 +111,31 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
     // ============================================================
 
     showLogger(event: any) {
+        this.loadLogger(event, false);
+    }
+
+    private loadLogger(event: any, silent: boolean) {
         if (!event || !event.start || !event.end || !event.tags || event.tags.length === 0) {
-            alert('Please select start date, end date and tags.');
+            if (!silent) {
+                alert('Please select start date, end date and tags.');
+            }
             return;
         }
 
-        this.start = new Date(event.start);
-        this.end = new Date(event.end);
-        this.tags = event.tags;
+        if (!silent) {
+            this.selectedEvent = {
+                ...event,
+                tags: (event.tags || []).slice(0)
+            };
+        }
+
+        const sourceEvent = this.selectedEvent || event;
+        const requestEvent = this.resolveRequestEvent(sourceEvent);
+
+        this.isRealtimeRange = requestEvent.movingWindow === true;
+        this.start = new Date(requestEvent.start);
+        this.end = new Date(requestEvent.end);
+        this.tags = (requestEvent.tags || []).slice(0);
 
         this.start.setSeconds(0);
         this.start.setMilliseconds(0);
@@ -118,16 +143,28 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         this.end.setMilliseconds(0);
 
         if (this.end.getTime() < this.start.getTime()) {
-            alert('End date must be greater than start date.');
+            if (!silent) {
+                alert('End date must be greater than start date.');
+            }
             return;
         }
 
-        this.resetTableState();
+        if (!silent) {
+            this.autoRefresh = this.isRealtimeRange;
+            if (!this.autoRefresh) {
+                this.clearRefreshTimer();
+            }
+            this.resetTableState();
+        } else if (this.isRealtimeRange) {
+            // Live tables always return to the newest page after refresh.
+            this.pageActive = 1;
+        }
+
         this.rebuildPagination();
-        this.setDatetime(this.pageActive);
+        this.setDatetime(this.pageActive, silent);
     }
 
-    setDatetime(pageNum: number) {
+    setDatetime(pageNum: number, silent: boolean = false) {
         if (!this.start || !this.end || !this.tags || this.tags.length === 0) {
             return;
         }
@@ -151,7 +188,7 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         const startTime = this.formatRequestTime(pageStartTime);
         const endTime = this.formatRequestTime(pageEndTime);
 
-        this.getData(startTime, endTime, this.tags);
+        this.getData(startTime, endTime, this.tags, silent);
     }
 
     private rebuildPagination() {
@@ -173,20 +210,24 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
     // Load Data
     // ============================================================
 
-    getData(startTime: string, endTime: string, tags: any[]) {
+    getData(startTime: string, endTime: string, tags: any[], silent: boolean = false) {
         const requestVersion = ++this.requestVersion;
         this.requestSub?.unsubscribe();
+        this.requestPending = true;
 
-        this.loading = true;
+        if (!silent) {
+            this.loading = true;
+        }
         this.errorMessage = '';
 
         this.headers = this.createHeaders(tags);
-        this.visibleHeaders = this.headers.slice(0);
-        this.datahis = [];
-        this.tableRows = [];
-        this.resetStatusSummary();
-
-        this.changeDetectorRef.detectChanges();
+        if (!silent) {
+            this.visibleHeaders = this.headers.slice(0);
+            this.datahis = [];
+            this.tableRows = [];
+            this.resetStatusSummary();
+            this.changeDetectorRef.detectChanges();
+        }
 
         this.ngZone.runOutsideAngular(() => {
             this.requestSub = this.newHttp.getHistorianValues(startTime, endTime, tags).subscribe(
@@ -216,7 +257,13 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
                         this.datahis = reportValue;
                         this.refreshVisibleColumns();
                         this.applyTableState();
+                        this.lastUpdatedLabel = this.formatDisplayTime(new Date());
+                        this.requestPending = false;
                         this.finishLoading();
+
+                        if (this.autoRefresh) {
+                            this.ensureRefreshTimer();
+                        }
                     });
                 },
                 () => {
@@ -226,12 +273,130 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
 
                     this.ngZone.run(() => {
                         this.errorMessage = 'Cannot load data from server.';
-                        alert(this.errorMessage);
+                        this.requestPending = false;
+                        if (!silent) {
+                            alert(this.errorMessage);
+                        }
                         this.finishLoading();
                     });
                 }
             );
         });
+    }
+
+    // ============================================================
+    // Auto Refresh / Clear Table
+    // ============================================================
+
+    toggleAutoRefresh(): void {
+        if (!this.selectedEvent) {
+            return;
+        }
+
+        this.autoRefresh = !this.autoRefresh;
+        if (this.autoRefresh) {
+            this.startRefreshTimer();
+            this.refreshNow();
+        } else {
+            this.clearRefreshTimer();
+        }
+
+        this.changeDetectorRef.detectChanges();
+    }
+
+    refreshNow(): void {
+        if (!this.selectedEvent || this.loading || this.requestPending) {
+            return;
+        }
+
+        this.loadLogger(this.selectedEvent, true);
+    }
+
+    clearTable(): void {
+        this.clearRefreshTimer();
+        this.autoRefresh = false;
+        this.isRealtimeRange = false;
+        this.selectedEvent = null;
+        this.requestSub?.unsubscribe();
+        this.requestSub = null;
+        this.requestPending = false;
+        this.requestVersion += 1;
+
+        this.datahis = [];
+        this.tableRows = [];
+        this.headers = [];
+        this.visibleHeaders = [];
+        this.tags = [];
+        this.loading = false;
+        this.errorMessage = '';
+        this.lastUpdatedLabel = '';
+        this.totalRows = 0;
+        this.pageCount = 0;
+        this.pageActive = 1;
+        this.pages = [];
+        this.resetTableState();
+        this.changeDetectorRef.detectChanges();
+    }
+
+    private ensureRefreshTimer(): void {
+        if (!this.refreshTimer) {
+            this.startRefreshTimer();
+        }
+    }
+
+    private startRefreshTimer(): void {
+        this.clearRefreshTimer();
+        this.refreshTimer = setInterval(() => {
+            if (this.autoRefresh && this.selectedEvent && !this.loading && !this.requestPending) {
+                this.loadLogger(this.selectedEvent, true);
+            }
+        }, this.refreshMs);
+    }
+
+    private clearRefreshTimer(): void {
+        if (this.refreshTimer) {
+            clearInterval(this.refreshTimer);
+            this.refreshTimer = null;
+        }
+    }
+
+    private resolveRequestEvent(event: any): any {
+        const start = Number(event.start);
+        const end = Number(event.end);
+        const now = Date.now();
+        const period = String(event.period || '').toUpperCase();
+        const movingWindow = event.movingWindow === true || Math.abs(now - end) <= 2 * 60 * 1000;
+
+        if (!movingWindow || period === 'Y') {
+            return { ...event, start, end, movingWindow: false };
+        }
+
+        const nextEnd = now;
+        let nextStart = start;
+        let numeric = parseFloat(period.replace(/[^0-9.]+/g, ''));
+        if (!Number.isFinite(numeric) || numeric <= 0) {
+            numeric = 1;
+        }
+
+        if (period === 'T') {
+            const today = new Date(now);
+            today.setHours(0, 0, 0, 0);
+            nextStart = today.getTime();
+        } else if (period === 'M') {
+            const month = new Date(now);
+            month.setDate(1);
+            month.setHours(0, 0, 0, 0);
+            nextStart = month.getTime();
+        } else if (/H$/.test(period)) {
+            nextStart = nextEnd - numeric * 60 * 60 * 1000;
+        } else if (/W$/.test(period)) {
+            nextStart = nextEnd - numeric * 7 * 24 * 60 * 60 * 1000;
+        } else {
+            const duration = Math.max(60 * 1000, end - start);
+            nextStart = nextEnd - duration;
+        }
+
+        return { ...event, start: nextStart, end: nextEnd, movingWindow: true };
     }
 
     // ============================================================
@@ -1106,12 +1271,8 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
 
         this.pageRow = value;
 
-        if (this.start && this.end && this.tags && this.tags.length > 0) {
-            this.showLogger({
-                start: this.start,
-                end: this.end,
-                tags: this.tags
-            });
+        if (this.selectedEvent) {
+            this.loadLogger(this.selectedEvent, false);
         }
     }
 
@@ -1124,12 +1285,8 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
 
         this.selectedIntervalMs = value;
 
-        if (this.start && this.end && this.tags && this.tags.length > 0) {
-            this.showLogger({
-                start: this.start,
-                end: this.end,
-                tags: this.tags
-            });
+        if (this.selectedEvent) {
+            this.loadLogger(this.selectedEvent, false);
         }
     }
 

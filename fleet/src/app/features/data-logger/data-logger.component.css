@@ -119,6 +119,14 @@
     letter-spacing: -0.02em;
 }
 
+.table-update-meta {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+
 .table-actions {
     display: flex;
     align-items: center;
@@ -140,7 +148,9 @@
 
 .interval-select,
 .clear-filter-btn,
-.setting-btn {
+.setting-btn,
+.logger-auto-btn,
+.logger-icon-btn {
     height: 36px;
     border-radius: 9px;
     border: 1px solid #d8e3f1;
@@ -167,8 +177,77 @@
     cursor: pointer;
 }
 
+.logger-auto-btn {
+    min-width: 132px;
+    padding: 0 10px 0 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.logger-toggle-dot {
+    position: relative;
+    width: 34px;
+    height: 19px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #cbd5e1;
+    transition: background 0.2s ease;
+}
+
+.logger-toggle-dot::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 2px 7px rgba(15, 23, 42, 0.24);
+    transition: transform 0.2s ease;
+}
+
+.logger-auto-btn.active {
+    color: #166534;
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+
+.logger-auto-btn.active .logger-toggle-dot {
+    background: #22c55e;
+}
+
+.logger-auto-btn.active .logger-toggle-dot::after {
+    transform: translateX(15px);
+}
+
+.logger-icon-btn {
+    width: 36px;
+    padding: 0;
+    display: inline-grid;
+    place-items: center;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.logger-icon-btn--clear:hover {
+    color: #dc2626 !important;
+    border-color: #fecaca !important;
+    background: #fef2f2 !important;
+}
+
+.logger-icon-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 .clear-filter-btn:hover,
 .setting-btn:hover,
+.logger-auto-btn:hover,
+.logger-icon-btn:hover,
 .interval-select:hover {
     background: #eff6ff;
     color: #2563eb;
@@ -750,8 +829,13 @@
     }
 
     .clear-filter-btn,
-    .interval-select {
+    .interval-select,
+    .logger-auto-btn {
         flex: 1;
+    }
+
+    .logger-auto-btn {
+        min-width: 150px;
     }
 
     .table-count-badge {
@@ -816,6 +900,8 @@
 :host-context([data-theme='dark']) .interval-select,
 :host-context([data-theme='dark']) .clear-filter-btn,
 :host-context([data-theme='dark']) .setting-btn,
+:host-context([data-theme='dark']) .logger-auto-btn,
+:host-context([data-theme='dark']) .logger-icon-btn,
 :host-context([data-theme='dark']) .table-count-badge,
 :host-context([data-theme='dark']) .rows-select,
 :host-context([data-theme='dark']) .page-arrow,
@@ -829,12 +915,38 @@
 :host-context([data-theme='dark']) .quick-chip:hover,
 :host-context([data-theme='dark']) .clear-filter-btn:hover,
 :host-context([data-theme='dark']) .setting-btn:hover,
+:host-context([data-theme='dark']) .logger-auto-btn:hover,
+:host-context([data-theme='dark']) .logger-icon-btn:hover,
 :host-context([data-theme='dark']) .interval-select:hover,
 :host-context([data-theme='dark']) .page-arrow:hover,
 :host-context([data-theme='dark']) .page-number:hover {
     background: #111c2a !important;
     color: #93c5fd !important;
     border-color: rgba(96, 165, 250, 0.46) !important;
+}
+
+:host-context([data-theme='dark']) .table-update-meta {
+    color: #94a3b8 !important;
+}
+
+:host-context([data-theme='dark']) .logger-auto-btn.active {
+    color: #86efac !important;
+    border-color: rgba(34, 197, 94, 0.42) !important;
+    background: rgba(20, 83, 45, 0.24) !important;
+}
+
+:host-context([data-theme='dark']) .logger-toggle-dot {
+    background: #334155;
+}
+
+:host-context([data-theme='dark']) .logger-auto-btn.active .logger-toggle-dot {
+    background: #22c55e;
+}
+
+:host-context([data-theme='dark']) .logger-icon-btn--clear:hover {
+    color: #fca5a5 !important;
+    border-color: rgba(248, 113, 113, 0.42) !important;
+    background: rgba(127, 29, 29, 0.24) !important;
 }
 
 :host-context([data-theme='dark']) .quick-chip.active {

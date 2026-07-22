@@ -425,3 +425,54 @@
     overflow-y: auto;
   }
 }
+
+/* =========================================================
+   LOGIN FAILURE FEEDBACK V2
+   ========================================================= */
+.login_invalid {
+  width: 100%;
+  min-height: 22px;
+}
+
+.login_invalid span {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: 11px;
+  color: #b91c1c;
+  background: rgba(254, 242, 242, 0.94);
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.login_invalid span i {
+  margin-top: 2px;
+  flex: 0 0 auto;
+  color: #ef4444;
+}
+
+.login-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.login_submit:disabled {
+  transform: none;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+}
+
+:host-context([data-theme='dark']) .login_invalid span {
+  border-color: rgba(248, 113, 113, 0.34);
+  color: #fecaca;
+  background: rgba(69, 10, 10, 0.36);
+}
+
+:host-context([data-theme='dark']) .login_invalid span i {
+  color: #f87171;
+}

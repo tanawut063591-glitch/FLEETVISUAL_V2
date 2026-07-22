@@ -105,20 +105,33 @@
         </div>
       </div>
 
-      <div class="login_invalid" [@loginState]="loginValid.toString()">
+      <div
+        class="login_invalid"
+        [@loginState]="loginValid.toString()"
+        role="alert"
+        aria-live="assertive"
+      >
         <span *ngIf="!loginValid">
           <i class="fa fa-times-circle"></i>
           {{ errorMessage || 'The username or password is incorrect.' }}
         </span>
       </div>
 
-      <button type="submit" class="login_submit" [disabled]="isSubmitting">
+      <button
+        type="submit"
+        class="login_submit"
+        [disabled]="isSubmitting"
+        [attr.aria-busy]="isSubmitting"
+      >
         <span *ngIf="!isSubmitting">
           Log in
           <i class="fa fa-arrow-right ml-1"></i>
         </span>
 
-        <span *ngIf="isSubmitting">Logging in...</span>
+        <span *ngIf="isSubmitting" class="login-loading">
+          <i class="fa fa-circle-o-notch fa-spin" aria-hidden="true"></i>
+          Checking credentials...
+        </span>
       </button>
 
       <div class="login-support">

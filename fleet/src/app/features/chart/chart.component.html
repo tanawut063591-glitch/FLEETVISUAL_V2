@@ -114,16 +114,6 @@
             </div>
         </div>
 
-        <div class="parameter-strip" *ngIf="selectedSeries.length > 0">
-            <div
-                class="parameter-chip"
-                *ngFor="let s of selectedSeries; trackBy: trackBySeries">
-                <span class="chip-color" [style.background]="s.color"></span>
-                <span>{{ s.label }}</span>
-                <em *ngIf="s.unit">{{ s.unit }}</em>
-            </div>
-        </div>
-
         <div class="chart-content">
 
             <div class="chart-main">
@@ -146,7 +136,10 @@
                     <span>Choose parameters, select a time range and visualize data as line, area, step or column charts.</span>
                 </div>
 
-                <div class="chart-card" *ngIf="!loading && selectedSeries.length > 0 && displayMode == 'all'">
+                <div
+                    class="chart-card"
+                    data-chart-target="main"
+                    *ngIf="!loading && selectedSeries.length > 0 && displayMode == 'all'">
                     <div class="chart-card-head">
                         <div>
                             <h3>All selected parameters</h3>
@@ -164,10 +157,11 @@
                             <button
                                 type="button"
                                 class="card-tool-btn"
-                                title="Full screen"
-                                aria-label="Open chart in full screen"
+                                [title]="isChartFullscreen('main') ? 'Exit full screen' : 'Full screen'"
+                                [attr.aria-label]="isChartFullscreen('main') ? 'Exit chart full screen' : 'Open chart in full screen'"
+                                [attr.aria-pressed]="isChartFullscreen('main')"
                                 (click)="toggleChartFullscreen('main', $event)">
-                                <i class="fa fa-expand"></i>
+                                <i class="fa" [ngClass]="isChartFullscreen('main') ? 'fa-compress' : 'fa-expand'"></i>
                             </button>
                             <div class="chart-menu-wrap">
                                 <button
@@ -202,7 +196,10 @@
                 </div>
 
                 <div class="group-stack" *ngIf="chartsVisible && !loading && selectedSeries.length > 0 && displayMode == 'groups'">
-                    <div class="chart-card group-card" *ngFor="let group of groupCharts; trackBy: trackByGroup">
+                    <div
+                        class="chart-card group-card"
+                        [attr.data-chart-target]="'group:' + group.key"
+                        *ngFor="let group of groupCharts; trackBy: trackByGroup">
                         <div class="chart-card-head compact">
                             <div>
                                 <h3>{{ group.label }}</h3>
@@ -220,10 +217,11 @@
                                 <button
                                     type="button"
                                     class="card-tool-btn"
-                                    title="Full screen"
-                                    aria-label="Open group chart in full screen"
+                                    [title]="isChartFullscreen('group:' + group.key) ? 'Exit full screen' : 'Full screen'"
+                                    [attr.aria-label]="isChartFullscreen('group:' + group.key) ? 'Exit group chart full screen' : 'Open group chart in full screen'"
+                                    [attr.aria-pressed]="isChartFullscreen('group:' + group.key)"
                                     (click)="toggleChartFullscreen('group:' + group.key, $event)">
-                                    <i class="fa fa-expand"></i>
+                                    <i class="fa" [ngClass]="isChartFullscreen('group:' + group.key) ? 'fa-compress' : 'fa-expand'"></i>
                                 </button>
                                 <div class="chart-menu-wrap">
                                     <button

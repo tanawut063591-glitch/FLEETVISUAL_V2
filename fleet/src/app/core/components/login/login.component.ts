@@ -11,7 +11,10 @@ import {
   keyframes,
 } from '@angular/animations';
 
-import { AuthService } from '../../../shared/services/auth.service';
+import {
+  AuthService,
+  LoginError,
+} from '../../../shared/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -120,7 +123,7 @@ export class LoginComponent implements OnInit {
     // ถ้าฟอร์มไม่ครบ ให้โชว์ error
     if (this.loginForm.invalid) {
       this.markFormTouched();
-      this.showLoginError('Invalid username or password');
+      this.showLoginError('Please enter your username and password.');
       return;
     }
 
@@ -148,15 +151,38 @@ export class LoginComponent implements OnInit {
       if (redirectUrl) {
         await this.router.navigateByUrl(redirectUrl);
       } else {
-        this.showLoginError('Invalid username or password.');
+        this.showLoginError('The username or password is incorrect.');
       }
-    } catch (error) {
-      // กรณี service error หรือ backend มีปัญหา
-      console.error('[LoginComponent] submit error:', error);
-      this.showLoginError('Something went wrong. Please try again.');
-    } finally {
-      // ปิด loading ไม่ว่าจะสำเร็จหรือ error
+    } catch (error: unknown) {
+      // คืนปุ่มก่อนแสดงข้อความทันที เพื่อไม่ให้ UI ค้างที่ Logging in...
       this.isSubmitting = false;
+      this.showLoginError(this.getLoginErrorMessage(error));
+    } finally {
+      // Safety net: ปิด loading เสมอทั้ง success, invalid password, timeout และ network error
+      this.isSubmitting = false;
+      this.changeDetectorRef.markForCheck();
+    }
+  }
+
+  /**
+   * ข้อความที่แสดงให้ผู้ใช้ แยกตามสาเหตุจริงของการ Login ไม่สำเร็จ
+   */
+  private getLoginErrorMessage(error: unknown): string {
+    if (!(error instanceof LoginError)) {
+      return 'Unable to sign in right now. Please try again.';
+    }
+
+    switch (error.reason) {
+      case 'invalid_credentials':
+        return 'The username or password is incorrect.';
+      case 'timeout':
+        return 'The login server took too long to respond. Please try again.';
+      case 'network':
+        return 'Unable to connect to the login server. Please check the server or network.';
+      case 'invalid_response':
+        return 'The login server returned an invalid response. Please contact support.';
+      default:
+        return 'The login server is temporarily unavailable. Please try again.';
     }
   }
 

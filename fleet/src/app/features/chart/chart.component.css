@@ -285,36 +285,6 @@
     color: #ffffff;
 }
 
-.parameter-strip {
-    padding: 12px 16px;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    border-bottom: 1px solid #edf3fb;
-    background: #ffffff;
-}
-
-.parameter-chip {
-    height: 34px;
-    padding: 0 10px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border: 1px solid #dbe7f5;
-    border-radius: 999px;
-    background: #f8fbff;
-    color: #334155;
-    font-size: 12px;
-    font-weight: 800;
-}
-
-.parameter-chip em {
-    color: #2563eb;
-    font-style: normal;
-    font-weight: 900;
-}
-
-.chip-color,
 .side-color {
     width: 9px;
     height: 9px;
@@ -344,6 +314,65 @@
 
 .chart-card {
     overflow: hidden;
+}
+
+
+/*
+ * Stable card-level fullscreen.
+ * The parent card remains mounted while Auto Refresh updates chart options,
+ * so the browser does not leave fullscreen when Highcharts is reconstructed.
+ */
+.chart-card:fullscreen,
+.chart-card:-webkit-full-screen,
+.chart-card--fullscreen-fallback {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff;
+    overflow: hidden !important;
+    box-shadow: none !important;
+}
+
+.chart-card--fullscreen-fallback {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2147483000 !important;
+}
+
+.chart-card:fullscreen .chart-card-head,
+.chart-card:-webkit-full-screen .chart-card-head,
+.chart-card--fullscreen-fallback .chart-card-head {
+    flex: 0 0 auto;
+    min-height: 68px;
+    padding: 18px 24px 10px;
+    background: inherit;
+}
+
+.chart-card:fullscreen .chart-instance,
+.chart-card:-webkit-full-screen .chart-instance,
+.chart-card--fullscreen-fallback .chart-instance {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: calc(100vh - 78px) !important;
+}
+
+.chart-card:fullscreen .card-tool-btn,
+.chart-card:-webkit-full-screen .card-tool-btn,
+.chart-card--fullscreen-fallback .card-tool-btn {
+    width: 38px;
+    height: 38px;
+}
+
+:host-context([data-theme='dark']) .chart-card:fullscreen,
+:host-context([data-theme='dark']) .chart-card:-webkit-full-screen,
+:host-context([data-theme='dark']) .chart-card--fullscreen-fallback {
+    background: #070b12 !important;
 }
 
 .chart-card-head {
@@ -682,14 +711,12 @@
     border-color: rgba(148, 163, 184, 0.20) !important;
 }
 
-:host-context([data-theme='dark']) .chart-meta,
-:host-context([data-theme='dark']) .parameter-strip {
+:host-context([data-theme='dark']) .chart-meta {
     background: #070b12 !important;
     border-color: rgba(148, 163, 184, 0.18) !important;
 }
 
 :host-context([data-theme='dark']) .chart-meta > .meta-card,
-:host-context([data-theme='dark']) .parameter-chip,
 :host-context([data-theme='dark']) .selected-pill,
 :host-context([data-theme='dark']) .mode-switch,
 :host-context([data-theme='dark']) .auto-btn,
@@ -745,7 +772,6 @@
 }
 
 :host-context([data-theme='dark']) .selected-pill,
-:host-context([data-theme='dark']) .parameter-chip em,
 :host-context([data-theme='dark']) .chart-type-grid button i {
     color: #60a5fa !important;
 }
@@ -897,25 +923,6 @@
     padding: 0 7px;
   }
 
-  .parameter-strip {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding: 10px 12px 12px;
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .parameter-chip {
-    flex: 0 0 auto;
-    max-width: 84vw;
-    scroll-snap-align: start;
-  }
-
-  .parameter-chip span:not(.chip-color) {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 
   .chart-content {
     min-height: 0;

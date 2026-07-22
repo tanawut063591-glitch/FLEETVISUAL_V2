@@ -1,153 +1,181 @@
-<div class="container-fluid">
-  <!-- Fuel Supply + Load -->
-  <div id="group-ftd1">
-    <div class="ftd1">
-      <div class="ftd1-name">
-        Flow
-      </div>
+<section
+  class="dg-monitor dg-monitor--running"
+  [class.realtime-alert-console]="hasAnyAlarm()"
+>
+  <div class="dg-hero">
+    <div class="dg-core" aria-hidden="true">
+      <span class="dg-core__orbit"></span>
+      <span class="dg-core__icon"><i class="fa fa-bolt"></i></span>
+    </div>
 
+    <div class="dg-identity">
+      <span class="dg-eyebrow">GENERATOR CORE</span>
+      <strong>Diesel Generator</strong>
+      <span class="dg-state"><i></i>Operational</span>
+    </div>
+
+    <div
+      class="dg-live-metric"
+      [class.realtime-alert-field]="hasAlarm(cons)"
+      [attr.title]="getTooltip(cons)"
+    >
+      <span>LIVE RATE</span>
+      <strong>{{ displayAbsNumber(cons, 2) }}</strong>
+      <small>L/h</small>
+    </div>
+  </div>
+
+  <div class="fuel-block fuel-block--supply">
+    <div class="fuel-block__heading">
+      <span class="fuel-block__label">
+        <i class="fa fa-long-arrow-right"></i>
+        Fuel supply
+      </span>
+      <span class="fuel-block__status">INLET</span>
+    </div>
+
+    <div class="fuel-metrics">
       <div
-        class="ftd1-value"
+        class="fuel-metric"
+        [class.realtime-alert-field]="hasAlarm(flow_supply)"
         [attr.title]="getTooltip(flow_supply)"
       >
-        {{ displayNumber(flow_supply, 2) }}
-      </div>
-
-      <div class="ftd1-unit">
-        L/h
-      </div>
-    </div>
-
-    <div class="ftd1" *ngIf="hasLoad">
-      <div class="ftd1-name">
-        Load.
+        <span>FLOW</span>
+        <strong>{{ displayNumber(flow_supply, 2) }}</strong>
+        <small>L/h</small>
       </div>
 
       <div
-        class="ftd1-value"
+        class="fuel-metric"
+        [class.realtime-alert-field]="hasAlarm(load)"
         [attr.title]="getTooltip(load)"
       >
-        {{ displayNumber(load, 2) }}
-      </div>
-
-      <div class="ftd1-unit">
-        %
-      </div>
-    </div>
-
-    <div class="ftd1" *ngIf="hasLoadKw">
-      <div class="ftd1-name">
-        Load.
+        <span>LOAD</span>
+        <strong *ngIf="hasLoad; else noSupplyLoad">{{ displayNumber(load, 1) }}</strong>
+        <ng-template #noSupplyLoad><strong>—</strong></ng-template>
+        <small>%</small>
       </div>
 
       <div
-        class="ftd1-value"
+        class="fuel-metric"
+        [class.realtime-alert-field]="hasAlarm(load_kw)"
         [attr.title]="getTooltip(load_kw)"
       >
-        {{ displayNumber(load_kw, 2) }}
-      </div>
-
-      <div class="ftd1-unit">
-        kW
+        <span>OUTPUT</span>
+        <strong *ngIf="hasLoadKw; else noSupplyOutput">{{ displayNumber(load_kw, 2) }}</strong>
+        <ng-template #noSupplyOutput><strong>—</strong></ng-template>
+        <small>kW</small>
       </div>
     </div>
   </div>
 
-  <!-- Fuel Return -->
-  <div id="group-ftd2">
-    <div class="ftd1">
-      <div class="ftd1-name">
-        Flow
-      </div>
+  <div class="fuel-circuit" aria-hidden="true">
+    <span class="fuel-circuit__line fuel-circuit__line--supply"></span>
+    <span class="fuel-circuit__arrow fuel-circuit__arrow--supply">
+      <i class="fa fa-chevron-right"></i>
+    </span>
 
+    <div class="fuel-circuit__node">
+      <i class="fa fa-cog"></i>
+      <span>DG</span>
+    </div>
+
+    <span class="fuel-circuit__line fuel-circuit__line--return"></span>
+    <span class="fuel-circuit__arrow fuel-circuit__arrow--return">
+      <i class="fa fa-chevron-left"></i>
+    </span>
+  </div>
+
+  <div class="fuel-block fuel-block--return">
+    <div class="fuel-block__heading">
+      <span class="fuel-block__label">
+        <i class="fa fa-long-arrow-left"></i>
+        Fuel return
+      </span>
+      <span class="fuel-block__status">OUTLET</span>
+    </div>
+
+    <div class="fuel-metrics">
       <div
-        class="ftd1-value"
+        class="fuel-metric"
+        [class.realtime-alert-field]="hasAlarm(flow_return)"
         [attr.title]="getTooltip(flow_return)"
       >
-        {{ displayNumber(flow_return, 2) }}
-      </div>
-
-      <div class="ftd1-unit">
-        L/h
-      </div>
-    </div>
-  </div>
-
-  <!-- Consumption Rate -->
-  <div id="group-ftd3">
-    <div class="ftd1">
-      <div class="ftd1-name">
-        Cons.
+        <span>FLOW</span>
+        <strong>{{ displayNumber(flow_return, 2) }}</strong>
+        <small>L/h</small>
       </div>
 
       <div
-        class="ftd1-value"
+        class="fuel-metric"
+        [class.realtime-alert-field]="hasAlarm(cons)"
         [attr.title]="getTooltip(cons)"
       >
-        {{ displayAbsNumber(cons, 2) }}
-      </div>
-
-      <div class="ftd1-unit">
-        L/h
-      </div>
-    </div>
-  </div>
-
-  <!-- Consumption Today -->
-  <div id="group-ftd4">
-    <div class="ftd1">
-      <div class="ftd1-name">
-        Cons.
+        <span>CONSUMPTION</span>
+        <strong>{{ displayAbsNumber(cons, 2) }}</strong>
+        <small>L/h</small>
       </div>
 
       <div
-        class="ftd1-value"
+        class="fuel-metric"
+        [class.realtime-alert-field]="hasAlarm(consL)"
         [attr.title]="getTooltip(consL)"
       >
+        <span>TODAY</span>
+        <strong>{{ displayNumber(consL, 2) }}</strong>
+        <small>L</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="dg-performance">
+    <div
+      class="dg-load"
+      [ngClass]="loadStateClass"
+      [class.realtime-alert-field]="hasAlarm(load)"
+    >
+      <div class="dg-load__heading">
+        <span>GENERATOR LOAD</span>
+        <strong *ngIf="hasLoad; else noLoadPercent">
+          {{ displayNumber(load, 1) }}<small>%</small>
+        </strong>
+        <ng-template #noLoadPercent><strong>—</strong></ng-template>
+      </div>
+
+      <div class="dg-load__track" role="progressbar" aria-label="Generator load" [attr.aria-valuenow]="loadPercent" aria-valuemin="0" aria-valuemax="100">
+        <span [style.width.%]="loadPercent"></span>
+      </div>
+
+      <div class="dg-load__scale">
+        <span>0</span>
+        <span>50</span>
+        <span>100%</span>
+      </div>
+    </div>
+
+    <div
+      class="dg-output"
+      [class.realtime-alert-field]="hasAlarm(load_kw)"
+      [attr.title]="getTooltip(load_kw)"
+    >
+      <span>POWER OUTPUT</span>
+      <strong *ngIf="hasLoadKw; else noLoadKw">
+        {{ displayNumber(load_kw, 2) }}
+        <small>kW</small>
+      </strong>
+      <ng-template #noLoadKw><strong>—</strong></ng-template>
+    </div>
+
+    <div
+      class="dg-output dg-output--today"
+      [class.realtime-alert-field]="hasAlarm(consL)"
+      [attr.title]="getTooltip(consL)"
+    >
+      <span>TODAY CONSUMPTION</span>
+      <strong>
         {{ displayNumber(consL, 2) }}
-      </div>
-
-      <div class="ftd1-unit">
-        L
-      </div>
+        <small>L</small>
+      </strong>
     </div>
   </div>
-
-  <!-- Diagram Line -->
-  <div id="fuel-use"></div>
-
-  <!-- Fuel Supply Label -->
-  <div id="fuel-supply-title">
-    <div style="text-align: center; line-height: 1.5">
-      <i
-        class="fa fa-caret-right"
-        aria-hidden="true"
-        style="line-height: 0.1; font-size: 18px"
-      ></i>
-    </div>
-
-    <div style="font-size: 10px; line-height: 0.1; text-align: center">
-      Fuel Supply
-    </div>
-  </div>
-
-  <!-- Fuel Return Label -->
-  <div id="fuel-return-title">
-    <div style="font-size: 10px; line-height: 0.6">
-      Fuel Return
-    </div>
-
-    <div style="text-align: center; line-height: 1.5">
-      <i
-        class="fa fa-caret-left"
-        aria-hidden="true"
-        style="line-height: 0.1; font-size: 18px"
-      ></i>
-    </div>
-  </div>
-
-  <!-- DG Box -->
-  <div id="engine">
-    DG
-  </div>
-</div>
+</section>

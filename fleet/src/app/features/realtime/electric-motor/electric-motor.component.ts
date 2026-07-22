@@ -1,6 +1,8 @@
 import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 
 import { TooltipFormatService } from '../../../shared/services/tooltip-format.service';
+import { AlertRecord } from '../../../shared/models/alert.model';
+import { hasRealtimeTagAlarm } from '../realtime-alarm.util';
 
 interface RealtimeValue {
   value?: string | number | null;
@@ -20,6 +22,8 @@ type MotorInput = RealtimeValue | number | string | null | undefined;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ElectricMotorComponent {
+  @Input() activeAlerts: readonly AlertRecord[] = [];
+
   @Input() speed: MotorInput = null;
 
   constructor(public tooltipFormatService: TooltipFormatService) {}
@@ -83,5 +87,16 @@ export class ElectricMotorComponent {
     }
 
     return value.toFixed(digits);
+  }
+
+
+  hasAlarm(input: MotorInput, ...fallbackTags: string[]): boolean {
+    return hasRealtimeTagAlarm(this.activeAlerts, input, ...fallbackTags);
+  }
+
+  hasAnyAlarm(): boolean {
+    return [
+      this.speed,
+    ].some((input) => hasRealtimeTagAlarm(this.activeAlerts, input));
   }
 }

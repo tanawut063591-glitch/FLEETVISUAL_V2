@@ -216,11 +216,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
         // the Alarm page after navigation has completed.
         if (!result || this.isAlarmPage()) return;
 
-        const activeCount = result.alerts.filter(
+        const activeAlerts = result.alerts.filter(
           (alert) => alert.state !== 'resolved'
-        ).length;
+        );
 
-        this.alertState.setActiveCount(activeCount);
+        this.alertState.setActiveAlerts(activeAlerts);
       });
   }
 

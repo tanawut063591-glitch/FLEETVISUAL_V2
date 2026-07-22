@@ -48,6 +48,9 @@
             <div class="table-title-wrap">
                 <span class="table-kicker">LOGGER VIEW</span>
                 <h3>DATA TABLE</h3>
+                <small class="table-update-meta" *ngIf="lastUpdatedLabel">
+                    Last update {{ lastUpdatedLabel }}
+                </small>
             </div>
 
             <div class="table-actions">
@@ -71,8 +74,34 @@
                     </option>
                 </select>
 
-                <button type="button" class="setting-btn">
-                    ⚙
+                <button
+                    type="button"
+                    class="logger-auto-btn"
+                    [ngClass]="{ 'active': autoRefresh }"
+                    [attr.aria-pressed]="autoRefresh"
+                    title="Refresh the current logger range every 30 seconds"
+                    (click)="toggleAutoRefresh()">
+                    <span>Auto Refresh</span>
+                    <i class="logger-toggle-dot"></i>
+                </button>
+
+                <button
+                    type="button"
+                    class="logger-icon-btn"
+                    title="Refresh table now"
+                    aria-label="Refresh data logger table"
+                    [disabled]="loading"
+                    (click)="refreshNow()">
+                    <i class="fa fa-refresh" [class.fa-spin]="loading"></i>
+                </button>
+
+                <button
+                    type="button"
+                    class="logger-icon-btn logger-icon-btn--clear"
+                    title="Clear table"
+                    aria-label="Clear data logger table"
+                    (click)="clearTable()">
+                    <i class="fa fa-eraser"></i>
                 </button>
             </div>
         </div>

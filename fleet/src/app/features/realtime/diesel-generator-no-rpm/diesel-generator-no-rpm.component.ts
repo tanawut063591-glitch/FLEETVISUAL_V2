@@ -1,10 +1,12 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   Input,
-  ChangeDetectionStrategy,
 } from '@angular/core';
 
 import { TooltipFormatService } from '../../../shared/services/tooltip-format.service';
+import { AlertRecord } from '../../../shared/models/alert.model';
+import { hasRealtimeTagAlarm } from '../realtime-alarm.util';
 
 interface RealtimeValue {
   value?: string | number | null;
@@ -21,30 +23,25 @@ type GeneratorInput = RealtimeValue | number | string | null | undefined;
   standalone: false,
   templateUrl: './diesel-generator-no-rpm.component.html',
   styleUrls: ['./diesel-generator-no-rpm.component.css'],
-
-  // ลดการ render ซ้ำ เวลา realtime update
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DieselGeneratorNoRpmComponent {
-  // Fuel supply
+  @Input() activeAlerts: readonly AlertRecord[] = [];
+
   @Input() flow_supply: GeneratorInput = null;
   @Input() temp_supply: GeneratorInput = null;
   @Input() dens_supply: GeneratorInput = null;
 
-  // Fuel return
   @Input() flow_return: GeneratorInput = null;
   @Input() temp_return: GeneratorInput = null;
   @Input() dens_return: GeneratorInput = null;
 
-  // Consumption
   @Input() cons: GeneratorInput = null;
   @Input() consL: GeneratorInput = null;
 
-  // Generator load
   @Input() load: GeneratorInput = null;
   @Input() load_kw: GeneratorInput = null;
 
-  // Status
   @Input() ecm_status: GeneratorInput = null;
   @Input() gen_status: GeneratorInput = null;
   @Input() supply_status: GeneratorInput = null;
@@ -52,9 +49,6 @@ export class DieselGeneratorNoRpmComponent {
 
   constructor(public tooltipFormatService: TooltipFormatService) {}
 
-  /**
-   * ดึง value จาก object realtime หรือค่าตรง ๆ
-   */
   getValue(input: GeneratorInput): string {
     if (input === null || input === undefined) {
       return '';
@@ -62,20 +56,12 @@ export class DieselGeneratorNoRpmComponent {
 
     if (typeof input === 'object') {
       const value = input.value;
-
-      if (value === null || value === undefined) {
-        return '';
-      }
-
-      return String(value);
+      return value === null || value === undefined ? '' : String(value);
     }
 
     return String(input);
   }
 
-  /**
-   * ดึง tagName สำหรับ tooltip
-   */
   getTagName(input: GeneratorInput): string {
     if (!input || typeof input !== 'object') {
       return '';
@@ -84,30 +70,16 @@ export class DieselGeneratorNoRpmComponent {
     return input.tagName || input.name || '';
   }
 
-  /**
-   * ดึง timestamp สำหรับ tooltip
-   */
   getTimestamp(input: GeneratorInput): string {
-    if (!input || typeof input !== 'object') {
+    if (!input || typeof input !== 'object' || !input.timestamp) {
       return '';
     }
 
-    const timestamp = input.timestamp;
-
-    if (!timestamp) {
-      return '';
-    }
-
-    if (timestamp instanceof Date) {
-      return timestamp.toISOString();
-    }
-
-    return String(timestamp);
+    return input.timestamp instanceof Date
+      ? input.timestamp.toISOString()
+      : String(input.timestamp);
   }
 
-  /**
-   * ใช้ใน HTML แทน tooltipFormatService.getTooltip(...) ตรง ๆ
-   */
   getTooltip(input: GeneratorInput): string {
     return this.tooltipFormatService.getTooltip(
       this.getTagName(input),
@@ -115,70 +87,58 @@ export class DieselGeneratorNoRpmComponent {
     );
   }
 
-  /**
-   * แสดงตัวเลขแบบปลอดภัย
-   */
   displayNumber(
     input: GeneratorInput,
-    digits: number = 2,
-    fallback: string = '0.00'
+    digits = 2,
+    fallback = '0.00'
   ): string {
-    const value = Number(this.getValue(input));
-
-    if (!Number.isFinite(value)) {
-      return fallback;
-    }
-
-    return value.toFixed(digits);
+    const value = this.toFiniteNumber(input);
+    return value === null ? fallback : value.toFixed(digits);
   }
 
-  /**
-   * แสดงตัวเลขแบบค่าสัมบูรณ์ เช่น consumption ที่ติดลบ
-   */
   displayAbsNumber(
     input: GeneratorInput,
-    digits: number = 2,
-    fallback: string = '0.00'
+    digits = 2,
+    fallback = '0.00'
   ): string {
-    const value = Math.abs(Number(this.getValue(input)));
+    const value = this.toFiniteNumber(input);
+    return value === null ? fallback : Math.abs(value).toFixed(digits);
+  }
 
-    if (!Number.isFinite(value)) {
-      return fallback;
+  get hasLoad(): boolean {
+    return this.toFiniteNumber(this.load) !== null;
+  }
+
+  get hasLoadKw(): boolean {
+    return this.toFiniteNumber(this.load_kw) !== null;
+  }
+
+  get loadPercent(): number {
+    const value = this.toFiniteNumber(this.load);
+    return value === null ? 0 : Math.min(100, Math.max(0, value));
+  }
+
+  get loadStateClass(): string {
+    if (this.loadPercent >= 90) {
+      return 'load-critical';
     }
 
-    return value.toFixed(digits);
+    if (this.loadPercent >= 75) {
+      return 'load-warning';
+    }
+
+    return 'load-normal';
   }
 
-  /**
-   * เช็กว่ามี load ไหม
-   */
-  get hasLoad(): boolean {
-    const value = Number(this.getValue(this.load));
-
-    return Number.isFinite(value) && value !== 0;
-  }
-
-  /**
-   * เช็กว่ามี load kW ไหม
-   */
-  get hasLoadKw(): boolean {
-    const value = Number(this.getValue(this.load_kw));
-
-    return Number.isFinite(value) && value !== 0;
-  }
-
-  /**
-   * สถานะ generator
-   */
   get isRunning(): boolean {
-    const genValue = Number(this.getValue(this.gen_status));
-    const ecmValue = Number(this.getValue(this.ecm_status));
+    const genValue = this.toFiniteNumber(this.gen_status);
+    const ecmValue = this.toFiniteNumber(this.ecm_status);
 
-    if (Number.isFinite(genValue)) {
+    if (genValue !== null) {
       return genValue === 1;
     }
 
-    if (Number.isFinite(ecmValue)) {
+    if (ecmValue !== null) {
       return ecmValue === 1;
     }
 
@@ -186,10 +146,41 @@ export class DieselGeneratorNoRpmComponent {
   }
 
   get statusText(): string {
-    return this.isRunning ? 'Running' : 'Stopped';
+    return this.isRunning ? 'Operational' : 'Stopped';
   }
 
-  get statusClass(): string {
-    return this.isRunning ? 'running' : 'stopped';
+  private toFiniteNumber(input: GeneratorInput): number | null {
+    const raw = this.getValue(input).trim();
+
+    if (!raw) {
+      return null;
+    }
+
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  }
+
+
+  hasAlarm(input: GeneratorInput, ...fallbackTags: string[]): boolean {
+    return hasRealtimeTagAlarm(this.activeAlerts, input, ...fallbackTags);
+  }
+
+  hasAnyAlarm(): boolean {
+    return [
+      this.flow_supply,
+      this.temp_supply,
+      this.dens_supply,
+      this.flow_return,
+      this.temp_return,
+      this.dens_return,
+      this.cons,
+      this.consL,
+      this.load,
+      this.load_kw,
+      this.ecm_status,
+      this.gen_status,
+      this.supply_status,
+      this.return_status,
+    ].some((input) => hasRealtimeTagAlarm(this.activeAlerts, input));
   }
 }

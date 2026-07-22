@@ -54,6 +54,9 @@ export class ChartComponent implements OnInit, OnDestroy {
     liveClockLabel: string = '';
 
     activeChartMenu: string | null = null;
+    fullscreenTarget: string | null = null;
+    private fullscreenFallbackTarget: string | null = null;
+    private previousBodyOverflow: string = '';
     private mainChartInstance: Highcharts.Chart | null = null;
     private groupChartInstances: { [key: string]: Highcharts.Chart } = {};
 
@@ -134,6 +137,8 @@ export class ChartComponent implements OnInit, OnDestroy {
         this.mainChartInstance = null;
         this.groupChartInstances = {};
         this.activeChartMenu = null;
+        this.clearFullscreenFallback();
+        this.fullscreenTarget = null;
     }
 
     showLogger(event: any) {
@@ -278,6 +283,9 @@ export class ChartComponent implements OnInit, OnDestroy {
     onMainChartInstance(chart: Highcharts.Chart): void {
         this.mainChartInstance = chart;
         this.enforceAreaRendering(chart);
+        if (this.fullscreenTarget === 'main') {
+            this.scheduleFullscreenResize('main');
+        }
     }
 
     onGroupChartInstance(key: string, chart: Highcharts.Chart): void {
@@ -286,6 +294,9 @@ export class ChartComponent implements OnInit, OnDestroy {
         }
         this.groupChartInstances[key] = chart;
         this.enforceAreaRendering(chart);
+        if (this.fullscreenTarget === 'group:' + key) {
+            this.scheduleFullscreenResize('group:' + key);
+        }
     }
 
     /**
@@ -408,25 +419,182 @@ export class ChartComponent implements OnInit, OnDestroy {
         this.activeChartMenu = null;
 
         var chart = this.getChartInstance(target);
+        var card = this.getChartCardElement(target);
+        if (!chart || !card || typeof document === 'undefined') {
+            return;
+        }
+
+        var doc = document as any;
+        var nativeFullscreenElement = doc.fullscreenElement || doc.webkitFullscreenElement || null;
+
+        if (nativeFullscreenElement === card) {
+            this.exitNativeFullscreen(doc);
+            return;
+        }
+
+        if (this.fullscreenFallbackTarget === target) {
+            this.clearFullscreenFallback();
+            this.fullscreenTarget = null;
+            this.restoreChartSize(target);
+            this.markView();
+            return;
+        }
+
+        this.clearFullscreenFallback();
+        this.fullscreenTarget = target;
+        this.markView();
+
+        const fullscreenCard = card;
+        var requestFullscreen = (fullscreenCard as any).requestFullscreen || (fullscreenCard as any).webkitRequestFullscreen;
+        if (typeof requestFullscreen === 'function') {
+            try {
+                var requestResult = requestFullscreen.call(fullscreenCard, { navigationUI: 'hide' });
+                if (requestResult && typeof requestResult.then === 'function') {
+                    requestResult
+                        .then(() => this.scheduleFullscreenResize(target))
+                        .catch(() => this.enterFullscreenFallback(target, fullscreenCard));
+                } else {
+                    this.scheduleFullscreenResize(target);
+                }
+                return;
+            } catch (_error) {
+                // Continue with the deterministic CSS fallback below.
+            }
+        }
+
+        this.enterFullscreenFallback(target, fullscreenCard);
+    }
+
+    isChartFullscreen(target: string): boolean {
+        return this.fullscreenTarget === target;
+    }
+
+    @HostListener('document:fullscreenchange')
+    @HostListener('document:webkitfullscreenchange')
+    onChartFullscreenChange(): void {
+        if (typeof document === 'undefined') {
+            return;
+        }
+
+        var doc = document as any;
+        var element = (doc.fullscreenElement || doc.webkitFullscreenElement || null) as HTMLElement | null;
+        if (!element) {
+            var previousTarget = this.fullscreenTarget;
+            this.fullscreenTarget = this.fullscreenFallbackTarget;
+            if (!this.fullscreenFallbackTarget && previousTarget) {
+                this.restoreChartSize(previousTarget);
+            }
+            this.markView();
+            return;
+        }
+
+        var target = element.getAttribute('data-chart-target');
+        if (target) {
+            this.fullscreenTarget = target;
+            this.scheduleFullscreenResize(target);
+            this.markView();
+        }
+    }
+
+    @HostListener('window:resize')
+    onChartViewportResize(): void {
+        if (this.fullscreenTarget) {
+            this.scheduleFullscreenResize(this.fullscreenTarget);
+        }
+    }
+
+    private getChartCardElement(target: string): HTMLElement | null {
+        if (typeof document === 'undefined') {
+            return null;
+        }
+
+        var cards = document.querySelectorAll<HTMLElement>('[data-chart-target]');
+        for (var i = 0; i < cards.length; i++) {
+            if (cards[i].getAttribute('data-chart-target') === target) {
+                return cards[i];
+            }
+        }
+
+        return null;
+    }
+
+    private enterFullscreenFallback(target: string, card: HTMLElement): void {
+        this.clearFullscreenFallback();
+        this.fullscreenTarget = target;
+        this.fullscreenFallbackTarget = target;
+        card.classList.add('chart-card--fullscreen-fallback');
+
+        if (typeof document !== 'undefined' && document.body) {
+            this.previousBodyOverflow = document.body.style.overflow || '';
+            document.body.style.overflow = 'hidden';
+        }
+
+        this.scheduleFullscreenResize(target);
+        this.markView();
+    }
+
+    private clearFullscreenFallback(): void {
+        if (typeof document !== 'undefined') {
+            var activeCard = document.querySelector<HTMLElement>('.chart-card--fullscreen-fallback');
+            activeCard?.classList.remove('chart-card--fullscreen-fallback');
+            if (document.body) {
+                document.body.style.overflow = this.previousBodyOverflow;
+            }
+        }
+
+        this.fullscreenFallbackTarget = null;
+        this.previousBodyOverflow = '';
+    }
+
+    private exitNativeFullscreen(doc: any): void {
+        var exitFullscreen = doc.exitFullscreen || doc.webkitExitFullscreen;
+        if (typeof exitFullscreen !== 'function') {
+            return;
+        }
+
+        var result = exitFullscreen.call(doc);
+        if (result && typeof result.catch === 'function') {
+            result.catch(() => undefined);
+        }
+    }
+
+    private scheduleFullscreenResize(target: string): void {
+        var delays = [0, 80, 220, 500];
+        for (var i = 0; i < delays.length; i++) {
+            setTimeout(() => this.resizeChartForFullscreen(target), delays[i]);
+        }
+    }
+
+    private resizeChartForFullscreen(target: string): void {
+        if (this.fullscreenTarget !== target) {
+            return;
+        }
+
+        var chart = this.getChartInstance(target);
+        var card = this.getChartCardElement(target);
+        if (!chart || !card) {
+            return;
+        }
+
+        var header = card.querySelector<HTMLElement>('.chart-card-head');
+        var headerHeight = header ? header.getBoundingClientRect().height : 64;
+        var cardHeight = Math.max(card.clientHeight, typeof window !== 'undefined' ? window.innerHeight : 720);
+        var chartHeight = Math.max(360, Math.floor(cardHeight - headerHeight - 10));
+
+        chart.setSize(null, chartHeight, false);
+        chart.reflow();
+    }
+
+    private restoreChartSize(target: string): void {
+        var chart = this.getChartInstance(target);
         if (!chart) {
             return;
         }
 
-        var activeChart = chart as Highcharts.Chart;
-        var chartWithFullscreen = activeChart as any;
-        if (chartWithFullscreen.fullscreen && typeof chartWithFullscreen.fullscreen.toggle === 'function') {
-            chartWithFullscreen.fullscreen.toggle();
-            setTimeout(() => activeChart.reflow(), 120);
-            return;
-        }
-
-        var chartElement = chartWithFullscreen.renderTo || activeChart.container;
-        var doc = document as any;
-        if (doc.fullscreenElement && typeof doc.exitFullscreen === 'function') {
-            doc.exitFullscreen().finally(() => setTimeout(() => activeChart.reflow(), 120));
-        } else if (chartElement && typeof chartElement.requestFullscreen === 'function') {
-            chartElement.requestFullscreen().then(() => setTimeout(() => activeChart.reflow(), 120));
-        }
+        var normalHeight = target === 'main' ? 550 : 300;
+        const activeChart = chart;
+        activeChart.setSize(null, normalHeight, false);
+        setTimeout(() => activeChart.reflow(), 80);
     }
 
     downloadChartPng(target: string, event?: MouseEvent): void {
@@ -1025,15 +1193,21 @@ export class ChartComponent implements OnInit, OnDestroy {
     // ============================================================
 
     private rebuildCharts() {
-        this.mainChartOptions = null;
-        this.groupCharts = [];
-
         if (!this.selectedSeries || this.selectedSeries.length === 0) {
+            this.mainChartOptions = null;
+            this.groupCharts = [];
             return;
         }
 
+        // Update the existing tracked chart cards in place. Keeping the card
+        // element stable prevents the browser from leaving Fullscreen whenever
+        // Auto Refresh replaces the Highcharts options/data.
         this.mainChartOptions = this.createChartOptions('All Selected Parameters', this.selectedSeries, 550);
         this.groupCharts = this.createGroupedCharts(this.selectedSeries);
+
+        if (this.fullscreenTarget) {
+            this.scheduleFullscreenResize(this.fullscreenTarget);
+        }
     }
 
     private createGroupedCharts(series: ChartSeriesItem[]): ChartGroupItem[] {

@@ -249,7 +249,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
       this.backendEndpoint = '';
       this.sourceType = '';
       this.lastUpdatedAt = '';
-      this.alertState.setActiveCount(0);
+      this.alertState.setActiveAlerts([]);
     }
 
     const query = {
@@ -286,7 +286,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
             this.alerts.find((alert) => alert.id === this.selectedAlert?.id) || this.selectedAlert;
         }
 
-        this.alertState.setActiveCount(this.activeCount);
+        this.alertState.setActiveAlerts(incomingActive);
       },
       error: (error) => {
         this.loading = false;
@@ -297,7 +297,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
         this.knownActiveAlertIds.clear();
         this.selectedAlert = null;
         this.detailOpen = false;
-        this.alertState.setActiveCount(0);
+        this.alertState.setActiveAlerts([]);
         this.errorMessage = error?.message || 'Unable to load alerts from the backend.';
       },
     });

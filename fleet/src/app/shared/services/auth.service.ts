@@ -1,7 +1,31 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, TimeoutError, timeout } from 'rxjs';
 import { environment } from '../../../environments/environment';
+
+export type LoginFailureReason =
+  | 'invalid_credentials'
+  | 'timeout'
+  | 'network'
+  | 'invalid_response'
+  | 'server';
+
+/**
+ * Error ที่หน้า Login สามารถนำไปแสดงข้อความให้ผู้ใช้ได้อย่างถูกต้อง
+ * โดยไม่ต้องเดาจากข้อความของ Backend
+ */
+export class LoginError extends Error {
+  constructor(
+    public readonly reason: LoginFailureReason,
+    public readonly status = 0,
+    message = 'Login failed'
+  ) {
+    super(message);
+    this.name = 'LoginError';
+  }
+}
+
+const LOGIN_TIMEOUT_MS = 8_000;
 
 // URL API จาก environment
 const URL = environment.API_URL || '';
@@ -41,7 +65,9 @@ export class AuthService {
 
     try {
       const res: any = await firstValueFrom(
-        this.http.post(`${URL}/token`, body.toString(), { headers })
+        this.http
+          .post(`${URL}/token`, body.toString(), { headers })
+          .pipe(timeout(LOGIN_TIMEOUT_MS))
       );
 
       const token =
@@ -67,15 +93,24 @@ export class AuthService {
   // Login แบบใหม่ ใช้ API /authen
   async login2(username: string, password: string): Promise<boolean> {
     if (!username || !password) {
-      return false;
+      throw new LoginError(
+        'invalid_credentials',
+        400,
+        'Username and password are required.'
+      );
     }
+
+    // ป้องกัน token เก่าค้างแล้วทำให้เข้าใจผิดว่า Login สำเร็จ
+    this.clearLoginSession();
 
     try {
       const res: any = await firstValueFrom(
-        this.http.post(`${URL2}/authen`, {
-          username,
-          password,
-        })
+        this.http
+          .post(`${URL2}/authen`, {
+            username,
+            password,
+          })
+          .pipe(timeout(LOGIN_TIMEOUT_MS))
       );
 
       const token =
@@ -91,7 +126,27 @@ export class AuthService {
         '';
 
       if (!token) {
-        return false;
+        const backendMessage = String(
+          res?.message ||
+            res?.Message ||
+            res?.error_description ||
+            res?.error ||
+            ''
+        );
+
+        const rejected =
+          res?.success === false ||
+          res?.authenticated === false ||
+          res?.isAuthenticated === false ||
+          /invalid|incorrect|unauthori[sz]ed|credential|password/i.test(
+            backendMessage
+          );
+
+        throw new LoginError(
+          rejected ? 'invalid_credentials' : 'invalid_response',
+          200,
+          backendMessage || 'The login server returned no access token.'
+        );
       }
 
       localStorage.setItem(TOKEN_KEY, String(token));
@@ -122,9 +177,16 @@ export class AuthService {
       localStorage.setItem(SITES_KEY, JSON.stringify(sites));
 
       return true;
-    } catch (err) {
-      console.error('[AuthService] login2 error:', err);
-      return false;
+    } catch (error: unknown) {
+      const loginError = this.normalizeLoginError(error);
+
+      // ไม่พิมพ์ password หรือ request payload ลง Console
+      console.warn('[AuthService] Login failed:', {
+        reason: loginError.reason,
+        status: loginError.status,
+      });
+
+      throw loginError;
     }
   }
 
@@ -221,6 +283,60 @@ export class AuthService {
     }
 
     return this.login(username, password);
+  }
+
+  /**
+   * แปลง Error จาก HttpClient/RxJS ให้เป็นประเภทที่หน้า Login เข้าใจได้
+   */
+  private normalizeLoginError(error: unknown): LoginError {
+    if (error instanceof LoginError) {
+      return error;
+    }
+
+    if (
+      error instanceof TimeoutError ||
+      (error as { name?: string } | null)?.name === 'TimeoutError'
+    ) {
+      return new LoginError(
+        'timeout',
+        0,
+        'The login request timed out.'
+      );
+    }
+
+    const status = Number(
+      (error as { status?: number } | null)?.status ?? 0
+    );
+
+    if (status === 400 || status === 401 || status === 403) {
+      return new LoginError(
+        'invalid_credentials',
+        status,
+        'The username or password is incorrect.'
+      );
+    }
+
+    if (status === 0) {
+      return new LoginError(
+        'network',
+        status,
+        'Unable to connect to the login server.'
+      );
+    }
+
+    return new LoginError(
+      'server',
+      status,
+      'The login server returned an error.'
+    );
+  }
+
+  /** ล้างเฉพาะข้อมูล session ที่เกี่ยวกับการ Login ก่อนเริ่มรอบใหม่ */
+  private clearLoginSession(): void {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(OLD_TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(SITES_KEY);
   }
 
   // ดึง token ปัจจุบัน

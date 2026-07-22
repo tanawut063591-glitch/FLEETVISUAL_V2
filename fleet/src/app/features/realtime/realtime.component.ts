@@ -13,6 +13,8 @@ import * as fvInfoReducer from '../../store/reducers/fv-info.reducer';
 import * as fvInfoActions from '../../store/actions/fv-info.action';
 
 import { FvRealtimeService } from '../../shared/services/fv-realtime.service';
+import { AlertStateService } from '../../shared/services/alert-state.service';
+import { AlertRecord } from '../../shared/models/alert.model';
 import {
   getVesselStatusFromTimestamp,
   toVesselStatusLabel,
@@ -20,6 +22,15 @@ import {
 
 import { CardInfo, CardDetail } from './models/card-info.model';
 import { CardConfiguration } from './card-config';
+import {
+  hasRealtimeEquipmentAlarm,
+  hasRealtimeTagAlarm,
+} from './realtime-alarm.util';
+
+interface RealtimeAlertContext {
+  readonly alerts: readonly AlertRecord[];
+  readonly count: number;
+}
 
 @Component({
   selector: 'app-realtime',
@@ -30,6 +41,9 @@ import { CardConfiguration } from './card-config';
 export class RealtimeComponent implements OnInit, OnDestroy {
   data$!: Observable<Record<string, any>>;
   activeVessel$!: Observable<any>;
+  selectedVesselAlerts$!: Observable<readonly AlertRecord[]>;
+  selectedVesselAlarmCount$!: Observable<number>;
+  selectedVesselAlertContext$!: Observable<RealtimeAlertContext>;
 
   cardInfos: CardInfo[] = [];
   prefixName = '';
@@ -39,7 +53,8 @@ export class RealtimeComponent implements OnInit, OnDestroy {
   constructor(
     private store: Store<any>,
     private route: ActivatedRoute,
-    private fvRealtimeService: FvRealtimeService
+    private fvRealtimeService: FvRealtimeService,
+    private alertState: AlertStateService
   ) {
     this.cardInfos = new CardConfiguration().getConfig();
   }
@@ -78,10 +93,200 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       shareReplay({ bufferSize: 1, refCount: true })
     );
 
+    // Reuse the immutable alarm snapshot already polled by Header/Alarm Center.
+    // Realtime only filters the shared rows for the selected vessel, so no
+    // additional timer or backend request is created.
+    this.selectedVesselAlerts$ = combineLatest([
+      this.activeVessel$,
+      this.alertState.activeAlerts$,
+    ]).pipe(
+      map(([vessel, alerts]) => this.getActiveAlertsForVessel(alerts, vessel)),
+      distinctUntilChanged((previous, current) =>
+        this.isSameAlertSnapshot(previous, current)
+      ),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
+
+    this.selectedVesselAlarmCount$ = this.selectedVesselAlerts$.pipe(
+      map((alerts) => alerts.length),
+      distinctUntilChanged(),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
+
+    this.selectedVesselAlertContext$ = this.selectedVesselAlerts$.pipe(
+      map((alerts) => ({ alerts, count: alerts.length })),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
+
     this.syncActiveVesselFromRoute();
     this.activateStoredVessel();
     this.watchSelectedVesselForLiveUpdate();
     this.watchRealtimePrefix();
+  }
+
+  /**
+   * Returns the unresolved alarm rows that belong to the selected vessel.
+   * Matching is intentionally tolerant because different backend endpoints may
+   * identify the same vessel by id, prefix, ship id or display name.
+   */
+  private getActiveAlertsForVessel(
+    alerts: readonly AlertRecord[] | null | undefined,
+    activeVessel: any
+  ): readonly AlertRecord[] {
+    if (!Array.isArray(alerts) || alerts.length === 0 || !activeVessel) {
+      return [];
+    }
+
+    const vesselKeys = this.collectVesselAlarmKeys(activeVessel);
+    if (vesselKeys.size === 0) {
+      return [];
+    }
+
+    return alerts.filter((alert) => {
+      if (!alert || alert.state === 'resolved') {
+        return false;
+      }
+
+      const alertKeys = this.collectAlertVesselKeys(alert);
+      return Array.from(alertKeys).some((key) => vesselKeys.has(key));
+    });
+  }
+
+  private isSameAlertSnapshot(
+    previous: readonly AlertRecord[],
+    current: readonly AlertRecord[]
+  ): boolean {
+    if (previous === current) {
+      return true;
+    }
+
+    if (previous.length !== current.length) {
+      return false;
+    }
+
+    return previous.every((alert, index) => {
+      const next = current[index];
+      return (
+        alert.id === next.id &&
+        alert.state === next.state &&
+        alert.severity === next.severity &&
+        alert.value === next.value &&
+        alert.occurredAt === next.occurredAt
+      );
+    });
+  }
+
+  hasRealtimeAlarm(
+    alerts: readonly AlertRecord[],
+    ...tagNames: string[]
+  ): boolean {
+    return hasRealtimeTagAlarm(alerts, ...tagNames);
+  }
+
+  hasCardAlarm(
+    alerts: readonly AlertRecord[],
+    row: number,
+    col: number,
+    cardType: string
+  ): boolean {
+    return hasRealtimeEquipmentAlarm(
+      alerts,
+      ...this.getCardAlarmEquipmentKeys(row, col, cardType)
+    );
+  }
+
+  private getCardAlarmEquipmentKeys(
+    row: number,
+    col: number,
+    cardType: string
+  ): string[] {
+    const type = String(cardType || '').toUpperCase();
+
+    if (type === 'DG_NO_RPM' || type === 'DG_NO_RPM_VTOTAL') {
+      const dgIndex = row === 1 ? col : row === 2 && col === 1 ? 4 : 0;
+      return dgIndex > 0 ? [`DG${dgIndex}`] : [];
+    }
+
+    const machineryByPosition: Record<string, string[]> = {
+      '1:1': ['PME'],
+      '1:2': type === 'MOTOR' ? ['PPS', 'PORT-MOTOR'] : ['CME'],
+      '1:3': ['SME'],
+      '2:1': ['PAE'],
+      '2:2': type === 'MOTOR' ? ['SPS', 'STARBOARD-MOTOR'] : ['CAE'],
+      '2:3': ['SAE'],
+    };
+
+    return machineryByPosition[`${row}:${col}`] || [];
+  }
+
+  private collectVesselAlarmKeys(vessel: any): Set<string> {
+    const values: unknown[] = [];
+    const sources = [vessel, vessel?.fv, vessel?.fvInfo];
+
+    for (const source of sources) {
+      if (!source) continue;
+
+      values.push(
+        source.id,
+        source._id,
+        source.vesselId,
+        source.VesselID,
+        source.shipId,
+        source.ShipID,
+        source.prefix,
+        source.Prefix,
+        source.code,
+        source.Code,
+        source.name,
+        source.Name,
+        source.vesselName,
+        source.VesselName,
+        source.shipName,
+        source.ShipName
+      );
+    }
+
+    return this.toNormalizedAlarmKeys(values);
+  }
+
+  private collectAlertVesselKeys(alert: AlertRecord): Set<string> {
+    const raw = alert.raw && typeof alert.raw === 'object'
+      ? (alert.raw as Record<string, any>)
+      : {};
+    const tagPrefix = String(alert.tagName || '').split('-')[0];
+
+    return this.toNormalizedAlarmKeys([
+      alert.vesselId,
+      alert.vesselName,
+      tagPrefix,
+      raw['VesselID'],
+      raw['vesselId'],
+      raw['ShipID'],
+      raw['shipId'],
+      raw['Prefix'],
+      raw['prefix'],
+      raw['VesselName'],
+      raw['vesselName'],
+      raw['ShipName'],
+      raw['shipName'],
+      raw['PointSource'],
+      raw['pointSource'],
+    ]);
+  }
+
+  private toNormalizedAlarmKeys(values: unknown[]): Set<string> {
+    return new Set(
+      values
+        .map((value) => this.normalizeAlarmVesselKey(value))
+        .filter((value) => value.length > 0)
+    );
+  }
+
+  private normalizeAlarmVesselKey(value: unknown): string {
+    return String(value ?? '')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
   }
 
   ngOnDestroy(): void {
@@ -155,7 +360,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
             String(fv?.id || '').toLowerCase() === id.toLowerCase()
           );
         });
-
+        
         if (match) {
           this.store.dispatch(new fvInfoActions.SetFvActive(match));
         }
@@ -481,7 +686,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
   abs(data: any): any {
     return data !== undefined && data !== null ? data : null;
   }
-
+  
   getAvg(data: any): any {
     if (data && data.tagName && data.value !== undefined) {
       const hours = this.getHour(data.timestamp);
@@ -529,6 +734,130 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       value: total.toFixed(2),
       cal: false,
     };
+  }
+
+  /**
+   * คำนวณสัดส่วนความเร็วปัจจุบันเทียบกับค่าสูงสุดของวัน
+   * จำกัดค่าให้อยู่ระหว่าง 0-100 เพื่อใช้กับวงแสดงผลและ progress bar
+   */
+  getSummarySpeedProgress(rtData: any): number {
+    const current = Number(this.getRealtimeValue(rtData, 'VES_GPS_SPEED', 0));
+    const maximum = Number(this.getRealtimeValue(rtData, 'VES_GPS_SPEED_MAX', 0));
+
+    if (!Number.isFinite(current) || !Number.isFinite(maximum) || maximum <= 0) {
+      return 0;
+    }
+
+    return Math.round(Math.min(100, Math.max(0, (current / maximum) * 100)));
+  }
+
+  /**
+   * แปลงองศาเข็มทิศเป็นทิศย่อ เพื่อให้ผู้ปฏิบัติงานอ่านได้เร็วขึ้น
+   */
+  getSummaryCourseCardinal(rtData: any): string {
+    const heading = Number(this.getRealtimeValue(rtData, 'VES_GPS_HEAD', 0));
+
+    if (!Number.isFinite(heading)) {
+      return '--';
+    }
+
+    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    const normalized = ((heading % 360) + 360) % 360;
+    return directions[Math.round(normalized / 45) % directions.length];
+  }
+
+  /**
+   * รวม Fuel Rate ที่เป็นบวกจากเครื่องจักรทุกชุด
+   * ใช้รายการ Tag เดียวกับ KPI ด้านบน เพื่อให้ค่าทั้งหน้าตรงกัน
+   */
+  getSummaryCurrentFuelRate(rtData: any): number {
+    const keys = [
+      'PME_CONS_RATE',
+      'CME_CONS_RATE',
+      'SME_CONS_RATE',
+      'PAE_CONS_RATE',
+      'CAE_CONS_RATE',
+      'SAE_CONS_RATE',
+      'DG1_CONS_RATE',
+      'DG2_CONS_RATE',
+      'DG3_CONS_RATE',
+      'DG4_CONS_RATE',
+    ];
+
+    return keys.reduce((total, key) => {
+      const value = Number(this.getRealtimeValue(rtData, key, 0));
+      return Number.isFinite(value) && value > 0 ? total + value : total;
+    }, 0);
+  }
+
+  /**
+   * ค่าเฉลี่ยการใช้น้ำมันของวันนี้ = ปริมาณสะสม / ชั่วโมงที่ผ่านไป
+   */
+  getSummaryAverageFuelRate(rtData: any): number {
+    const data = this.normalizeRealtimeData(rtData);
+    const total = Number(this.getRealtimeValue(data, 'VES_CONS_TODAY', 0));
+    const tag = this.getTag(data, 'VES_CONS_TODAY');
+    const hours = this.getHour(tag?.timestamp || new Date());
+
+    if (!Number.isFinite(total) || total < 0 || !Number.isFinite(hours) || hours <= 0) {
+      return 0;
+    }
+
+    return total / hours;
+  }
+
+  getSummaryFuelState(rtData: any): 'efficient' | 'steady' | 'warning' | 'neutral' {
+    const average = this.getSummaryAverageFuelRate(rtData);
+    const current = this.getSummaryCurrentFuelRate(rtData);
+
+    if (average <= 0 || current <= 0) {
+      return 'neutral';
+    }
+
+    const variance = ((current - average) / average) * 100;
+
+    if (variance <= -10) {
+      return 'efficient';
+    }
+
+    if (variance >= 10) {
+      return 'warning';
+    }
+
+    return 'steady';
+  }
+
+  getSummaryFuelStatusLabel(rtData: any): string {
+    switch (this.getSummaryFuelState(rtData)) {
+      case 'efficient':
+        return 'Efficient';
+      case 'warning':
+        return 'Above average';
+      case 'steady':
+        return 'Stable';
+      default:
+        return 'Awaiting baseline';
+    }
+  }
+
+  getSummaryFuelVarianceText(rtData: any): string {
+    const average = this.getSummaryAverageFuelRate(rtData);
+    const current = this.getSummaryCurrentFuelRate(rtData);
+
+    if (average <= 0 || current <= 0) {
+      return 'Waiting for a valid daily baseline';
+    }
+
+    const variance = ((current - average) / average) * 100;
+    const amount = Math.abs(variance).toFixed(1);
+
+    if (Math.abs(variance) < 1) {
+      return 'Aligned with the daily average';
+    }
+
+    return variance < 0
+      ? `${amount}% below the daily average`
+      : `${amount}% above the daily average`;
   }
 
   /**
@@ -595,6 +924,37 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     });
 
     return result;
+  }
+
+  getCardSubtitle(type: string): string {
+    switch (String(type || '').toUpperCase()) {
+      case 'ME1':
+        return 'Propulsion & fuel telemetry';
+      case 'AE1':
+      case 'DG_RPM':
+        return 'Auxiliary power telemetry';
+      case 'MOTOR':
+        return 'Electric propulsion telemetry';
+      case 'DG_NO_RPM':
+      case 'DG_NO_RPM_VTOTAL':
+        return 'Generator performance telemetry';
+      default:
+        return 'Machinery telemetry';
+    }
+  }
+
+  getCardIcon(type: string): string {
+    switch (String(type || '').toUpperCase()) {
+      case 'ME1':
+        return 'fa-cogs';
+      case 'MOTOR':
+        return 'fa-circle-o-notch';
+      case 'AE1':
+      case 'DG_RPM':
+        return 'fa-cog';
+      default:
+        return 'fa-bolt';
+    }
   }
 
   private getTag(data: Record<string, any>, key: string): any {
