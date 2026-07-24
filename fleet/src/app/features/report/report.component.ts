@@ -65,7 +65,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   successMessage = '';
 
   loadedAt: Date | null = null;
-  pdfZoom = 0.94;
+  pdfZoom = 1;
 
   private readonly destroy$ = new Subject<void>();
 
@@ -253,7 +253,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   zoomIn(): void {
-    this.pdfZoom = Math.min(1.35, Number((this.pdfZoom + 0.08).toFixed(2)));
+    this.pdfZoom = Math.min(1.5, Number((this.pdfZoom + 0.08).toFixed(2)));
   }
 
   zoomOut(): void {
@@ -261,7 +261,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   resetZoom(): void {
-    this.pdfZoom = 0.94;
+    this.pdfZoom = 1;
   }
 
   onPdfError(error: any): void {
@@ -312,7 +312,7 @@ export class ReportComponent implements OnInit, OnDestroy {
         this.setSelectedVessel(vessel);
       });
   }
-
+  
   private setSelectedVessel(vessel: any): void {
     const name = this.vesselStorage.extractVesselName(vessel);
 

@@ -123,7 +123,9 @@
     min-width: 0;
     overflow-x: hidden;
     overflow-y: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior-y: contain;
+    scroll-behavior: auto;
+    scroll-padding-top: 12px;
     -webkit-overflow-scrolling: touch;
     padding-bottom: max(76px, env(safe-area-inset-bottom));
   }

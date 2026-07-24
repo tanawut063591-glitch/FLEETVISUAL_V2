@@ -73,12 +73,20 @@ export class NewHttpClientService {
                 return [];
               }
 
-              const accessible = list
-                .filter((x: any) => x?.name && this.securityService.hasAccess(x.name))
+              const activeVessels = list.filter(
+                (x: any) =>
+                  x?.name &&
+                  !this.securityService.isExcludedVessel(x.name) &&
+                  !this.securityService.isExcludedVessel(x?.prefix || x?.id || '')
+              );
+
+              const accessible = activeVessels
+                .filter((x: any) => this.securityService.hasAccess(x.name))
                 .sort(this.compare);
 
-              // ถ้า user ไม่อยู่ใน permission list เดิม อย่าให้หน้าจอว่าง: แสดงข้อมูลที่ backend ส่งมาแทน
-              return (accessible.length > 0 ? accessible : list).sort(this.compare);
+              // ถ้า user ไม่อยู่ใน permission list เดิม อย่าให้หน้าจอว่าง
+              // แต่ยังคงตัดเรือที่ยกเลิกการใช้งานออกเสมอ
+              return (accessible.length > 0 ? accessible : activeVessels).sort(this.compare);
             }),
             catchError((err) => {
               this.handleLoginRedirect(err);

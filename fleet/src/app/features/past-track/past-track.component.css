@@ -388,6 +388,16 @@
   gap: 14px;
 }
 
+
+.mobile-playback {
+  display: none;
+}
+
+.desktop-playback {
+  display: block;
+  min-width: 0;
+}
+
 .state-box {
   padding: 18px;
   border: 1px solid var(--border-color);
@@ -727,3 +737,27 @@
     padding: 10px;
   }
 }
+
+/* Mobile information order: map -> playback -> timeline -> selected-point detail. */
+@media (max-width: 820px) {
+  .mobile-playback {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .desktop-playback {
+    display: none;
+  }
+
+  .left-area {
+    gap: 12px;
+  }
+
+  .mobile-playback app-past-track-playback {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+}
+

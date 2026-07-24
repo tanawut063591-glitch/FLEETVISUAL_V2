@@ -22,6 +22,7 @@ import * as fvInfoReducer from '../../store/reducers/fv-info.reducer';
 
 import { TagService } from '../../shared/services/tag.service';
 import { NewHttpClientService } from '../../shared/services/http-client1.service';
+import { FvRealtimeService } from '../../shared/services/fv-realtime.service';
 
 import {
     TimerPayload,
@@ -81,6 +82,7 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
     pointErrorMessage = '';
 
     vesselSub: Subscription | null = null;
+    private activeVesselSub: Subscription | null = null;
     private pointSub: Subscription | null = null;
     private pointRequestVersion = 0;
 
@@ -179,23 +181,29 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         private datePipe: DatePipe,
         private store: Store<FvState>,
         private cd: ChangeDetectorRef,
-        private tagService: TagService
+        private tagService: TagService,
+        private fvRealtimeService: FvRealtimeService
     ) { }
 
     ngOnInit() {
         this.setDefaultDateTime();
         this.loadLocalTagMemory();
 
+        // Chart and Data Logger do not start the old FV polling service because it
+        // would duplicate backend requests. Read the shared active-vessel stream
+        // used by the Sidebar instead, then keep the NgRx selector as a fallback
+        // for Realtime / Diagram and legacy navigation flows.
+        this.activeVesselSub = this.fvRealtimeService.activeVessel$
+            .subscribe((vessel: any) => this.applyActiveVessel(vessel));
+
         this.vesselSub = this.store
             .select(fvInfoReducer.getFvInfosActive)
             .pipe(retry(2))
-            .subscribe((res: any) => {
-                if (res && res.fvInfo && res.fvInfo.prefix && res.fvInfo.prefix !== this.prefix) {
-                    this.prefix = res.fvInfo.prefix;
-                    this.vesselInfoActive = res.fvInfo;
-                    this.getPoints(this.prefix);
-                }
-            });
+            .subscribe((res: any) => this.applyActiveVessel(res));
+
+        // BehaviorSubject normally emits the stored selection immediately. This
+        // snapshot also covers unusual lifecycle ordering during a hard refresh.
+        this.applyActiveVessel(this.fvRealtimeService.getActiveVesselSnapshot());
     }
 
     ngOnChanges(changes: SimpleChanges) {
@@ -212,6 +220,7 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
 
     ngOnDestroy() {
         this.unsubscribeSafe(this.vesselSub);
+        this.unsubscribeSafe(this.activeVesselSub);
         this.unsubscribeSafe(this.pointSub);
         this.pointRequestVersion++;
     }
@@ -226,6 +235,110 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         if (this.cd) {
             this.cd.markForCheck();
         }
+    }
+
+    /**
+     * Accept all vessel shapes used across the application:
+     * - Sidebar/backend row: { prefix, name, ... }
+     * - NgRx row: { fvInfo: { prefix, name, ... } }
+     * - Realtime payload: { fv: { prefix, name, ... } }
+     *
+     * This keeps Manage Tags attached to the vessel selected in the global
+     * Sidebar without forcing Chart/Data Logger to run another polling service.
+     */
+    private applyActiveVessel(value: any): void {
+        var vessel = this.resolveVesselInfo(value);
+        var nextPrefix = this.resolveVesselPrefix(vessel);
+
+        if (!nextPrefix) {
+            return;
+        }
+
+        var changed = nextPrefix !== this.prefix;
+
+        this.vesselInfoActive = {
+            ...(vessel || {}),
+            prefix: nextPrefix
+        };
+
+        if (!changed) {
+            // Recover a dialog that was opened before the asynchronous Sidebar
+            // vessel list finished loading.
+            if (this.displayDialog && !this.pointsLoading && this.tags.length === 0) {
+                this.hasPointError = false;
+                this.pointErrorMessage = '';
+                this.getPoints(nextPrefix);
+            }
+
+            this.markView();
+            return;
+        }
+
+        this.prefix = nextPrefix;
+        this.hasPointError = false;
+        this.pointErrorMessage = '';
+
+        // Prevent tags from the previous vessel flashing while the next request
+        // is in flight. The selected tag names are restored after the new list
+        // has been normalized.
+        this.processTagsResult([], nextPrefix);
+        this.getPoints(nextPrefix);
+        this.markView();
+    }
+
+    private resolveVesselInfo(value: any): any {
+        if (!value) {
+            return null;
+        }
+
+        return value.fvInfo || value.fv || value.vessel || value;
+    }
+
+    private resolveVesselPrefix(value: any): string {
+        var sources = [
+            value,
+            value && value.fvInfo,
+            value && value.fv,
+            value && value.vessel
+        ];
+
+        for (var i = 0; i < sources.length; i++) {
+            var source = sources[i];
+
+            if (!source) {
+                continue;
+            }
+
+            var prefix = source.prefix || source.vesselPrefix || source.shipPrefix || '';
+
+            if (prefix !== null && prefix !== undefined && String(prefix).trim() !== '') {
+                return String(prefix).trim();
+            }
+        }
+
+        return '';
+    }
+
+    private restoreActiveVessel(): boolean {
+        var snapshot = this.fvRealtimeService.getActiveVesselSnapshot();
+        this.applyActiveVessel(snapshot);
+
+        if (this.prefix) {
+            return true;
+        }
+
+        try {
+            var raw = localStorage.getItem('selectedVessel') || localStorage.getItem('realtimeVessel');
+            if (raw) {
+                this.applyActiveVessel(JSON.parse(raw));
+            }
+        } catch (error) {
+            if (typeof console !== 'undefined' && console.warn) {
+                console.warn('[DatetimeControl] restore selected vessel failed:', error);
+            }
+        }
+
+        return !!this.prefix;
     }
 
     private setDefaultDateTime() {
@@ -317,22 +430,29 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         this.selectionSnapshot = this.selectedTags.map((tag: any) => this.getTagMemoryKey(tag));
         this.displayDialog = true;
 
+        // A hard refresh can render the page a few milliseconds before the
+        // Sidebar's vessel request completes. Rehydrate the shared selection
+        // first instead of showing a false "select a vessel" error.
+        this.restoreActiveVessel();
+
         // Retry automatically when the dialog is opened with no usable tag data.
         // This also recovers from an older empty cache entry.
         if (this.prefix && !this.pointsLoading && this.tags.length === 0) {
             this.getPoints(this.prefix, true);
         } else if (!this.prefix) {
             this.hasPointError = true;
-            this.pointErrorMessage = 'Please select a vessel before managing tags.';
+            this.pointErrorMessage = 'Vessel data is still loading. Please wait a moment or select a vessel from the sidebar.';
         }
 
         this.markView();
     }
 
     retryPoints(): void {
+        this.restoreActiveVessel();
+
         if (!this.prefix) {
             this.hasPointError = true;
-            this.pointErrorMessage = 'Please select a vessel before managing tags.';
+            this.pointErrorMessage = 'No vessel is available yet. Select a vessel from the sidebar and retry.';
             this.markView();
             return;
         }

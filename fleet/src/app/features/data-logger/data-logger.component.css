@@ -1057,3 +1057,77 @@
     border-color: rgba(251, 146, 60, 0.34) !important;
     color: #fdba74 !important;
 }
+
+
+/* =========================================================
+   DATA LOGGER TABLE — full horizontal pan + taller viewport
+   ========================================================= */
+.table-scroll {
+    height: clamp(620px, calc(100dvh - 285px), 920px) !important;
+    min-height: 620px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable both-edges;
+    scrollbar-width: auto;
+}
+
+.table-scroll::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+/* The time/date column now travels with the rest of the table. */
+.premium-table thead .time-col {
+    left: auto !important;
+    z-index: 10 !important;
+    box-shadow: none !important;
+}
+
+.premium-table thead tr.filter-row .time-col {
+    left: auto !important;
+    z-index: 9 !important;
+    box-shadow: none !important;
+}
+
+.premium-table tbody .time-cell {
+    position: static !important;
+    left: auto !important;
+    box-shadow: none !important;
+}
+
+@media screen and (max-width: 1200px) {
+    .table-scroll {
+        height: clamp(620px, calc(100dvh - 250px), 880px) !important;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .data-logger-page {
+        padding: 8px 7px 104px;
+    }
+
+    .data-table-card {
+        border-radius: 13px;
+    }
+
+    .table-scroll {
+        height: max(620px, calc(100dvh - 220px)) !important;
+        min-height: 620px;
+    }
+
+    .premium-table {
+        min-width: 1040px;
+    }
+
+    .time-col,
+    .time-cell {
+        width: 190px;
+        min-width: 190px;
+    }
+
+    .table-footer {
+        padding: 14px 12px;
+    }
+}

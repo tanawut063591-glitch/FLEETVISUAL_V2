@@ -1440,7 +1440,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
     if (normalized.includes('intan')) return 'assets/images/vessel/bb_intan.jpg';
     if (normalized.includes('lazurit')) return 'assets/images/vessel/bb_mulia.jpg';
-    if (normalized.includes('makmur')) return 'assets/images/vessel/bb_mukda.jpg';
     if (normalized.includes('zamrud')) return 'assets/images/vessel/bb_zamrud.jpg';
     if (normalized.includes('liberty')) return 'assets/images/vessel/bb_liberty209.jpg';
     if (normalized.includes('tongkam')) return 'assets/images/vessel/bb_tongkam.jpg';

@@ -41,7 +41,13 @@ export class HttpClientService {
           }
 
           return res
-            .filter((x: any) => x?.name && this.securityService.hasAccess(x.name))
+            .filter(
+              (x: any) =>
+                x?.name &&
+                !this.securityService.isExcludedVessel(x.name) &&
+                !this.securityService.isExcludedVessel(x?.prefix || x?.id || '') &&
+                this.securityService.hasAccess(x.name)
+            )
             .sort(this.compare);
         }),
         catchError((err) =>

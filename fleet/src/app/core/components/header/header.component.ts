@@ -316,7 +316,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   /*
     โหลด theme จาก localStorage
-    default เป็น Dark และจำโหมดล่าสุดของผู้ใช้ไว้ใน localStorage
+    default เป็น Light และจำโหมดล่าสุดที่ผู้ใช้เลือกไว้ใน localStorage
   */
   private initThemeMode(): void {
     const mode = this.themeModeService.init();
@@ -368,16 +368,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
     แล้วส่งกลับไปหน้า login
   */
   logout(): void {
-    const themeMode = localStorage.getItem('fleet-theme-mode');
+    const themeMode = this.themeModeService.getMode();
     this.userPresence.signOut();
 
     localStorage.clear();
     sessionStorage.clear();
 
     // เก็บ theme ที่ผู้ใช้เลือกไว้ แม้ logout แล้วกลับมาใหม่ก็ยังเป็น mode เดิม
-    if (themeMode) {
-      localStorage.setItem('fleet-theme-mode', themeMode);
-    }
+    this.themeModeService.setMode(themeMode);
 
     this.closeSettingsMenu();
     this.closeMobileMenu();

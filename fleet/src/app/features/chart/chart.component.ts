@@ -1249,6 +1249,20 @@ export class ChartComponent implements OnInit, OnDestroy {
         var primaryText = darkTheme ? '#f8fafc' : '#0f172a';
         var tooltipBackground = darkTheme ? '#0d1420' : '#ffffff';
         var tooltipBorder = darkTheme ? '#475569' : '#bfdbfe';
+        // Keep the hover card compact so it does not cover the chart. When
+        // many tags are selected, only the value list scrolls internally.
+        var tooltipMaxHeight = Math.max(
+            132,
+            Math.min(182, (typeof window !== 'undefined' ? window.innerHeight : 900) - 230)
+        );
+        var escapeTooltipHtml = function (value: any): string {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        };
         var axisLayout = this.createReadableAxisLayout(seriesItems, mutedText, gridColor, axisColor);
         var tickInterval = this.getReadableTimeTickInterval();
         var highchartsType = this.getHighchartsSeriesType();
@@ -1413,18 +1427,59 @@ export class ChartComponent implements OnInit, OnDestroy {
                 shared: true,
                 split: false,
                 useHTML: true,
+                outside: true,
+                stickOnContact: true,
+                hideDelay: 550,
+                className: 'fleet-chart-tooltip',
                 backgroundColor: tooltipBackground,
                 borderColor: tooltipBorder,
-                borderRadius: 8,
+                borderRadius: 10,
+                borderWidth: 1,
+                padding: 8,
                 shadow: true,
-                style: { color: primaryText, fontSize: '12px' },
+                style: {
+                    color: primaryText,
+                    fontSize: '11px',
+                    pointerEvents: 'auto'
+                },
+                positioner: function (this: any, labelWidth: number, labelHeight: number, point: any) {
+                    var chart = this.chart;
+                    var chartPosition = chart.pointer && chart.pointer.getChartPosition
+                        ? chart.pointer.getChartPosition()
+                        : { left: 0, top: 0 };
+                    var viewportWidth = typeof document !== 'undefined'
+                        ? document.documentElement.clientWidth
+                        : chart.chartWidth;
+                    var viewportHeight = typeof window !== 'undefined'
+                        ? window.innerHeight
+                        : chart.chartHeight;
+                    var anchorX = Number(point && point.plotX) || 0;
+                    var anchorY = Number(point && point.plotY) || 0;
+                    var chartX = anchorX + chart.plotLeft;
+                    var chartY = anchorY + chart.plotTop;
+                    var minimumX = 12 - chartPosition.left;
+                    var maximumX = viewportWidth - chartPosition.left - labelWidth - 12;
+                    var minimumY = 12 - chartPosition.top;
+                    var maximumY = viewportHeight - chartPosition.top - labelHeight - 12;
+                    var rightX = chartX + 18;
+                    var leftX = chartX - labelWidth - 18;
+                    var x = rightX <= maximumX ? rightX : leftX;
+                    var aboveY = chartY - labelHeight - 18;
+                    var belowY = chartY + 18;
+                    var y = aboveY >= minimumY ? aboveY : belowY;
+
+                    x = Math.max(minimumX, Math.min(x, Math.max(minimumX, maximumX)));
+                    y = Math.max(minimumY, Math.min(y, Math.max(minimumY, maximumY)));
+                    return { x: x, y: y };
+                },
                 formatter: function (this: any) {
                     var date = new Date(Number(this.x));
                     var timestamp = date.toLocaleString('en-GB', {
                         day: '2-digit', month: 'short', year: 'numeric',
                         hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
                     });
-                    var rows = (this.points || []).map((point: any) => {
+                    var points = this.points || [];
+                    var rows = points.map((point: any) => {
                         var rawName = String(point.series.name || '');
                         var unitMatch = rawName.match(/\(([^()]*)\)\s*$/);
                         var unit = unitMatch ? unitMatch[1] : '';
@@ -1433,12 +1488,16 @@ export class ChartComponent implements OnInit, OnDestroy {
                         var formatted = Number.isFinite(value)
                             ? value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: decimals })
                             : '-';
-                        return '<div style="display:flex;align-items:center;gap:8px;margin-top:5px">' +
-                            '<span style="width:8px;height:8px;border-radius:50%;background:' + point.color + '"></span>' +
-                            '<span style="min-width:180px">' + rawName.replace(/\s*\([^()]*\)\s*$/, '') + '</span>' +
-                            '<strong style="margin-left:auto">' + formatted + (unit ? ' ' + unit : '') + '</strong></div>';
+                        var label = rawName.replace(/\s*\([^()]*\)\s*$/, '');
+                        return '<div class="fleet-tooltip-row">' +
+                            '<span class="fleet-tooltip-dot" style="background:' + escapeTooltipHtml(point.color) + '"></span>' +
+                            '<span class="fleet-tooltip-name">' + escapeTooltipHtml(label) + '</span>' +
+                            '<strong class="fleet-tooltip-value">' + escapeTooltipHtml(formatted + (unit ? ' ' + unit : '')) + '</strong>' +
+                            '</div>';
                     }).join('');
-                    return '<div style="min-width:310px"><strong>' + timestamp + '</strong>' + rows + '</div>';
+                    return '<div class="fleet-tooltip-card" style="--fleet-tooltip-max-height:' + tooltipMaxHeight + 'px;color:' + primaryText + '">' +
+                        '<div class="fleet-tooltip-time">' + escapeTooltipHtml(timestamp) + '</div>' +
+                        '<div class="fleet-tooltip-scroll">' + rows + '</div></div>';
                 }
             },
             plotOptions: {

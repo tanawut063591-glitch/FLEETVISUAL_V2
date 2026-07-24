@@ -16,7 +16,12 @@
     (selectedVessel)="onSelectVessel($event)"
   ></div>
 
-  <div class="grid-content" [class.is-overview]="isOverviewRoute" [@routeAnimation]="getDepth(myOutlet)">
+  <div
+    #contentViewport
+    class="grid-content"
+    [class.is-overview]="isOverviewRoute"
+    [@routeAnimation]="getDepth(myOutlet)"
+  >
     <router-outlet #myOutlet="outlet"></router-outlet>
   </div>
 </div>

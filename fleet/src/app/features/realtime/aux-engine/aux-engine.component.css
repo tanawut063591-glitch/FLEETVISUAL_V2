@@ -465,3 +465,15 @@
 }
 
 :host-context([data-theme='dark']) .footer-stat strong { color: #f8fafc; }
+
+
+/* Mobile keeps the same compact three-column web composition. */
+@media (max-width: 720px) {
+  .aux-console { min-height: 346px; padding: 10px; gap: 8px; }
+  .aux-hero { grid-template-columns: 42px minmax(0, 1fr) auto; gap: 8px; }
+  .aux-core { width: 40px; height: 40px; }
+  .aux-live { grid-column: auto; width: auto; min-width: 70px; padding: 7px; text-align: right; }
+  .aux-live strong { font-size: 14px; }
+  .aux-footer { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .footer-state { grid-column: auto; flex-direction: column; }
+}

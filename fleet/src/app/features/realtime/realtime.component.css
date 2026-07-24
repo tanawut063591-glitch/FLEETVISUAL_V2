@@ -2568,3 +2568,59 @@
     font-size: 19px;
   }
 }
+
+
+/* =========================================================
+   MOBILE REALTIME VIEWPORT STABILITY
+   Keep the first card clear of the shell header and reserve enough safe
+   space for the floating vessel selector without covering final readings.
+   ========================================================= */
+@media (max-width: 991px) {
+  :host {
+    scroll-margin-top: 12px;
+  }
+
+  .premium-dashboard {
+    padding-top: 14px;
+    padding-bottom: calc(112px + env(safe-area-inset-bottom));
+  }
+
+  .premium-dashboard > :first-child,
+  .premium-dashboard > ng-container:first-child {
+    scroll-margin-top: 12px;
+  }
+}
+
+
+/* =========================================================
+   MOBILE REALTIME — web-card density without oversized panels
+   ========================================================= */
+@media (max-width: 720px) {
+  .premium-dashboard {
+    padding-inline: 8px;
+  }
+
+  .col-left,
+  .col-right {
+    gap: 12px;
+  }
+
+  .dg-card > .card-header {
+    min-height: 50px;
+    padding: 8px 10px;
+  }
+
+  .dg-heading-copy strong {
+    max-width: 210px;
+  }
+
+  .card-body.pd-0 {
+    min-height: 0 !important;
+    height: auto !important;
+    flex: 0 0 auto;
+  }
+
+  .col-right > .premium-card {
+    height: auto;
+  }
+}

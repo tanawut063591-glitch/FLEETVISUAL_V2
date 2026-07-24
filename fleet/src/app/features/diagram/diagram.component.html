@@ -29,8 +29,31 @@
     </div>
   </div>
 
-  <div class="diagram-scroll">
-    <div class="diagram-board">
+  <div class="diagram-mobile-tools" aria-label="Diagram view controls">
+    <div class="diagram-pan-hint">
+      <span class="diagram-pan-icon" aria-hidden="true">↔</span>
+      <span>Swipe to explore the full diagram</span>
+    </div>
+
+    <div class="diagram-zoom-toggle" role="group" aria-label="Diagram zoom">
+      <button
+        type="button"
+        [class.active]="diagramZoomMode === 'fit'"
+        (click)="setDiagramZoom('fit')">
+        Fit
+      </button>
+      <button
+        type="button"
+        [class.active]="diagramZoomMode === 'full'"
+        (click)="setDiagramZoom('full')">
+        100%
+      </button>
+    </div>
+  </div>
+
+  <div class="diagram-scroll" #diagramViewport>
+    <div class="diagram-stage" [style.width.px]="diagramStageWidth" [style.height.px]="diagramStageHeight">
+      <div class="diagram-board" [style.transform]="'scale(' + diagramScale + ')'">
       <svg class="diagram-lines" viewBox="0 0 750 755" preserveAspectRatio="xMinYMin meet">
         <path class="group-box" d="M567.018 0.6H191.524C188.197 0.6 185.5 3.326 185.5 6.688V219.773C185.5 223.135 188.197 225.861 191.524 225.861H567.018C570.345 225.861 573.042 223.135 573.042 219.773V6.688C573.042 3.326 570.345 0.6 567.018 0.6Z" />
         <path class="group-box" d="M559.089 318.6H165.524C162.197 318.6 159.5 321.326 159.5 324.688V564.155C159.5 567.517 162.197 570.243 165.524 570.243H559.089C562.416 570.243 565.113 567.517 565.113 564.155V324.688C565.113 321.326 562.416 318.6 559.089 318.6Z" />
@@ -110,6 +133,7 @@
 
         <div class="device-title">{{ device.title }}</div>
         <div class="device-subtitle">{{ device.subtitle }}</div>
+      </div>
       </div>
     </div>
   </div>

@@ -481,7 +481,6 @@ export class FleetVesselDataService {
 
     if (normalized.includes('intan')) return 'assets/images/vessel/bb_intan.jpg';
     if (normalized.includes('lazurit')) return 'assets/images/vessel/bb_mulia.jpg';
-    if (normalized.includes('makmur')) return 'assets/images/vessel/bb_mukda.jpg';
     if (normalized.includes('zamrud')) return 'assets/images/vessel/bb_zamrud.jpg';
     if (normalized.includes('liberty')) return 'assets/images/vessel/bb_liberty209.jpg';
     if (normalized.includes('tongkam')) return 'assets/images/vessel/bb_tongkam.jpg';
@@ -527,7 +526,6 @@ export class FleetVesselDataService {
     return [
       this.demo('BB_INTAN', 'BAHTERA INTAN', 'assets/images/vessel/bb_intan.jpg', 8.7075, 101.11338, 6.59, 193.54, 151.65, 2391, 26.25, 'online', minutesAgo(1)),
       this.demo('BB_LAZURIT', 'BAHTERA LAZURIT', 'assets/images/vessel/bb_mulia.jpg', 9.98095, 101.36226, 5.87, 118.2, 121.2, 1804, 22.1, 'online', minutesAgo(2)),
-      this.demo('BB_MAKMUR', 'BAHTERA MAKMUR', 'assets/images/vessel/bb_mukda.jpg', 4.58099, 113.77967, 0.8, 72.0, 52.0, 702, 9.1, 'online', minutesAgo(1)),
       this.demo('BB_ZAMRUD', 'BAHTERA ZAMRUD', 'assets/images/vessel/bb_zamrud.jpg', 7.23465, 100.56837, 5.22, 182.0, 110.0, 1642, 31.8, 'online', minutesAgo(2)),
       this.demo('BB_LIBERTY233', 'BB LIBERTY 233', 'assets/images/vessel/bb_liberty209.jpg', 7.28742, 100.63028, 4.18, 196.0, 95.0, 1408, 29.4, 'online', minutesAgo(1)),
       this.demo('BB_TONGKAM', 'BB TONGKAM', 'assets/images/vessel/bb_tongkam.jpg', 7.20297, 100.58679, 0, 90, 0, 0, 0, 'offline', daysAgo(60)),

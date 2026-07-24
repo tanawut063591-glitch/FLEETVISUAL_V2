@@ -152,6 +152,23 @@
           </app-past-track-map>
         </div>
 
+        <div class="mobile-playback" aria-label="Mobile route playback controls">
+          <app-past-track-playback
+            [trackPoints]="trackPoints"
+            [selectedPoint]="selectedPoint"
+            [isPlaying]="isPlaying"
+            [playbackSpeed]="playbackSpeed"
+            [rangeStart]="startDate"
+            [rangeEnd]="endDate"
+            [samplingIntervalMinutes]="samplingIntervalMinutes"
+            (previousClicked)="previousPoint()"
+            (nextClicked)="nextPoint()"
+            (playClicked)="togglePlayback()"
+            (speedChanged)="changePlaybackSpeed($event)"
+            (pointScrubbed)="scrubToPoint($event)">
+          </app-past-track-playback>
+        </div>
+
         <app-past-track-timeline
           [trackPoints]="trackPoints"
           [selectedPoint]="selectedPoint"
@@ -164,20 +181,22 @@
       <aside class="right-area" aria-label="Selected point and playback controls">
         <app-past-track-detail [point]="selectedPoint"></app-past-track-detail>
 
-        <app-past-track-playback
-          [trackPoints]="trackPoints"
-          [selectedPoint]="selectedPoint"
-          [isPlaying]="isPlaying"
-          [playbackSpeed]="playbackSpeed"
-          [rangeStart]="startDate"
-          [rangeEnd]="endDate"
-          [samplingIntervalMinutes]="samplingIntervalMinutes"
-          (previousClicked)="previousPoint()"
-          (nextClicked)="nextPoint()"
-          (playClicked)="togglePlayback()"
-          (speedChanged)="changePlaybackSpeed($event)"
-          (pointScrubbed)="scrubToPoint($event)">
-        </app-past-track-playback>
+        <div class="desktop-playback">
+          <app-past-track-playback
+            [trackPoints]="trackPoints"
+            [selectedPoint]="selectedPoint"
+            [isPlaying]="isPlaying"
+            [playbackSpeed]="playbackSpeed"
+            [rangeStart]="startDate"
+            [rangeEnd]="endDate"
+            [samplingIntervalMinutes]="samplingIntervalMinutes"
+            (previousClicked)="previousPoint()"
+            (nextClicked)="nextPoint()"
+            (playClicked)="togglePlayback()"
+            (speedChanged)="changePlaybackSpeed($event)"
+            (pointScrubbed)="scrubToPoint($event)">
+          </app-past-track-playback>
+        </div>
       </aside>
     </div>
   </ng-container>

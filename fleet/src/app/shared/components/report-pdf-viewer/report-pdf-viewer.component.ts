@@ -9,7 +9,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 export class ReportPdfViewerComponent {
   @Input() src: string | null = null;
   @Input() fileName = '';
-  @Input() zoom = 0.94;
+  @Input() zoom = 1;
   @Input() loading = false;
   @Input() canLoad = false;
   @Input() emptyTitle = 'No PDF Loaded';

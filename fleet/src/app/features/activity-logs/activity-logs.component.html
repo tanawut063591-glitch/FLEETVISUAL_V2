@@ -167,41 +167,49 @@
       <p>No live server events matched this date range and filter.</p>
     </div>
 
-    <div class="activity-table" *ngIf="!loading && !errorMessage && filteredLogs.length">
-      <div class="table-head">
-        <span>Timestamp</span>
-        <span>Severity</span>
-        <span>Message</span>
-        <span>Module / Source</span>
-      </div>
+    <div
+      class="activity-table-scroll"
+      *ngIf="!loading && !errorMessage && filteredLogs.length"
+      tabindex="0"
+      role="region"
+      aria-label="Activity log table. Swipe or scroll horizontally to see all columns."
+    >
+      <div class="activity-table">
+        <div class="table-head">
+          <span>Timestamp</span>
+          <span>Severity</span>
+          <span>Message</span>
+          <span>Module / Source</span>
+        </div>
 
-      <article
-        class="activity-row"
-        *ngFor="let row of pagedLogs; trackBy: trackByLog"
-        [attr.data-severity]="row.severity"
-      >
-        <div class="timestamp-cell">
-          <i class="event-dot"></i>
-          <strong>{{ formatTime(row.timestamp) }}</strong>
-          <small>{{ formatDate(row.timestamp) }}</small>
-        </div>
-        <div>
-          <span class="severity-badge" [attr.data-severity]="row.severity">{{
-            severityLabel(row.severity)
-          }}</span>
-        </div>
-        <div class="message-cell">
-          <strong>{{ row.message }}</strong>
-          <small
-            >{{ row.detail
-            }}<ng-container *ngIf="row.vesselName"> · {{ row.vesselName }}</ng-container></small
-          >
-        </div>
-        <div class="module-cell">
-          <strong>{{ row.module }}</strong>
-          <small>{{ row.source }}</small>
-        </div>
-      </article>
+        <article
+          class="activity-row"
+          *ngFor="let row of pagedLogs; trackBy: trackByLog"
+          [attr.data-severity]="row.severity"
+        >
+          <div class="timestamp-cell">
+            <i class="event-dot"></i>
+            <strong>{{ formatTime(row.timestamp) }}</strong>
+            <small>{{ formatDate(row.timestamp) }}</small>
+          </div>
+          <div>
+            <span class="severity-badge" [attr.data-severity]="row.severity">{{
+              severityLabel(row.severity)
+            }}</span>
+          </div>
+          <div class="message-cell">
+            <strong>{{ row.message }}</strong>
+            <small
+              >{{ row.detail
+              }}<ng-container *ngIf="row.vesselName"> · {{ row.vesselName }}</ng-container></small
+            >
+          </div>
+          <div class="module-cell">
+            <strong>{{ row.module }}</strong>
+            <small>{{ row.source }}</small>
+          </div>
+        </article>
+      </div>
     </div>
 
     <footer class="feed-footer" *ngIf="filteredLogs.length">

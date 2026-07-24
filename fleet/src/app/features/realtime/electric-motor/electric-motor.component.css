@@ -402,3 +402,11 @@
 
 :host-context([data-theme='dark']) .motor-speed__value strong { color: #60a5fa; }
 :host-context([data-theme='dark']) .motor-note { background: rgba(37, 99, 235, 0.1); }
+
+
+/* Mobile keeps the desktop health row instead of stacking every metric. */
+@media (max-width: 720px) {
+  .motor-console { min-height: 346px; padding: 10px; gap: 8px; }
+  .motor-health { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .health-card { padding-inline: 6px; }
+}

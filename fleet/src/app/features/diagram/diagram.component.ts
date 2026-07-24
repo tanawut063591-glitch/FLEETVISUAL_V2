@@ -1,4 +1,12 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { combineLatest, Observable, Subscription } from 'rxjs';
@@ -35,7 +43,7 @@ interface VesselInfoLike {
   templateUrl: './diagram.component.html',
   styleUrls: ['./diagram.component.css'],
 })
-export class DiagramComponent implements OnInit, OnDestroy {
+export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
   data$: Observable<any> | undefined;
   vessel$: Observable<any> | undefined;
 
@@ -43,6 +51,16 @@ export class DiagramComponent implements OnInit, OnDestroy {
   vesselPrefix = '';
   lastUpdated = '-';
   currentValues: { [key: string]: any } = {};
+
+  @ViewChild('diagramViewport')
+  private diagramViewport?: ElementRef<HTMLDivElement>;
+
+  readonly diagramNaturalWidth = 750;
+  readonly diagramNaturalHeight = 755;
+  diagramScale = 1;
+  diagramStageWidth = this.diagramNaturalWidth;
+  diagramStageHeight = this.diagramNaturalHeight;
+  diagramZoomMode: 'fit' | 'full' = 'full';
 
   devices: DiagramDevice[] = [
     {
@@ -177,6 +195,7 @@ export class DiagramComponent implements OnInit, OnDestroy {
 
   private subscription = new Subscription();
   private activeVesselIdentity = '';
+  private diagramResizeObserver?: ResizeObserver;
 
   constructor(
     private store: Store<any>,
@@ -194,7 +213,22 @@ export class DiagramComponent implements OnInit, OnDestroy {
     this.watchRealtimeData();
   }
 
+  ngAfterViewInit(): void {
+    this.scheduleDiagramFit();
+
+    if (typeof ResizeObserver !== 'undefined' && this.diagramViewport?.nativeElement) {
+      this.diagramResizeObserver = new ResizeObserver(() => this.scheduleDiagramFit());
+      this.diagramResizeObserver.observe(this.diagramViewport.nativeElement);
+    }
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.scheduleDiagramFit();
+  }
+
   ngOnDestroy(): void {
+    this.diagramResizeObserver?.disconnect();
     this.subscription.unsubscribe();
   }
 
@@ -230,6 +264,57 @@ export class DiagramComponent implements OnInit, OnDestroy {
     }
 
     return total;
+  }
+
+  setDiagramZoom(mode: 'fit' | 'full'): void {
+    this.diagramZoomMode = mode;
+    this.scheduleDiagramFit();
+  }
+
+  private scheduleDiagramFit(): void {
+    requestAnimationFrame(() => this.fitDiagramToViewport());
+  }
+
+  private fitDiagramToViewport(): void {
+    const viewport = this.diagramViewport?.nativeElement;
+
+    if (!viewport) {
+      return;
+    }
+
+    const styles = window.getComputedStyle(viewport);
+    const horizontalPadding =
+      (Number.parseFloat(styles.paddingLeft) || 0) +
+      (Number.parseFloat(styles.paddingRight) || 0);
+    const availableWidth = Math.max(220, viewport.clientWidth - horizontalPadding);
+    const isMobile = window.matchMedia('(max-width: 560px)').matches;
+
+    // Mobile defaults to the natural 100% diagram size so labels and devices
+    // stay readable. The viewport becomes a two-axis touch scroller.
+    const nextScale =
+      isMobile && this.diagramZoomMode === 'full'
+        ? 1
+        : Math.min(1, availableWidth / this.diagramNaturalWidth);
+    const minimumScale = isMobile ? 0.42 : 0.28;
+    const roundedScale = Math.max(
+      minimumScale,
+      Math.round(nextScale * 1000) / 1000
+    );
+
+    this.diagramScale = roundedScale;
+    this.diagramStageWidth = Math.ceil(this.diagramNaturalWidth * roundedScale);
+    this.diagramStageHeight = Math.ceil(this.diagramNaturalHeight * roundedScale);
+
+    requestAnimationFrame(() => {
+      viewport.scrollLeft = Math.min(
+        viewport.scrollLeft,
+        Math.max(0, viewport.scrollWidth - viewport.clientWidth)
+      );
+      viewport.scrollTop = Math.min(
+        viewport.scrollTop,
+        Math.max(0, viewport.scrollHeight - viewport.clientHeight)
+      );
+    });
   }
 
   private watchRouteVessel(): void {

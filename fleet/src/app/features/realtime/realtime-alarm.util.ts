@@ -12,6 +12,39 @@ interface AlarmIndex {
   readonly equipmentTokens: ReadonlySet<string>;
 }
 
+const ALARM_TAG_FIELD_NAMES = new Set([
+  'tagname',
+  'tag',
+  'pointname',
+  'address',
+  'signalname',
+  'parametername',
+  'alarmtag',
+  'alarmtagname',
+  'sourcetag',
+]);
+
+const ALARM_SUFFIX_TOKENS = new Set([
+  'ALARM',
+  'ALERT',
+  'ACTIVE',
+  'CRITICAL',
+  'MAJOR',
+  'MINOR',
+  'WARNING',
+  'WARN',
+  'FAULT',
+  'TRIP',
+  'HIGH',
+  'HI',
+  'HH',
+  'HIGHHIGH',
+  'LOW',
+  'LO',
+  'LL',
+  'LOWLOW',
+]);
+
 const alarmIndexCache = new WeakMap<readonly AlertRecord[], AlarmIndex>();
 
 /**
@@ -101,10 +134,11 @@ export function getRealtimeAlarmMessage(
     .map(realtimeCandidateTag)
     .filter((candidate) => candidate.length > 0);
 
-  const match = alerts.find((alert) => {
-    const alarmTag = normalizeRealtimeAlarmTag(alert?.tagName);
-    return normalizedCandidates.some((candidate) => tagsMatch(alarmTag, candidate));
-  });
+  const match = alerts.find((alert) =>
+    collectAlertTagNames(alert).some((alarmTag) =>
+      normalizedCandidates.some((candidate) => tagsMatch(alarmTag, candidate))
+    )
+  );
 
   if (!match) {
     return '';
@@ -127,13 +161,11 @@ function getAlarmIndex(alerts: readonly AlertRecord[]): AlarmIndex {
       continue;
     }
 
-    const normalizedTag = normalizeRealtimeAlarmTag(alert.tagName);
-    const normalizedEquipment = normalizeRealtimeAlarmTag(alert.equipment);
-
-    if (normalizedTag) {
+    for (const normalizedTag of collectAlertTagNames(alert)) {
       tagNames.add(normalizedTag);
     }
 
+    const normalizedEquipment = normalizeRealtimeAlarmTag(alert.equipment);
     if (normalizedEquipment) {
       equipmentTokens.add(normalizedEquipment);
     }
@@ -149,11 +181,69 @@ function tagsMatch(alarmTag: string, candidate: string): boolean {
     return false;
   }
 
-  return (
-    alarmTag === candidate ||
-    alarmTag.endsWith(`-${candidate}`) ||
-    candidate.endsWith(`-${alarmTag}`)
+  const alarmVariants = buildTagVariants(alarmTag);
+  const candidateVariants = buildTagVariants(candidate);
+
+  return alarmVariants.some((alarmVariant) =>
+    candidateVariants.some((candidateVariant) =>
+      alarmVariant === candidateVariant ||
+      alarmVariant.endsWith(`-${candidateVariant}`) ||
+      candidateVariant.endsWith(`-${alarmVariant}`)
+    )
   );
+}
+
+/**
+ * Database alarm APIs are not always consistent about the property used for
+ * the telemetry tag. Preserve alert.tagName as the primary source, then read
+ * common nested/raw field names without using broad title/message matching.
+ */
+function collectAlertTagNames(alert: AlertRecord): string[] {
+  const tags = new Set<string>();
+  addNormalizedTag(tags, alert.tagName);
+
+  const visit = (value: unknown, depth: number): void => {
+    if (!value || typeof value !== 'object' || depth > 4) {
+      return;
+    }
+
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      if (ALARM_TAG_FIELD_NAMES.has(key.toLowerCase())) {
+        addNormalizedTag(tags, child);
+      }
+
+      if (child && typeof child === 'object' && !Array.isArray(child)) {
+        visit(child, depth + 1);
+      }
+    }
+  };
+
+  visit(alert.raw, 0);
+  return Array.from(tags);
+}
+
+function addNormalizedTag(target: Set<string>, value: unknown): void {
+  const normalized = normalizeRealtimeAlarmTag(value);
+  if (normalized) {
+    target.add(normalized);
+  }
+}
+
+/**
+ * Some alarm tables append qualifiers such as HIGH, HH, WARNING or ACTIVE to
+ * the actual telemetry tag. Generate a conservative variant with only trailing
+ * alarm qualifiers removed, so DG1-FIN-TEMP-HIGH still maps to DG1-FIN-TEMP.
+ */
+function buildTagVariants(tag: string): string[] {
+  const variants = new Set<string>([tag]);
+  const parts = tag.split('-').filter(Boolean);
+
+  while (parts.length > 1 && ALARM_SUFFIX_TOKENS.has(parts[parts.length - 1])) {
+    parts.pop();
+    variants.add(parts.join('-'));
+  }
+
+  return Array.from(variants);
 }
 
 function escapeRegExp(value: string): string {

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
@@ -21,6 +21,9 @@ import { Animaions } from './main.animation';
   standalone: false,
 })
 export class MainComponent implements OnInit, OnDestroy {
+  @ViewChild('contentViewport', { static: true })
+  private contentViewport?: ElementRef<HTMLElement>;
+
   activeOffCanvas = false;
   showSidebar = true;
   isOverviewRoute = false;
@@ -34,6 +37,8 @@ export class MainComponent implements OnInit, OnDestroy {
   private fvInfoStarted = false;
   private realtimeStarted = false;
   private layoutSettleTimer: ReturnType<typeof setTimeout> | null = null;
+  private scrollResetTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastPublishedVesselKey = '';
 
   constructor(
     public fvTimeService: FvTimeService,
@@ -76,6 +81,11 @@ export class MainComponent implements OnInit, OnDestroy {
       this.layoutSettleTimer = null;
     }
 
+    if (this.scrollResetTimer !== null) {
+      clearTimeout(this.scrollResetTimer);
+      this.scrollResetTimer = null;
+    }
+
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -99,7 +109,16 @@ export class MainComponent implements OnInit, OnDestroy {
     } catch {}
 
     this.fvRealtimeService.setActiveVessel(vessel);
+    this.lastPublishedVesselKey = this.normalizeVesselIdentity(vessel);
     this.vesselPopup.openPopup(vessel);
+
+    // Realtime cards are long on phones. When a vessel is changed from the
+    // mobile drawer, returning to the previous scroll offset can leave the
+    // first card hidden under the fixed header. Start the selected vessel at
+    // the top so its identity and latest status are always visible.
+    if (/\/main\/(realtime|diagram)(?:\/|$)/.test(this.router.url)) {
+      this.scheduleContentScrollReset();
+    }
 
     // On Past Track, selecting another vessel must change the route parameter.
     // PastTrackComponent subscribes to paramMap and reloads that vessel automatically.
@@ -143,11 +162,30 @@ export class MainComponent implements OnInit, OnDestroy {
 
           if (selectedMatch) {
             // Keep the active vessel attached to the latest backend row so the
-            // Sidebar, Overview popup, Realtime and Past Track all share one selection.
+            // Sidebar, Manage Tags, Realtime and Past Track share one selection.
             this.selectedVessel = selectedMatch;
-          } else if (!this.selectedVessel && this.vessels.length > 0) {
+
+            const selectedKey = this.normalizeVesselIdentity(selectedMatch);
+            if (selectedKey && selectedKey !== this.lastPublishedVesselKey) {
+              this.fvRealtimeService.setActiveVessel(selectedMatch);
+              this.lastPublishedVesselKey = selectedKey;
+            }
+          } else if (this.vessels.length > 0) {
+            // เรือที่เคยเลือกอาจถูกนำออกจากระบบ ให้ย้ายไปลำแรกที่ยังใช้งาน
+            // และเขียนทับ localStorage เพื่อไม่ให้ Realtime โหลดเรือเก่ากลับมาอีก
             this.selectedVessel = this.vessels[0];
+
+            try {
+              localStorage.setItem('selectedVessel', JSON.stringify(this.selectedVessel));
+              localStorage.setItem('realtimeVessel', JSON.stringify(this.selectedVessel));
+              localStorage.setItem('pastTrackVessel', JSON.stringify(this.selectedVessel));
+            } catch {}
+
             this.fvRealtimeService.setActiveVessel(this.selectedVessel);
+            this.lastPublishedVesselKey = this.normalizeVesselIdentity(this.selectedVessel);
+          } else {
+            this.selectedVessel = null;
+            this.lastPublishedVesselKey = '';
           }
         },
         error: (error) => {
@@ -172,9 +210,21 @@ export class MainComponent implements OnInit, OnDestroy {
           return;
         }
 
-        const match = this.findMatchingVessel(vessel, this.vessels) || vessel;
+        const matchingVessel = this.findMatchingVessel(vessel, this.vessels);
+
+        // เมื่อรายการเรือโหลดแล้ว ห้ามรับ selection ที่ไม่อยู่ในรายการอีก
+        // ป้องกันเรือที่ถูกนำออกย้อนกลับมาจาก localStorage หรือ route เก่า
+        if (this.vessels.length > 0 && !matchingVessel) {
+          return;
+        }
+
+        const match = matchingVessel || vessel;
         const nextKey = this.normalizeVesselIdentity(match);
         const currentKey = this.normalizeVesselIdentity(this.selectedVessel);
+
+        if (nextKey) {
+          this.lastPublishedVesselKey = nextKey;
+        }
 
         if (nextKey && nextKey !== currentKey) {
           this.selectedVessel = match;
@@ -238,6 +288,7 @@ export class MainComponent implements OnInit, OnDestroy {
   private applyRouteState(url: string): void {
     this.updateLayout(url);
     this.syncRouteServices(url);
+    this.scheduleContentScrollReset();
     this.scheduleLayoutSettle();
   }
 
@@ -266,6 +317,43 @@ export class MainComponent implements OnInit, OnDestroy {
       this.fvRealtimeService.stop();
       this.realtimeStarted = false;
     }
+  }
+
+
+  /**
+   * Main uses an internal scroll container instead of the browser window.
+   * Angular therefore keeps its old scrollTop when switching tabs. On mobile
+   * this could reopen Realtime halfway through an engine card, visually
+   * placing content underneath the fixed header. Reset after the routed view
+   * has rendered and repeat once after the route animation settles.
+   */
+  private scheduleContentScrollReset(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (this.scrollResetTimer !== null) {
+      clearTimeout(this.scrollResetTimer);
+      this.scrollResetTimer = null;
+    }
+
+    const reset = () => {
+      const viewport = this.contentViewport?.nativeElement;
+      if (!viewport) {
+        return;
+      }
+
+      viewport.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    };
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(reset);
+    });
+
+    this.scrollResetTimer = setTimeout(() => {
+      reset();
+      this.scrollResetTimer = null;
+    }, 220);
   }
 
   private scheduleLayoutSettle(): void {

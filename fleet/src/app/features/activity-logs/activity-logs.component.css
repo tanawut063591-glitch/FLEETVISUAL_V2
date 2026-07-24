@@ -548,6 +548,37 @@ button:disabled {
   animation: spin 0.78s linear infinite;
 }
 
+.activity-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+
+.activity-table-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.activity-table-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.activity-table-scroll::-webkit-scrollbar-track {
+  background: var(--surface-bg-2);
+}
+
+.activity-table-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid var(--surface-bg-2);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 52%, var(--border-color));
+}
+
 .activity-table {
   width: 100%;
   min-width: 920px;
@@ -784,3 +815,28 @@ button:disabled {
     width: 100%;
   }
 }
+
+@media (max-width: 760px) {
+  .activity-table-scroll {
+    position: relative;
+    border-top: 1px solid var(--soft-border);
+    border-bottom: 1px solid var(--soft-border);
+    background: var(--card-bg);
+  }
+
+  .activity-table {
+    min-width: 760px;
+  }
+
+  .table-head,
+  .activity-row {
+    grid-template-columns: 145px 100px minmax(270px, 1fr) minmax(170px, 0.55fr);
+  }
+
+  .table-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+}
+

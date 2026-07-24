@@ -363,3 +363,49 @@
 .pdf-summary-strip {
   display: none !important;
 }
+
+
+/* =========================================================
+   MOBILE REPORT — full-width PDF workspace
+   ========================================================= */
+@media screen and (max-width: 760px) {
+  .report-page {
+    padding: 8px 6px 96px;
+  }
+
+  .report-container {
+    max-width: none;
+  }
+
+  .report-header {
+    min-height: 0;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .report-header h1 {
+    font-size: 22px;
+  }
+
+  .report-header p {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .report-controls {
+    margin-top: 10px;
+    gap: 9px;
+  }
+
+  .simple-field {
+    min-height: 70px;
+    padding: 10px 12px;
+    border-radius: 13px;
+  }
+
+  .report-content {
+    margin-top: 10px;
+    width: 100%;
+    min-width: 0;
+  }
+}

@@ -23,6 +23,7 @@
                         <p-datepicker
                             appendTo="body"
                             [showIcon]="true"
+                            iconDisplay="input"
                             readonlyInput="true"
                             [(ngModel)]="start"
                             [showTime]="true"
@@ -30,6 +31,8 @@
                             dateFormat="dd M yy"
                             inputStyleClass="dl-calendar-input"
                             styleClass="dl-prime-calendar"
+                            panelStyleClass="fleet-datetime-panel"
+                            [baseZIndex]="12000"
                             (onSelect)="onInput()">
                         </p-datepicker>
                     </div>
@@ -44,6 +47,7 @@
                         <p-datepicker
                             appendTo="body"
                             [showIcon]="true"
+                            iconDisplay="input"
                             readonlyInput="true"
                             [(ngModel)]="end"
                             [showTime]="true"
@@ -51,6 +55,8 @@
                             dateFormat="dd M yy"
                             inputStyleClass="dl-calendar-input"
                             styleClass="dl-prime-calendar"
+                            panelStyleClass="fleet-datetime-panel"
+                            [baseZIndex]="12000"
                             (onSelect)="onInput()">
                         </p-datepicker>
                     </div>

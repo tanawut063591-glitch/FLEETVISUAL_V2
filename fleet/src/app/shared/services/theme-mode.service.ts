@@ -7,12 +7,24 @@ export type ThemeMode = 'light' | 'dark';
 })
 export class ThemeModeService {
   private readonly storageKey = 'fleet-theme-mode';
-  private readonly defaultMode: ThemeMode = 'dark';
+  private readonly defaultVersionKey = 'fleet-theme-default-version';
+  private readonly defaultVersion = 'light-default-v1';
+  private readonly defaultMode: ThemeMode = 'light';
 
   init(): ThemeMode {
-    const savedMode = this.getSavedMode();
-    this.applyMode(savedMode, false);
-    return savedMode;
+    const isCurrentDefaultVersion =
+      localStorage.getItem(this.defaultVersionKey) === this.defaultVersion;
+
+    // Apply the new Light default once after this update. Afterwards, keep the
+    // mode explicitly selected by the user in localStorage.
+    const mode = isCurrentDefaultVersion ? this.getSavedMode() : this.defaultMode;
+
+    if (!isCurrentDefaultVersion) {
+      this.persistMode(mode);
+    }
+
+    this.applyMode(mode, false);
+    return mode;
   }
 
   getMode(): ThemeMode {
@@ -26,8 +38,13 @@ export class ThemeModeService {
   }
 
   setMode(mode: ThemeMode): void {
-    localStorage.setItem(this.storageKey, mode);
+    this.persistMode(mode);
     this.applyMode(mode, true);
+  }
+
+  private persistMode(mode: ThemeMode): void {
+    localStorage.setItem(this.storageKey, mode);
+    localStorage.setItem(this.defaultVersionKey, this.defaultVersion);
   }
 
   private getSavedMode(): ThemeMode {

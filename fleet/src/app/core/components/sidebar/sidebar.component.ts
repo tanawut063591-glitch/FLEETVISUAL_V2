@@ -695,10 +695,6 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges, DoCheck {
       return 'assets/images/vessel/bb_mulia.jpg';
     }
 
-    if (normalized.includes('makmur')) {
-      return 'assets/images/vessel/bb_mukda.jpg';
-    }
-
     if (normalized.includes('zamrud')) {
       return 'assets/images/vessel/bb_zamrud.jpg';
     }

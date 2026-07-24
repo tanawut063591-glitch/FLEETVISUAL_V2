@@ -11,6 +11,12 @@ interface Security {
 export class SecurityService {
   repo: Security[] = [];
 
+  // เรือที่ยกเลิกการใช้งานและต้องไม่แสดงในทุกหน้าของระบบ
+  private readonly excludedVesselKeys = new Set<string>([
+    'BAHTERA MAKMUR',
+    'BB MAKMUR',
+  ]);
+
   // กลุ่มเรือสำหรับทดสอบ
   test: string[] = [];
 
@@ -18,7 +24,6 @@ export class SecurityService {
   bb_chevron: string[] = [];
 
   bb_ptt: string[] = [
-    'BAHTERA MAKMUR',
     'BAHTERA INTAN',
     'BB TONGKAM',
     'BAHTERA ZAMRUD',
@@ -92,6 +97,8 @@ export class SecurityService {
   ]);
 
   constructor() {
+    this.clearExcludedStoredSelections();
+
     // User ที่เห็นเรือเฉพาะลำ
     this.addPermission('scbrave', ['SC BRAVE']);
     this.addPermission('scemerald', ['SC EMERALD']);
@@ -124,11 +131,53 @@ export class SecurityService {
     this.addPermission('mvgemia', ['MV GEMIA']);
   }
 
+  // ล้างเรือที่ถูกนำออกซึ่ง Browser อาจจำไว้จากการเลือกครั้งก่อน
+  private clearExcludedStoredSelections(): void {
+    const storageKeys = ['selectedVessel', 'realtimeVessel', 'pastTrackVessel'];
+
+    storageKeys.forEach((key) => {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return;
+
+        const stored = JSON.parse(raw);
+        const candidates = [
+          stored?.name,
+          stored?.prefix,
+          stored?.id,
+          stored?.fv?.name,
+          stored?.fv?.prefix,
+          stored?.fv?.id,
+          stored?.fvInfo?.name,
+          stored?.fvInfo?.prefix,
+          stored?.fvInfo?.id,
+        ];
+
+        if (candidates.some((value) => this.isExcludedVessel(String(value || '')))) {
+          localStorage.removeItem(key);
+        }
+      } catch {
+        localStorage.removeItem(key);
+      }
+    });
+  }
+
+  // เช็กว่าเป็นเรือที่ถูกนำออกจากระบบหรือไม่ รองรับทั้งชื่อและ prefix
+  isExcludedVessel(vesselNameOrPrefix: string): boolean {
+    const normalized = String(vesselNameOrPrefix || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ');
+
+    return this.excludedVesselKeys.has(normalized);
+  }
+
   // เช็กว่า user ปัจจุบันมีสิทธิ์ดูเรือลำนี้ไหม
   hasAccess(vesselName: string): boolean {
     const username = localStorage.getItem('username');
 
-    if (!username || !vesselName) {
+    if (!username || !vesselName || this.isExcludedVessel(vesselName)) {
       return false;
     }
 
@@ -164,7 +213,9 @@ export class SecurityService {
       (item) => item.username.toLowerCase() === safeUsername
     );
 
-    return permission?.vesselNames ?? [];
+    return (permission?.vesselNames ?? []).filter(
+      (name) => !this.isExcludedVessel(name)
+    );
   }
 
   // เพิ่มสิทธิ์ให้ user
@@ -195,7 +246,11 @@ export class SecurityService {
     vesselNames.forEach((name) => {
       const safeName = this.normalizeVesselName(name);
 
-      if (safeName && !result.includes(safeName)) {
+      if (
+        safeName &&
+        !this.isExcludedVessel(safeName) &&
+        !result.includes(safeName)
+      ) {
         result.push(safeName);
       }
     });
