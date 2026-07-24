@@ -270,15 +270,28 @@
 .motor-shaft__energy {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95), transparent);
-  transform: translateX(-100%);
+  /* Background-position animation prevents the energy strip spilling outside. */
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 34%,
+    rgba(255, 255, 255, 0.95) 50%,
+    transparent 66%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  background-position: 120% 0;
+  transform: none;
 }
 
 .motor-console--running .motor-shaft__energy {
   animation: energyFlow 1.9s linear infinite;
 }
 
-@keyframes energyFlow { to { transform: translateX(100%); } }
+@keyframes energyFlow {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
 
 .motor-shaft small {
   position: absolute;

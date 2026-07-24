@@ -340,8 +340,18 @@
 .shaft__pulse {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
-  transform: translateX(-100%);
+  /* Keep the moving highlight inside its own shaft segment. */
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 34%,
+    rgba(255, 255, 255, 0.9) 50%,
+    transparent 66%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  background-position: 120% 0;
+  transform: none;
   animation: shaftPulse 2.4s linear infinite;
 }
 
@@ -360,7 +370,8 @@
 .engine-console--stopped .shaft__pulse { animation: none; opacity: 0; }
 
 @keyframes shaftPulse {
-  to { transform: translateX(100%); }
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
 }
 
 .engine-footer {

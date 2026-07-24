@@ -7,7 +7,6 @@ import { CoordinatesService } from '../../../shared/services/coordinate.service'
 import { FvTimeService } from '../../../shared/services/fv-time.service';
 import { FvInfoService } from '../../../shared/services/fv-info.service';
 import { FvRealtimeService } from '../../../shared/services/fv-realtime.service';
-import { FvOverviewService } from '../../../shared/services/fv-overview.service';
 import { FleetVesselDataService } from '../../../shared/services/fleet-vessel-data.service';
 import { VesselPopupService } from '../../../shared/services/vessel-popup.service';
 import { UserPresenceService } from '../../../shared/services/user-presence.service';
@@ -31,13 +30,16 @@ export class MainComponent implements OnInit, OnDestroy {
   
   private destroy$ = new Subject<void>();
   private readonly defaultTimer = 5000;
+  private refreshTimer = this.defaultTimer;
+  private fvInfoStarted = false;
+  private realtimeStarted = false;
+  private layoutSettleTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     public fvTimeService: FvTimeService,
     public coordinatesService: CoordinatesService,
     private router: Router,
     private route: ActivatedRoute,
-    private fvOverviewService: FvOverviewService,
     private fvInfoService: FvInfoService,
     private fvRealtimeService: FvRealtimeService,
     private vesselData: FleetVesselDataService,
@@ -46,16 +48,13 @@ export class MainComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    const timer = this.route.snapshot.data['timer'] || this.defaultTimer;
+    this.refreshTimer =
+      this.route.snapshot.data['timer'] || this.defaultTimer;
 
-    this.fvInfoService.start(timer);
-    this.fvRealtimeService.start(timer);
-    this.fvOverviewService.start(timer);
     this.userPresence.start();
-
     this.loadSidebarVessels();
     this.watchActiveVesselSelection();
-    this.updateLayout(this.router.url);
+    this.applyRouteState(this.router.url);
 
     this.router.events
       .pipe(
@@ -63,15 +62,19 @@ export class MainComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe((event: NavigationEnd) => {
-        this.updateLayout(event.urlAfterRedirects || event.url);
+        this.applyRouteState(event.urlAfterRedirects || event.url);
       });
   }
 
   ngOnDestroy(): void {
     this.fvInfoService.stop();
     this.fvRealtimeService.stop();
-    this.fvOverviewService.stop();
     this.userPresence.stop();
+
+    if (this.layoutSettleTimer !== null) {
+      clearTimeout(this.layoutSettleTimer);
+      this.layoutSettleTimer = null;
+    }
 
     this.destroy$.next();
     this.destroy$.complete();
@@ -135,7 +138,6 @@ export class MainComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (rows: any[]) => {
           this.vessels = Array.isArray(rows) ? rows : [];
-          this.fvOverviewService.setVessels(this.vessels);
 
           const selectedMatch = this.findMatchingVessel(this.selectedVessel, this.vessels);
 
@@ -231,6 +233,60 @@ export class MainComponent implements OnInit, OnDestroy {
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '');
+  }
+
+  private applyRouteState(url: string): void {
+    this.updateLayout(url);
+    this.syncRouteServices(url);
+    this.scheduleLayoutSettle();
+  }
+
+  /**
+   * Only run expensive telemetry polling on pages that consume it. The old
+   * shell started Info, Realtime and Overview polling together immediately
+   * after login, which duplicated requests and made the first screen feel
+   * slower than a browser refresh.
+   */
+  private syncRouteServices(url: string): void {
+    const needsFvInfo = /\/main\/(realtime|diagram|report)(?:\/|$)/.test(url);
+    const needsRealtime = /\/main\/(realtime|diagram)(?:\/|$)/.test(url);
+
+    if (needsFvInfo && !this.fvInfoStarted) {
+      this.fvInfoService.start(this.refreshTimer);
+      this.fvInfoStarted = true;
+    } else if (!needsFvInfo && this.fvInfoStarted) {
+      this.fvInfoService.stop();
+      this.fvInfoStarted = false;
+    }
+
+    if (needsRealtime && !this.realtimeStarted) {
+      this.fvRealtimeService.ensureStarted(this.refreshTimer);
+      this.realtimeStarted = true;
+    } else if (!needsRealtime && this.realtimeStarted) {
+      this.fvRealtimeService.stop();
+      this.realtimeStarted = false;
+    }
+  }
+
+  private scheduleLayoutSettle(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (this.layoutSettleTimer !== null) {
+      clearTimeout(this.layoutSettleTimer);
+    }
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        window.dispatchEvent(new Event('resize'));
+      });
+    });
+
+    this.layoutSettleTimer = setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+      this.layoutSettleTimer = null;
+    }, 280);
   }
 
   private updateLayout(url: string): void {

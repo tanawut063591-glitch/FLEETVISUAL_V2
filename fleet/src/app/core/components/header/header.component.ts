@@ -229,6 +229,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.syncMobileMenuDocumentState(false);
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -274,6 +275,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     this.mobileMenuOpen = !this.mobileMenuOpen;
     this.settingsMenuOpen = false;
+    this.syncMobileMenuDocumentState(this.mobileMenuOpen);
   }
 
   /*
@@ -281,6 +283,20 @@ export class HeaderComponent implements OnInit, OnDestroy {
   */
   closeMobileMenu(): void {
     this.mobileMenuOpen = false;
+    this.syncMobileMenuDocumentState(false);
+  }
+
+  /**
+   * Shares the mobile drawer state with fixed controls outside this component.
+   * The vessel button uses this class to move out of the navigation action bar.
+   */
+  private syncMobileMenuDocumentState(open: boolean): void {
+    if (typeof document === 'undefined' || !document.body) {
+      return;
+    }
+
+    document.documentElement?.classList.toggle('fv-mobile-navigation-open', open);
+    document.body.classList.toggle('fv-mobile-navigation-open', open);
   }
 
   /*
@@ -367,6 +383,19 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.closeMobileMenu();
 
     this.router.navigate(['/login']);
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    if (typeof window !== 'undefined' && window.innerWidth > 992 && this.mobileMenuOpen) {
+      this.closeMobileMenu();
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    this.closeSettingsMenu();
+    this.closeMobileMenu();
   }
 
   /*

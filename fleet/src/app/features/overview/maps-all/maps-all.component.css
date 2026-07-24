@@ -93,51 +93,6 @@
   background: #ef4444;
 }
 
-.map-legend {
-  position: absolute;
-  left: 22px;
-  bottom: 22px;
-  z-index: 20;
-
-  height: 44px;
-  padding: 0 16px;
-
-  display: flex;
-  align-items: center;
-  gap: 22px;
-
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.14);
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  color: #0f172a;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.legend-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-}
-
-.legend-dot.online {
-  background: #16a34a;
-}
-
-.legend-dot.idle {
-  background: #f59e0b;
-}
-
-.legend-dot.offline {
-  background: #ef4444;
-}
 
 /* Popup */
 .vessel-popup {
@@ -503,13 +458,6 @@
   .popup-actions {
     grid-template-columns: 1fr;
   }
-
-  .map-legend {
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    overflow-x: auto;
-  }
 }
 /* V7: align map overlays with approved reference */
 .map-filter-bar {
@@ -522,13 +470,6 @@
   height: 40px;
   padding: 0 16px;
   font-size: 12px;
-}
-
-.map-legend {
-  left: 18px;
-  bottom: 18px;
-  height: 40px;
-  border-radius: 10px;
 }
 
 .vessel-popup {
@@ -572,11 +513,6 @@
     padding: 0 14px;
   }
 
-  .map-legend {
-    left: 12px;
-    bottom: 14px;
-  }
-
   .vessel-popup {
     top: auto;
     left: 12px;
@@ -585,5 +521,67 @@
     width: auto;
     max-height: calc(100% - 150px);
     overflow: auto;
+  }
+}
+
+/* Mobile status controls: keep every status visible without horizontal clipping. */
+@media (max-width: 900px) {
+  .map-filter-bar {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: none;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2px;
+    padding: 3px;
+    overflow: visible;
+    box-sizing: border-box;
+  }
+
+  .filter-pill {
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+    padding: 0 5px;
+    justify-content: center;
+    gap: 5px;
+    white-space: nowrap;
+    font-size: 10.5px;
+    line-height: 1;
+    border-radius: 9px;
+    box-sizing: border-box;
+  }
+
+  .filter-dot {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+  }
+
+
+  .vessel-popup {
+    bottom: 18px;
+  }
+}
+
+@media (max-width: 360px) {
+  .map-filter-bar {
+    left: 6px;
+    right: 6px;
+    gap: 1px;
+    padding: 2px;
+  }
+
+  .filter-pill {
+    height: 36px;
+    padding: 0 3px;
+    gap: 3px;
+    font-size: 9.5px;
+  }
+
+  .filter-dot {
+    width: 9px;
+    height: 9px;
   }
 }

@@ -273,3 +273,98 @@
     background: #eef5ff;
     color: #1769ff;
 }
+
+/* Phone/tablet map layout */
+@media (max-width: 760px) {
+    .map-panel {
+        border-radius: 14px;
+    }
+
+    .panel-header {
+        height: auto;
+        min-height: 106px;
+        padding: 14px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 11px;
+    }
+
+    .panel-header h3 {
+        font-size: 17px;
+    }
+
+    .panel-header p {
+        font-size: 12px;
+        line-height: 1.45;
+    }
+
+    .legend {
+        width: 100%;
+        height: auto;
+        min-height: 42px;
+        padding: 8px 10px;
+        justify-content: space-between;
+        gap: 8px;
+        border-radius: 10px;
+        font-size: 11px;
+    }
+
+    .legend span {
+        min-width: 0;
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+    }
+
+    .map-wrap {
+        height: clamp(310px, 76vw, 430px);
+        margin: 0 10px 10px;
+        border-radius: 12px;
+    }
+
+    .map-type-switch {
+        top: 10px;
+        left: 10px;
+        max-width: calc(100% - 76px);
+    }
+
+    .map-type-switch button {
+        height: 40px;
+        padding: 0 17px;
+        font-size: 12px;
+    }
+
+    .coordinate-box {
+        right: 10px;
+        bottom: 10px;
+        max-width: calc(100% - 20px);
+        padding: 10px 12px;
+        overflow: hidden;
+        border-radius: 10px;
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 390px) {
+    .legend {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .legend span {
+        justify-content: center;
+        font-size: 10px;
+    }
+
+    .dot {
+        width: 8px;
+        height: 8px;
+        margin-right: 4px;
+    }
+
+    .map-wrap {
+        height: 300px;
+    }
+}

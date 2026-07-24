@@ -1409,3 +1409,313 @@ select:focus {
 :host-context([data-theme='dark']) .tag-preset select {
   color: #e2e8f0 !important;
 }
+
+
+/* =========================================================
+   TAG LOADING + MOBILE DIALOG REFINEMENT (v47)
+   ========================================================= */
+.tag-load-state {
+  min-height: 150px;
+  padding: 22px;
+  border: 1px dashed #cbd8e8;
+  border-radius: 18px;
+  background: #ffffff;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: left;
+}
+
+.tag-load-state > i {
+  flex: 0 0 auto;
+  color: #2563eb;
+  font-size: 26px;
+}
+
+.tag-load-state > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.tag-load-state strong,
+.tag-load-state span {
+  display: block;
+}
+
+.tag-load-state strong {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.tag-load-state span {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.tag-load-state button {
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid #bfdbfe;
+  border-radius: 11px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tag-load-state button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.tag-load-state.error > i {
+  color: #ef4444;
+}
+
+.tag-load-state.empty > i {
+  color: #64748b;
+}
+
+.tag-row {
+  align-items: flex-start;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.tag-row span {
+  line-height: 1.35;
+}
+
+/* PrimeNG 20 uses .p-dialog; retain legacy .ui-dialog support. */
+:host ::ng-deep .manage-tags-dialog.p-dialog,
+:host ::ng-deep .pro-tags-dialog.p-dialog,
+:host ::ng-deep .manage-tags-dialog.ui-dialog,
+:host ::ng-deep .pro-tags-dialog.ui-dialog {
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  box-shadow: 0 30px 90px rgba(15, 23, 42, 0.34) !important;
+}
+
+:host ::ng-deep .manage-tags-dialog .p-dialog-header,
+:host ::ng-deep .pro-tags-dialog .p-dialog-header {
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+:host ::ng-deep .manage-tags-dialog .p-dialog-content,
+:host ::ng-deep .pro-tags-dialog .p-dialog-content {
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: #f3f6fa !important;
+}
+
+@media screen and (max-width: 992px) {
+  :host ::ng-deep .manage-tags-dialog.p-dialog,
+  :host ::ng-deep .pro-tags-dialog.p-dialog,
+  :host ::ng-deep .manage-tags-dialog.ui-dialog,
+  :host ::ng-deep .pro-tags-dialog.ui-dialog {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    min-width: 0 !important;
+    max-height: calc(100dvh - 16px) !important;
+    margin: 8px !important;
+    border-radius: 19px !important;
+  }
+
+  .manage-tags-header {
+    min-height: 0;
+    padding: 14px;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .manage-tags-title {
+    align-items: flex-start;
+  }
+
+  .manage-tags-title h3 {
+    font-size: 18px;
+  }
+
+  .manage-tags-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .tag-action-btn {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    padding: 0 10px;
+  }
+
+  .manage-tags-body {
+    min-height: 0;
+    max-height: calc(100dvh - 178px);
+    padding: 14px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tag-control-bar {
+    position: relative;
+    z-index: 2;
+    margin-bottom: 12px;
+    padding: 10px;
+    gap: 9px;
+  }
+
+  .tag-search,
+  .tag-preset,
+  .tag-summary-chip,
+  .tag-filter-btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    border-radius: 13px;
+  }
+
+  .tag-summary-chip {
+    padding: 0 13px;
+  }
+
+  .manage-tags-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tags-scroll {
+    order: 1;
+    width: 100%;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .tags-layout {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .tag-column {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+    border: 1px solid #dce6f2;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  .tag-list {
+    max-height: 260px;
+  }
+
+  .selected-panel {
+    order: 2;
+    min-height: 0;
+  }
+
+  .tag-side-panel {
+    order: 3;
+    min-height: 0;
+  }
+
+  .tag-side-content {
+    max-height: 240px;
+  }
+
+  .side-empty {
+    min-height: 120px;
+  }
+}
+
+@media screen and (max-width: 620px) {
+  .dl-shell {
+    padding: 10px;
+  }
+
+  .dl-panel {
+    padding: 16px 13px;
+    border-radius: 18px;
+  }
+
+  .dl-toolbar {
+    gap: 10px;
+  }
+
+  .dl-card {
+    padding: 13px;
+    border-radius: 16px;
+  }
+
+  .dl-card-info {
+    align-items: flex-start;
+  }
+
+  .dl-card-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .manage-tags-body {
+    max-height: calc(100dvh - 188px);
+    padding: 10px;
+  }
+
+  .tags-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .tag-list {
+    max-height: 300px;
+  }
+
+  .tag-side-panel {
+    display: none;
+  }
+
+  .selected-panel-range {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .selected-panel-range small {
+    display: none;
+  }
+
+  .tag-load-state {
+    min-height: 180px;
+    padding: 18px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tag-load-state button {
+    width: 100%;
+  }
+}
+
+:host-context([data-theme='dark']) .tag-load-state {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: #0b111b;
+  color: #a8b6c9;
+}
+
+:host-context([data-theme='dark']) .tag-load-state strong {
+  color: #f8fafc;
+}
+
+:host-context([data-theme='dark']) .tag-column {
+  border-color: rgba(148, 163, 184, 0.2);
+}

@@ -149,7 +149,13 @@ export class LoginComponent implements OnInit {
 
       // ถ้า login สำเร็จ ให้ไปหน้าที่หลังบ้าน/Service กำหนด
       if (redirectUrl) {
-        await this.router.navigateByUrl(redirectUrl);
+        const navigated = await this.router.navigateByUrl(redirectUrl, {
+          replaceUrl: true,
+        });
+
+        if (navigated) {
+          this.settleAuthenticatedLayout();
+        }
       } else {
         this.showLoginError('The username or password is incorrect.');
       }
@@ -162,6 +168,28 @@ export class LoginComponent implements OnInit {
       this.isSubmitting = false;
       this.changeDetectorRef.markForCheck();
     }
+  }
+
+
+  /**
+   * Google Maps and responsive cards can calculate their size while the login
+   * screen is still being removed. Notify them again after the authenticated
+   * shell has painted instead of forcing the user to refresh the browser.
+   */
+  private settleAuthenticatedLayout(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const notifyLayout = (): void => {
+      window.dispatchEvent(new Event('resize'));
+    };
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(notifyLayout);
+    });
+
+    window.setTimeout(notifyLayout, 300);
   }
 
   /**

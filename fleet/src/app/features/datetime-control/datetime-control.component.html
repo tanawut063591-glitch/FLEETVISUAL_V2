@@ -265,7 +265,37 @@
 
         </div>
 
-        <div class="manage-tags-grid">
+        <div class="tag-load-state loading" *ngIf="pointsLoading" aria-live="polite">
+            <i class="fa fa-circle-o-notch fa-spin"></i>
+            <div>
+                <strong>Loading sensor tags...</strong>
+                <span>Retrieving available parameters for {{ vesselName }}.</span>
+            </div>
+        </div>
+
+        <div class="tag-load-state error" *ngIf="!pointsLoading && hasPointError" role="alert">
+            <i class="fa fa-exclamation-triangle"></i>
+            <div>
+                <strong>Unable to load sensor tags</strong>
+                <span>{{ pointErrorMessage }}</span>
+            </div>
+            <button type="button" (click)="retryPoints()" [disabled]="!prefix">
+                <i class="fa fa-refresh"></i> Retry
+            </button>
+        </div>
+
+        <div class="tag-load-state empty" *ngIf="!pointsLoading && !hasPointError && tags.length === 0">
+            <i class="fa fa-tags"></i>
+            <div>
+                <strong>No sensor tags were returned</strong>
+                <span>Refresh the selected vessel or verify the <code>/getpoints</code> response.</span>
+            </div>
+            <button type="button" (click)="retryPoints()">
+                <i class="fa fa-refresh"></i> Refresh Tags
+            </button>
+        </div>
+
+        <div class="manage-tags-grid" *ngIf="!pointsLoading && !hasPointError && tags.length > 0">
 
             <aside class="tag-side-panel">
 

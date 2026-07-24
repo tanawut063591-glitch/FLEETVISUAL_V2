@@ -336,6 +336,40 @@
       </table>
     </div>
 
+    <div class="vessel-mobile-list" *ngIf="!loading && !errorMessage">
+      <article class="vessel-mobile-card" *ngFor="let vessel of pagedVessels; trackBy: trackByVessel">
+        <header class="vessel-mobile-card-head">
+          <div class="vessel-mobile-thumb">
+            <img *ngIf="vessel.image" [src]="vessel.image" [alt]="vessel.name" />
+            <i *ngIf="!vessel.image" class="fa fa-ship"></i>
+          </div>
+          <div class="vessel-mobile-identity">
+            <span class="vessel-mobile-id">ID {{ vessel.id }}</span>
+            <h3>{{ vessel.name }}</h3>
+            <div class="vessel-mobile-status-row">
+              <span class="status-pill" [attr.data-status]="vessel.status"><i></i>{{ statusLabel(vessel.status) }}</span>
+              <span class="prefix-chip">{{ vessel.prefix }}</span>
+            </div>
+          </div>
+        </header>
+
+        <dl class="vessel-mobile-meta">
+          <div><dt>Nationality</dt><dd>{{ vessel.nationality || '—' }}</dd></div>
+          <div><dt>Customer</dt><dd>{{ vessel.customer || '—' }}</dd></div>
+          <div><dt>Owner</dt><dd>{{ vessel.owner || '—' }}</dd></div>
+          <div><dt>Agency</dt><dd>{{ vessel.agency || '—' }}</dd></div>
+          <div><dt>Groups</dt><dd><span class="group-count">{{ vesselGroupCount(vessel) }}</span></dd></div>
+        </dl>
+
+        <footer class="vessel-mobile-actions">
+          <button type="button" class="edit" (click)="openEdit(vessel)"><i class="fa fa-pencil"></i><span>Edit</span></button>
+          <button type="button" class="delete" (click)="deleteVessel(vessel)"><i class="fa fa-trash-o"></i><span>Delete</span></button>
+        </footer>
+      </article>
+
+      <div class="empty-inline" *ngIf="pagedVessels.length === 0">No vessel records match this search.</div>
+    </div>
+
     <footer class="table-footer" *ngIf="!loading && !errorMessage">
       <span>Showing {{ pageStart }} to {{ pageEnd }} of {{ filteredVessels.length }} vessels</span>
       <div class="pagination">

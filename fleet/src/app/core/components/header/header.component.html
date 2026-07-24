@@ -35,131 +35,146 @@
     aria-hidden="true"
   ></div>
 
-  <!-- CENTER MENU -->
-  <nav
-    id="mobile-main-navigation"
-    class="main-menu"
-    [class.open]="mobileMenuOpen"
-    aria-label="Main navigation"
-  >
-    <a
-      *ngFor="let item of menuItems"
-      class="nav-item"
-      [class.is-alert]="item.isAlert"
-      [class.is-log]="item.isLog"
-      [routerLink]="item.route"
-      routerLinkActive="active"
-      [routerLinkActiveOptions]="{ exact: false }"
-      (click)="closeSettingsMenu(); closeMobileMenu()"
-      [hidden]="item.show === false"
+  <!--
+    Desktop: display: contents keeps the original 3-column header layout.
+    Mobile: this becomes one solid drawer, so menu items and account actions
+    can no longer split, float over the page, or swap to the top of the screen.
+  -->
+  <div class="mobile-nav-shell" [class.open]="mobileMenuOpen">
+    <!-- CENTER MENU -->
+    <nav
+      id="mobile-main-navigation"
+      class="main-menu"
+      aria-label="Main navigation"
     >
-      <div class="nav-icon">
-        <i [class]="item.icon" aria-hidden="true"></i>
-
-        <span
-          class="alert-count"
-          *ngIf="item.isAlert && alertCount > 0"
-          aria-live="polite"
-          [attr.aria-label]="alertCount + ' active alarms'"
-        >
-          {{ alertCount > 99 ? '99+' : alertCount }}
-        </span>
-      </div>
-
-      <div class="nav-text">
-        {{ item.label }}
-      </div>
-    </a>
-  </nav>
-
-  <!-- RIGHT ACTIONS -->
-  <section class="right-menu" [class.mobile-open]="mobileMenuOpen">
-    <!-- SETTINGS -->
-    <div class="settings-action-wrap" [class.open]="settingsMenuOpen">
-      <button
-        type="button"
-        class="settings-action-btn"
-        title="Settings"
-        (click)="toggleSettingsMenu($event)"
+      <a
+        *ngFor="let item of menuItems"
+        class="nav-item"
+        [class.is-alert]="item.isAlert"
+        [class.is-log]="item.isLog"
+        [routerLink]="item.route"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: false }"
+        (click)="closeSettingsMenu(); closeMobileMenu()"
+        [hidden]="item.show === false"
       >
-        <i class="fa fa-cog" aria-hidden="true"></i>
-      </button>
+        <div class="nav-icon">
+          <i [class]="item.icon" aria-hidden="true"></i>
 
-      <div class="settings-dropdown">
-        <div class="dropdown-title">
-          System Settings
+          <span
+            class="alert-count"
+            *ngIf="item.isAlert && alertCount > 0"
+            aria-live="polite"
+            [attr.aria-label]="alertCount + ' active alarms'"
+          >
+            {{ alertCount > 99 ? '99+' : alertCount }}
+          </span>
         </div>
 
+        <div class="nav-text">
+          {{ item.label }}
+        </div>
+      </a>
+    </nav>
+
+    <!-- RIGHT ACTIONS -->
+    <section class="right-menu" aria-label="Account and display actions">
+      <!-- SETTINGS -->
+      <div class="settings-action-wrap" [class.open]="settingsMenuOpen">
         <button
           type="button"
-          class="dropdown-item"
-          *ngFor="let item of settingsItems"
-          (click)="goTo(item.route)"
+          class="settings-action-btn"
+          title="Settings"
+          aria-label="Open system settings"
+          [attr.aria-expanded]="settingsMenuOpen"
+          (click)="toggleSettingsMenu($event)"
         >
-          <span class="dropdown-icon" [class]="item.color">
-            <i [class]="item.icon" aria-hidden="true"></i>
+          <span class="mobile-action-icon settings-mobile-icon" aria-hidden="true">
+            <i class="fa fa-cog"></i>
           </span>
-
-          <div class="dropdown-copy">
-            <strong>{{ item.title }}</strong>
-            <small>{{ item.subtitle }}</small>
-          </div>
+          <span class="mobile-action-label">SETTINGS</span>
         </button>
+
+        <div class="settings-dropdown">
+          <div class="dropdown-title">
+            System Settings
+          </div>
+
+          <button
+            type="button"
+            class="dropdown-item"
+            *ngFor="let item of settingsItems"
+            (click)="goTo(item.route)"
+          >
+            <span class="dropdown-icon" [class]="item.color">
+              <i [class]="item.icon" aria-hidden="true"></i>
+            </span>
+
+            <div class="dropdown-copy">
+              <strong>{{ item.title }}</strong>
+              <small>{{ item.subtitle }}</small>
+            </div>
+          </button>
+        </div>
       </div>
-    </div>
 
-    <!-- DARK MODE -->
-    <button
-      type="button"
-      class="dark-mode-pill"
-      [class.active]="isDarkMode"
-      (click)="toggleDarkMode($event)"
-    >
-      <span class="dark-icon">
-        <i
-          class="fa"
-          [class.fa-moon-o]="!isDarkMode"
-          [class.fa-sun-o]="isDarkMode"
-          aria-hidden="true"
-        ></i>
-      </span>
-
-      <span class="dark-copy">
-        <strong>{{ isDarkMode ? 'LIGHT' : 'DARK' }}</strong>
-        <small>Switch mode</small>
-      </span>
-    </button>
-
-    <!-- USER -->
-    <div class="user-profile-pill">
-      <div class="user-avatar">
-        <img
-          *ngIf="!avatarError && userImage"
-          [src]="userImage"
-          alt="User"
-          (error)="onUserImageError()"
-        />
-
-        <span *ngIf="avatarError || !userImage" class="user-initial">
-          {{ userInitial }}
+      <!-- DARK MODE -->
+      <button
+        type="button"
+        class="dark-mode-pill"
+        [class.active]="isDarkMode"
+        [attr.aria-label]="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+        (click)="toggleDarkMode($event)"
+      >
+        <span class="dark-icon">
+          <i
+            class="fa"
+            [class.fa-moon-o]="!isDarkMode"
+            [class.fa-sun-o]="isDarkMode"
+            aria-hidden="true"
+          ></i>
         </span>
+
+        <span class="dark-copy">
+          <strong>{{ isDarkMode ? 'LIGHT' : 'DARK' }}</strong>
+          <small>Switch mode</small>
+        </span>
+        <span class="mobile-action-label">{{ isDarkMode ? 'LIGHT' : 'DARK' }}</span>
+      </button>
+
+      <!-- USER -->
+      <div class="user-profile-pill">
+        <div class="user-avatar">
+          <img
+            *ngIf="!avatarError && userImage"
+            [src]="userImage"
+            alt="User"
+            (error)="onUserImageError()"
+          />
+
+          <span *ngIf="avatarError || !userImage" class="user-initial">
+            {{ userInitial }}
+          </span>
+        </div>
+
+        <div class="user-info">
+          <span class="user-label">USER</span>
+          <strong>{{ username || 'User' }}</strong>
+        </div>
+        <span class="mobile-action-label">ACCOUNT</span>
       </div>
 
-      <div class="user-info">
-        <span class="user-label">USER</span>
-        <strong>{{ username || 'User' }}</strong>
-      </div>
-    </div>
+      <!-- LOGOUT -->
+      <button type="button" class="logout-item" aria-label="Log out" (click)="logout()">
+        <div class="logout-icon">
+          <i class="fa fa-sign-out" aria-hidden="true"></i>
+        </div>
 
-    <!-- LOGOUT -->
-    <button type="button" class="logout-item" (click)="logout()">
-      <div class="logout-icon">
-        <i class="fa fa-sign-out" aria-hidden="true"></i>
-      </div>
-
-      <div class="logout-text">
-        LOGOUT
-      </div>
-    </button>
-  </section>
+        <div class="logout-text">
+          LOGOUT
+        </div>
+        <span class="mobile-action-label">LOGOUT</span>
+      </button>
+    </section>
+  </div>
 </header>

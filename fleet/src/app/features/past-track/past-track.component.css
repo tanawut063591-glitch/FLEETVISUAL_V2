@@ -634,3 +634,96 @@
   border-left-color: #3b82f6;
   background: rgba(10, 15, 24, 0.86);
 }
+
+/* Final phone pass: keep every Past Track block inside the viewport and make
+   information order predictable. These rules intentionally sit at the end of
+   the file so older tablet breakpoints cannot override them. */
+@media (max-width: 760px) {
+  .past-track-page {
+    width: 100%;
+    max-width: 100%;
+    padding: 12px;
+    overflow-x: hidden;
+  }
+
+  .page-header {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .heading-block {
+    width: 100%;
+    padding: 13px 14px;
+  }
+
+  .page-header h1 {
+    margin-top: 6px;
+    font-size: 24px;
+  }
+
+  .page-header p {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .range-toolbar,
+  .route-info-bar,
+  .main-grid,
+  .left-area,
+  .right-area,
+  .route-map-export-frame {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .range-toolbar {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .range-preset {
+    min-height: 46px;
+  }
+
+  .route-info-item strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 430px) {
+  .past-track-page {
+    padding: 10px;
+  }
+
+  .header-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .header-actions .btn {
+    min-width: 0;
+    height: 44px;
+    padding-inline: 8px;
+    font-size: 11px;
+  }
+
+  .range-presets {
+    gap: 7px;
+  }
+
+  .range-preset,
+  .range-preset.custom {
+    height: 44px;
+    font-size: 12px;
+  }
+
+  .route-info-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .route-info-item {
+    padding: 10px;
+  }
+}

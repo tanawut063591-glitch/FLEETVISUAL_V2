@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { firstValueFrom, Observable, of, timer } from 'rxjs';
-import { catchError, shareReplay, switchMap } from 'rxjs/operators';
+import { catchError, exhaustMap, shareReplay } from 'rxjs/operators';
 
 import { NewHttpClientService } from './http-client1.service';
 
@@ -31,7 +31,10 @@ export class FleetVesselDataService {
   getOverviewVessels(refreshMs = 5000): Observable<OverviewPayloadRow[]> {
     if (!this.overviewStream$) {
       this.overviewStream$ = timer(0, refreshMs).pipe(
-        switchMap(() => this.loadOverviewRowsSafe()),
+        // Ignore the next timer tick while the current backend refresh is still
+        // running. Promise-based requests cannot be cancelled by switchMap and
+        // previously accumulated in the background on a slow first login.
+        exhaustMap(() => this.loadOverviewRowsSafe()),
         shareReplay({ bufferSize: 1, refCount: true })
       );
     }

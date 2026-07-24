@@ -9,6 +9,7 @@ import {
   PastTrackSummary,
 } from './models/past-track.model';
 import { PastTrackService } from '../../shared/services/past-track.service';
+import { PastTrackMapComponent } from './components/past-track-map/past-track-map.component';
 
 type PlaybackSpeed = '0.5x' | '1x' | '1.5x' | '2x';
 type RangeMode = 1 | 3 | 7 | 'custom';
@@ -28,6 +29,7 @@ interface HistoryPreset {
 export class PastTrackComponent implements OnInit, OnDestroy {
   @ViewChild('routeWorkspace') routeWorkspace?: ElementRef<HTMLElement>;
   @ViewChild('routeMapExport') routeMapExport?: ElementRef<HTMLElement>;
+  @ViewChild(PastTrackMapComponent) routeMapComponent?: PastTrackMapComponent;
   readonly maxHistoryDays = 7;
   readonly historyPresets: HistoryPreset[] = [
     { days: 1, label: '1 Day', intervalMinutes: 10 },
@@ -373,34 +375,136 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     this.exportingMap = true;
 
     try {
-      const html2canvasModule = await import('html2canvas/dist/html2canvas.esm.js');
-      const html2canvas = html2canvasModule.default;
-      const canvas = await html2canvas(this.routeMapExport.nativeElement, {
-        backgroundColor: '#eaf4fb',
-        scale: Math.min(2, window.devicePixelRatio || 1.5),
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        imageTimeout: 7000,
-      });
-
-      if (!canvas.width || !canvas.height) {
-        throw new Error('Map capture returned an empty canvas');
-      }
-
-      this.downloadCanvas(canvas, this.getMapExportFileName());
+      // Google Maps renders its tiles in cross-origin image layers. html2canvas can
+      // return a valid-sized canvas while silently omitting those layers, which is
+      // why mobile exports previously contained a white map area. Build the export
+      // independently instead: prefer a Google Static Maps image and always retain
+      // a deterministic coordinate-route fallback.
+      const staticMap = await this.loadStaticMapImage();
+      const canvas = this.buildVectorMapCanvas(staticMap);
+      await this.downloadCanvas(canvas, this.getMapExportFileName());
     } catch (error) {
-      console.warn('[PastTrackComponent] Google map capture unavailable. Using vector fallback.', error);
-      const fallback = this.buildVectorMapCanvas();
-      this.downloadCanvas(fallback, this.getMapExportFileName());
+      console.warn('[PastTrackComponent] Static map export unavailable. Using coordinate fallback.', error);
+      const fallback = this.buildVectorMapCanvas(null);
+      await this.downloadCanvas(fallback, this.getMapExportFileName());
     } finally {
       this.exportingMap = false;
     }
   }
 
-  private buildVectorMapCanvas(): HTMLCanvasElement {
+  private async loadStaticMapImage(): Promise<HTMLImageElement | null> {
+    const url = this.buildStaticMapUrl();
+
+    if (!url) {
+      return null;
+    }
+
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        const timeoutId = window.setTimeout(() => {
+          img.src = '';
+          reject(new Error('Static map image timed out'));
+        }, 10_000);
+
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          window.clearTimeout(timeoutId);
+          resolve(img);
+        };
+        img.onerror = () => {
+          window.clearTimeout(timeoutId);
+          reject(new Error('Static map image failed to load'));
+        };
+        img.src = url;
+      });
+
+      // Verify that the response can safely be copied into the final PNG. Some
+      // key/referrer configurations allow the image to display but do not expose
+      // CORS headers; in that case use the local coordinate fallback instead.
+      const probe = document.createElement('canvas');
+      probe.width = 2;
+      probe.height = 2;
+      const probeContext = probe.getContext('2d');
+      probeContext?.drawImage(image, 0, 0, 2, 2);
+      probeContext?.getImageData(0, 0, 1, 1);
+
+      return image;
+    } catch (error) {
+      console.info('[PastTrackComponent] Google Static Maps is not available for this export.', error);
+      return null;
+    }
+  }
+
+  private buildStaticMapUrl(): string | null {
+    const key = this.getGoogleMapsApiKey();
+    const valid = this.getValidExportPoints();
+
+    if (!key || valid.length === 0) {
+      return null;
+    }
+
+    const url = new URL('https://maps.googleapis.com/maps/api/staticmap');
+    url.searchParams.set('size', '640x320');
+    url.searchParams.set('scale', '2');
+    url.searchParams.set('format', 'png32');
+    url.searchParams.set('maptype', this.routeMapComponent?.mapType || 'roadmap');
+    url.searchParams.set('language', 'en');
+    url.searchParams.set('key', key);
+    url.searchParams.append('style', 'feature:poi|visibility:off');
+    url.searchParams.append('style', 'feature:transit|visibility:off');
+
+    for (const segment of this.buildExportRouteSegments(valid)) {
+      const sampled = this.downsampleExportPoints(segment.points, 90);
+      const encoded = this.encodeGooglePolyline(sampled);
+
+      if (!encoded) {
+        continue;
+      }
+
+      // White halo followed by the status colour keeps the track readable on
+      // both road and satellite-style basemaps.
+      url.searchParams.append('path', `color:0xffffffff|weight:8|enc:${encoded}`);
+      url.searchParams.append('path', `color:${segment.color}|weight:4|enc:${encoded}`);
+    }
+
+    const first = valid[0];
+    const last = valid[valid.length - 1];
+    url.searchParams.append('markers', `color:0x10b981|label:S|${first.lat},${first.lng}`);
+    url.searchParams.append('markers', `color:0xef4444|label:E|${last.lat},${last.lng}`);
+
+    if (this.selectedPoint && Number.isFinite(this.selectedPoint.lat) && Number.isFinite(this.selectedPoint.lng)) {
+      url.searchParams.append(
+        'markers',
+        `color:0x2563eb|label:P|${this.selectedPoint.lat},${this.selectedPoint.lng}`
+      );
+    }
+
+    return url.toString();
+  }
+
+  private getGoogleMapsApiKey(): string {
+    const scripts = Array.from(
+      document.querySelectorAll<HTMLScriptElement>('script[src*="maps.googleapis.com/maps/api/js"]')
+    );
+
+    for (const script of scripts) {
+      try {
+        const key = new URL(script.src, window.location.href).searchParams.get('key');
+        if (key) {
+          return key;
+        }
+      } catch {
+        // Ignore malformed script URLs and continue looking for the Maps loader.
+      }
+    }
+
+    return '';
+  }
+
+  private buildVectorMapCanvas(baseMap: HTMLImageElement | null = null): HTMLCanvasElement {
     const width = 1600;
-    const height = 920;
+    const height = 1000;
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
@@ -410,115 +514,437 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       return canvas;
     }
 
-    ctx.fillStyle = '#eaf6fb';
+    const valid = this.getValidExportPoints();
+    const selected = this.selectedPoint && Number.isFinite(this.selectedPoint.lat) && Number.isFinite(this.selectedPoint.lng)
+      ? this.selectedPoint
+      : valid[0] || null;
+
+    ctx.fillStyle = '#eef5fb';
     ctx.fillRect(0, 0, width, height);
 
-    const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, '#dff3fb');
-    gradient.addColorStop(1, '#bfe6f4');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 110, width, height - 110);
+    const pageGradient = ctx.createLinearGradient(0, 0, 0, height);
+    pageGradient.addColorStop(0, '#ffffff');
+    pageGradient.addColorStop(1, '#edf5fb');
+    ctx.fillStyle = pageGradient;
+    ctx.fillRect(0, 0, width, height);
 
+    // Header and export metadata.
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, width, 110);
-    ctx.fillStyle = '#0f2344';
-    ctx.font = '700 32px Segoe UI, Arial';
-    ctx.fillText(`${this.summary?.vesselName || this.vesselId} · PAST TRACK`, 46, 48);
-    ctx.fillStyle = '#60708a';
-    ctx.font = '600 18px Segoe UI, Arial';
-    ctx.fillText(`${this.getRangeStartLabel()}  →  ${this.getRangeEndLabel()}   ·   Every ${this.samplingIntervalMinutes} min`, 46, 82);
+    ctx.fillRect(0, 0, width, 132);
+    ctx.strokeStyle = '#d9e6f3';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 131);
+    ctx.lineTo(width, 131);
+    ctx.stroke();
 
-    const valid = this.trackPoints.filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
-    if (valid.length === 0) {
-      return canvas;
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 34px Segoe UI, Arial, sans-serif';
+    ctx.fillText(`${this.summary?.vesselName || this.vesselId} · ROUTE MAP`, 48, 50);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '600 18px Segoe UI, Arial, sans-serif';
+    ctx.fillText(
+      `${this.getRangeStartLabel()}  →  ${this.getRangeEndLabel()}   ·   Every ${this.samplingIntervalMinutes} minutes`,
+      48,
+      84
+    );
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '600 14px Segoe UI, Arial, sans-serif';
+    ctx.fillText(baseMap ? 'Google basemap export' : 'Coordinate route fallback', 48, 110);
+
+    this.drawExportLegend(ctx, width - 520, 32);
+
+    const mapX = 38;
+    const mapY = 156;
+    const mapWidth = width - 76;
+    const mapHeight = 790;
+
+    ctx.save();
+    this.roundedRectPath(ctx, mapX, mapY, mapWidth, mapHeight, 24);
+    ctx.clip();
+
+    if (baseMap) {
+      ctx.drawImage(baseMap, mapX, mapY, mapWidth, mapHeight);
+      const softOverlay = ctx.createLinearGradient(mapX, mapY, mapX, mapY + mapHeight);
+      softOverlay.addColorStop(0, 'rgba(255,255,255,0.02)');
+      softOverlay.addColorStop(1, 'rgba(15,23,42,0.05)');
+      ctx.fillStyle = softOverlay;
+      ctx.fillRect(mapX, mapY, mapWidth, mapHeight);
+    } else {
+      this.drawCoordinateFallbackMap(ctx, valid, mapX, mapY, mapWidth, mapHeight);
     }
 
-    const latitudes = valid.map((point) => point.lat);
-    const longitudes = valid.map((point) => point.lng);
+    ctx.restore();
+
+    ctx.strokeStyle = '#cdddec';
+    ctx.lineWidth = 3;
+    this.roundedRectPath(ctx, mapX, mapY, mapWidth, mapHeight, 24);
+    ctx.stroke();
+
+    if (selected) {
+      const coordinate = `${Number(selected.lat).toFixed(6)} N, ${Number(selected.lng).toFixed(6)} E`;
+      const boxWidth = 440;
+      const boxHeight = 64;
+      const boxX = mapX + mapWidth - boxWidth - 24;
+      const boxY = mapY + mapHeight - boxHeight - 24;
+
+      ctx.fillStyle = 'rgba(255,255,255,0.96)';
+      this.roundedRectPath(ctx, boxX, boxY, boxWidth, boxHeight, 16);
+      ctx.fill();
+      ctx.strokeStyle = '#cbdced';
+      ctx.lineWidth = 2;
+      this.roundedRectPath(ctx, boxX, boxY, boxWidth, boxHeight, 16);
+      ctx.stroke();
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '800 22px Segoe UI, Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(coordinate, boxX + boxWidth / 2, boxY + boxHeight / 2 + 1);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    }
+
+    return canvas;
+  }
+
+  private drawCoordinateFallbackMap(
+    ctx: CanvasRenderingContext2D,
+    valid: PastTrackPoint[],
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): void {
+    const seaGradient = ctx.createLinearGradient(x, y, x, y + height);
+    seaGradient.addColorStop(0, '#d9f2fb');
+    seaGradient.addColorStop(1, '#a9deef');
+    ctx.fillStyle = seaGradient;
+    ctx.fillRect(x, y, width, height);
+
+    if (valid.length === 0) {
+      ctx.fillStyle = '#52657c';
+      ctx.font = '700 24px Segoe UI, Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No valid Latitude / Longitude points', x + width / 2, y + height / 2);
+      ctx.textAlign = 'left';
+      return;
+    }
+
+    const latitudes = valid.map((point) => Number(point.lat));
+    const longitudes = valid.map((point) => Number(point.lng));
     let minLat = Math.min(...latitudes);
     let maxLat = Math.max(...latitudes);
     let minLng = Math.min(...longitudes);
     let maxLng = Math.max(...longitudes);
 
-    if (minLat === maxLat) { minLat -= 0.01; maxLat += 0.01; }
-    if (minLng === maxLng) { minLng -= 0.01; maxLng += 0.01; }
+    const minLatSpan = 0.02;
+    const minLngSpan = 0.02;
+    const latSpan = Math.max(maxLat - minLat, minLatSpan);
+    const lngSpan = Math.max(maxLng - minLng, minLngSpan);
+    const latPadding = latSpan * 0.15;
+    const lngPadding = lngSpan * 0.15;
+    minLat -= latPadding;
+    maxLat += latPadding;
+    minLng -= lngPadding;
+    maxLng += lngPadding;
 
-    const padX = 90;
-    const padTop = 170;
-    const padBottom = 80;
-    const plotWidth = width - padX * 2;
-    const plotHeight = height - padTop - padBottom;
+    const plotPadX = 78;
+    const plotPadY = 66;
+    const plotX = x + plotPadX;
+    const plotY = y + plotPadY;
+    const plotWidth = width - plotPadX * 2;
+    const plotHeight = height - plotPadY * 2;
     const project = (point: PastTrackPoint) => ({
-      x: padX + ((point.lng - minLng) / (maxLng - minLng)) * plotWidth,
-      y: padTop + (1 - (point.lat - minLat) / (maxLat - minLat)) * plotHeight,
+      x: plotX + ((Number(point.lng) - minLng) / (maxLng - minLng)) * plotWidth,
+      y: plotY + (1 - (Number(point.lat) - minLat) / (maxLat - minLat)) * plotHeight,
     });
 
-    ctx.strokeStyle = 'rgba(70, 126, 158, 0.20)';
+    ctx.strokeStyle = 'rgba(43, 105, 139, 0.20)';
+    ctx.fillStyle = 'rgba(25, 75, 103, 0.72)';
+    ctx.font = '600 13px Segoe UI, Arial, sans-serif';
     ctx.lineWidth = 1;
-    for (let i = 0; i <= 8; i += 1) {
-      const x = padX + (plotWidth / 8) * i;
-      const y = padTop + (plotHeight / 8) * i;
-      ctx.beginPath(); ctx.moveTo(x, padTop); ctx.lineTo(x, padTop + plotHeight); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(padX + plotWidth, y); ctx.stroke();
+
+    for (let index = 0; index <= 6; index += 1) {
+      const gridX = plotX + (plotWidth / 6) * index;
+      const gridY = plotY + (plotHeight / 6) * index;
+      const longitude = minLng + ((maxLng - minLng) / 6) * index;
+      const latitude = maxLat - ((maxLat - minLat) / 6) * index;
+
+      ctx.beginPath();
+      ctx.moveTo(gridX, plotY);
+      ctx.lineTo(gridX, plotY + plotHeight);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(plotX, gridY);
+      ctx.lineTo(plotX + plotWidth, gridY);
+      ctx.stroke();
+
+      ctx.fillText(longitude.toFixed(3), gridX - 28, plotY + plotHeight + 28);
+      ctx.fillText(latitude.toFixed(3), plotX - 62, gridY + 5);
     }
+
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    this.roundedRectPath(ctx, x + 24, y + 22, 294, 46, 13);
+    ctx.fill();
+    ctx.fillStyle = '#164e63';
+    ctx.font = '800 17px Segoe UI, Arial, sans-serif';
+    ctx.fillText('LATITUDE / LONGITUDE ROUTE', x + 42, y + 52);
 
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
-    ctx.lineWidth = 7;
-    for (let i = 1; i < valid.length; i += 1) {
-      const a = project(valid[i - 1]);
-      const b = project(valid[i]);
-      ctx.strokeStyle = valid[i].status === 'Idle' ? '#f59e0b' : valid[i].status === 'No Data' ? '#94a3b8' : '#12ad71';
+
+    for (const segment of this.buildExportRouteSegments(valid)) {
+      if (segment.points.length < 2) {
+        continue;
+      }
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      ctx.lineWidth = 12;
       ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
+      segment.points.forEach((point, index) => {
+        const position = project(point);
+        if (index === 0) ctx.moveTo(position.x, position.y);
+        else ctx.lineTo(position.x, position.y);
+      });
+      ctx.stroke();
+
+      ctx.strokeStyle = this.staticMapColorToCss(segment.color);
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      segment.points.forEach((point, index) => {
+        const position = project(point);
+        if (index === 0) ctx.moveTo(position.x, position.y);
+        else ctx.lineTo(position.x, position.y);
+      });
       ctx.stroke();
     }
 
-    const drawMarker = (point: PastTrackPoint, label: string, color: string) => {
-      const pos = project(point);
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(pos.x, pos.y, 18, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.arc(pos.x, pos.y, 14, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '800 15px Segoe UI, Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, pos.x, pos.y + 1);
-    };
+    this.drawExportMarker(ctx, project(valid[0]), 'S', '#10b981');
+    this.drawExportMarker(ctx, project(valid[valid.length - 1]), 'E', '#ef4444');
 
-    drawMarker(valid[0], 'S', '#12ad71');
-    drawMarker(valid[valid.length - 1], 'E', '#ef4455');
-
-    if (this.selectedPoint) {
-      drawMarker(this.selectedPoint, '•', '#2563eb');
+    if (this.selectedPoint && Number.isFinite(this.selectedPoint.lat) && Number.isFinite(this.selectedPoint.lng)) {
+      this.drawExportMarker(ctx, project(this.selectedPoint), 'P', '#2563eb');
     }
 
+    // North indicator and a truthful fallback label. No invented coastline is
+    // drawn when a network basemap cannot be captured.
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    this.roundedRectPath(ctx, x + width - 92, y + 22, 58, 76, 15);
+    ctx.fill();
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '900 20px Segoe UI, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('N', x + width - 63, y + 49);
+    ctx.beginPath();
+    ctx.moveTo(x + width - 63, y + 59);
+    ctx.lineTo(x + width - 75, y + 82);
+    ctx.lineTo(x + width - 63, y + 76);
+    ctx.lineTo(x + width - 51, y + 82);
+    ctx.closePath();
+    ctx.fill();
     ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.fillRect(45, height - 58, width - 90, 38);
-    ctx.fillStyle = '#38506b';
-    ctx.font = '600 15px Segoe UI, Arial';
-    ctx.fillText('Vector route export is used when browser security blocks Google map tiles. Route coordinates are preserved.', 62, height - 33);
-
-    return canvas;
   }
 
-  private downloadCanvas(canvas: HTMLCanvasElement, filename: string): void {
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    }, 'image/png', 1);
+  private drawExportLegend(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    const items = [
+      { label: 'Sailing', color: '#10b981' },
+      { label: 'Idle', color: '#f59e0b' },
+      { label: 'No Data', color: '#94a3b8' },
+    ];
+
+    ctx.fillStyle = '#f8fbff';
+    this.roundedRectPath(ctx, x, y, 470, 62, 18);
+    ctx.fill();
+    ctx.strokeStyle = '#d5e3f0';
+    ctx.lineWidth = 2;
+    this.roundedRectPath(ctx, x, y, 470, 62, 18);
+    ctx.stroke();
+
+    let cursor = x + 26;
+    for (const item of items) {
+      ctx.fillStyle = item.color;
+      ctx.beginPath();
+      ctx.arc(cursor + 8, y + 31, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '800 17px Segoe UI, Arial, sans-serif';
+      ctx.fillText(item.label, cursor + 25, y + 37);
+      cursor += item.label === 'No Data' ? 138 : 130;
+    }
+  }
+
+  private drawExportMarker(
+    ctx: CanvasRenderingContext2D,
+    position: { x: number; y: number },
+    label: string,
+    color: string
+  ): void {
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(position.x, position.y, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(position.x, position.y, 17, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 15px Segoe UI, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, position.x, position.y + 1);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  private getValidExportPoints(): PastTrackPoint[] {
+    return (this.trackPoints || []).filter((point) =>
+      Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lng))
+    );
+  }
+
+  private buildExportRouteSegments(points: PastTrackPoint[]): Array<{
+    points: PastTrackPoint[];
+    color: string;
+  }> {
+    if (points.length < 2) {
+      return points.length ? [{ points, color: '0x10b981ff' }] : [];
+    }
+
+    const maxGapMs = 90 * 60_000;
+    const result: Array<{ points: PastTrackPoint[]; color: string }> = [];
+    let currentPoints: PastTrackPoint[] = [points[0]];
+    let currentColor = this.getExportStatusColor(points[0]);
+
+    for (let index = 1; index < points.length; index += 1) {
+      const previous = points[index - 1];
+      const current = points[index];
+      const previousTime = this.parseInputDate(previous.time)?.getTime() ?? null;
+      const currentTime = this.parseInputDate(current.time)?.getTime() ?? null;
+      const hasGap = previousTime !== null && currentTime !== null && currentTime - previousTime > maxGapMs;
+      const nextColor = this.getExportStatusColor(current);
+
+      if (hasGap || nextColor !== currentColor) {
+        if (currentPoints.length > 1) {
+          result.push({ points: currentPoints, color: currentColor });
+        }
+        currentPoints = hasGap ? [current] : [previous, current];
+        currentColor = nextColor;
+        continue;
+      }
+
+      currentPoints.push(current);
+    }
+
+    if (currentPoints.length > 1) {
+      result.push({ points: currentPoints, color: currentColor });
+    }
+
+    return result;
+  }
+
+  private getExportStatusColor(point: PastTrackPoint): string {
+    if (point.status === 'Idle') {
+      return '0xf59e0bff';
+    }
+
+    if (point.status === 'No Data') {
+      return '0x94a3b8ff';
+    }
+
+    return '0x10b981ff';
+  }
+
+  private staticMapColorToCss(color: string): string {
+    return `#${color.replace(/^0x/, '').slice(0, 6)}`;
+  }
+
+  private downsampleExportPoints(points: PastTrackPoint[], maxPoints: number): PastTrackPoint[] {
+    if (points.length <= maxPoints) {
+      return points;
+    }
+
+    const result: PastTrackPoint[] = [];
+    const step = (points.length - 1) / (maxPoints - 1);
+
+    for (let index = 0; index < maxPoints; index += 1) {
+      result.push(points[Math.round(index * step)]);
+    }
+
+    return result;
+  }
+
+  private encodeGooglePolyline(points: PastTrackPoint[]): string {
+    let previousLat = 0;
+    let previousLng = 0;
+    let encoded = '';
+
+    for (const point of points) {
+      const lat = Math.round(Number(point.lat) * 1e5);
+      const lng = Math.round(Number(point.lng) * 1e5);
+      encoded += this.encodePolylineValue(lat - previousLat);
+      encoded += this.encodePolylineValue(lng - previousLng);
+      previousLat = lat;
+      previousLng = lng;
+    }
+
+    return encoded;
+  }
+
+  private encodePolylineValue(value: number): string {
+    let encodedValue = value < 0 ? ~(value << 1) : value << 1;
+    let output = '';
+
+    while (encodedValue >= 0x20) {
+      output += String.fromCharCode((0x20 | (encodedValue & 0x1f)) + 63);
+      encodedValue >>= 5;
+    }
+
+    output += String.fromCharCode(encodedValue + 63);
+    return output;
+  }
+
+  private roundedRectPath(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    radius: number
+  ): void {
+    const safeRadius = Math.min(radius, width / 2, height / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + safeRadius, y);
+    ctx.arcTo(x + width, y, x + width, y + height, safeRadius);
+    ctx.arcTo(x + width, y + height, x, y + height, safeRadius);
+    ctx.arcTo(x, y + height, x, y, safeRadius);
+    ctx.arcTo(x, y, x + width, y, safeRadius);
+    ctx.closePath();
+  }
+
+  private downloadCanvas(canvas: HTMLCanvasElement, filename: string): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      try {
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('Unable to create the PNG file'));
+            return;
+          }
+
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = filename;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.setTimeout(() => URL.revokeObjectURL(url), 0);
+          resolve();
+        }, 'image/png', 1);
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 
   private getMapExportFileName(): string {

@@ -331,7 +331,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
         this.fvRealtimeService.setActiveVessel(vessel);
       });
   }
-
+  
   /**
    * ใช้ดึงเรือจาก URL เช่น /main/realtime/BB_INTAN
    * แล้ว set active vessel ให้ตรงกับ route
@@ -341,7 +341,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       map((params) => (params.get('id') || '').trim()),
       distinctUntilChanged()
     );
-
+    
     const vessels$ = this.store.select(fvInfoReducer.getFvInfos);
 
     combineLatest([routeId$, vessels$])
@@ -360,7 +360,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
             String(fv?.id || '').toLowerCase() === id.toLowerCase()
           );
         });
-        
+
         if (match) {
           this.store.dispatch(new fvInfoActions.SetFvActive(match));
         }

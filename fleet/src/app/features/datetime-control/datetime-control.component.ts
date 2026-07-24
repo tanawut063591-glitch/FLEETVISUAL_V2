@@ -138,7 +138,8 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         { key: 'dg2', title: 'DG2', subtitle: 'Generator 2', icon: 'fa-microchip' },
         { key: 'dg3', title: 'DG3', subtitle: 'Generator 3', icon: 'fa-microchip' },
         { key: 'dg4', title: 'DG4', subtitle: 'Generator 4', icon: 'fa-microchip' },
-        { key: 'status', title: 'STATUS', subtitle: 'Signal Status', icon: 'fa-signal' }
+        { key: 'status', title: 'STATUS', subtitle: 'Signal Status', icon: 'fa-signal' },
+        { key: 'other', title: 'OTHER', subtitle: 'Other Sensors', icon: 'fa-tags' }
     ];
 
     tagGroup: { [key: string]: TagGroupBucket } = {
@@ -153,7 +154,8 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         dg2: { group: ['DG2'], tags: [] },
         dg3: { group: ['DG3'], tags: [] },
         dg4: { group: ['DG4'], tags: [] },
-        status: { group: ['ALIVE', 'STATUS'], tags: [] }
+        status: { group: ['ALIVE', 'STATUS'], tags: [] },
+        other: { group: [], tags: [] }
     };
 
     headers: any = {
@@ -168,7 +170,8 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         dg2: false,
         dg3: false,
         dg4: false,
-        status: false
+        status: false,
+        other: false
     };
 
     constructor(
@@ -313,10 +316,31 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
     openDialog() {
         this.selectionSnapshot = this.selectedTags.map((tag: any) => this.getTagMemoryKey(tag));
         this.displayDialog = true;
+
+        // Retry automatically when the dialog is opened with no usable tag data.
+        // This also recovers from an older empty cache entry.
+        if (this.prefix && !this.pointsLoading && this.tags.length === 0) {
+            this.getPoints(this.prefix, true);
+        } else if (!this.prefix) {
+            this.hasPointError = true;
+            this.pointErrorMessage = 'Please select a vessel before managing tags.';
+        }
+
         this.markView();
     }
 
-    getPoints(prefix: string) {
+    retryPoints(): void {
+        if (!this.prefix) {
+            this.hasPointError = true;
+            this.pointErrorMessage = 'Please select a vessel before managing tags.';
+            this.markView();
+            return;
+        }
+
+        this.getPoints(this.prefix, true);
+    }
+
+    getPoints(prefix: string, forceRefresh: boolean = false) {
         if (!prefix) {
             return;
         }
@@ -329,12 +353,16 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
 
         this.unsubscribeSafe(this.pointSub);
 
-        if (this.tagService && this.tagService.hasPoint(prefix)) {
+        if (!forceRefresh && this.tagService && this.tagService.hasPoint(prefix)) {
             var cachedPoint = this.tagService.getPoint(prefix);
-            this.processTagsResult(cachedPoint || [], prefix);
-            this.pointsLoading = false;
-            this.markView();
-            return;
+
+            // Never lock the UI to an empty cache. Empty data is fetched again.
+            if (Array.isArray(cachedPoint) && cachedPoint.length > 0) {
+                this.processTagsResult(cachedPoint, prefix);
+                this.pointsLoading = false;
+                this.markView();
+                return;
+            }
         }
 
         this.pointSub = this.http
@@ -350,7 +378,7 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
 
                     this.processTagsResult(next, prefix);
 
-                    if (this.tagService) {
+                    if (this.tagService && next.length > 0) {
                         this.tagService.addPoint(prefix, next);
                     }
 
@@ -375,29 +403,56 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
             );
     }
 
-    private extractArray(response: any): any[] {
+    private extractArray(response: any, depth: number = 0): any[] {
+        if (response === null || response === undefined || depth > 8) {
+            return [];
+        }
+
+        if (typeof response === 'string') {
+            var text = response.trim();
+
+            if (!text) {
+                return [];
+            }
+
+            try {
+                return this.extractArray(JSON.parse(text), depth + 1);
+            } catch (e) {
+                return [];
+            }
+        }
+
         if (Array.isArray(response)) {
             return response;
         }
 
-        if (!response || typeof response !== 'object') {
+        if (typeof response !== 'object') {
             return [];
         }
 
-        var candidates = [
-            response.data,
-            response.result,
-            response.results,
-            response.records,
-            response.items,
-            response.values,
-            response.Data,
-            response.Result
+        var preferredKeys = [
+            'data', 'Data', 'result', 'Result', 'results', 'Results',
+            'records', 'Records', 'items', 'Items', 'values', 'Values',
+            'points', 'Points', 'tags', 'Tags', 'payload', 'Payload',
+            'response', 'Response', 'value', 'Value'
         ];
 
-        for (var i = 0; i < candidates.length; i++) {
-            if (Array.isArray(candidates[i])) {
-                return candidates[i];
+        for (var i = 0; i < preferredKeys.length; i++) {
+            var preferred = response[preferredKeys[i]];
+            var preferredResult = this.extractArray(preferred, depth + 1);
+
+            if (preferredResult.length > 0) {
+                return preferredResult;
+            }
+        }
+
+        // Some gateways wrap the list under a dynamic property name.
+        var keys = Object.keys(response);
+        for (var j = 0; j < keys.length; j++) {
+            var nestedResult = this.extractArray(response[keys[j]], depth + 1);
+
+            if (nestedResult.length > 0) {
+                return nestedResult;
             }
         }
 
@@ -432,7 +487,10 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
             normalized.push({
                 name: cleanName,
                 tagName: cleanName,
-                check: false
+                check: false,
+                unit: raw && (raw.Unit || raw.unit || raw.EngineeringUnit || raw.engineeringUnit) || '',
+                description: raw && (raw.Description || raw.description || raw.Display || raw.display) || '',
+                source: raw && (raw.PointSource || raw.pointSource || raw.Address || raw.address) || ''
             });
         }
 
@@ -460,7 +518,9 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
             return '';
         }
 
-        return row.TagName || row.tagName || row.name || '';
+        return row.TagName || row.tagName || row.Name || row.name ||
+            row.Tag || row.tag || row.PointName || row.pointName ||
+            row.Address || row.address || row.PointSource || row.pointSource || '';
     }
 
     private normalizeTagName(rawName: string, prefix: string): string {
@@ -478,11 +538,25 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     getTagGroup() {
+        var assigned: { [key: string]: boolean } = {};
+
         for (var key in this.tagGroup) {
-            if (this.tagGroup.hasOwnProperty(key)) {
+            if (this.tagGroup.hasOwnProperty(key) && key !== 'other') {
                 this.tagCallBack(key);
+
+                var grouped = this.tagGroup[key].tags || [];
+                for (var i = 0; i < grouped.length; i++) {
+                    assigned[this.getTagMemoryKey(grouped[i]).toUpperCase()] = true;
+                }
             }
         }
+
+        // Backend installations do not always use PME/SME/DG naming.
+        // Keep those sensors visible in an OTHER column instead of dropping them.
+        this.tagGroup['other'].tags = this.tags.filter((tag: any) => {
+            var memoryKey = this.getTagMemoryKey(tag).toUpperCase();
+            return memoryKey && !assigned[memoryKey];
+        });
     }
 
     tagCallBack(key: string) {
@@ -563,8 +637,14 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
             var keyword = this.searchKeyword.toLowerCase().trim();
 
             list = list.filter((x: any) => {
-                var name = x.tagName || x.name || '';
-                return String(name).toLowerCase().indexOf(keyword) > -1;
+                var searchText = [
+                    x.tagName || x.name || '',
+                    x.unit || '',
+                    x.description || '',
+                    x.source || ''
+                ].join(' ').toLowerCase();
+
+                return searchText.indexOf(keyword) > -1;
             });
         }
 

@@ -306,8 +306,18 @@
 .aux-shaft > span {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
-  transform: translateX(-100%);
+  /* Animate only the background so the highlight never leaves the shaft area. */
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 34%,
+    rgba(255, 255, 255, 0.9) 50%,
+    transparent 66%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  background-position: 120% 0;
+  transform: none;
   animation: auxPulse 2.4s linear infinite;
 }
 
@@ -324,7 +334,10 @@
 
 .aux-console--stopped .aux-shaft > span { animation: none; opacity: 0; }
 
-@keyframes auxPulse { to { transform: translateX(100%); } }
+@keyframes auxPulse {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
 
 .speed-card {
   min-width: 0;
