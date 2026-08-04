@@ -79,7 +79,7 @@ export class OverviewComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.overviewSub?.unsubscribe();
   }
-
+  
   selectVesselFromSidebar(vesselFromSidebar: any): void {
     if (!vesselFromSidebar) {
       return;

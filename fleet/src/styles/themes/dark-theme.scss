@@ -137,11 +137,26 @@
   background: rgba(0, 0, 0, 0.72);
 }
 
-.major-icon { color: #fb7185 !important; }
-.minor-icon { color: #fb923c !important; }
-.warning-icon { color: #fde047 !important; }
-.normal-icon { color: #22c55e !important; }
-.hide-icon { display: none; }
+.major-icon {
+  color: #fb7185 !important;
+}
+
+.minor-icon {
+  color: #fb923c !important;
+}
+
+.warning-icon {
+  color: #fde047 !important;
+}
+
+.normal-icon {
+  color: #22c55e !important;
+}
+
+.hide-icon {
+  display: none;
+}
+
 /* =========================================================
    PREMIUM BLACK THEME OVERRIDES
    ใช้กับทุกหน้าเมื่อตั้งค่า html[data-theme='dark']
@@ -348,7 +363,7 @@
 [data-theme='dark'] .st-lbl,
 [data-theme='dark'] .st-unit,
 [data-theme='dark'] .pdf-summary-item small,
-[data-theme='dark'] .simple-field > span,
+[data-theme='dark'] .simple-field>span,
 [data-theme='dark'] .selected-vessel-card small,
 [data-theme='dark'] .pdf-toolbar small {
   color: var(--secondary-txt) !important;
@@ -702,7 +717,7 @@
   background: linear-gradient(180deg, #17191f 0%, #08090b 100%) !important;
   color: #f8fafc !important;
   border-color: rgba(148, 163, 184, 0.55) !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), 0 10px 22px rgba(0,0,0,0.45) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 10px 22px rgba(0, 0, 0, 0.45) !important;
 }
 
 [data-theme='dark'] .premium-dashboard #fuel-use,
@@ -1697,10 +1712,10 @@
   color: #cbd5e1 !important;
 }
 
-[data-theme='dark'] .p-datepicker table td > span:hover,
-[data-theme='dark'] .p-datepicker table td > span.p-highlight,
-[data-theme='dark'] .ui-datepicker table td > a:hover,
-[data-theme='dark'] .ui-datepicker table td > a.ui-state-active {
+[data-theme='dark'] .p-datepicker table td>span:hover,
+[data-theme='dark'] .p-datepicker table td>span.p-highlight,
+[data-theme='dark'] .ui-datepicker table td>a:hover,
+[data-theme='dark'] .ui-datepicker table td>a.ui-state-active {
   background: #1d4ed8 !important;
   color: #ffffff !important;
 }

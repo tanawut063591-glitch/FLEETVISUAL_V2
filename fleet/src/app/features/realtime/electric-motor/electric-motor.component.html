@@ -3,18 +3,21 @@
   [class.motor-console--running]="isRunning"
   [class.motor-console--stopped]="!isRunning"
 >
-  <div class="motor-hero">
-    <div class="motor-core" aria-hidden="true">
-      <span class="motor-core__ring motor-core__ring--outer"></span>
-      <span class="motor-core__ring motor-core__ring--inner"></span>
-      <span class="motor-core__hub"><i class="fa fa-bolt"></i></span>
+  <div class="motor-telemetry-bar">
+    <div class="motor-telemetry-bar__identity">
+      <span class="motor-telemetry-bar__icon" aria-hidden="true">
+        <i class="fa fa-bolt"></i>
+      </span>
+      <span class="motor-telemetry-bar__copy">
+        <strong>Electric drive telemetry</strong>
+        <small>Motor · shaft · propulsion</small>
+      </span>
     </div>
 
-    <div class="motor-identity">
-      <span class="motor-eyebrow">ELECTRIC PROPULSION</span>
-      <strong>Drive Motor</strong>
-      <span class="motor-state"><i></i>{{ statusText }}</span>
-    </div>
+    <span class="motor-telemetry-bar__signal" [class.is-running]="isRunning">
+      <i aria-hidden="true"></i>
+      Live signal
+    </span>
   </div>
 
   <div

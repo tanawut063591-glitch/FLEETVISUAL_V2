@@ -188,12 +188,11 @@ export class ReportComponent implements OnInit, OnDestroy {
   clearSuccess(): void {
     this.successMessage = '';
   }
-
+  
   loadReport(): void {
     if (this.loading) {
       return;
     }
-
     this.clearMessages();
     this.revokePdfUrl();
 
@@ -232,7 +231,7 @@ export class ReportComponent implements OnInit, OnDestroy {
           this.errorMessage = 'Report not found, or the backend did not return a PDF file.';
         },
       });
-  }
+    }
 
   reloadReport(): void {
     if (this.canLoadReport) {
@@ -253,11 +252,11 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   zoomIn(): void {
-    this.pdfZoom = Math.min(1.5, Number((this.pdfZoom + 0.08).toFixed(2)));
+    this.pdfZoom = Math.min(2, Number((this.pdfZoom + 0.1).toFixed(2)));
   }
 
   zoomOut(): void {
-    this.pdfZoom = Math.max(0.7, Number((this.pdfZoom - 0.08).toFixed(2)));
+    this.pdfZoom = Math.max(0.5, Number((this.pdfZoom - 0.1).toFixed(2)));
   }
 
   resetZoom(): void {
@@ -297,7 +296,7 @@ export class ReportComponent implements OnInit, OnDestroy {
       })
     );
   }
-
+  
   private watchActiveVessel(): void {
     this.store
       .select(fvInfoReducer.getFvInfosActive)
@@ -339,6 +338,7 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.revokePdfUrl();
     this.reportFileName = '';
     this.loadedAt = null;
+    this.pdfZoom = 1;
   }
 
   private revokePdfUrl(): void {

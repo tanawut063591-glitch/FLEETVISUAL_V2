@@ -40,15 +40,20 @@
     Mobile: this becomes one solid drawer, so menu items and account actions
     can no longer split, float over the page, or swap to the top of the screen.
   -->
-  <div class="mobile-nav-shell" [class.open]="mobileMenuOpen">
+  <div
+    class="mobile-nav-shell"
+    [class.open]="mobileMenuOpen"
+    [attr.aria-hidden]="mobileMenuOpen ? null : true"
+  >
     <!-- CENTER MENU -->
     <nav
       id="mobile-main-navigation"
       class="main-menu"
       aria-label="Main navigation"
     >
+      <ng-container *ngFor="let item of menuItems">
       <a
-        *ngFor="let item of menuItems"
+        *ngIf="canAccessModule(item.module)"
         class="nav-item"
         [class.is-alert]="item.isAlert"
         [class.is-log]="item.isLog"
@@ -75,12 +80,13 @@
           {{ item.label }}
         </div>
       </a>
+      </ng-container>
     </nav>
 
     <!-- RIGHT ACTIONS -->
     <section class="right-menu" aria-label="Account and display actions">
       <!-- SETTINGS -->
-      <div class="settings-action-wrap" [class.open]="settingsMenuOpen">
+      <div class="settings-action-wrap" *ngIf="canAccessSettingsRoute()" [class.open]="settingsMenuOpen">
         <button
           type="button"
           class="settings-action-btn"
@@ -95,9 +101,12 @@
           <span class="mobile-action-label">SETTINGS</span>
         </button>
 
-        <div class="settings-dropdown">
+        <div class="settings-dropdown" [class.is-loading]="settingsNavigationPending" [attr.aria-busy]="settingsNavigationPending">
           <div class="dropdown-title">
-            System Settings
+            <span>System Settings</span>
+            <span class="settings-loading-label" *ngIf="settingsNavigationPending">
+              <i class="fa fa-circle-o-notch fa-spin" aria-hidden="true"></i> Opening…
+            </span>
           </div>
 
           <button
@@ -105,6 +114,7 @@
             class="dropdown-item"
             *ngFor="let item of settingsItems"
             (click)="goTo(item.route)"
+            [disabled]="settingsNavigationPending"
           >
             <span class="dropdown-icon" [class]="item.color">
               <i [class]="item.icon" aria-hidden="true"></i>

@@ -79,117 +79,314 @@
   </section>
 
   <section class="users-panel" *ngIf="activeTab === 'users'">
-    <div class="panel-heading">
-      <div>
-        <h2>User Sessions</h2>
-        <p>Admin view of users who are online, idle or recently offline.</p>
+    <div class="user-panel-switch" role="tablist" aria-label="User administration views">
+      <button
+        type="button"
+        role="tab"
+        [class.active]="userPanelMode === 'management'"
+        [attr.aria-selected]="userPanelMode === 'management'"
+        (click)="selectUserPanel('management')"
+      >
+        <i class="fa fa-user-circle-o"></i>
+        <span><strong>User Management</strong><small>Roles, fleet access and permissions</small></span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [class.active]="userPanelMode === 'sessions'"
+        [attr.aria-selected]="userPanelMode === 'sessions'"
+        (click)="selectUserPanel('sessions')"
+      >
+        <i class="fa fa-desktop"></i>
+        <span><strong>Active Sessions</strong><small>Online, idle and recently offline users</small></span>
+      </button>
+    </div>
+
+    <ng-container *ngIf="userPanelMode === 'management'">
+      <div class="panel-heading user-management-heading">
+        <div>
+          <h2>User Access Management</h2>
+          <p>Control which vessel groups, individual vessels and modules each account can access.</p>
+        </div>
+        <div class="heading-actions">
+          <span class="backend-label" [class.session-source]="!userAccessIsBackend">
+            <i class="fa" [class.fa-database]="userAccessIsBackend" [class.fa-hdd-o]="!userAccessIsBackend"></i>
+            {{ userAccessIsBackend ? 'Database access profiles' : 'Browser access profiles' }}
+          </span>
+          <span class="backend-label account-api-label" [class.account-ready]="userAccountApiEnabled && userAccountApiSecure">
+            <i class="fa" [class.fa-lock]="!userAccountApiEnabled || !userAccountApiSecure" [class.fa-key]="userAccountApiEnabled && userAccountApiSecure"></i>
+            {{ userAccountApiEnabled && userAccountApiSecure ? 'Login Account API' : 'Account API unavailable' }}
+          </span>
+          <button type="button" class="ghost-btn" (click)="loadUserAccessRecords(true)">
+            <i class="fa fa-refresh" [class.fa-spin]="userAccessLoading || userAccessRefreshing"></i> Refresh
+          </button>
+          <button type="button" class="primary-btn" (click)="openAddUserAccess()">
+            <i class="fa fa-user-plus"></i> Add User
+          </button>
+        </div>
       </div>
-      <div class="heading-actions">
-        <span class="backend-label" [class.session-source]="!userPresenceIsBackend">
-          <i class="fa" [class.fa-database]="userPresenceIsBackend" [class.fa-desktop]="!userPresenceIsBackend"></i>
-          {{ userPresenceIsBackend ? 'Backend session tracking' : 'Current browser session only' }}
+
+      <div class="user-summary-grid access-summary-grid">
+        <article>
+          <span class="summary-icon total"><i class="fa fa-users"></i></span>
+          <div><small>Managed Users</small><strong>{{ userAccessRecords.length }}</strong><p>Access profiles in this environment</p></div>
+        </article>
+        <article>
+          <span class="summary-icon admin"><i class="fa fa-shield"></i></span>
+          <div><small>Administrators</small><strong>{{ userAccessAdministratorCount }}</strong><p>Full fleet and system access</p></div>
+        </article>
+        <article>
+          <span class="summary-icon restricted"><i class="fa fa-object-group"></i></span>
+          <div><small>Restricted Access</small><strong>{{ userAccessRestrictedCount }}</strong><p>Assigned groups or selected vessels</p></div>
+        </article>
+        <article>
+          <span class="summary-icon offline"><i class="fa fa-ban"></i></span>
+          <div><small>Suspended</small><strong>{{ userAccessSuspendedCount }}</strong><p>Accounts blocked from the application</p></div>
+        </article>
+      </div>
+
+      <div class="table-tools user-access-tools">
+        <label class="table-search">
+          <i class="fa fa-search"></i>
+          <input
+            type="search"
+            aria-label="Search access profiles"
+            placeholder="Search user, role, group or vessel access..."
+            [(ngModel)]="userAccessSearchTerm"
+          />
+        </label>
+        <div class="tool-actions">
+          <label class="filter-select">
+            <span>Role</span>
+            <select [(ngModel)]="userRoleFilter">
+              <option value="all">All Roles</option>
+              <option *ngFor="let role of userRoleOptions" [value]="role.value">{{ role.label }}</option>
+            </select>
+          </label>
+          <label class="filter-select">
+            <span>Status</span>
+            <select [(ngModel)]="userAccountStatusFilter">
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="loading-box" *ngIf="userAccessLoading">
+        <span class="spinner"></span>
+        <strong>Loading user access profiles...</strong>
+      </div>
+
+      <div class="error-box" *ngIf="!userAccessLoading && userAccessError">
+        <i class="fa fa-exclamation-circle"></i>
+        <span>{{ userAccessError }}</span>
+        <button type="button" (click)="loadUserAccessRecords(true)">Retry</button>
+      </div>
+
+      <div class="user-table-wrap access-table-wrap" *ngIf="!userAccessLoading && !userAccessError">
+        <table class="user-table user-access-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Role</th>
+              <th>Vessel Access</th>
+              <th>Assigned Scope</th>
+              <th>Modules</th>
+              <th>Status</th>
+              <th>Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of filteredUserAccessRecords; trackBy: trackByUserAccess">
+              <td data-label="User">
+                <div class="user-identity">
+                  <span class="avatar small">{{ user.displayName.charAt(0).toUpperCase() }}</span>
+                  <span>
+                    <strong>{{ user.displayName }}</strong>
+                    <small>{{ user.username }}<ng-container *ngIf="isCurrentUser(user)"> · Current account</ng-container></small>
+                    <small class="identity-source-line"><i class="fa" [class.fa-shield]="user.accountProvisioning === 'managed'" [class.fa-link]="user.accountProvisioning === 'linked'" [class.fa-id-card-o]="!user.accountProvisioning || user.accountProvisioning === 'access-only'"></i> {{ accountProvisioningLabel(user) }}</small>
+                  </span>
+                </div>
+              </td>
+              <td data-label="Role">
+                <span class="role-chip" [attr.data-role]="user.role">{{ userRoleLabel(user.role) }}</span>
+              </td>
+              <td data-label="Vessel Access">
+                <div class="access-scope-cell">
+                  <strong>{{ userAccessSummary(user) }}</strong>
+                  <small>{{ effectiveVesselPreview(user) }}</small>
+                </div>
+              </td>
+              <td data-label="Assigned Scope">
+                <div class="group-chip-list" *ngIf="user.accessScope === 'groups'; else nonGroupScope">
+                  <span *ngFor="let name of assignedGroupNames(user).slice(0, 2)">{{ name }}</span>
+                  <b *ngIf="assignedGroupNames(user).length > 2">+{{ assignedGroupNames(user).length - 2 }}</b>
+                </div>
+                <ng-template #nonGroupScope>
+                  <span class="scope-chip" [attr.data-scope]="user.accessScope">
+                    <i class="fa" [class.fa-globe]="user.accessScope === 'all'" [class.fa-ship]="user.accessScope === 'vessels'"></i>
+                    {{ user.accessScope === 'all' ? 'All fleet' : 'Individual vessels' }}
+                  </span>
+                </ng-template>
+              </td>
+              <td data-label="Modules">
+                <span class="module-count"><strong>{{ moduleAccessCount(user) }}</strong>/{{ userModuleDefinitions.length }}</span>
+              </td>
+              <td data-label="Status">
+                <span class="account-status" [attr.data-status]="user.status">
+                  <i></i>{{ user.status === 'active' ? 'Active' : 'Suspended' }}
+                </span>
+              </td>
+              <td data-label="Updated">{{ formatDateTime(user.updatedAt || user.createdAt) }}</td>
+              <td data-label="Actions">
+                <div class="row-actions access-actions">
+                  <button type="button" class="edit" title="Edit user access" (click)="openEditUserAccess(user)">
+                    <i class="fa fa-pencil"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="delete"
+                    title="Delete access profile"
+                    [disabled]="isCurrentUser(user)"
+                    (click)="deleteUserAccess(user)"
+                  >
+                    <i class="fa fa-trash-o"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredUserAccessRecords.length === 0">
+              <td colspan="8" class="empty-table">No access profiles match this filter.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="integration-note" [class.backend-ready]="userAccessIsBackend">
+        <i class="fa" [class.fa-check-circle]="userAccessIsBackend" [class.fa-info-circle]="!userAccessIsBackend"></i>
+        <span *ngIf="userAccessIsBackend">
+          Access profiles are supplied by the configured backend. Vessel visibility is enforced in the UI and should also be validated by every backend endpoint.
         </span>
-        <button type="button" class="ghost-btn" (click)="loadUserSessions(true)">
-          <i class="fa fa-refresh" [class.fa-spin]="usersLoading || usersRefreshing"></i> Refresh
-        </button>
+        <span *ngIf="!userAccessIsBackend">
+          Access profiles currently persist in this browser. Enable <code>userAccess</code> in <code>public/database-api.config.json</code> and enforce the same permissions on the backend before production deployment.
+        </span>
       </div>
-    </div>
+    </ng-container>
 
-    <div class="user-summary-grid">
-      <article>
-        <span class="summary-icon total"><i class="fa fa-users"></i></span>
-        <div><small>Total Sessions</small><strong>{{ userSessions.length }}</strong><p>Visible to this admin view</p></div>
-      </article>
-      <article>
-        <span class="summary-icon online"><i class="fa fa-circle"></i></span>
-        <div><small>Online</small><strong>{{ userOnlineCount }}</strong><p>Active within 5 minutes</p></div>
-      </article>
-      <article>
-        <span class="summary-icon idle"><i class="fa fa-clock-o"></i></span>
-        <div><small>Idle</small><strong>{{ userIdleCount }}</strong><p>Inactive for 5–30 minutes</p></div>
-      </article>
-      <article>
-        <span class="summary-icon offline"><i class="fa fa-power-off"></i></span>
-        <div><small>Offline</small><strong>{{ userOfflineCount }}</strong><p>No recent heartbeat</p></div>
-      </article>
-    </div>
+    <ng-container *ngIf="userPanelMode === 'sessions'">
+      <div class="panel-heading user-session-heading">
+        <div>
+          <h2>Active Sessions</h2>
+          <p>Monitor users who are online, idle or recently offline.</p>
+        </div>
+        <div class="heading-actions">
+          <span class="backend-label" [class.session-source]="!userPresenceIsBackend">
+            <i class="fa" [class.fa-database]="userPresenceIsBackend" [class.fa-desktop]="!userPresenceIsBackend"></i>
+            {{ userPresenceIsBackend ? 'Backend session tracking' : 'Current browser session only' }}
+          </span>
+          <button type="button" class="ghost-btn" (click)="loadUserSessions(true)">
+            <i class="fa fa-refresh" [class.fa-spin]="usersLoading || usersRefreshing"></i> Refresh
+          </button>
+        </div>
+      </div>
 
-    <div class="table-tools user-tools">
-      <label class="table-search">
-        <i class="fa fa-search"></i>
-        <input type="search" placeholder="Search user, role, device or IP..." [(ngModel)]="userSearchTerm" />
-      </label>
-      <label class="filter-select">
-        <span>Status</span>
-        <select [(ngModel)]="userStatusFilter">
-          <option value="all">All Status</option>
-          <option value="online">Online</option>
-          <option value="idle">Idle</option>
-          <option value="offline">Offline</option>
-          <option value="unknown">No Data</option>
-        </select>
-      </label>
-    </div>
+      <div class="user-summary-grid">
+        <article>
+          <span class="summary-icon total"><i class="fa fa-users"></i></span>
+          <div><small>Total Sessions</small><strong>{{ userSessions.length }}</strong><p>Visible to this admin view</p></div>
+        </article>
+        <article>
+          <span class="summary-icon online"><i class="fa fa-circle"></i></span>
+          <div><small>Online</small><strong>{{ userOnlineCount }}</strong><p>Active within 5 minutes</p></div>
+        </article>
+        <article>
+          <span class="summary-icon idle"><i class="fa fa-clock-o"></i></span>
+          <div><small>Idle</small><strong>{{ userIdleCount }}</strong><p>Inactive for 5–30 minutes</p></div>
+        </article>
+        <article>
+          <span class="summary-icon offline"><i class="fa fa-power-off"></i></span>
+          <div><small>Offline</small><strong>{{ userOfflineCount }}</strong><p>No recent heartbeat</p></div>
+        </article>
+      </div>
 
-    <div class="loading-box" *ngIf="usersLoading">
-      <span class="spinner"></span>
-      <strong>Loading user sessions...</strong>
-    </div>
+      <div class="table-tools user-tools">
+        <label class="table-search">
+          <i class="fa fa-search"></i>
+          <input type="search" aria-label="Search user sessions" placeholder="Search user, role, device or IP..." [(ngModel)]="userSearchTerm" />
+        </label>
+        <label class="filter-select">
+          <span>Status</span>
+          <select [(ngModel)]="userStatusFilter">
+            <option value="all">All Status</option>
+            <option value="online">Online</option>
+            <option value="idle">Idle</option>
+            <option value="offline">Offline</option>
+            <option value="unknown">No Data</option>
+          </select>
+        </label>
+      </div>
 
-    <div class="error-box" *ngIf="!usersLoading && usersError">
-      <i class="fa fa-exclamation-circle"></i>
-      <span>{{ usersError }}</span>
-      <button type="button" (click)="loadUserSessions(true)">Retry</button>
-    </div>
+      <div class="loading-box" *ngIf="usersLoading">
+        <span class="spinner"></span>
+        <strong>Loading user sessions...</strong>
+      </div>
 
-    <div class="user-table-wrap" *ngIf="!usersLoading && !usersError">
-      <table class="user-table">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Signed In</th>
-            <th>Last Activity</th>
-            <th>Device</th>
-            <th>IP Address</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let user of filteredUsers; trackBy: trackByUser">
-            <td data-label="User">
-              <div class="user-identity">
-                <span class="avatar small">{{ user.displayName.charAt(0).toUpperCase() }}</span>
-                <span><strong>{{ user.displayName }}</strong><small>{{ user.username }}</small></span>
-              </div>
-            </td>
-            <td data-label="Role"><span class="role-chip">{{ user.role }}</span></td>
-            <td data-label="Status">
-              <span class="status-pill" [attr.data-status]="user.status">
-                <i></i>{{ statusLabel(user.status) }}
-              </span>
-            </td>
-            <td data-label="Signed In">{{ formatDateTime(user.loginAt) }}</td>
-            <td data-label="Last Activity">{{ formatDateTime(user.lastActiveAt) }}</td>
-            <td data-label="Device">{{ userDevice(user) }}</td>
-            <td data-label="IP Address">{{ user.ipAddress || '—' }}</td>
-          </tr>
-          <tr *ngIf="filteredUsers.length === 0">
-            <td colspan="7" class="empty-table">No user sessions match this filter.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <div class="error-box" *ngIf="!usersLoading && usersError">
+        <i class="fa fa-exclamation-circle"></i>
+        <span>{{ usersError }}</span>
+        <button type="button" (click)="loadUserSessions(true)">Retry</button>
+      </div>
 
-    <div class="integration-note" [class.backend-ready]="userPresenceIsBackend">
-      <i class="fa" [class.fa-check-circle]="userPresenceIsBackend" [class.fa-info-circle]="!userPresenceIsBackend"></i>
-      <span *ngIf="userPresenceIsBackend">
-        Live session data is supplied by the configured backend endpoint and refreshes automatically.
-      </span>
-      <span *ngIf="!userPresenceIsBackend">
-        Start the local database with <code>npm run start:local</code> to record login, logout and heartbeat activity. If the API is unavailable, this page safely shows only the current browser session.
-      </span>
-    </div>
+      <div class="user-table-wrap" *ngIf="!usersLoading && !usersError">
+        <table class="user-table session-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Signed In</th>
+              <th>Last Activity</th>
+              <th>Device</th>
+              <th>IP Address</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of filteredUsers; trackBy: trackByUser">
+              <td data-label="User">
+                <div class="user-identity">
+                  <span class="avatar small">{{ user.displayName.charAt(0).toUpperCase() }}</span>
+                  <span><strong>{{ user.displayName }}</strong><small>{{ user.username }}</small></span>
+                </div>
+              </td>
+              <td data-label="Role"><span class="role-chip">{{ user.role }}</span></td>
+              <td data-label="Status">
+                <span class="status-pill" [attr.data-status]="user.status"><i></i>{{ statusLabel(user.status) }}</span>
+              </td>
+              <td data-label="Signed In">{{ formatDateTime(user.loginAt) }}</td>
+              <td data-label="Last Activity">{{ formatDateTime(user.lastActiveAt) }}</td>
+              <td data-label="Device">{{ userDevice(user) }}</td>
+              <td data-label="IP Address">{{ user.ipAddress || '—' }}</td>
+            </tr>
+            <tr *ngIf="filteredUsers.length === 0">
+              <td colspan="7" class="empty-table">No user sessions match this filter.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="integration-note" [class.backend-ready]="userPresenceIsBackend">
+        <i class="fa" [class.fa-check-circle]="userPresenceIsBackend" [class.fa-info-circle]="!userPresenceIsBackend"></i>
+        <span *ngIf="userPresenceIsBackend">
+          Live session data is supplied by the configured backend endpoint and refreshes automatically.
+        </span>
+        <span *ngIf="!userPresenceIsBackend">
+          Configure the <code>userSessions</code> endpoint in <code>public/database-api.config.json</code> to record login, logout and heartbeat activity. Until then, this page safely shows only the current browser session.
+        </span>
+      </div>
+    </ng-container>
   </section>
 
   <section class="groups-panel" *ngIf="activeTab === 'groups'">
@@ -291,6 +488,7 @@
             <th>Customer</th>
             <th>Owner</th>
             <th>Agency</th>
+            <th>Engine</th>
             <th>Group</th>
             <th>Action</th>
           </tr>
@@ -317,6 +515,7 @@
             <td data-label="Customer">{{ vessel.customer || '—' }}</td>
             <td data-label="Owner">{{ vessel.owner || '—' }}</td>
             <td data-label="Agency">{{ vessel.agency || '—' }}</td>
+            <td data-label="Engine"><span class="engine-count-chip" [class.unassigned]="vesselEngineCount(vessel) === 0">{{ vesselEngineSummary(vessel) }}</span></td>
             <td data-label="Group"><span class="group-count">{{ vesselGroupCount(vessel) }}</span></td>
             <td data-label="Action">
               <div class="row-actions">
@@ -330,7 +529,7 @@
             </td>
           </tr>
           <tr *ngIf="pagedVessels.length === 0">
-            <td colspan="10" class="empty-table">No vessel records match this search.</td>
+            <td colspan="11" class="empty-table">No vessel records match this search.</td>
           </tr>
         </tbody>
       </table>
@@ -358,6 +557,7 @@
           <div><dt>Customer</dt><dd>{{ vessel.customer || '—' }}</dd></div>
           <div><dt>Owner</dt><dd>{{ vessel.owner || '—' }}</dd></div>
           <div><dt>Agency</dt><dd>{{ vessel.agency || '—' }}</dd></div>
+          <div><dt>Engines</dt><dd><span class="engine-count-chip" [class.unassigned]="vesselEngineCount(vessel) === 0">{{ vesselEngineSummary(vessel) }}</span></dd></div>
           <div><dt>Groups</dt><dd><span class="group-count">{{ vesselGroupCount(vessel) }}</span></dd></div>
         </dl>
 
@@ -392,6 +592,237 @@
       <article><span class="summary-icon groups"><i class="fa fa-object-group"></i></span><div><small>Groups</small><strong>{{ managedGroupCount }}</strong><p>Vessel groups</p></div></article>
     </div>
   </section>
+
+  <div class="drawer-backdrop user-access-backdrop" *ngIf="userAccessDrawerOpen" aria-hidden="true" (click)="closeUserAccessDrawer()"></div>
+  <aside
+    class="user-access-drawer"
+    [class.open]="userAccessDrawerOpen"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="user-access-drawer-title"
+  >
+    <header>
+      <div>
+        <h2 id="user-access-drawer-title">{{ editingUserAccessId ? 'Edit User' : 'Create User' }}</h2>
+        <p>{{ editingUserAccessId ? 'Manage account details, password and permissions.' : 'Create or link a login account, then assign permissions.' }}</p>
+      </div>
+      <button type="button" aria-label="Close user access editor" (click)="closeUserAccessDrawer()"><i class="fa fa-times"></i></button>
+    </header>
+
+    <div class="user-access-drawer-content">
+      <section class="drawer-section account-setup-section">
+        <div class="drawer-section-title">
+          <span><i class="fa fa-user-o"></i></span>
+          <div><h3>Login Account</h3><p>Set the username and securely create or reset the password.</p></div>
+          <span class="identity-api-status" [class.ready]="userAccountApiEnabled && userAccountApiSecure" [class.blocked]="userAccountApiEnabled && !userAccountApiSecure">
+            <i class="fa" [class.fa-check-circle]="userAccountApiEnabled && userAccountApiSecure" [class.fa-lock]="!userAccountApiEnabled || !userAccountApiSecure"></i>
+            {{ userAccountApiEnabled && userAccountApiSecure ? 'Account API ready' : 'Access only' }}
+          </span>
+        </div>
+
+        <div class="access-credential-note" [class.success]="userAccountApiEnabled && userAccountApiSecure" [class.warning]="!userAccountApiEnabled || !userAccountApiSecure">
+          <i class="fa" [class.fa-check-circle]="userAccountApiEnabled && userAccountApiSecure" [class.fa-info-circle]="!userAccountApiEnabled || !userAccountApiSecure"></i>
+          <span>{{ userAccountApiNotice }} Password values are sent only to the identity backend and are never stored in Local Storage or the access profile.</span>
+        </div>
+
+        <div class="account-setup-options" *ngIf="!editingUserAccessId">
+          <button type="button" [class.selected]="userAccountSetupMode === 'create'" [disabled]="!userAccountApiEnabled || !userAccountApiSecure" (click)="setUserAccountSetupMode('create')">
+            <i class="fa fa-user-plus"></i>
+            <span><strong>Create login account</strong><small>Create a new username and password in the backend.</small></span>
+            <i class="fa fa-check-circle"></i>
+          </button>
+          <button type="button" [class.selected]="userAccountSetupMode === 'link'" (click)="setUserAccountSetupMode('link')">
+            <i class="fa fa-link"></i>
+            <span><strong>Link existing username</strong><small>Use an account that already exists in the login system.</small></span>
+            <i class="fa fa-check-circle"></i>
+          </button>
+        </div>
+
+        <div class="managed-account-summary" *ngIf="editingUserAccessId">
+          <span><i class="fa" [class.fa-shield]="userAccessForm.accountProvisioning === 'managed'" [class.fa-link]="userAccessForm.accountProvisioning !== 'managed'"></i></span>
+          <div><small>Identity status</small><strong>{{ accountProvisioningLabel(userAccessForm) }}</strong><p *ngIf="userAccessForm.accountLastSyncedAt">Last synced {{ formatDateTime(userAccessForm.accountLastSyncedAt) }}</p></div>
+          <button type="button" class="ghost-btn" [disabled]="!userAccountApiEnabled || !userAccountApiSecure || userAccessSaving" (click)="toggleResetPasswordPanel()">
+            <i class="fa fa-key"></i> {{ resetPasswordPanelOpen ? 'Close' : 'Reset Password' }}
+          </button>
+        </div>
+
+        <div class="user-form-grid">
+          <label>Username <em>*</em><input type="text" autocomplete="username" [(ngModel)]="userAccessForm.username" [disabled]="!!editingUserAccessId || userAccessSaving" placeholder="operator01" /></label>
+          <label>Display Name <em>*</em><input type="text" autocomplete="name" [(ngModel)]="userAccessForm.displayName" [disabled]="userAccessSaving" placeholder="Operations Team 01" /></label>
+          <label>Email<input type="email" autocomplete="email" [(ngModel)]="userAccessForm.email" [disabled]="userAccessSaving" placeholder="operator@example.com" /></label>
+          <label>Account Status
+            <select [(ngModel)]="userAccessForm.status" [disabled]="isCurrentUser(userAccessForm) || userAccessSaving">
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="password-editor" *ngIf="!editingUserAccessId && userAccountSetupMode === 'create'">
+          <div class="password-field-grid">
+            <label>New Password <em>*</em>
+              <span class="password-input-wrap">
+                <input [type]="showUserPassword ? 'text' : 'password'" autocomplete="new-password" [(ngModel)]="userPassword" [disabled]="userAccessSaving" placeholder="Minimum 10 characters" />
+                <button type="button" [attr.aria-label]="showUserPassword ? 'Hide password' : 'Show password'" (click)="showUserPassword = !showUserPassword"><i class="fa" [class.fa-eye]="!showUserPassword" [class.fa-eye-slash]="showUserPassword"></i></button>
+              </span>
+            </label>
+            <label>Confirm Password <em>*</em><input [type]="showUserPassword ? 'text' : 'password'" autocomplete="new-password" [(ngModel)]="userPasswordConfirm" [disabled]="userAccessSaving" placeholder="Enter the same password" /></label>
+          </div>
+          <div class="password-strength" [attr.data-strength]="passwordStrengthClass(userPasswordStrengthScore)">
+            <div><span *ngFor="let item of [1,2,3,4,5]" [class.active]="userPasswordStrengthScore >= item"></span></div>
+            <strong>{{ passwordStrengthLabel(userPasswordStrengthScore) }}</strong>
+          </div>
+          <div class="password-rules">
+            <span [class.met]="userPassword.length >= 10"><i class="fa fa-check"></i> 10+ characters</span>
+            <span [class.met]="passwordHasLower(userPassword)"><i class="fa fa-check"></i> Lowercase</span>
+            <span [class.met]="passwordHasUpper(userPassword)"><i class="fa fa-check"></i> Uppercase</span>
+            <span [class.met]="passwordHasNumber(userPassword)"><i class="fa fa-check"></i> Number</span>
+            <span [class.met]="passwordHasSpecial(userPassword)"><i class="fa fa-check"></i> Special</span>
+          </div>
+        </div>
+
+        <div class="password-editor reset-password-editor" *ngIf="editingUserAccessId && resetPasswordPanelOpen">
+          <div class="password-editor-head"><div><strong>Reset Password</strong><small>The existing password is never displayed or returned by the server.</small></div><i class="fa fa-lock"></i></div>
+          <div class="password-field-grid">
+            <label>New Password <em>*</em>
+              <span class="password-input-wrap">
+                <input [type]="showResetPassword ? 'text' : 'password'" autocomplete="new-password" [(ngModel)]="resetPassword" [disabled]="resetPasswordSaving" placeholder="Minimum 10 characters" />
+                <button type="button" (click)="showResetPassword = !showResetPassword"><i class="fa" [class.fa-eye]="!showResetPassword" [class.fa-eye-slash]="showResetPassword"></i></button>
+              </span>
+            </label>
+            <label>Confirm Password <em>*</em><input [type]="showResetPassword ? 'text' : 'password'" autocomplete="new-password" [(ngModel)]="resetPasswordConfirm" [disabled]="resetPasswordSaving" placeholder="Enter the same password" /></label>
+          </div>
+          <div class="password-strength" [attr.data-strength]="passwordStrengthClass(resetPasswordStrengthScore)">
+            <div><span *ngFor="let item of [1,2,3,4,5]" [class.active]="resetPasswordStrengthScore >= item"></span></div>
+            <strong>{{ passwordStrengthLabel(resetPasswordStrengthScore) }}</strong>
+          </div>
+          <div class="reset-password-actions">
+            <span class="save-notice" *ngIf="resetPasswordNotice">{{ resetPasswordNotice }}</span>
+            <button type="button" class="primary-btn" [disabled]="resetPasswordSaving || userAccessSaving" (click)="resetUserPassword()"><i class="fa" [class.fa-spin]="resetPasswordSaving" [class.fa-spinner]="resetPasswordSaving" [class.fa-key]="!resetPasswordSaving"></i> {{ resetPasswordSaving ? 'Resetting...' : 'Reset Password' }}</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="drawer-section">
+        <div class="drawer-section-title">
+          <span><i class="fa fa-shield"></i></span>
+          <div><h3>Permission Profile</h3><p>Start from a role preset, then customise individual modules.</p></div>
+        </div>
+        <div class="role-option-grid">
+          <label *ngFor="let role of userRoleOptions" [class.selected]="userAccessForm.role === role.value">
+            <input type="radio" name="user-role" [value]="role.value" [ngModel]="userAccessForm.role" (ngModelChange)="onUserRoleChange($event)" />
+            <span class="role-option-icon"><i class="fa" [class.fa-star]="role.value === 'administrator'" [class.fa-wrench]="role.value === 'operator'" [class.fa-eye]="role.value === 'viewer'" [class.fa-sliders]="role.value === 'custom'"></i></span>
+            <span><strong>{{ role.label }}</strong><small>{{ role.description }}</small></span>
+            <i class="fa fa-check-circle role-check"></i>
+          </label>
+        </div>
+      </section>
+
+      <section class="drawer-section">
+        <div class="drawer-section-title">
+          <span><i class="fa fa-ship"></i></span>
+          <div><h3>Vessel Access Scope</h3><p>Choose exactly which fleet data this user can open.</p></div>
+        </div>
+        <div class="access-scope-options">
+          <button type="button" [class.selected]="userAccessForm.accessScope === 'all'" (click)="setUserAccessScope('all')">
+            <i class="fa fa-globe"></i><span><strong>All vessels</strong><small>Full access to the entire fleet</small></span><b>{{ vessels.length }}</b>
+          </button>
+          <button type="button" [class.selected]="userAccessForm.accessScope === 'groups'" (click)="setUserAccessScope('groups')">
+            <i class="fa fa-object-group"></i><span><strong>Selected groups</strong><small>Access follows vessel group membership</small></span><b>{{ userAccessForm.groupIds.length }}</b>
+          </button>
+          <button type="button" [class.selected]="userAccessForm.accessScope === 'vessels'" (click)="setUserAccessScope('vessels')">
+            <i class="fa fa-anchor"></i><span><strong>Selected vessels</strong><small>Choose individual vessels directly</small></span><b>{{ userAccessForm.vesselIds.length }}</b>
+          </button>
+        </div>
+
+        <div class="access-selection-panel" *ngIf="userAccessForm.accessScope === 'groups'">
+          <div class="access-selection-head">
+            <div><strong>Select Vessel Groups</strong><small>{{ userAccessForm.groupIds.length }} selected</small></div>
+            <label><i class="fa fa-search"></i><input type="search" [(ngModel)]="userAccessGroupSearchTerm" placeholder="Search group..." /></label>
+          </div>
+          <div class="access-check-grid group-access-grid">
+            <label *ngFor="let group of filteredUserAccessGroups; trackBy: trackByGroupDefinition" [class.selected]="userGroupSelected(group.id)">
+              <input type="checkbox" [checked]="userGroupSelected(group.id)" (change)="toggleUserGroup(group.id, $any($event.target).checked)" />
+              <span class="access-check-icon"><i class="fa fa-object-group"></i></span>
+              <span><strong>{{ group.name }}</strong><small>{{ group.vesselIds.length }} vessels · {{ group.description || 'Custom vessel group' }}</small></span>
+              <i class="fa fa-check"></i>
+            </label>
+            <div class="empty-inline" *ngIf="filteredUserAccessGroups.length === 0">No vessel groups match this search. Create groups in the Groups tab first.</div>
+          </div>
+        </div>
+
+        <div class="access-selection-panel" *ngIf="userAccessForm.accessScope === 'vessels'">
+          <div class="access-selection-head">
+            <div><strong>Select Individual Vessels</strong><small>{{ userAccessForm.vesselIds.length }} selected</small></div>
+            <label><i class="fa fa-search"></i><input type="search" [(ngModel)]="userAccessVesselSearchTerm" placeholder="Search vessel..." /></label>
+          </div>
+          <div class="access-check-grid vessel-access-grid">
+            <label *ngFor="let vessel of filteredUserAccessVessels; trackBy: trackByVessel" [class.selected]="userVesselSelected(vessel.id)">
+              <input type="checkbox" [checked]="userVesselSelected(vessel.id)" (change)="toggleUserVessel(vessel.id, $any($event.target).checked)" />
+              <span class="mini-vessel-image"><img *ngIf="vessel.image" [src]="vessel.image" alt="" /><i *ngIf="!vessel.image" class="fa fa-ship"></i></span>
+              <span><strong>{{ vessel.name }}</strong><small>{{ vessel.prefix }} · {{ statusLabel(vessel.status) }}</small></span>
+              <i class="fa fa-check"></i>
+            </label>
+          </div>
+        </div>
+
+        <div class="effective-access-card">
+          <span class="effective-access-icon"><i class="fa fa-check-circle"></i></span>
+          <div><small>Effective vessel access</small><strong>{{ userAccessEffectiveVesselIds.length }} of {{ vessels.length }} vessels</strong><p>{{ effectiveVesselPreview(userAccessForm) }}</p></div>
+        </div>
+
+        <details class="access-exceptions" *ngIf="userAccessForm.accessScope !== 'all'">
+          <summary><span><i class="fa fa-sliders"></i> Access Exceptions</span><small>Add or exclude individual vessels without changing the group.</small></summary>
+          <div class="exception-columns">
+            <div>
+              <h4><i class="fa fa-plus-circle"></i> Additional Vessels</h4>
+              <p>Grant extra access outside the selected scope.</p>
+              <label *ngFor="let vessel of vessels; trackBy: trackByVessel">
+                <input type="checkbox" [checked]="userAdditionalVesselSelected(vessel.id)" (change)="toggleAdditionalVessel(vessel.id, $any($event.target).checked)" />
+                <span>{{ vessel.name }}</span>
+              </label>
+            </div>
+            <div>
+              <h4><i class="fa fa-minus-circle"></i> Excluded Vessels</h4>
+              <p>Block selected vessels even when a group includes them.</p>
+              <label *ngFor="let vessel of vessels; trackBy: trackByVessel">
+                <input type="checkbox" [checked]="userExcludedVesselSelected(vessel.id)" (change)="toggleExcludedVessel(vessel.id, $any($event.target).checked)" />
+                <span>{{ vessel.name }}</span>
+              </label>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="drawer-section">
+        <div class="drawer-section-title">
+          <span><i class="fa fa-th-large"></i></span>
+          <div><h3>Module Permissions</h3><p>View controls navigation; Export and Manage apply only where supported.</p></div>
+        </div>
+        <div class="module-permission-table">
+          <div class="module-permission-head"><span>Module</span><span>View</span><span>Export</span><span>Manage</span></div>
+          <div class="module-permission-row" *ngFor="let module of userModuleDefinitions; trackBy: trackByUserModule">
+            <div class="module-identity"><i [class]="module.icon"></i><span><strong>{{ module.label }}</strong><small>{{ module.description }}</small></span></div>
+            <label class="permission-toggle"><input type="checkbox" [ngModel]="userAccessForm.modulePermissions[module.key].view" (ngModelChange)="onModuleViewChange(module.key, $event)" /><span></span></label>
+            <label class="permission-toggle"><input type="checkbox" [(ngModel)]="userAccessForm.modulePermissions[module.key].export" [disabled]="!module.supportsExport || !userAccessForm.modulePermissions[module.key].view" (ngModelChange)="onModulePermissionChange()" /><span></span></label>
+            <label class="permission-toggle"><input type="checkbox" [(ngModel)]="userAccessForm.modulePermissions[module.key].manage" [disabled]="!module.supportsManage || !userAccessForm.modulePermissions[module.key].view" (ngModelChange)="onModulePermissionChange()" /><span></span></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="access-final-summary">
+        <div><span>Role</span><strong>{{ userRoleLabel(userAccessForm.role) }}</strong></div>
+        <div><span>Vessels</span><strong>{{ userAccessEffectiveVesselIds.length }} / {{ vessels.length }}</strong></div>
+        <div><span>Modules</span><strong>{{ moduleAccessCount(userAccessForm) }} / {{ userModuleDefinitions.length }}</strong></div>
+        <div><span>Status</span><strong>{{ userAccessForm.status === 'active' ? 'Active' : 'Suspended' }}</strong></div>
+      </section>
+    </div>
+
+    <footer class="user-access-drawer-footer">
+      <span class="save-notice" *ngIf="userAccessSaveNotice">{{ userAccessSaveNotice }}</span>
+      <div><button type="button" class="ghost-btn" [disabled]="userAccessSaving || resetPasswordSaving" (click)="closeUserAccessDrawer()">Cancel</button><button type="button" class="primary-btn" [disabled]="userAccessSaving || resetPasswordSaving" (click)="saveUserAccess()"><i class="fa" [class.fa-spinner]="userAccessSaving" [class.fa-spin]="userAccessSaving" [class.fa-floppy-o]="!userAccessSaving"></i> {{ userAccessSaving ? 'Saving...' : (editingUserAccessId ? 'Save Changes' : (userAccountSetupMode === 'create' ? 'Create User & Access' : 'Link User & Save Access')) }}</button></div>
+    </footer>
+  </aside>
 
   <div class="drawer-backdrop" *ngIf="groupDrawerOpen" (click)="closeGroupDrawer()"></div>
   <aside class="group-drawer" [class.open]="groupDrawerOpen" aria-label="Vessel group editor">
@@ -462,7 +893,7 @@
       <h3>Basic Information</h3>
       <label>Vessel ID <em>*</em><input type="text" [(ngModel)]="form.id" [disabled]="!!editingId" placeholder="Enter vessel ID" /></label>
       <label>Vessel Name <em>*</em><input type="text" [(ngModel)]="form.name" placeholder="Enter vessel name" /></label>
-      <label>Prefix <em>*</em><input type="text" [(ngModel)]="form.prefix" placeholder="Enter telemetry prefix" /></label>
+      <label>Prefix <em>*</em><input type="text" [(ngModel)]="form.prefix" (change)="onVesselPrefixChanged()" placeholder="Enter telemetry prefix" /></label>
 
       <label class="image-upload">
         <input type="file" accept="image/png,image/jpeg" (change)="onImageSelected($event)" />
@@ -480,31 +911,367 @@
         <label>Agency<input type="text" [(ngModel)]="form.agency" placeholder="Enter agency" /></label>
       </div>
 
-      <h3>Groups</h3>
-      <div class="group-options">
-        <label *ngFor="let group of groupOptions">
-          <input type="checkbox" [checked]="form.groups.includes(group)" (change)="toggleGroup(group, $any($event.target).checked)" />
-          {{ group }}
-        </label>
-      </div>
-
-      <h3>Engine</h3>
-      <div class="engine-add">
-        <input type="text" [(ngModel)]="newEngine" (keyup.enter)="addEngine()" placeholder="Enter engine" />
-        <button type="button" (click)="addEngine()"><i class="fa fa-plus"></i> Add Engine</button>
-      </div>
-      <div class="engine-list">
-        <div *ngFor="let engine of form.engines; let index = index">
-          <span>{{ index + 1 }}</span><strong>{{ engine }}</strong><button type="button" (click)="removeEngine(index)"><i class="fa fa-times"></i></button>
+      <section class="vessel-group-summary" aria-labelledby="vessel-groups-heading">
+        <div class="vessel-subsection-heading">
+          <div>
+            <h3 id="vessel-groups-heading">Groups</h3>
+            <p>Group names and vessel membership are managed from the Vessel Groups page.</p>
+          </div>
+          <button type="button" class="manage-groups-btn" *ngIf="editingId" (click)="openGroupManagement()">
+            <i class="fa fa-object-group"></i> Manage Groups
+          </button>
         </div>
-      </div>
+
+        <div class="group-readonly-card" *ngIf="editingId; else unsavedVesselGroupMessage">
+          <div class="assigned-group-list" *ngIf="form.groups.length > 0; else noAssignedGroups">
+            <span *ngFor="let group of form.groups"><i class="fa fa-tag"></i>{{ group }}</span>
+          </div>
+          <ng-template #noAssignedGroups>
+            <div class="group-empty-state">
+              <i class="fa fa-object-group"></i>
+              <span><strong>No group assigned</strong><small>Use Manage Groups to assign this vessel.</small></span>
+            </div>
+          </ng-template>
+        </div>
+
+        <ng-template #unsavedVesselGroupMessage>
+          <div class="group-readonly-card new-vessel">
+            <i class="fa fa-info-circle"></i>
+            <span><strong>Save this vessel first</strong><small>After saving, assign it from Settings → Groups.</small></span>
+          </div>
+        </ng-template>
+      </section>
+
+      <section class="engine-profile-section professional-engine-setup" aria-labelledby="engine-profile-heading">
+        <div class="engine-section-heading professional-engine-heading">
+          <div>
+            <h3 id="engine-profile-heading">Engine Setup</h3>
+            <p>Manage Realtime machinery positions and reusable engine profiles in one place.</p>
+          </div>
+          <div class="engine-heading-actions">
+            <span class="engine-count-chip" [class.unassigned]="assignedEngineCount === 0">
+              <i class="fa fa-cog"></i>
+              <strong>{{ assignedEngineCount }}</strong>
+              <span>{{ assignedEngineCount === 1 ? 'engine' : 'engines' }}</span>
+            </span>
+            <button type="button" class="engine-library-btn compact" (click)="openEngineLibrary()">
+              <i class="fa fa-sliders"></i> Profiles
+            </button>
+            <button type="button" class="engine-add-btn" (click)="openManualEngineComposer()" [disabled]="engineProfilesLoading || isSavingVessel">
+              <i class="fa fa-plus"></i> Add Engine
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="engine-connection-summary"
+          *ngIf="realtimeMachinery.length > 0 || assignedEngineCount > 0"
+          [class.manual-only]="realtimeMachinery.length === 0"
+        >
+          <span class="engine-connection-icon">
+            <i class="fa" [ngClass]="realtimeMachinery.length ? 'fa-link' : 'fa-pencil-square-o'"></i>
+          </span>
+          <div class="engine-connection-copy">
+            <strong>{{ realtimeMachinery.length ? 'Realtime machinery connected' : 'Manual engine configuration' }}</strong>
+            <small>{{ realtimeMachinery.length ? realtimeMachineryNotice : 'This vessel currently uses manually assigned engine profiles.' }}</small>
+          </div>
+          <span class="engine-source-status" [class.manual]="realtimeMachinery.length === 0">
+            <i class="fa" [ngClass]="realtimeMachinery.length ? 'fa-circle' : 'fa-pencil'"></i>
+            {{ realtimeMachinery.length ? 'Connected' : 'Manual' }}
+          </span>
+          <button
+            type="button"
+            class="engine-sync-btn"
+            (click)="syncRealtimeMachinery(true)"
+            [disabled]="!form.prefix.trim() || isSavingVessel"
+          >
+            <i class="fa fa-refresh"></i>
+            <span>Sync</span>
+          </button>
+        </div>
+
+        <div class="engine-profile-loading" *ngIf="engineProfilesLoading">
+          <span class="spinner"></span><span>Loading shared engine profiles...</span>
+        </div>
+        <div class="engine-profile-error" *ngIf="engineProfilesError">
+          <i class="fa fa-exclamation-circle"></i>
+          <span>{{ engineProfilesError }}</span>
+          <button type="button" (click)="loadEngineProfiles(true)">Retry</button>
+        </div>
+
+        <div class="compact-engine-list" *ngIf="(form.engineAssignments?.length || 0) > 0">
+          <article
+            class="compact-engine-card"
+            *ngFor="let assignment of form.engineAssignments || []; trackBy: trackByEngineAssignment"
+            [class.expanded]="isEngineAssignmentExpanded(assignment)"
+            [class.needs-setup]="!engineProfileForAssignment(assignment)"
+          >
+            <div class="compact-engine-summary">
+              <span class="compact-engine-index">{{ engineAssignmentNumber(assignment) }}</span>
+              <span class="engine-profile-icon" [attr.data-category]="engineAssignmentCategory(assignment)">
+                <i class="fa fa-cog"></i>
+              </span>
+
+              <div class="compact-engine-identity">
+                <strong>{{ assignment.position || assignment.displayName || 'Unnamed engine' }}</strong>
+                <small *ngIf="isRealtimeAssignment(assignment); else manualEngineMeta">
+                  Row {{ assignment.realtimeRow }} · Column {{ assignment.realtimeCol }}
+                  <span *ngIf="assignment.realtimeType"> · {{ assignment.realtimeType }}</span>
+                </small>
+                <ng-template #manualEngineMeta>
+                  <small>Manual engine · Quantity {{ assignment.quantity || 1 }}</small>
+                </ng-template>
+              </div>
+
+              <div class="compact-engine-profile">
+                <span>ENGINE PROFILE</span>
+                <strong *ngIf="engineProfileForAssignment(assignment) as profile; else profileRequired">
+                  {{ engineProfileDisplayName(profile) }}
+                </strong>
+                <ng-template #profileRequired><strong class="missing-profile">Profile required</strong></ng-template>
+              </div>
+
+              <span
+                class="engine-setup-status"
+                [class.connected]="isRealtimeAssignment(assignment) && !!engineProfileForAssignment(assignment)"
+                [class.manual]="!isRealtimeAssignment(assignment) && !!engineProfileForAssignment(assignment)"
+                [class.warning]="!engineProfileForAssignment(assignment)"
+              >
+                <i class="fa" [ngClass]="engineAssignmentStatusIcon(assignment)"></i>
+                {{ engineAssignmentStatusLabel(assignment) }}
+              </span>
+
+              <button
+                type="button"
+                class="engine-edit-toggle"
+                (click)="toggleEngineAssignmentEditor(assignment)"
+                [attr.aria-expanded]="isEngineAssignmentExpanded(assignment)"
+              >
+                <i class="fa" [ngClass]="isEngineAssignmentExpanded(assignment) ? 'fa-chevron-up' : 'fa-pencil'"></i>
+                <span>{{ isEngineAssignmentExpanded(assignment) ? 'Close' : 'Edit' }}</span>
+              </button>
+            </div>
+
+            <div class="compact-engine-editor" *ngIf="isEngineAssignmentExpanded(assignment)">
+              <div class="engine-editor-grid">
+                <label *ngIf="!isRealtimeAssignment(assignment)">
+                  <span>Engine name / position</span>
+                  <input type="text" [(ngModel)]="assignment.position" placeholder="Enter engine name" />
+                </label>
+
+                <label [class.full]="isRealtimeAssignment(assignment)">
+                  <span>Shared engine profile</span>
+                  <select
+                    [(ngModel)]="assignment.profileId"
+                    (ngModelChange)="onEngineAssignmentProfileChange(assignment)"
+                    [disabled]="engineProfilesLoading || isSavingVessel"
+                  >
+                    <option value="">No shared profile</option>
+                    <option
+                      *ngFor="let profileOption of engineProfilesForAssignment(assignment); trackBy: trackByEngineProfile"
+                      [value]="profileOption.id"
+                    >
+                      {{ engineProfileOptionLabel(profileOption) }}
+                    </option>
+                  </select>
+                </label>
+
+                <label class="quantity-field" *ngIf="!isRealtimeAssignment(assignment)">
+                  <span>Quantity</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="12"
+                    [(ngModel)]="assignment.quantity"
+                    (change)="updateEngineAssignmentQuantity(assignment)"
+                  />
+                </label>
+              </div>
+
+              <div class="engine-editor-footer">
+                <div class="engine-profile-context" *ngIf="engineProfileForAssignment(assignment) as profile; else noProfileContext">
+                  <i class="fa fa-check-circle"></i>
+                  <span>
+                    <strong>{{ engineFormulaName(profile) }}</strong>
+                    <small>{{ engineProfileCategoryLabel(profile.category) }} · Shared profile</small>
+                  </span>
+                </div>
+                <ng-template #noProfileContext>
+                  <div class="engine-profile-context warning">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    <span><strong>Profile required</strong><small>Select a profile before saving for complete mapping.</small></span>
+                  </div>
+                </ng-template>
+
+                <button
+                  type="button"
+                  class="remove-engine-btn professional-remove"
+                  *ngIf="!isRealtimeAssignment(assignment)"
+                  (click)="removeEngineAssignment(assignment.id)"
+                  [disabled]="isSavingVessel"
+                >
+                  <i class="fa fa-trash-o"></i> Remove Engine
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="engine-onboarding" *ngIf="assignedEngineCount === 0 && !manualEngineComposerOpen">
+          <span class="engine-onboarding-icon"><i class="fa fa-cogs"></i></span>
+          <div>
+            <strong>No engines configured</strong>
+            <p>Detect engines from this vessel’s Realtime layout, or add an engine manually with a reusable profile.</p>
+          </div>
+          <div class="engine-onboarding-actions">
+            <button
+              type="button"
+              class="engine-detect-btn"
+              (click)="syncRealtimeMachinery(true)"
+              [disabled]="!form.prefix.trim() || isSavingVessel"
+            >
+              <i class="fa fa-refresh"></i> Detect from Realtime
+            </button>
+            <button type="button" class="engine-manual-btn" (click)="openManualEngineComposer()" [disabled]="engineProfilesLoading || isSavingVessel">
+              <i class="fa fa-plus"></i> Add Manually
+            </button>
+          </div>
+          <small class="engine-onboarding-hint" *ngIf="!form.prefix.trim()">
+            Enter a Telemetry Prefix above to enable automatic Realtime detection.
+          </small>
+          <small class="engine-onboarding-hint warning" *ngIf="form.prefix.trim() && realtimeMachinery.length === 0">
+            No machinery layout was found for “{{ form.prefix }}”. Manual setup is still available.
+          </small>
+        </div>
+
+        <div class="manual-engine-composer" *ngIf="manualEngineComposerOpen">
+          <div class="manual-engine-composer-heading">
+            <div>
+              <strong>Add Engine Manually</strong>
+              <p>Name the engine and apply a reusable profile. Telemetry can be mapped later from the profile library.</p>
+            </div>
+            <button type="button" (click)="closeManualEngineComposer()" aria-label="Close manual engine form">
+              <i class="fa fa-times"></i>
+            </button>
+          </div>
+
+          <div class="manual-engine-composer-grid">
+            <label>
+              <span>Engine name</span>
+              <input type="text" [(ngModel)]="manualEngineName" placeholder="e.g. Diesel Generator 1" />
+            </label>
+            <label>
+              <span>Shared profile</span>
+              <select [(ngModel)]="selectedEngineProfileId" [disabled]="engineProfilesLoading || isSavingVessel">
+                <option value="">Select engine profile...</option>
+                <option *ngFor="let profile of engineProfiles; trackBy: trackByEngineProfile" [value]="profile.id">
+                  {{ engineProfileOptionLabel(profile) }}
+                </option>
+              </select>
+            </label>
+            <button
+              type="button"
+              class="assign-engine-btn professional-assign"
+              (click)="assignEngineProfile()"
+              [disabled]="!selectedEngineProfileId || engineProfilesLoading || isSavingVessel"
+            >
+              <i class="fa fa-plus"></i> Add Engine
+            </button>
+          </div>
+        </div>
+
+        <div class="engine-library-panel" *ngIf="engineLibraryOpen">
+          <div class="engine-library-header">
+            <div>
+              <strong>Engine Profile Library</strong>
+              <p>One profile can be reused by multiple vessels. Formula changes apply to every vessel assigned to that profile.</p>
+            </div>
+            <button type="button" title="Close engine library" (click)="closeEngineLibrary()"><i class="fa fa-times"></i></button>
+          </div>
+
+          <div class="engine-library-tools">
+            <label class="engine-profile-search">
+              <i class="fa fa-search"></i>
+              <input type="search" [(ngModel)]="engineProfileSearchTerm" placeholder="Search engine profile..." />
+            </label>
+            <button type="button" class="new-engine-profile-btn" (click)="startNewEngineProfile()"><i class="fa fa-plus"></i> New Profile</button>
+          </div>
+
+          <div class="engine-library-list">
+            <article *ngFor="let profile of filteredEngineProfiles; trackBy: trackByEngineProfile" [class.active]="editingEngineProfileId === profile.id">
+              <button type="button" class="engine-library-select" (click)="editEngineProfile(profile)">
+                <span class="engine-profile-icon" [attr.data-category]="profile.category"><i class="fa fa-cog"></i></span>
+                <span>
+                  <strong>{{ profile.name }}</strong>
+                  <small>{{ profile.manufacturer || 'Unspecified' }}{{ profile.model ? ' · ' + profile.model : '' }}</small>
+                  <em>{{ engineFormulaName(profile) }} · {{ engineProfileUsageCount(profile.id) }} vessel(s)</em>
+                </span>
+              </button>
+              <div class="engine-library-actions">
+                <button type="button" title="Duplicate safely" (click)="duplicateEngineProfile(profile)"><i class="fa fa-copy"></i></button>
+                <button type="button" class="danger" title="Delete profile" (click)="deleteEngineProfile(profile)"><i class="fa fa-trash-o"></i></button>
+              </div>
+            </article>
+            <div class="engine-library-empty" *ngIf="filteredEngineProfiles.length === 0">No engine profiles match this search.</div>
+          </div>
+
+          <div class="engine-profile-editor">
+            <div class="engine-profile-editor-heading">
+              <div>
+                <strong>{{ editingEngineProfileId ? 'Edit Engine Profile' : 'Create Engine Profile' }}</strong>
+                <p>{{ editingEngineProfileId ? 'Changes are shared by every assigned vessel.' : 'Create a reusable profile for vessels with the same engine model.' }}</p>
+              </div>
+              <span *ngIf="editingEngineProfileId">{{ engineProfileUsageCount(editingEngineProfileId) }} vessel(s)</span>
+            </div>
+
+            <div class="engine-profile-form-grid">
+              <label class="full"><span>Profile Name <em>*</em></span><input type="text" [(ngModel)]="engineProfileForm.name" placeholder="e.g. CAT 3512C Main Engine" /></label>
+              <label><span>Manufacturer</span><input type="text" [(ngModel)]="engineProfileForm.manufacturer" placeholder="e.g. Caterpillar" /></label>
+              <label><span>Model</span><input type="text" [(ngModel)]="engineProfileForm.model" placeholder="e.g. 3512C" /></label>
+              <label><span>Engine Type</span><select [(ngModel)]="engineProfileForm.category"><option *ngFor="let option of engineCategoryOptions" [value]="option.value">{{ option.label }}</option></select></label>
+              <label><span>Fuel Type</span><select [(ngModel)]="engineProfileForm.fuelType"><option *ngFor="let fuel of engineFuelOptions" [value]="fuel">{{ fuel }}</option></select></label>
+              <label><span>Rated Power (kW)</span><input type="number" min="1" [(ngModel)]="engineProfileForm.ratedPowerKw" placeholder="Optional" /></label>
+              <label><span>Rated RPM</span><input type="number" min="1" [(ngModel)]="engineProfileForm.ratedRpm" placeholder="Optional" /></label>
+              <label><span>Cylinders</span><input type="number" min="1" max="32" [(ngModel)]="engineProfileForm.cylinders" placeholder="Optional" /></label>
+              <label class="full"><span>Calculation Profile</span><select [(ngModel)]="engineProfileForm.formulaPresetId"><option *ngFor="let preset of engineFormulaPresets" [value]="preset.id">{{ preset.name }}</option></select></label>
+              <label class="full"><span>Description</span><textarea rows="2" [(ngModel)]="engineProfileForm.description" placeholder="Operational notes or engine specification source"></textarea></label>
+            </div>
+
+            <div class="engine-formula-preview">
+              <strong><i class="fa fa-calculator"></i>{{ engineFormulaName(engineProfileForm) }}</strong>
+              <p>{{ engineFormulaDescription(engineProfileForm) }}</p>
+              <code *ngFor="let line of engineFormulaLines(engineProfileForm)">{{ line }}</code>
+            </div>
+
+            <button type="button" class="telemetry-toggle" (click)="engineTelemetryMappingOpen = !engineTelemetryMappingOpen" [attr.aria-expanded]="engineTelemetryMappingOpen">
+              <span><i class="fa fa-database"></i> Telemetry Tag Mapping <small>Optional — connect profile inputs to backend tags</small></span>
+              <i class="fa" [class.fa-chevron-down]="!engineTelemetryMappingOpen" [class.fa-chevron-up]="engineTelemetryMappingOpen"></i>
+            </button>
+
+            <div class="telemetry-template-note" *ngIf="engineTelemetryMappingOpen"><i class="fa fa-lightbulb-o"></i> Use <code>{{ '{' }}prefix{{ '}' }}</code>, <code>{{ '{' }}vesselId{{ '}' }}</code> and <code>{{ '{' }}index{{ '}' }}</code> as reusable placeholders for each vessel and engine position.</div>
+            <div class="telemetry-mapping-grid" *ngIf="engineTelemetryMappingOpen">
+              <label><span>Power kW Tag</span><input type="text" [(ngModel)]="engineProfileForm.telemetryMapping.powerKwTag" placeholder="e.g. {prefix}_ME{index}_POWER_KW" /></label>
+              <label><span>RPM Tag</span><input type="text" [(ngModel)]="engineProfileForm.telemetryMapping.rpmTag" placeholder="e.g. {prefix}_ME{index}_RPM" /></label>
+              <label><span>Fuel Rate kg/h Tag</span><input type="text" [(ngModel)]="engineProfileForm.telemetryMapping.fuelRateKgPerHourTag" placeholder="e.g. {prefix}_ME{index}_FUEL_KGH" /></label>
+              <label><span>Running Hours Tag</span><input type="text" [(ngModel)]="engineProfileForm.telemetryMapping.runningHoursTag" placeholder="e.g. {prefix}_ME{index}_RUN_HOURS" /></label>
+              <label class="full"><span>Status Tag</span><input type="text" [(ngModel)]="engineProfileForm.telemetryMapping.statusTag" placeholder="e.g. {prefix}_ME{index}_RUNNING" /></label>
+            </div>
+
+            <div class="engine-profile-save-notice" *ngIf="engineProfileSaveNotice"><i class="fa fa-info-circle"></i>{{ engineProfileSaveNotice }}</div>
+            <div class="engine-profile-editor-actions">
+              <button type="button" class="cancel-btn" (click)="startNewEngineProfile()">Clear</button>
+              <button type="button" class="primary-btn" (click)="saveEngineProfile()"><i class="fa fa-check"></i> Apply Profile</button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div class="save-message" *ngIf="saveNotice">{{ saveNotice }}</div>
     </div>
 
     <footer>
       <button type="button" class="cancel-btn" (click)="closeDrawer()">Cancel</button>
-      <button type="button" class="primary-btn" (click)="saveVessel()">Save Vessel</button>
+      <button type="button" class="primary-btn" (click)="saveVessel()" [disabled]="isSavingVessel"><i class="fa" [ngClass]="isSavingVessel ? 'fa-spinner fa-spin' : 'fa-save'"></i> {{ isSavingVessel ? 'Saving...' : 'Save Vessel & Engines' }}</button>
     </footer>
   </aside>
 </div>

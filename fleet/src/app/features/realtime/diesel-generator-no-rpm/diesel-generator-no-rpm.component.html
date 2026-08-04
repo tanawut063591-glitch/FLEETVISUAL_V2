@@ -3,30 +3,26 @@
   [class.dg-monitor--running]="isRunning"
   [class.dg-monitor--stopped]="!isRunning"
 >
-  <div class="dg-hero">
-    <div class="dg-core" aria-hidden="true">
-      <span class="dg-core__orbit"></span>
-      <span class="dg-core__icon"><i class="fa fa-bolt"></i></span>
-    </div>
-
-    <div class="dg-identity">
-      <span class="dg-eyebrow">GENERATOR CORE</span>
-      <strong>Diesel Generator</strong>
-      <span class="dg-state">
-        <i></i>
-        {{ statusText }}
+  <div
+    class="dg-live-strip"
+    [class.realtime-alert-field]="hasAlarm(cons)"
+    [attr.title]="getTooltip(cons)"
+    aria-label="Live fuel rate"
+  >
+    <span class="dg-live-strip__metric">
+      <span class="dg-live-strip__icon" aria-hidden="true">
+        <i class="fa fa-tint"></i>
       </span>
-    </div>
+      <span class="dg-live-strip__copy">
+        <strong>LIVE FUEL RATE</strong>
+        <small>Current generator consumption</small>
+      </span>
+    </span>
 
-    <div
-      class="dg-live-metric"
-      [class.realtime-alert-field]="hasAlarm(cons)"
-      [attr.title]="getTooltip(cons)"
-    >
-      <span>LIVE RATE</span>
+    <span class="dg-live-strip__value">
       <strong>{{ displayAbsNumber(cons, 2) }}</strong>
       <small>L/h</small>
-    </div>
+    </span>
   </div>
 
   <div class="fuel-block fuel-block--supply">

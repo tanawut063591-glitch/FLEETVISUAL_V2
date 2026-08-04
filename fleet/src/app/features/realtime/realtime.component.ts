@@ -473,7 +473,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     if (fv && fv.image) {
       return fv.image;
     }
-
+    
     return this.resolveFallbackImage(fv?.name || fv?.prefix || '');
   }
 
@@ -929,17 +929,17 @@ export class RealtimeComponent implements OnInit, OnDestroy {
   getCardSubtitle(type: string): string {
     switch (String(type || '').toUpperCase()) {
       case 'ME1':
-        return 'Propulsion & fuel telemetry';
+        return 'Main engine';
       case 'AE1':
       case 'DG_RPM':
-        return 'Auxiliary power telemetry';
+        return 'Aux / generator';
       case 'MOTOR':
-        return 'Electric propulsion telemetry';
+        return 'Electric motor';
       case 'DG_NO_RPM':
       case 'DG_NO_RPM_VTOTAL':
-        return 'Generator performance telemetry';
+        return 'Generator';
       default:
-        return 'Machinery telemetry';
+        return 'Telemetry';
     }
   }
 
@@ -954,6 +954,24 @@ export class RealtimeComponent implements OnInit, OnDestroy {
         return 'fa-cog';
       default:
         return 'fa-bolt';
+    }
+  }
+
+
+  getCardHeaderIconClass(type: string): string {
+    switch (String(type || '').toUpperCase()) {
+      case 'ME1':
+        return 'dg-header-icon--main';
+      case 'AE1':
+      case 'DG_RPM':
+        return 'dg-header-icon--aux';
+      case 'MOTOR':
+        return 'dg-header-icon--motor';
+      case 'DG_NO_RPM':
+      case 'DG_NO_RPM_VTOTAL':
+        return 'dg-header-icon--generator';
+      default:
+        return 'dg-header-icon--telemetry';
     }
   }
 

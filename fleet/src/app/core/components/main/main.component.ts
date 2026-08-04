@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
@@ -10,6 +10,9 @@ import { FvRealtimeService } from '../../../shared/services/fv-realtime.service'
 import { FleetVesselDataService } from '../../../shared/services/fleet-vessel-data.service';
 import { VesselPopupService } from '../../../shared/services/vessel-popup.service';
 import { UserPresenceService } from '../../../shared/services/user-presence.service';
+import { UserAccessControlService } from '../../../shared/services/user-access-control.service';
+import { AuthService } from '../../../shared/services/auth.service';
+import { FleetModuleKey } from '../../../shared/models/settings.model';
 
 import { Animaions } from './main.animation';
 
@@ -20,7 +23,7 @@ import { Animaions } from './main.animation';
   animations: [Animaions.routeAnimation],
   standalone: false,
 })
-export class MainComponent implements OnInit, OnDestroy {
+export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('contentViewport', { static: true })
   private contentViewport?: ElementRef<HTMLElement>;
 
@@ -49,7 +52,9 @@ export class MainComponent implements OnInit, OnDestroy {
     private fvRealtimeService: FvRealtimeService,
     private vesselData: FleetVesselDataService,
     private vesselPopup: VesselPopupService,
-    private userPresence: UserPresenceService
+    private userPresence: UserPresenceService,
+    private userAccess: UserAccessControlService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -57,7 +62,26 @@ export class MainComponent implements OnInit, OnDestroy {
       this.route.snapshot.data['timer'] || this.defaultTimer;
 
     this.userPresence.start();
-    this.loadSidebarVessels();
+    this.userAccess.refreshCurrentAccess()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (access) => {
+          if (access?.status === 'suspended' || !this.userAccess.hasAnyModuleAccess()) {
+            this.authService.logout();
+            void this.router.navigate(['/login']);
+            return;
+          }
+          const currentModule = this.moduleFromUrl(this.router.url);
+          const moduleAllowed = !currentModule || (currentModule === 'settings'
+            ? this.userAccess.canManageModule('settings')
+            : this.userAccess.canAccessModule(currentModule));
+          if (!moduleAllowed) {
+            void this.router.navigateByUrl(this.userAccess.firstAllowedRoute());
+          }
+          this.loadSidebarVessels();
+        },
+        error: () => this.loadSidebarVessels(),
+      });
     this.watchActiveVesselSelection();
     this.applyRouteState(this.router.url);
 
@@ -69,6 +93,13 @@ export class MainComponent implements OnInit, OnDestroy {
       .subscribe((event: NavigationEnd) => {
         this.applyRouteState(event.urlAfterRedirects || event.url);
       });
+  }
+
+  ngAfterViewInit(): void {
+    // ngOnInit runs before the authenticated grid and Header have their final
+    // dimensions. A second settle after paint prevents first-login hitboxes from
+    // being calculated against the old Login layout.
+    this.scheduleLayoutSettle();
   }
 
   ngOnDestroy(): void {
@@ -365,16 +396,29 @@ export class MainComponent implements OnInit, OnDestroy {
       clearTimeout(this.layoutSettleTimer);
     }
 
+    const notify = (): void => {
+      window.dispatchEvent(new Event('resize'));
+    };
+
     window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        window.dispatchEvent(new Event('resize'));
-      });
+      window.requestAnimationFrame(notify);
     });
 
+    // The first authenticated page may still be decoding map imagery and lazy
+    // route chunks. Repeat after the shell has fully settled.
+    setTimeout(notify, 120);
     this.layoutSettleTimer = setTimeout(() => {
-      window.dispatchEvent(new Event('resize'));
+      notify();
       this.layoutSettleTimer = null;
-    }, 280);
+    }, 520);
+  }
+
+  private moduleFromUrl(url: string): FleetModuleKey | null {
+    const path = String(url || '').split('?')[0].split('#').pop() || '';
+    if (path.includes('/main/data-logger') || path.includes('/main/datalogger')) return 'data-logger';
+    if (path.includes('/main/past-track')) return 'overview';
+    const modules: FleetModuleKey[] = ['overview', 'realtime', 'chart', 'diagram', 'report', 'alarm', 'log', 'settings'];
+    return modules.find((module) => path.includes(`/main/${module}`)) || null;
   }
 
   private updateLayout(url: string): void {

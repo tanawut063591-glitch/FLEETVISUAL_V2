@@ -57,9 +57,10 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
 
   readonly diagramNaturalWidth = 750;
   readonly diagramNaturalHeight = 755;
+  readonly diagramBottomGutter = 28;
   diagramScale = 1;
   diagramStageWidth = this.diagramNaturalWidth;
-  diagramStageHeight = this.diagramNaturalHeight;
+  diagramStageHeight = this.diagramNaturalHeight + this.diagramBottomGutter;
   diagramZoomMode: 'fit' | 'full' = 'full';
 
   devices: DiagramDevice[] = [
@@ -196,6 +197,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
   private subscription = new Subscription();
   private activeVesselIdentity = '';
   private diagramResizeObserver?: ResizeObserver;
+  private diagramFitFrameId: number | null = null;
 
   constructor(
     private store: Store<any>,
@@ -229,6 +231,12 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.diagramResizeObserver?.disconnect();
+
+    if (this.diagramFitFrameId !== null) {
+      cancelAnimationFrame(this.diagramFitFrameId);
+      this.diagramFitFrameId = null;
+    }
+
     this.subscription.unsubscribe();
   }
 
@@ -267,12 +275,23 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   setDiagramZoom(mode: 'fit' | 'full'): void {
+    if (this.diagramZoomMode === mode) {
+      return;
+    }
+
     this.diagramZoomMode = mode;
     this.scheduleDiagramFit();
   }
 
   private scheduleDiagramFit(): void {
-    requestAnimationFrame(() => this.fitDiagramToViewport());
+    if (this.diagramFitFrameId !== null) {
+      cancelAnimationFrame(this.diagramFitFrameId);
+    }
+
+    this.diagramFitFrameId = requestAnimationFrame(() => {
+      this.diagramFitFrameId = null;
+      this.fitDiagramToViewport();
+    });
   }
 
   private fitDiagramToViewport(): void {
@@ -289,31 +308,29 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
     const availableWidth = Math.max(220, viewport.clientWidth - horizontalPadding);
     const isMobile = window.matchMedia('(max-width: 560px)').matches;
 
-    // Mobile defaults to the natural 100% diagram size so labels and devices
-    // stay readable. The viewport becomes a two-axis touch scroller.
-    const nextScale =
-      isMobile && this.diagramZoomMode === 'full'
-        ? 1
-        : Math.min(1, availableWidth / this.diagramNaturalWidth);
-    const minimumScale = isMobile ? 0.42 : 0.28;
+    // At 100%, preserve the natural diagram size for readable labels.
+    // Fit mode must genuinely fit the available width on narrow phones; the
+    // previous 0.42 clamp could still create horizontal clipping.
+    const fitScale = Math.min(1, availableWidth / this.diagramNaturalWidth);
+    const minimumFitScale = isMobile ? 0.24 : 0.28;
+    const nextScale = this.diagramZoomMode === 'full' ? 1 : fitScale;
     const roundedScale = Math.max(
-      minimumScale,
+      this.diagramZoomMode === 'full' ? 1 : minimumFitScale,
       Math.round(nextScale * 1000) / 1000
     );
 
     this.diagramScale = roundedScale;
     this.diagramStageWidth = Math.ceil(this.diagramNaturalWidth * roundedScale);
-    this.diagramStageHeight = Math.ceil(this.diagramNaturalHeight * roundedScale);
+    this.diagramStageHeight = Math.ceil(
+      (this.diagramNaturalHeight + this.diagramBottomGutter) * roundedScale
+    );
 
     requestAnimationFrame(() => {
-      viewport.scrollLeft = Math.min(
-        viewport.scrollLeft,
-        Math.max(0, viewport.scrollWidth - viewport.clientWidth)
-      );
-      viewport.scrollTop = Math.min(
-        viewport.scrollTop,
-        Math.max(0, viewport.scrollHeight - viewport.clientHeight)
-      );
+      const maxScrollLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+      viewport.scrollLeft =
+        this.diagramZoomMode === 'fit'
+          ? 0
+          : Math.min(viewport.scrollLeft, maxScrollLeft);
     });
   }
 

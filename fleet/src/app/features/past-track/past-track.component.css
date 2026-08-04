@@ -389,11 +389,13 @@
 }
 
 
-.mobile-playback {
+.mobile-playback,
+.mobile-point-detail {
   display: none;
 }
 
-.desktop-playback {
+.desktop-playback,
+.desktop-point-detail {
   display: block;
   min-width: 0;
 }
@@ -738,15 +740,18 @@
   }
 }
 
-/* Mobile information order: map -> playback -> timeline -> selected-point detail. */
+/* Mobile information order: map -> playback -> selected-point detail -> timeline. */
 @media (max-width: 820px) {
-  .mobile-playback {
+  .mobile-playback,
+  .mobile-point-detail {
     display: block;
     width: 100%;
     min-width: 0;
   }
 
-  .desktop-playback {
+  .desktop-playback,
+  .desktop-point-detail,
+  .right-area {
     display: none;
   }
 
@@ -754,7 +759,8 @@
     gap: 12px;
   }
 
-  .mobile-playback app-past-track-playback {
+  .mobile-playback app-past-track-playback,
+  .mobile-point-detail app-past-track-detail {
     display: block;
     width: 100%;
     min-width: 0;

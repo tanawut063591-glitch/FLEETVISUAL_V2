@@ -64,6 +64,20 @@ export class DatabaseApiConfigService {
         10,
         publicConfig,
       ),
+      userAccess: this.resolveEndpoint(
+        config.userAccess,
+        globallyEnabled,
+        defaultTimeout,
+        10,
+        publicConfig,
+      ),
+      engineProfiles: this.resolveEndpoint(
+        config.engineProfiles,
+        globallyEnabled,
+        defaultTimeout,
+        30,
+        publicConfig,
+      ),
       fallback: {
         alertsToTelemetry: config.fallback?.alertsToTelemetry !== false,
         logsToAlerts: config.fallback?.logsToAlerts !== false,

@@ -204,17 +204,21 @@ pdf-viewer {
 :host ::ng-deep .ng2-pdf-viewer-container {
   width: 100% !important;
   max-width: 100% !important;
-  overflow-x: hidden !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
   overscroll-behavior: contain;
 }
 
 :host ::ng-deep .pdfViewer {
-  width: 100% !important;
-  max-width: 100% !important;
+  width: max-content !important;
+  min-width: 100% !important;
+  max-width: none !important;
 }
 
 :host ::ng-deep .pdfViewer .page {
-  max-width: 100% !important;
+  /* ng2-pdf-viewer already computes page width from [zoom]. A max-width:100%
+     rule cancelled that calculation, which made the +/- buttons look broken. */
+  max-width: none !important;
   margin: 0 auto 12px !important;
   border: 0 !important;
   box-shadow: 0 5px 18px rgba(15, 23, 42, 0.12);
@@ -264,7 +268,7 @@ pdf-viewer {
 
   .pdf-viewer-wrap {
     min-height: 72dvh;
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: auto;
     background: #dfe5ee;
   }

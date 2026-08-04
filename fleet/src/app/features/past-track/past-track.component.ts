@@ -161,7 +161,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       this.errorMessage = 'Please select a vessel before loading past track data';
       return;
     }
-
+    
     this.loading = true;
     this.summary = null;
     this.trackPoints = [];

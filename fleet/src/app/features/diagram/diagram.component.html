@@ -32,7 +32,7 @@
   <div class="diagram-mobile-tools" aria-label="Diagram view controls">
     <div class="diagram-pan-hint">
       <span class="diagram-pan-icon" aria-hidden="true">↔</span>
-      <span>Swipe to explore the full diagram</span>
+      <span>Swipe sideways • Scroll down</span>
     </div>
 
     <div class="diagram-zoom-toggle" role="group" aria-label="Diagram zoom">
@@ -51,7 +51,11 @@
     </div>
   </div>
 
-  <div class="diagram-scroll" #diagramViewport>
+  <div
+    class="diagram-scroll"
+    #diagramViewport
+    [class.is-fit-zoom]="diagramZoomMode === 'fit'"
+    [class.is-full-zoom]="diagramZoomMode === 'full'">
     <div class="diagram-stage" [style.width.px]="diagramStageWidth" [style.height.px]="diagramStageHeight">
       <div class="diagram-board" [style.transform]="'scale(' + diagramScale + ')'">
       <svg class="diagram-lines" viewBox="0 0 750 755" preserveAspectRatio="xMinYMin meet">
@@ -136,5 +140,10 @@
       </div>
       </div>
     </div>
+  </div>
+
+  <div class="diagram-mobile-end" aria-label="End of diagram">
+    <span class="diagram-mobile-end-icon" aria-hidden="true">✓</span>
+    <span>End of diagram</span>
   </div>
 </div>

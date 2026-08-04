@@ -1,11 +1,13 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { AfterViewInit, ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { NavigationStart, Router } from '@angular/router';
 import { Subject, of, timer } from 'rxjs';
 import { catchError, exhaustMap, switchMap, takeUntil } from 'rxjs/operators';
 import { ThemeModeService } from '../../../shared/services/theme-mode.service';
 import { AlertStateService } from '../../../shared/services/alert-state.service';
 import { AlertsService } from '../../../shared/services/alerts.service';
 import { UserPresenceService } from '../../../shared/services/user-presence.service';
+import { FleetModuleKey } from '../../../shared/models/settings.model';
+import { UserAccessControlService } from '../../../shared/services/user-access-control.service';
 
 /*
   รูปแบบข้อมูลของเมนูบน Header
@@ -18,6 +20,7 @@ interface HeaderMenuItem {
   show?: boolean;
   isAlert?: boolean;
   isLog?: boolean;
+  module: FleetModuleKey;
 }
 
 /*
@@ -37,7 +40,7 @@ interface SettingsItem {
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.css'],
 })
-export class HeaderComponent implements OnInit, OnDestroy {
+export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   // ชื่อผู้ใช้ที่แสดงมุมขวาบน
   username = 'sat';
 
@@ -54,7 +57,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isDarkMode = false;
 
   // รูปผู้ใช้ ถ้าโหลดไม่ได้จะแสดงตัวอักษรแทน
-  userImage = 'assets/images/user-avatar.png';
+  userImage = ''; // Use the account initial until a real avatar URL is available.
   avatarError = false;
 
   // รูปโลโก้ Fleet Visual มุมซ้ายบน
@@ -70,42 +73,49 @@ export class HeaderComponent implements OnInit, OnDestroy {
       icon: 'fa fa-map',
       route: '/main/overview',
       show: true,
+      module: 'overview',
     },
     {
       label: 'REALTIME',
       icon: 'fa fa-tachometer',
       route: '/main/realtime',
       show: true,
+      module: 'realtime',
     },
     {
       label: 'DATA LOGGER',
       icon: 'fa fa-database',
       route: '/main/data-logger',
       show: true,
+      module: 'data-logger',
     },
     {
       label: 'CHART',
       icon: 'fa fa-area-chart',
       route: '/main/chart',
       show: true,
+      module: 'chart',
     },
     {
       label: 'DIAGRAM',
       icon: 'fa fa-sitemap',
       route: '/main/diagram',
       show: true,
+      module: 'diagram',
     },
     {
       label: 'REPORT',
       icon: 'fa fa-file-text-o',
       route: '/main/report',
       show: true,
+      module: 'report',
     },
     {
       label: 'ALARM',
       icon: 'fa fa-bell-o',
-      route: '/main/alerts',
+      route: '/main/alarm',
       show: true,
+      module: 'alarm',
       isAlert: true,
     },
     {
@@ -113,6 +123,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
       icon: 'fa fa-history',
       route: '/main/log',
       show: true,
+      module: 'log',
       isLog: true,
     },
   ];
@@ -130,13 +141,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
       route: '/main/settings',
     },
     {
-      title: 'Vessel Management',
-      subtitle: 'Add or edit vessel data',
-      icon: 'fa fa-ship',
-      color: 'green',
-      route: '/main/settings/vessels',
-    },
-    {
       title: 'User Management',
       subtitle: 'Roles and permissions',
       icon: 'fa fa-user-o',
@@ -144,23 +148,36 @@ export class HeaderComponent implements OnInit, OnDestroy {
       route: '/main/settings/users',
     },
     {
-      title: 'System Config',
-      subtitle: 'Advanced configuration',
-      icon: 'fa fa-cogs',
+      title: 'Vessel Management',
+      subtitle: 'Add or edit vessel data',
+      icon: 'fa fa-ship',
+      color: 'green',
+      route: '/main/settings/vessels',
+    },
+    {
+      title: 'Vessel Groups',
+      subtitle: 'Manage fleet grouping',
+      icon: 'fa fa-object-group',
       color: 'orange',
-      route: '/main/settings/system',
+      route: '/main/settings/groups',
     },
   ];
 
   private readonly destroy$ = new Subject<void>();
   private readonly alarmBadgeWindowMs = 24 * 60 * 60 * 1000;
+  private settingsFeatureWarmup?: Promise<unknown>;
+  private settingsWarmupTimer: ReturnType<typeof setTimeout> | null = null;
+  private mobileStateFrame: number | null = null;
+  settingsNavigationPending = false;
 
   constructor(
     private router: Router,
     private themeModeService: ThemeModeService,
     private alertState: AlertStateService,
     private alertsService: AlertsService,
-    private userPresence: UserPresenceService
+    private userPresence: UserPresenceService,
+    private userAccess: UserAccessControlService,
+    private changeDetectorRef: ChangeDetectorRef
   ) {}
 
   /*
@@ -168,6 +185,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
     ใช้โหลดข้อมูลผู้ใช้จาก localStorage / sessionStorage
   */
   ngOnInit(): void {
+    // Always start the authenticated shell with a clean navigation state.
+    // This also removes a stale document class left by browser back/forward
+    // cache, responsive-device emulation or an interrupted route transition.
+    this.resetMobileNavigationState();
+
     this.loadUserData();
     this.initThemeMode();
     this.alertState.activeCount$
@@ -175,6 +197,50 @@ export class HeaderComponent implements OnInit, OnDestroy {
       .subscribe((count) => (this.alertCount = count));
 
     this.startAlertMonitor();
+
+    // Warm the lazy Settings feature only after the first authenticated view
+    // has painted. This removes the one-time delay that previously made the
+    // first Settings click feel frozen, while still protecting login startup.
+    this.settingsWarmupTimer = setTimeout(() => {
+      this.settingsWarmupTimer = null;
+      void this.warmSettingsFeature();
+    }, 1200);
+
+    // A mobile drawer must never survive a route change. Some routes are
+    // opened programmatically (Alarm -> Realtime, vessel selection, browser
+    // back/forward), so relying only on menu-item click handlers is not enough.
+    this.router.events
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((event) => {
+        if (event instanceof NavigationStart) {
+          this.closeMobileMenu(false);
+        }
+      });
+  }
+
+  ngAfterViewInit(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    // Re-apply the closed state after the first authenticated layout paint.
+    // This prevents a stale compositor layer/hitbox from the Login route from
+    // making the hamburger appear stuck until a manual browser refresh.
+    this.mobileStateFrame = window.requestAnimationFrame(() => {
+      this.mobileStateFrame = window.requestAnimationFrame(() => {
+        this.mobileStateFrame = null;
+        this.resetMobileNavigationState();
+        this.changeDetectorRef.detectChanges();
+      });
+    });
+  }
+
+  canAccessModule(module: FleetModuleKey): boolean {
+    return this.userAccess.canAccessModule(module);
+  }
+
+  canAccessSettingsRoute(): boolean {
+    return this.userAccess.canManageModule('settings');
   }
 
   /**
@@ -225,11 +291,19 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   private isAlarmPage(): boolean {
-    return /^\/main\/alerts(?:[/?#]|$)/.test(this.router.url);
+    return /^\/main\/alarm(?:[/?#]|$)/.test(this.router.url);
   }
 
   ngOnDestroy(): void {
-    this.syncMobileMenuDocumentState(false);
+    this.resetMobileNavigationState();
+    if (this.mobileStateFrame !== null && typeof window !== 'undefined') {
+      window.cancelAnimationFrame(this.mobileStateFrame);
+      this.mobileStateFrame = null;
+    }
+    if (this.settingsWarmupTimer !== null) {
+      clearTimeout(this.settingsWarmupTimer);
+      this.settingsWarmupTimer = null;
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -272,17 +346,46 @@ export class HeaderComponent implements OnInit, OnDestroy {
     stopPropagation กันไม่ให้ document click ปิดทันที
   */
   toggleMobileMenu(event: MouseEvent): void {
+    event.preventDefault();
     event.stopPropagation();
-    this.mobileMenuOpen = !this.mobileMenuOpen;
+
+    const nextOpenState = !this.mobileMenuOpen;
+    this.mobileMenuOpen = nextOpenState;
     this.settingsMenuOpen = false;
-    this.syncMobileMenuDocumentState(this.mobileMenuOpen);
+    this.syncMobileMenuDocumentState(nextOpenState);
+
+    // Force the state to paint immediately on the first tap after Login.
+    // Mobile Chrome can otherwise keep the previous composited button layer
+    // until another resize/change-detection cycle occurs.
+    this.changeDetectorRef.detectChanges();
+
+    // Pointer taps can leave a sticky focus visual on mobile browsers. Remove
+    // only pointer-created focus; keyboard focus remains available/accessibile.
+    if (event.detail > 0 && event.currentTarget instanceof HTMLButtonElement) {
+      const button = event.currentTarget;
+      requestAnimationFrame(() => button.blur());
+    }
   }
 
   /*
     ปิดเมนู mobile
   */
-  closeMobileMenu(): void {
+  closeMobileMenu(refreshView = true): void {
+    const wasOpen = this.mobileMenuOpen;
     this.mobileMenuOpen = false;
+    this.syncMobileMenuDocumentState(false);
+
+    if (refreshView && wasOpen) {
+      this.changeDetectorRef.detectChanges();
+    }
+  }
+
+  /**
+   * Clears both Angular state and document-level classes in one place.
+   */
+  private resetMobileNavigationState(): void {
+    this.mobileMenuOpen = false;
+    this.settingsMenuOpen = false;
     this.syncMobileMenuDocumentState(false);
   }
 
@@ -303,8 +406,18 @@ export class HeaderComponent implements OnInit, OnDestroy {
     เปิด/ปิด Settings Dropdown
   */
   toggleSettingsMenu(event: MouseEvent): void {
+    event.preventDefault();
     event.stopPropagation();
+
+    // Start downloading the lazy feature on the first interaction. Do not wait
+    // for it here: the dropdown must respond immediately even on a cold cache.
+    void this.warmSettingsFeature();
     this.settingsMenuOpen = !this.settingsMenuOpen;
+
+    // A cold login can still be finishing several async layout/data callbacks.
+    // Force this small header state to paint in the same turn rather than being
+    // visually delayed until the next unrelated change-detection cycle.
+    this.changeDetectorRef.detectChanges();
   }
 
   /*
@@ -337,10 +450,56 @@ export class HeaderComponent implements OnInit, OnDestroy {
   /*
     ใช้พาไปหน้าอื่นจาก Settings Dropdown
   */
-  goTo(route: string): void {
-    this.closeSettingsMenu();
-    this.closeMobileMenu();
-    this.router.navigate([route]);
+  async goTo(route: string): Promise<void> {
+    if (this.settingsNavigationPending) return;
+
+    if (this.router.url === route) {
+      this.closeSettingsMenu();
+      this.closeMobileMenu();
+      return;
+    }
+
+    this.settingsNavigationPending = true;
+    this.changeDetectorRef.detectChanges();
+    void this.warmSettingsFeature();
+
+    try {
+      let navigated = await this.router.navigateByUrl(route);
+
+      // Very early after login another navigation can still be settling. Retry
+      // once without refreshing the browser if Angular reports cancellation.
+      if (!navigated && this.router.url !== route) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 120));
+        navigated = await this.router.navigateByUrl(route);
+      }
+
+      if (navigated || this.router.url === route) {
+        this.closeSettingsMenu();
+        this.closeMobileMenu();
+      }
+    } catch (error) {
+      console.error('[HeaderComponent] Settings navigation failed:', error);
+    } finally {
+      this.settingsNavigationPending = false;
+      this.changeDetectorRef.detectChanges();
+    }
+  }
+
+  /**
+   * Loads the lazy Settings chunk once and shares the same promise with the
+   * router. A failed background warm-up is cleared so the next click can retry.
+   */
+  private warmSettingsFeature(): Promise<unknown> {
+    if (!this.settingsFeatureWarmup) {
+      this.settingsFeatureWarmup = import('../../../features/settings/settings.module')
+        .catch((error) => {
+          this.settingsFeatureWarmup = undefined;
+          console.warn('[HeaderComponent] Settings warm-up skipped:', error);
+          return undefined;
+        });
+    }
+
+    return this.settingsFeatureWarmup;
   }
 
   /*
@@ -385,9 +544,31 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   @HostListener('window:resize')
   onWindowResize(): void {
-    if (typeof window !== 'undefined' && window.innerWidth > 992 && this.mobileMenuOpen) {
-      this.closeMobileMenu();
+    if (typeof window === 'undefined') {
+      return;
     }
+
+    // Main layout and Sidebar switch at 991px. Header must use exactly the
+    // same breakpoint or the hamburger can be active while the rest of the
+    // shell is still in desktop mode.
+    if (window.innerWidth > 991) {
+      this.closeMobileMenu();
+    } else if (!this.mobileMenuOpen) {
+      // Remove any stale global class even when Angular state is already false.
+      this.syncMobileMenuDocumentState(false);
+    }
+  }
+
+  @HostListener('window:orientationchange')
+  onOrientationChange(): void {
+    this.closeMobileMenu();
+  }
+
+  @HostListener('window:pageshow')
+  onPageShow(): void {
+    // Browser back/forward cache restores the old DOM without a full reload.
+    // Start from a predictable closed state instead of restoring a stale menu.
+    this.closeMobileMenu();
   }
 
   @HostListener('document:keydown.escape')

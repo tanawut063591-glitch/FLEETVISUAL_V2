@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import {
   Observable,
   catchError,
+  concat,
   defaultIfEmpty,
   filter,
   forkJoin,
@@ -20,10 +21,18 @@ import {
 import { SKIP_AUTH_REDIRECT } from '../../core/interceptors/http-context.tokens';
 import { ResolvedDatabaseEndpoint } from '../models/database-api.model';
 import {
+  ENGINE_PROFILE_STORAGE_KEY,
+  FleetModuleKey,
   SettingsPersistenceTarget,
+  USER_ACCESS_STORAGE_KEY,
+  UserAccessRecord,
+  UserAccessRole,
+  UserModulePermissionMap,
   UserPresenceStatus,
   UserSessionRecord,
+  VESSEL_GROUP_STORAGE_KEY,
   VesselGroupRecord,
+  VesselEngineAssignment,
   VesselSettingsRecord,
   VesselSettingsStatus,
 } from '../models/settings.model';
@@ -35,6 +44,7 @@ import { AuthService } from './auth.service';
 import { DatabaseApiConfigService } from './database-api-config.service';
 import { HttpClientService } from './http-client.service';
 import { NewHttpClientService } from './http-client1.service';
+import { FleetVesselDataService } from './fleet-vessel-data.service';
 
 interface LocalSettingsStore {
   records: VesselSettingsRecord[];
@@ -44,10 +54,12 @@ interface LocalSettingsStore {
 @Injectable({ providedIn: 'root' })
 export class SettingsDataService {
   private readonly storageKey = 'fleet-settings-vessels-v1';
-  private readonly groupStorageKey = 'fleet-settings-vessel-groups-v1';
+  private readonly groupStorageKey = VESSEL_GROUP_STORAGE_KEY;
+  private readonly userAccessStorageKey = USER_ACCESS_STORAGE_KEY;
   private backendVessels$?: Observable<VesselSettingsRecord[]>;
   private vesselGroups$?: Observable<VesselGroupRecord[]>;
   private userSessions$?: Observable<UserSessionRecord[]>;
+  private userAccess$?: Observable<UserAccessRecord[]>;
 
   constructor(
     private http: HttpClient,
@@ -55,6 +67,7 @@ export class SettingsDataService {
     private backend: HttpClientService,
     private directBackend: NewHttpClientService,
     private databaseConfig: DatabaseApiConfigService,
+    private fleetVesselData: FleetVesselDataService,
   ) {}
 
   /**
@@ -65,7 +78,8 @@ export class SettingsDataService {
     if (forceRefresh) this.backendVessels$ = undefined;
 
     if (!this.backendVessels$) {
-      this.backendVessels$ = this.databaseConfig.config$.pipe(
+      const cachedRows = this.getCachedOverviewVessels();
+      const backendRows$ = this.databaseConfig.config$.pipe(
         switchMap((config) => {
           const live$ = config.fallback.vesselsToCurrentInfo
             ? this.loadCurrentInfoVessels().pipe(catchError(() => of([])))
@@ -85,8 +99,15 @@ export class SettingsDataService {
             map(({ live, metadata }) => this.mergeBackendMetadata(live, metadata)),
           );
         }),
-        shareReplay({ bufferSize: 1, refCount: false }),
       );
+
+      // Main/Sidebar normally already has the vessel list. Emit that snapshot
+      // immediately so Settings never blocks on a duplicate cold API request,
+      // then replace it with the refreshed backend result when available.
+      this.backendVessels$ = (cachedRows.length
+        ? concat(of(cachedRows), backendRows$)
+        : backendRows$
+      ).pipe(shareReplay({ bufferSize: 1, refCount: false }));
     }
 
     return this.backendVessels$.pipe(map((rows) => this.mergeLocalChanges(rows)));
@@ -105,6 +126,7 @@ export class SettingsDataService {
       description: record.description.trim(),
       groups: this.uniqueStrings(record.groups),
       engines: this.uniqueStrings(record.engines),
+      engineAssignments: this.normalizeEngineAssignments(record.engineAssignments, record.engines),
     };
 
     return this.databaseConfig.config$.pipe(
@@ -290,11 +312,103 @@ export class SettingsDataService {
     return this.userSessions$;
   }
 
+
+  getUserAccessRecords(forceRefresh = false): Observable<UserAccessRecord[]> {
+    if (forceRefresh) this.userAccess$ = undefined;
+
+    if (!this.userAccess$) {
+      this.userAccess$ = this.databaseConfig.config$.pipe(
+        switchMap((config) => {
+          const localRecords = this.ensureCurrentAdministrator(this.readLocalUserAccessRecords());
+          if (!config.userAccess.enabled) return of(localRecords);
+          return this.loadDatabaseUserAccess(config.userAccess).pipe(
+            map((rows) => {
+              const resolved = rows.length ? rows : localRecords;
+              this.writeLocalUserAccessRecords(resolved);
+              return resolved;
+            }),
+            catchError((error) => {
+              console.warn('[SettingsDataService] user access database unavailable:', error);
+              return of(localRecords);
+            }),
+          );
+        }),
+        shareReplay({ bufferSize: 1, refCount: false }),
+      );
+    }
+
+    return this.userAccess$;
+  }
+
+  saveUserAccess(record: UserAccessRecord): Observable<SettingsPersistenceTarget> {
+    const normalized = this.normalizeUserAccess(record, 0, 'local');
+    return this.databaseConfig.config$.pipe(
+      take(1),
+      switchMap((config) => {
+        if (!config.userAccess.enabled) {
+          this.upsertLocalUserAccess(normalized);
+          this.userAccess$ = undefined;
+          return of('browser' as const);
+        }
+
+        const context = new HttpContext().set(SKIP_AUTH_REDIRECT, true);
+        const url = `${this.trimUrl(config.userAccess.url)}/${encodeURIComponent(normalized.id)}`;
+        return this.http.put(url, normalized, { context, headers: this.getAuthHeaders() }).pipe(
+          timeout(config.userAccess.timeoutMs),
+          tap(() => {
+            this.upsertLocalUserAccess({ ...normalized, source: 'backend' });
+            this.userAccess$ = undefined;
+          }),
+          map(() => 'database' as const),
+          catchError((error) => {
+            console.warn('[SettingsDataService] save user access fell back to browser:', error);
+            this.upsertLocalUserAccess(normalized);
+            this.userAccess$ = undefined;
+            return of('browser' as const);
+          }),
+        );
+      }),
+    );
+  }
+
+  deleteUserAccess(id: string): Observable<SettingsPersistenceTarget> {
+    return this.databaseConfig.config$.pipe(
+      take(1),
+      switchMap((config) => {
+        if (!config.userAccess.enabled) {
+          this.removeLocalUserAccess(id);
+          this.userAccess$ = undefined;
+          return of('browser' as const);
+        }
+
+        const context = new HttpContext().set(SKIP_AUTH_REDIRECT, true);
+        const url = `${this.trimUrl(config.userAccess.url)}/${encodeURIComponent(id)}`;
+        return this.http.delete(url, { context, headers: this.getAuthHeaders() }).pipe(
+          timeout(config.userAccess.timeoutMs),
+          tap(() => {
+            this.removeLocalUserAccess(id);
+            this.userAccess$ = undefined;
+          }),
+          map(() => 'database' as const),
+          catchError((error) => {
+            console.warn('[SettingsDataService] delete user access fell back to browser:', error);
+            this.removeLocalUserAccess(id);
+            this.userAccess$ = undefined;
+            return of('browser' as const);
+          }),
+        );
+      }),
+    );
+  }
+
   resetLocalChanges(): void {
     localStorage.removeItem(this.storageKey);
     localStorage.removeItem(this.groupStorageKey);
+    localStorage.removeItem(this.userAccessStorageKey);
+    localStorage.removeItem(ENGINE_PROFILE_STORAGE_KEY);
     this.backendVessels$ = undefined;
     this.vesselGroups$ = undefined;
+    this.userAccess$ = undefined;
   }
 
   private migrateLocalVessels(endpoint: ResolvedDatabaseEndpoint): Observable<void> {
@@ -390,6 +504,24 @@ export class SettingsDataService {
     );
   }
 
+
+  private loadDatabaseUserAccess(
+    endpoint: ResolvedDatabaseEndpoint,
+  ): Observable<UserAccessRecord[]> {
+    const context = new HttpContext().set(SKIP_AUTH_REDIRECT, true);
+    const headers = this.getAuthHeaders();
+    const request$ = endpoint.method === 'GET'
+      ? this.http.get(endpoint.url, { context, headers })
+      : this.http.post(endpoint.url, { page: 1, pageSize: 5000 }, { context, headers });
+
+    return request$.pipe(
+      timeout(endpoint.timeoutMs),
+      map((response: any) =>
+        this.extractArray(response).map((row, index) => this.normalizeUserAccess(row, index, 'backend')),
+      ),
+    );
+  }
+
   /**
    * The gateway and API2 vessel calls are started together. The first non-empty
    * response wins, removing the old worst-case 12 second sequential wait.
@@ -411,6 +543,17 @@ export class SettingsDataService {
       defaultIfEmpty([]),
       map((rows) => rows.map((row, index) => this.normalizeVessel(row, index))),
     );
+  }
+
+  private getCachedOverviewVessels(): VesselSettingsRecord[] {
+    const snapshot = this.fleetVesselData.getSnapshot();
+    if (!Array.isArray(snapshot) || snapshot.length === 0) return [];
+
+    return snapshot
+      .map((row: any, index: number) =>
+        this.normalizeVessel(row?.fvInfo ?? row?.fv ?? row, index),
+      )
+      .filter((row) => !!row.id && !!row.name);
   }
 
   private getAuthHeaders(): HttpHeaders {
@@ -454,6 +597,9 @@ export class SettingsDataService {
         agency: metadata.agency || live.agency,
         groups: this.uniqueStrings([...live.groups, ...metadata.groups]),
         engines: metadata.engines.length ? metadata.engines : live.engines,
+        engineAssignments: metadata.engineAssignments?.length
+          ? metadata.engineAssignments
+          : live.engineAssignments,
         status: live.status,
         lastSeenAt: live.lastSeenAt,
         lastSeenLabel: live.lastSeenLabel,
@@ -531,6 +677,10 @@ export class SettingsDataService {
       agency: String(row?.agency ?? row?.Agency ?? row?.agentName ?? ''),
       groups: this.toStringArray(row?.groups ?? row?.Groups ?? row?.group ?? row?.Group),
       engines: this.toStringArray(row?.engines ?? row?.Engines ?? row?.engine ?? row?.Engine),
+      engineAssignments: this.normalizeEngineAssignments(
+        row?.engineAssignments ?? row?.EngineAssignments,
+        this.toStringArray(row?.engines ?? row?.Engines ?? row?.engine ?? row?.Engine),
+      ),
       status,
       lastSeenAt: normalizedLastSeen,
       lastSeenLabel: this.isCompactLastSeen(compactLastSeen) ? String(compactLastSeen).trim() : '',
@@ -539,6 +689,55 @@ export class SettingsDataService {
       source: 'backend',
       raw: row,
     };
+  }
+
+  private normalizeEngineAssignments(
+    value: unknown,
+    legacyEngines: string[] = [],
+  ): VesselEngineAssignment[] {
+    if (Array.isArray(value)) {
+      const normalized = value
+        .map((item: any, index: number): VesselEngineAssignment | null => {
+          const profileId = String(item?.profileId ?? item?.ProfileId ?? '').trim();
+          const displayName = String(
+            item?.displayName ?? item?.DisplayName ?? item?.name ?? item?.Name ?? '',
+          ).trim();
+          if (!profileId && !displayName) return null;
+          const quantityValue = Number(item?.quantity ?? item?.Quantity ?? 1);
+          const sourceValue = String(item?.source ?? item?.Source ?? '').trim().toLowerCase();
+          const realtimeRow = Number(item?.realtimeRow ?? item?.RealtimeRow);
+          const realtimeCol = Number(item?.realtimeCol ?? item?.RealtimeCol);
+          return {
+            id: String(item?.id ?? item?.Id ?? `${profileId || 'legacy'}-${index + 1}`).trim(),
+            profileId,
+            displayName: displayName || profileId,
+            position: String(
+              item?.position ?? item?.Position ?? `Engine ${index + 1}`,
+            ).trim(),
+            quantity: Number.isFinite(quantityValue)
+              ? Math.min(12, Math.max(1, Math.round(quantityValue)))
+              : 1,
+            realtimeKey: String(item?.realtimeKey ?? item?.RealtimeKey ?? '').trim() || undefined,
+            realtimeRow: Number.isFinite(realtimeRow) ? realtimeRow : undefined,
+            realtimeCol: Number.isFinite(realtimeCol) ? realtimeCol : undefined,
+            realtimeType: String(item?.realtimeType ?? item?.RealtimeType ?? '').trim() || undefined,
+            source: sourceValue === 'realtime' || sourceValue === 'manual' || sourceValue === 'legacy'
+              ? sourceValue as 'realtime' | 'manual' | 'legacy'
+              : undefined,
+          };
+        })
+        .filter((item): item is VesselEngineAssignment => !!item);
+      if (normalized.length) return normalized;
+    }
+
+    return this.uniqueStrings(legacyEngines).map((name, index) => ({
+      id: `legacy-${index + 1}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      profileId: '',
+      displayName: name,
+      position: `Engine ${index + 1}`,
+      quantity: 1,
+      source: 'legacy' as const,
+    }));
   }
 
   private normalizeVesselGroup(row: any, index: number): VesselGroupRecord {
@@ -601,6 +800,144 @@ export class SettingsDataService {
       source: 'backend',
       raw: row,
     };
+  }
+
+  private normalizeUserAccess(
+    row: any,
+    index: number,
+    source: UserAccessRecord['source'] = 'backend',
+  ): UserAccessRecord {
+    const username = String(
+      row?.username ?? row?.Username ?? row?.userName ?? row?.UserName ?? `user-${index + 1}`,
+    ).trim();
+    const role = this.normalizeUserRole(row?.role ?? row?.Role ?? row?.group ?? row?.Group);
+    const groupIds = this.toStringArray(row?.groupIds ?? row?.GroupIds ?? row?.groups ?? row?.Groups);
+    const vesselIds = this.toStringArray(
+      row?.vesselIds ?? row?.VesselIds ?? row?.siteAccess ?? row?.SiteAccess ?? row?.sites ?? row?.Sites,
+    );
+    const scopeText = String(row?.accessScope ?? row?.AccessScope ?? row?.scope ?? '').toLowerCase();
+    const accessScope = scopeText === 'groups' || scopeText === 'vessels' || scopeText === 'all'
+      ? scopeText
+      : role === 'administrator'
+        ? 'all'
+        : groupIds.length
+          ? 'groups'
+          : 'vessels';
+
+    return {
+      id: String(row?.id ?? row?.Id ?? row?._id ?? username).trim(),
+      username,
+      displayName: String(
+        row?.displayName ?? row?.DisplayName ?? row?.fullname ?? row?.fullName ?? row?.name ?? username,
+      ).trim(),
+      email: String(row?.email ?? row?.Email ?? '').trim(),
+      role,
+      status: String(row?.status ?? row?.Status ?? 'active').toLowerCase() === 'suspended'
+        ? 'suspended'
+        : 'active',
+      accountId: String(row?.accountId ?? row?.AccountId ?? row?.identityId ?? row?.IdentityId ?? '').trim() || undefined,
+      accountProvisioning: row?.accountProvisioning === 'managed' || row?.accountProvisioning === 'linked'
+        ? row.accountProvisioning
+        : row?.accountId || row?.AccountId
+          ? 'managed'
+          : 'access-only',
+      accountLastSyncedAt: this.toIsoDate(row?.accountLastSyncedAt ?? row?.AccountLastSyncedAt),
+      accessScope,
+      groupIds,
+      vesselIds,
+      additionalVesselIds: this.toStringArray(
+        row?.additionalVesselIds ?? row?.AdditionalVesselIds,
+      ),
+      excludedVesselIds: this.toStringArray(row?.excludedVesselIds ?? row?.ExcludedVesselIds),
+      modulePermissions: this.normalizeModulePermissions(
+        row?.modulePermissions ?? row?.ModulePermissions ?? row?.pageAccess ?? row?.PageAccess,
+        role,
+      ),
+      createdAt: this.toIsoDate(row?.createdAt ?? row?.CreatedAt) || new Date().toISOString(),
+      updatedAt: this.toIsoDate(row?.updatedAt ?? row?.UpdatedAt),
+      source,
+      raw: row,
+    };
+  }
+
+  private normalizeUserRole(value: unknown): UserAccessRole {
+    const role = String(value ?? '').trim().toLowerCase();
+    if (role.includes('admin')) return 'administrator';
+    if (role.includes('operator')) return 'operator';
+    if (role.includes('custom')) return 'custom';
+    return 'viewer';
+  }
+
+  private normalizeModulePermissions(value: any, role: UserAccessRole): UserModulePermissionMap {
+    const modules: FleetModuleKey[] = [
+      'overview', 'realtime', 'data-logger', 'chart', 'diagram', 'report', 'alarm', 'log', 'settings',
+    ];
+    const selected = Array.isArray(value)
+      ? new Set(value.map((item) => String(item).trim().toLowerCase().replace(/[_\s]+/g, '-')))
+      : null;
+
+    return modules.reduce((permissions, module) => {
+      const raw = value?.[module] ?? value?.[module.replace('-', '')] ?? value?.[module.toUpperCase()];
+      const roleView = role === 'administrator' || module !== 'settings';
+      const view = selected
+        ? selected.has(module) || (module === 'data-logger' && selected.has('datalogger')) || (module === 'alarm' && selected.has('alerts'))
+        : Boolean(raw?.view ?? raw?.View ?? roleView);
+      permissions[module] = {
+        view,
+        export: Boolean(raw?.export ?? raw?.Export ?? (view && module !== 'overview' && module !== 'settings')),
+        manage: Boolean(raw?.manage ?? raw?.Manage ?? (role === 'administrator')),
+      };
+      return permissions;
+    }, {} as UserModulePermissionMap);
+  }
+
+  private ensureCurrentAdministrator(records: UserAccessRecord[]): UserAccessRecord[] {
+    if (records.length) return records;
+    const session = this.currentSessionRecord();
+    const now = new Date().toISOString();
+    const administrator = this.normalizeUserAccess({
+      id: session.id,
+      username: session.username,
+      displayName: session.displayName,
+      role: 'administrator',
+      status: 'active',
+      accessScope: 'all',
+      createdAt: now,
+      updatedAt: now,
+    }, 0, 'session');
+    this.writeLocalUserAccessRecords([administrator]);
+    return [administrator];
+  }
+
+  private readLocalUserAccessRecords(): UserAccessRecord[] {
+    try {
+      const rows = JSON.parse(localStorage.getItem(this.userAccessStorageKey) || '[]');
+      return Array.isArray(rows)
+        ? rows.map((row, index) => this.normalizeUserAccess(row, index, row?.source || 'local'))
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private writeLocalUserAccessRecords(records: UserAccessRecord[]): void {
+    localStorage.setItem(this.userAccessStorageKey, JSON.stringify(records));
+  }
+
+  private upsertLocalUserAccess(record: UserAccessRecord): void {
+    const rows = this.readLocalUserAccessRecords();
+    const normalizedUsername = record.username.trim().toLowerCase();
+    const index = rows.findIndex(
+      (item) => item.id === record.id || item.username.trim().toLowerCase() === normalizedUsername,
+    );
+    if (index >= 0) rows[index] = record;
+    else rows.unshift(record);
+    this.writeLocalUserAccessRecords(rows);
+  }
+
+  private removeLocalUserAccess(id: string): void {
+    const rows = this.readLocalUserAccessRecords().filter((item) => item.id !== id);
+    this.writeLocalUserAccessRecords(rows);
   }
 
   private currentSessionRecord(): UserSessionRecord {

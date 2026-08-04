@@ -57,6 +57,8 @@ export class ChartComponent implements OnInit, OnDestroy {
     fullscreenTarget: string | null = null;
     private fullscreenFallbackTarget: string | null = null;
     private previousBodyOverflow: string = '';
+    private fullscreenResizeObserver: ResizeObserver | null = null;
+    private fullscreenRestoreTimers: ReturnType<typeof setTimeout>[] = [];
     private mainChartInstance: Highcharts.Chart | null = null;
     private groupChartInstances: { [key: string]: Highcharts.Chart } = {};
 
@@ -137,6 +139,8 @@ export class ChartComponent implements OnInit, OnDestroy {
         this.mainChartInstance = null;
         this.groupChartInstances = {};
         this.activeChartMenu = null;
+        this.disconnectFullscreenResizeObserver();
+        this.clearFullscreenRestoreTimers();
         this.clearFullscreenFallback();
         this.fullscreenTarget = null;
     }
@@ -424,15 +428,24 @@ export class ChartComponent implements OnInit, OnDestroy {
             return;
         }
 
+        // Cancel a delayed restore from a previous fullscreen session. Without
+        // this guard, rapidly entering fullscreen again can resize the new
+        // fullscreen chart back to the dashboard dimensions.
+        this.clearFullscreenRestoreTimers();
+
         var doc = document as any;
         var nativeFullscreenElement = doc.fullscreenElement || doc.webkitFullscreenElement || null;
 
         if (nativeFullscreenElement === card) {
+            this.disconnectFullscreenResizeObserver();
+            this.setChartTooltipOutside(target, true);
             this.exitNativeFullscreen(doc);
             return;
         }
 
         if (this.fullscreenFallbackTarget === target) {
+            this.disconnectFullscreenResizeObserver();
+            this.setChartTooltipOutside(target, true);
             this.clearFullscreenFallback();
             this.fullscreenTarget = null;
             this.restoreChartSize(target);
@@ -442,6 +455,11 @@ export class ChartComponent implements OnInit, OnDestroy {
 
         this.clearFullscreenFallback();
         this.fullscreenTarget = target;
+        // Highcharts appends an `outside` tooltip to document.body. Native
+        // fullscreen renders only the fullscreen element and its descendants,
+        // so that tooltip becomes invisible. Keep it inside the chart while the
+        // card is fullscreen, then restore the outside tooltip on exit.
+        this.setChartTooltipOutside(target, false);
         this.markView();
 
         const fullscreenCard = card;
@@ -451,9 +469,15 @@ export class ChartComponent implements OnInit, OnDestroy {
                 var requestResult = requestFullscreen.call(fullscreenCard, { navigationUI: 'hide' });
                 if (requestResult && typeof requestResult.then === 'function') {
                     requestResult
-                        .then(() => this.scheduleFullscreenResize(target))
+                        .then(() => {
+                            this.setChartTooltipOutside(target, false);
+                            this.observeFullscreenCard(target, fullscreenCard);
+                            this.scheduleFullscreenResize(target);
+                        })
                         .catch(() => this.enterFullscreenFallback(target, fullscreenCard));
                 } else {
+                    this.setChartTooltipOutside(target, false);
+                    this.observeFullscreenCard(target, fullscreenCard);
                     this.scheduleFullscreenResize(target);
                 }
                 return;
@@ -480,8 +504,10 @@ export class ChartComponent implements OnInit, OnDestroy {
         var element = (doc.fullscreenElement || doc.webkitFullscreenElement || null) as HTMLElement | null;
         if (!element) {
             var previousTarget = this.fullscreenTarget;
+            this.disconnectFullscreenResizeObserver();
             this.fullscreenTarget = this.fullscreenFallbackTarget;
             if (!this.fullscreenFallbackTarget && previousTarget) {
+                this.setChartTooltipOutside(previousTarget, true);
                 this.restoreChartSize(previousTarget);
             }
             this.markView();
@@ -491,6 +517,8 @@ export class ChartComponent implements OnInit, OnDestroy {
         var target = element.getAttribute('data-chart-target');
         if (target) {
             this.fullscreenTarget = target;
+            this.setChartTooltipOutside(target, false);
+            this.observeFullscreenCard(target, element);
             this.scheduleFullscreenResize(target);
             this.markView();
         }
@@ -522,7 +550,9 @@ export class ChartComponent implements OnInit, OnDestroy {
         this.clearFullscreenFallback();
         this.fullscreenTarget = target;
         this.fullscreenFallbackTarget = target;
+        this.setChartTooltipOutside(target, false);
         card.classList.add('chart-card--fullscreen-fallback');
+        this.observeFullscreenCard(target, card);
 
         if (typeof document !== 'undefined' && document.body) {
             this.previousBodyOverflow = document.body.style.overflow || '';
@@ -558,8 +588,31 @@ export class ChartComponent implements OnInit, OnDestroy {
         }
     }
 
+    private observeFullscreenCard(target: string, card: HTMLElement): void {
+        this.disconnectFullscreenResizeObserver();
+
+        if (typeof ResizeObserver === 'undefined') {
+            return;
+        }
+
+        this.fullscreenResizeObserver = new ResizeObserver(() => {
+            if (this.fullscreenTarget === target) {
+                this.resizeChartForFullscreen(target);
+            }
+        });
+        this.fullscreenResizeObserver.observe(card);
+    }
+
+    private disconnectFullscreenResizeObserver(): void {
+        this.fullscreenResizeObserver?.disconnect();
+        this.fullscreenResizeObserver = null;
+    }
+
     private scheduleFullscreenResize(target: string): void {
-        var delays = [0, 80, 220, 500];
+        // Native fullscreen dimensions settle over more than one animation frame.
+        // Re-measure a few times and keep a ResizeObserver attached so the plot
+        // continues to fill the viewport after browser UI, DPI or orientation changes.
+        var delays = [0, 50, 140, 300, 650];
         for (var i = 0; i < delays.length; i++) {
             setTimeout(() => this.resizeChartForFullscreen(target), delays[i]);
         }
@@ -577,24 +630,69 @@ export class ChartComponent implements OnInit, OnDestroy {
         }
 
         var header = card.querySelector<HTMLElement>('.chart-card-head');
-        var headerHeight = header ? header.getBoundingClientRect().height : 64;
-        var cardHeight = Math.max(card.clientHeight, typeof window !== 'undefined' ? window.innerHeight : 720);
-        var chartHeight = Math.max(360, Math.floor(cardHeight - headerHeight - 10));
+        var headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 68;
+        var cardRect = card.getBoundingClientRect();
+        var viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1280;
+        var viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 720;
+        var cardWidth = Math.max(320, Math.floor(cardRect.width || card.clientWidth || viewportWidth));
+        var cardHeight = Math.max(420, Math.floor(cardRect.height || card.clientHeight || viewportHeight));
+        var chartHeight = Math.max(320, cardHeight - headerHeight);
 
-        chart.setSize(null, chartHeight, false);
+        // Supplying both dimensions is important here. A fixed height from a prior
+        // render otherwise survives Highcharts reflow and leaves a large blank band
+        // below the plot in fullscreen mode.
+        chart.setSize(cardWidth, chartHeight, false);
         chart.reflow();
     }
 
     private restoreChartSize(target: string): void {
-        var chart = this.getChartInstance(target);
-        if (!chart) {
-            return;
-        }
+        this.clearFullscreenRestoreTimers();
 
-        var normalHeight = target === 'main' ? 550 : 300;
-        const activeChart = chart;
-        activeChart.setSize(null, normalHeight, false);
-        setTimeout(() => activeChart.reflow(), 80);
+        // Highcharts.setSize(width, height) stores both fullscreen dimensions in
+        // chart.options. The previous implementation reset only the height, so
+        // the fullscreen width survived after exit and the normal dashboard plot
+        // overflowed behind the Selected Parameters panel. Reset both dimensions
+        // to null so Highcharts measures its responsive host again.
+        var restore = () => {
+            if (this.fullscreenTarget === target) {
+                return;
+            }
+
+            var chart = this.getChartInstance(target);
+            var card = this.getChartCardElement(target);
+            var host = card?.querySelector<HTMLElement>('.chart-instance') || null;
+            if (!chart || !host || !host.isConnected) {
+                return;
+            }
+
+            try {
+                chart.pointer?.reset(false, 0);
+            } catch (_error) {
+                // A hover point may already have been destroyed during refresh.
+            }
+
+            chart.setSize(null, null, false);
+            chart.reflow();
+        };
+
+        // Browser fullscreen, flex layout and the side panel do not always settle
+        // in the same frame. Re-measure a few times so the chart always returns to
+        // its original responsive card size without requiring a page refresh.
+        [0, 50, 160, 320].forEach((delay) => {
+            var timer = setTimeout(() => {
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(restore);
+                } else {
+                    restore();
+                }
+            }, delay);
+            this.fullscreenRestoreTimers.push(timer);
+        });
+    }
+
+    private clearFullscreenRestoreTimers(): void {
+        this.fullscreenRestoreTimers.forEach((timer) => clearTimeout(timer));
+        this.fullscreenRestoreTimers = [];
     }
 
     downloadChartPng(target: string, event?: MouseEvent): void {
@@ -661,6 +759,34 @@ export class ChartComponent implements OnInit, OnDestroy {
         }
 
         return null;
+    }
+
+
+    /**
+     * `tooltip.outside` is useful in the normal dashboard because the hover card
+     * may extend beyond the SVG. It cannot be used in native fullscreen because
+     * Highcharts mounts that tooltip under document.body, outside the browser's
+     * fullscreen top layer. Toggle the option without rebuilding the whole chart.
+     */
+    private setChartTooltipOutside(target: string, outside: boolean): void {
+        var chart = this.getChartInstance(target) as any;
+        if (!chart) {
+            return;
+        }
+
+        var tooltip = chart.tooltip as any;
+        if (tooltip && typeof tooltip.update === 'function') {
+            tooltip.update({ outside: outside });
+        } else {
+            chart.update({ tooltip: { outside: outside } }, false);
+        }
+
+        // Hide a tooltip created in the previous container so the next pointer
+        // movement recreates it at the correct position immediately.
+        if (chart.tooltip && typeof chart.tooltip.hide === 'function') {
+            chart.tooltip.hide(0);
+        }
+        chart.redraw(false);
     }
 
     toggleAutoRefresh() {
@@ -1202,7 +1328,7 @@ export class ChartComponent implements OnInit, OnDestroy {
         // Update the existing tracked chart cards in place. Keeping the card
         // element stable prevents the browser from leaving Fullscreen whenever
         // Auto Refresh replaces the Highcharts options/data.
-        this.mainChartOptions = this.createChartOptions('All Selected Parameters', this.selectedSeries, 550);
+        this.mainChartOptions = this.createChartOptions('All Selected Parameters', this.selectedSeries, 550, 'main');
         this.groupCharts = this.createGroupedCharts(this.selectedSeries);
 
         if (this.fullscreenTarget) {
@@ -1227,11 +1353,12 @@ export class ChartComponent implements OnInit, OnDestroy {
         for (var j = 0; j < order.length; j++) {
             var groupName = order[j];
             var groupSeries = groupIndex[groupName];
+            var groupKey = this.normalizeTagName(groupName);
             result.push({
-                key: this.normalizeTagName(groupName),
+                key: groupKey,
                 label: groupName,
                 count: groupSeries.length,
-                chartOptions: this.createChartOptions(groupName, groupSeries, 300),
+                chartOptions: this.createChartOptions(groupName, groupSeries, 300, 'group:' + groupKey),
                 seriesNames: groupSeries.map((x: ChartSeriesItem) => x.label)
             });
         }
@@ -1239,15 +1366,15 @@ export class ChartComponent implements OnInit, OnDestroy {
         return result;
     }
 
-    private createChartOptions(title: string, seriesItems: ChartSeriesItem[], height: number): Highcharts.Options {
+    private createChartOptions(title: string, seriesItems: ChartSeriesItem[], height: number, target: string): Highcharts.Options {
         var highSeries: any[] = [];
         var darkTheme = this.isDarkTheme();
-        var chartBackground = darkTheme ? '#070b12' : '#ffffff';
+        var chartBackground = darkTheme ? '#05080d' : '#ffffff';
         var axisColor = darkTheme ? '#334155' : '#cbd5e1';
         var gridColor = darkTheme ? '#1f2937' : '#e5e7eb';
         var mutedText = darkTheme ? '#a7b4c7' : '#475569';
         var primaryText = darkTheme ? '#f8fafc' : '#0f172a';
-        var tooltipBackground = darkTheme ? '#0d1420' : '#ffffff';
+        var tooltipBackground = darkTheme ? '#121925' : '#ffffff';
         var tooltipBorder = darkTheme ? '#475569' : '#bfdbfe';
         // Keep the hover card compact so it does not cover the chart. When
         // many tags are selected, only the value list scrolls internally.
@@ -1262,6 +1389,81 @@ export class ChartComponent implements OnInit, OnDestroy {
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        };
+        var tooltipMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var formatTooltipTime = function (timestamp: number): string {
+            var date = new Date(timestamp);
+            if (!Number.isFinite(date.getTime())) {
+                return '-';
+            }
+
+            var day = String(date.getDate()).padStart(2, '0');
+            var month = tooltipMonths[date.getMonth()] || '';
+            var year = date.getFullYear();
+            var hour = String(date.getHours()).padStart(2, '0');
+            var minute = String(date.getMinutes()).padStart(2, '0');
+            return day + '-' + month + '-' + year + ' ' + hour + ':' + minute;
+        };
+        var formatTooltipValue = function (value: number): string {
+            if (!Number.isFinite(value)) {
+                return '-';
+            }
+
+            // Preserve historian precision without forcing trailing zeroes.
+            // This produces values such as 801.7524, 820.377 and 562,245.
+            return value.toLocaleString('en-US', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 4
+            });
+        };
+        var findNearestSeriesPoint = function (series: any, targetX: number): any | null {
+            var points = series && Array.isArray(series.points) ? series.points : [];
+            if (!points.length || !Number.isFinite(targetX)) {
+                return null;
+            }
+
+            // Highcharts keeps points ordered by X. Binary search avoids scanning
+            // every historian sample whenever the pointer moves across the chart.
+            var low = 0;
+            var high = points.length - 1;
+            while (low <= high) {
+                var middle = Math.floor((low + high) / 2);
+                var middleX = Number(points[middle] && points[middle].x);
+                if (!Number.isFinite(middleX) || middleX < targetX) {
+                    low = middle + 1;
+                } else if (middleX > targetX) {
+                    high = middle - 1;
+                } else {
+                    low = middle;
+                    break;
+                }
+            }
+
+            var candidateIndexes = [low - 1, low, low + 1];
+            var nearest: any | null = null;
+            var nearestDistance = Number.POSITIVE_INFINITY;
+            for (var i = 0; i < candidateIndexes.length; i++) {
+                var index = candidateIndexes[i];
+                if (index < 0 || index >= points.length) {
+                    continue;
+                }
+
+                var candidate = points[index];
+                var candidateX = Number(candidate && candidate.x);
+                var candidateY = Number(candidate && candidate.y);
+                if (!Number.isFinite(candidateX) || !Number.isFinite(candidateY)) {
+                    continue;
+                }
+
+                var distance = Math.abs(candidateX - targetX);
+                if (distance < nearestDistance) {
+                    nearest = candidate;
+                    nearestDistance = distance;
+                }
+            }
+
+            return nearest;
         };
         var axisLayout = this.createReadableAxisLayout(seriesItems, mutedText, gridColor, axisColor);
         var tickInterval = this.getReadableTimeTickInterval();
@@ -1312,6 +1514,10 @@ export class ChartComponent implements OnInit, OnDestroy {
                 borderWidth: isColumnChart ? 0 : undefined,
                 turboThreshold: 5000,
                 connectNulls: false,
+                custom: {
+                    label: item.label,
+                    unit: item.unit
+                },
                 marker: isColumnChart ? undefined : {
                     enabled: false,
                     symbol: 'circle',
@@ -1327,7 +1533,9 @@ export class ChartComponent implements OnInit, OnDestroy {
             exporting: { enabled: false, fallbackToExportServer: false },
             chart: {
                 type: highchartsType,
-                height: height,
+                // Height is controlled by the responsive host element. Keeping this
+                // auto-sized lets Highcharts fill the entire card in fullscreen.
+                height: null,
                 zoomType: 'x',
                 panning: { enabled: true, type: 'x' },
                 panKey: 'shift',
@@ -1427,7 +1635,7 @@ export class ChartComponent implements OnInit, OnDestroy {
                 shared: true,
                 split: false,
                 useHTML: true,
-                outside: true,
+                outside: this.fullscreenTarget !== target,
                 stickOnContact: true,
                 hideDelay: 550,
                 className: 'fleet-chart-tooltip',
@@ -1444,23 +1652,40 @@ export class ChartComponent implements OnInit, OnDestroy {
                 },
                 positioner: function (this: any, labelWidth: number, labelHeight: number, point: any) {
                     var chart = this.chart;
-                    var chartPosition = chart.pointer && chart.pointer.getChartPosition
-                        ? chart.pointer.getChartPosition()
-                        : { left: 0, top: 0 };
-                    var viewportWidth = typeof document !== 'undefined'
-                        ? document.documentElement.clientWidth
-                        : chart.chartWidth;
-                    var viewportHeight = typeof window !== 'undefined'
-                        ? window.innerHeight
-                        : chart.chartHeight;
                     var anchorX = Number(point && point.plotX) || 0;
                     var anchorY = Number(point && point.plotY) || 0;
                     var chartX = anchorX + chart.plotLeft;
                     var chartY = anchorY + chart.plotTop;
-                    var minimumX = 12 - chartPosition.left;
-                    var maximumX = viewportWidth - chartPosition.left - labelWidth - 12;
-                    var minimumY = 12 - chartPosition.top;
-                    var maximumY = viewportHeight - chartPosition.top - labelHeight - 12;
+                    var isOutside = !!this.outside;
+                    var minimumX: number;
+                    var maximumX: number;
+                    var minimumY: number;
+                    var maximumY: number;
+
+                    if (isOutside) {
+                        var chartPosition = chart.pointer && chart.pointer.getChartPosition
+                            ? chart.pointer.getChartPosition()
+                            : { left: 0, top: 0 };
+                        var viewportWidth = typeof document !== 'undefined'
+                            ? document.documentElement.clientWidth
+                            : chart.chartWidth;
+                        var viewportHeight = typeof window !== 'undefined'
+                            ? window.innerHeight
+                            : chart.chartHeight;
+                        minimumX = 12 - chartPosition.left;
+                        maximumX = viewportWidth - chartPosition.left - labelWidth - 12;
+                        minimumY = 12 - chartPosition.top;
+                        maximumY = viewportHeight - chartPosition.top - labelHeight - 12;
+                    } else {
+                        // In fullscreen the tooltip is a child of the chart. Use
+                        // chart-local coordinates and keep the complete value card
+                        // inside the visible canvas at every cursor position.
+                        minimumX = 10;
+                        maximumX = chart.chartWidth - labelWidth - 10;
+                        minimumY = 10;
+                        maximumY = chart.chartHeight - labelHeight - 10;
+                    }
+
                     var rightX = chartX + 18;
                     var leftX = chartX - labelWidth - 18;
                     var x = rightX <= maximumX ? rightX : leftX;
@@ -1473,36 +1698,78 @@ export class ChartComponent implements OnInit, OnDestroy {
                     return { x: x, y: y };
                 },
                 formatter: function (this: any) {
-                    var date = new Date(Number(this.x));
-                    var timestamp = date.toLocaleString('en-GB', {
-                        day: '2-digit', month: 'short', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-                    });
-                    var points = this.points || [];
-                    var rows = points.map((point: any) => {
-                        var rawName = String(point.series.name || '');
+                    var sharedPoints = Array.isArray(this.points) ? this.points : [];
+                    var contextPoint = sharedPoints.length > 0 ? sharedPoints[0] : this.point;
+                    var chart = contextPoint && contextPoint.series ? contextPoint.series.chart : null;
+                    var targetX = Number(this.x != null ? this.x : (contextPoint && contextPoint.x));
+                    var tooltipPoints: any[] = [];
+
+                    // Standard Highcharts shared tooltips only include series that
+                    // contain an identical X timestamp. Historian tags often arrive
+                    // a few milliseconds/seconds apart, which previously produced a
+                    // one-row tooltip. Resolve the closest sample from every visible
+                    // series so one hover card consistently shows all selected tags.
+                    if (chart && Array.isArray(chart.series)) {
+                        for (var seriesIndex = 0; seriesIndex < chart.series.length; seriesIndex++) {
+                            var chartSeries: any = chart.series[seriesIndex];
+                            if (!chartSeries || chartSeries.visible === false ||
+                                (chartSeries.options && chartSeries.options.isInternal)) {
+                                continue;
+                            }
+
+                            var nearestPoint = findNearestSeriesPoint(chartSeries, targetX);
+                            if (nearestPoint) {
+                                tooltipPoints.push({
+                                    series: chartSeries,
+                                    point: nearestPoint,
+                                    y: Number(nearestPoint.y),
+                                    color: nearestPoint.color || chartSeries.color,
+                                    seriesIndex: seriesIndex
+                                });
+                            }
+                        }
+                    }
+
+                    if (tooltipPoints.length === 0) {
+                        tooltipPoints = sharedPoints.map((point: any, index: number) => ({
+                            series: point.series,
+                            point: point.point || point,
+                            y: Number(point.y),
+                            color: point.color || (point.series && point.series.color),
+                            seriesIndex: index
+                        }));
+                    }
+
+                    tooltipPoints.sort((left: any, right: any) => left.seriesIndex - right.seriesIndex);
+                    var rows = tooltipPoints.map((entry: any) => {
+                        var custom = entry.series && entry.series.options
+                            ? (entry.series.options.custom || {})
+                            : {};
+                        var rawName = String((entry.series && entry.series.name) || '');
                         var unitMatch = rawName.match(/\(([^()]*)\)\s*$/);
-                        var unit = unitMatch ? unitMatch[1] : '';
-                        var value = Number(point.y);
-                        var decimals = Math.abs(value) >= 100 ? 0 : Math.abs(value) >= 10 ? 1 : 2;
-                        var formatted = Number.isFinite(value)
-                            ? value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: decimals })
-                            : '-';
-                        var label = rawName.replace(/\s*\([^()]*\)\s*$/, '');
-                        return '<div class="fleet-tooltip-row">' +
-                            '<span class="fleet-tooltip-dot" style="background:' + escapeTooltipHtml(point.color) + '"></span>' +
-                            '<span class="fleet-tooltip-name">' + escapeTooltipHtml(label) + '</span>' +
-                            '<strong class="fleet-tooltip-value">' + escapeTooltipHtml(formatted + (unit ? ' ' + unit : '')) + '</strong>' +
+                        var label = String(custom.label || rawName.replace(/\s*\([^()]*\)\s*$/, ''));
+                        var unit = String(custom.unit || (unitMatch ? unitMatch[1] : ''));
+                        var formatted = formatTooltipValue(Number(entry.y));
+                        var valueText = formatted + (unit ? ' ' + unit : '');
+
+                        return '<div class="fleet-tooltip-row" style="display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;column-gap:7px;min-height:21px;line-height:1.35;">' +
+                            '<span class="fleet-tooltip-dot" style="display:block;width:8px;height:8px;border-radius:50%;background:' + escapeTooltipHtml(entry.color || '#64748b') + ';"></span>' +
+                            '<span class="fleet-tooltip-name" style="min-width:0;font-weight:600;white-space:normal;overflow-wrap:anywhere;">' + escapeTooltipHtml(label) + '</span>' +
+                            '<strong class="fleet-tooltip-value" style="padding-left:8px;font-weight:800;white-space:nowrap;text-align:right;">' + escapeTooltipHtml(valueText) + '</strong>' +
                             '</div>';
                     }).join('');
-                    return '<div class="fleet-tooltip-card" style="--fleet-tooltip-max-height:' + tooltipMaxHeight + 'px;color:' + primaryText + '">' +
-                        '<div class="fleet-tooltip-time">' + escapeTooltipHtml(timestamp) + '</div>' +
-                        '<div class="fleet-tooltip-scroll">' + rows + '</div></div>';
+                    var timestamp = formatTooltipTime(targetX);
+
+                    return '<div class="fleet-tooltip-card" style="--fleet-tooltip-max-height:' + tooltipMaxHeight + 'px;color:' + primaryText + ';min-width:230px;max-width:440px;">' +
+                        '<div class="fleet-tooltip-time" style="padding-bottom:5px;font-size:12px;font-weight:700;white-space:nowrap;">' + escapeTooltipHtml(timestamp) + '</div>' +
+                        '<div class="fleet-tooltip-scroll" style="max-height:' + tooltipMaxHeight + 'px;overflow-y:auto;overflow-x:hidden;padding-right:2px;">' + rows + '</div></div>';
                 }
             },
             plotOptions: {
                 series: {
                     animation: false,
+                    findNearestPointBy: 'x',
+                    stickyTracking: true,
                     states: {
                         hover: { lineWidthPlus: 0.8, halo: { size: 5 } },
                         inactive: { opacity: 0.16 }

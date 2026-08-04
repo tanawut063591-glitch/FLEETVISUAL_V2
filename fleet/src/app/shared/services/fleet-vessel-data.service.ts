@@ -3,6 +3,7 @@ import { firstValueFrom, Observable, of, timer } from 'rxjs';
 import { catchError, exhaustMap, shareReplay } from 'rxjs/operators';
 
 import { NewHttpClientService } from './http-client1.service';
+import { UserAccessControlService } from './user-access-control.service';
 
 export interface OverviewPayloadRow {
   fv: any;
@@ -20,7 +21,10 @@ export class FleetVesselDataService {
   private overviewStream$?: Observable<OverviewPayloadRow[]>;
   private lastRows: OverviewPayloadRow[] = [];
 
-  constructor(private newHttp: NewHttpClientService) {}
+  constructor(
+    private newHttp: NewHttpClientService,
+    private userAccess: UserAccessControlService,
+  ) {}
 
   /**
    * Main stream for Sidebar / Overview / Realtime.
@@ -58,25 +62,26 @@ export class FleetVesselDataService {
         .filter((item: any) => !!item.name);
 
       if (normalized.length > 0) {
-        return normalized;
+        return this.userAccess.filterVessels(normalized);
       }
     } catch (error) {
       console.warn('[FleetVesselDataService] loadVessels fallback:', error);
     }
 
-    return this.getFallbackVessels();
+    return this.userAccess.filterVessels(this.getFallbackVessels());
   }
 
   async loadOverviewRows(vessels?: any[]): Promise<OverviewPayloadRow[]> {
-    const fvInfos = Array.isArray(vessels) && vessels.length > 0
+    const sourceVessels = Array.isArray(vessels) && vessels.length > 0
       ? vessels.map((item: any) => this.normalizeVessel(item)).filter((item: any) => !!item.name)
       : await this.loadVessels();
+    const fvInfos = this.userAccess.filterVessels(sourceVessels);
 
     const tags = await this.loadOverviewTags();
     let payloadRows = this.buildPayloadRows(fvInfos, tags);
 
     if (payloadRows.length === 0) {
-      payloadRows = this.buildPayloadRows(this.getFallbackVessels(), tags);
+      payloadRows = this.buildPayloadRows(this.userAccess.filterVessels(this.getFallbackVessels()), tags);
     }
 
     await this.attachCurrentValues(payloadRows);
@@ -94,7 +99,7 @@ export class FleetVesselDataService {
         .then((rows) => {
           const safeRows = rows && rows.length > 0
             ? rows
-            : this.buildPayloadRows(this.getFallbackVessels(), this.getDefaultOverviewTags());
+            : this.buildPayloadRows(this.userAccess.filterVessels(this.getFallbackVessels()), this.getDefaultOverviewTags());
 
           this.lastRows = safeRows;
           observer.next(safeRows);
@@ -102,7 +107,7 @@ export class FleetVesselDataService {
         })
         .catch((error) => {
           console.warn('[FleetVesselDataService] overview stream fallback:', error);
-          const fallback = this.buildPayloadRows(this.getFallbackVessels(), this.getDefaultOverviewTags());
+          const fallback = this.buildPayloadRows(this.userAccess.filterVessels(this.getFallbackVessels()), this.getDefaultOverviewTags());
           this.lastRows = fallback;
           observer.next(fallback);
           observer.complete();
@@ -110,7 +115,7 @@ export class FleetVesselDataService {
     }).pipe(
       catchError((error) => {
         console.warn('[FleetVesselDataService] overview observable fallback:', error);
-        const fallback = this.buildPayloadRows(this.getFallbackVessels(), this.getDefaultOverviewTags());
+        const fallback = this.buildPayloadRows(this.userAccess.filterVessels(this.getFallbackVessels()), this.getDefaultOverviewTags());
         this.lastRows = fallback;
         return of(fallback);
       })

@@ -1,4 +1,4 @@
-<div class="alerts-page">
+<div class="alarm-page">
   <header class="page-toolbar">
     <div class="page-heading">
       <h1>Alarm Center</h1>
@@ -9,7 +9,7 @@
       <app-date-range-toolbar
         #dateRange
         initialPreset="24h"
-        storageKey="alerts"
+        storageKey="alarm"
         [showThreeDays]="true"
         [disabled]="loading || refreshing"
         [busy]="loading || refreshing"
@@ -22,7 +22,7 @@
         <i class="fa fa-search"></i>
         <input
           type="search"
-          placeholder="Search alerts..."
+          placeholder="Search alarms..."
           [(ngModel)]="searchTerm"
           (ngModelChange)="onFilterChanged()"
         />
@@ -69,7 +69,7 @@
         class="refresh-btn"
         [disabled]="loading || refreshing"
         (click)="loadAlerts(true)"
-        title="Refresh alerts"
+        title="Refresh alarms"
       >
         <i class="fa fa-refresh" [class.fa-spin]="refreshing"></i>
       </button>
@@ -166,7 +166,7 @@
     <div class="error-state" *ngIf="!loading && errorMessage" role="alert">
       <div class="state-icon error"><i class="fa fa-chain-broken"></i></div>
       <div>
-        <strong>Unable to load alerts from the backend</strong>
+        <strong>Unable to load alarms from the backend</strong>
         <p>{{ errorMessage }}</p>
         <small>
           Confirm that the logged-in token can access vessel current information and current telemetry values.
@@ -182,7 +182,7 @@
       *ngIf="!loading && !errorMessage && filteredAlerts.length === 0"
     >
       <div class="state-icon success"><i class="fa fa-check"></i></div>
-      <strong>No alerts found</strong>
+      <strong>No alarms found</strong>
       <p>No live server condition exceeded an alert rule for the selected range and filters.</p>
     </div>
 

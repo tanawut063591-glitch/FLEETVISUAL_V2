@@ -10,13 +10,13 @@
         <button type="button" title="Reload" (click)="reload.emit()" [disabled]="loading">
           <i class="fa fa-refresh" [class.fa-spin]="loading" aria-hidden="true"></i>
         </button>
-        <button type="button" title="Zoom out" (click)="zoomOut.emit()">
+        <button type="button" title="Zoom out" aria-label="Zoom out PDF" [disabled]="zoom <= 0.5" (click)="zoomOut.emit()">
           <i class="fa fa-minus" aria-hidden="true"></i>
         </button>
-        <button type="button" class="zoom-label" title="Reset zoom" (click)="resetZoom.emit()">
+        <button type="button" class="zoom-label" title="Reset zoom" aria-label="Reset PDF zoom to 100 percent" (click)="resetZoom.emit()">
           {{ (zoom * 100) | number:'1.0-0' }}%
         </button>
-        <button type="button" title="Zoom in" (click)="zoomIn.emit()">
+        <button type="button" title="Zoom in" aria-label="Zoom in PDF" [disabled]="zoom >= 2" (click)="zoomIn.emit()">
           <i class="fa fa-plus" aria-hidden="true"></i>
         </button>
         <button type="button" title="Download PDF" (click)="download.emit()">
@@ -28,7 +28,7 @@
       </div>
     </div>
 
-    <div class="pdf-viewer-wrap">
+    <div class="pdf-viewer-wrap" [class.is-zoomed]="zoom > 1.001">
       <pdf-viewer
         [src]="src"
         [zoom]="zoom"

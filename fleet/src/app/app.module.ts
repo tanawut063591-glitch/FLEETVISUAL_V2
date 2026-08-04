@@ -17,9 +17,7 @@ import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 
 @NgModule({
-  declarations: [
-    App,
-  ],
+  declarations: [App],
 
   imports: [
     BrowserModule,
@@ -43,16 +41,9 @@ import { errorInterceptor } from './core/interceptors/error.interceptor';
         })(),
       ],
     }),
-    provideHttpClient(
-      withInterceptors([
-        tokenInterceptor,
-        errorInterceptor,
-      ])
-    ),
+    provideHttpClient(withInterceptors([tokenInterceptor, errorInterceptor])),
   ],
 
-  bootstrap: [
-    App,
-  ],
+  bootstrap: [App],
 })
 export class AppModule {}

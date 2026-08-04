@@ -19,12 +19,12 @@ interface AlertSummaryCard {
 }
 
 @Component({
-  selector: 'app-alerts',
-  templateUrl: './alerts.component.html',
-  styleUrls: ['./alerts.component.css'],
+  selector: 'app-alarm',
+  templateUrl: './alarm.component.html',
+  styleUrls: ['./alarm.component.css'],
   standalone: false,
 })
-export class AlertsComponent implements OnInit, OnDestroy {
+export class AlarmComponent implements OnInit, OnDestroy {
   @ViewChild('dateRange') dateRange?: DateRangeToolbarComponent;
   alerts: AlertRecord[] = [];
   selectedAlert: AlertRecord | null = null;
@@ -145,7 +145,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
   get totalPages(): number {
     return Math.max(1, Math.ceil(this.filteredAlerts.length / this.pageSize));
   }
-
+  
   get pageStart(): number {
     return this.filteredAlerts.length === 0 ? 0 : (this.page - 1) * this.pageSize + 1;
   }
@@ -196,7 +196,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
   get feedDescription(): string {
     return this.sourceType === 'database'
       ? 'Persisted alert records returned by the server database API'
-      : 'Verified alerts calculated from live vessel status and telemetry returned by the server';
+      : 'Verified alarms calculated from live vessel status and telemetry returned by the server';
   }
 
   get connectedHost(): string {
@@ -298,7 +298,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
         this.selectedAlert = null;
         this.detailOpen = false;
         this.alertState.setActiveAlerts([]);
-        this.errorMessage = error?.message || 'Unable to load alerts from the backend.';
+        this.errorMessage = error?.message || 'Unable to load alarms from the backend.';
       },
     });
   }
@@ -514,7 +514,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `fleet-alerts-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
+    anchor.download = `fleet-alarms-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -629,7 +629,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
     this.activeCountCache = active;
     this.summaryCardsCache = [
       {
-        label: 'Critical Alerts',
+        label: 'Critical Alarms',
         value: critical,
         icon: 'fa fa-exclamation-triangle',
         tone: 'critical',

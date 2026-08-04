@@ -17,7 +17,7 @@
       </button>
 
       <button type="button" class="btn light" (click)="refreshPastTrack()" [disabled]="loading">
-        <span>↻</span> Refresh Route
+        <span>↻</span> Refresh
       </button>
 
       <button type="button" class="btn light" (click)="exportMapPng()" [disabled]="!trackPoints.length || exportingMap">
@@ -25,7 +25,7 @@
       </button>
 
       <button type="button" class="btn primary" (click)="exportCsv()" [disabled]="!trackPoints.length">
-        <span>⇩</span> Export CSV
+        <span>⇩</span> Export
       </button>
     </div>
   </div>
@@ -169,6 +169,10 @@
           </app-past-track-playback>
         </div>
 
+        <div class="mobile-point-detail" aria-label="Selected track point detail">
+          <app-past-track-detail [point]="selectedPoint"></app-past-track-detail>
+        </div>
+
         <app-past-track-timeline
           [trackPoints]="trackPoints"
           [selectedPoint]="selectedPoint"
@@ -179,7 +183,9 @@
       </div>
 
       <aside class="right-area" aria-label="Selected point and playback controls">
-        <app-past-track-detail [point]="selectedPoint"></app-past-track-detail>
+        <div class="desktop-point-detail">
+          <app-past-track-detail [point]="selectedPoint"></app-past-track-detail>
+        </div>
 
         <div class="desktop-playback">
           <app-past-track-playback

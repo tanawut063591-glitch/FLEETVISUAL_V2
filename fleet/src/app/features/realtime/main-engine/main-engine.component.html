@@ -3,27 +3,23 @@
   [class.engine-console--running]="isRunning"
   [class.engine-console--stopped]="!isRunning"
 >
-  <div class="engine-hero">
-    <div class="engine-core" aria-hidden="true">
-      <span class="engine-core__ring"></span>
-      <span class="engine-core__icon"><i class="fa fa-cogs"></i></span>
-    </div>
-
-    <div class="engine-identity">
-      <span class="engine-eyebrow">PROPULSION CORE</span>
-      <strong>Main Engine</strong>
-      <span class="engine-state">
-        <i></i>
-        {{ statusText }}
+  <div
+    class="engine-telemetry-bar"
+    [class.realtime-alert-field]="hasAlarm(cons)"
+    [attr.title]="getTooltip(cons)"
+    aria-label="Live fuel rate"
+  >
+    <div class="engine-telemetry-bar__identity">
+      <span class="engine-telemetry-bar__icon" aria-hidden="true">
+        <i class="fa fa-tint"></i>
+      </span>
+      <span class="engine-telemetry-bar__copy">
+        <strong>LIVE FUEL RATE</strong>
+        <small>Current propulsion consumption</small>
       </span>
     </div>
 
-    <div
-      class="engine-live"
-      [class.realtime-alert-field]="hasAlarm(cons)"
-      [attr.title]="getTooltip(cons)"
-    >
-      <span>LIVE FUEL RATE</span>
+    <div class="engine-live">
       <strong>{{ displayAbsNumber(cons, 2) }}</strong>
       <small>L/h</small>
     </div>
