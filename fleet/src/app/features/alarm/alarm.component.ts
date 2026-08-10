@@ -46,7 +46,7 @@ export class AlarmComponent implements OnInit, OnDestroy {
   moduleFilter = 'all';
 
   autoRefresh = true;
-  refreshSeconds = 15;
+  refreshSeconds = 60;
 
   page = 1;
   pageSize = 20;
@@ -187,6 +187,13 @@ export class AlarmComponent implements OnInit, OnDestroy {
     return this.currentRange?.label || 'Last 24 Hours';
   }
 
+  get autoRefreshLabel(): string {
+    if (this.refreshSeconds >= 60 && this.refreshSeconds % 60 === 0) {
+      return `${this.refreshSeconds / 60}m`;
+    }
+    return `${this.refreshSeconds}s`;
+  }
+
   get connectionLabel(): string {
     if (this.sourceType === 'database') return 'Database API connected';
     if (this.sourceType === 'telemetry') return 'Live telemetry connected';
@@ -228,7 +235,7 @@ export class AlarmComponent implements OnInit, OnDestroy {
     this.errorMessage = message;
   }
 
-  loadAlerts(silent = false): void {
+  loadAlerts(silent = false, forceRefresh = false): void {
     if (silent && (this.loading || this.refreshing)) return;
 
     if (silent) {
@@ -256,10 +263,10 @@ export class AlarmComponent implements OnInit, OnDestroy {
       startTime: this.currentRange.startTime,
       endTime: this.currentRange.endTime,
       page: 1,
-      pageSize: 1000,
+      pageSize: 200,
     };
 
-    this.requestSub = this.alertsService.fetchAlerts(query, silent).subscribe({
+    this.requestSub = this.alertsService.fetchAlerts(query, forceRefresh).subscribe({
       next: (result) => {
         const incomingActive = result.alerts.filter((alert) => alert.state !== 'resolved');
         const newActiveAlerts = this.hasLoadedOnce
@@ -664,9 +671,12 @@ export class AlarmComponent implements OnInit, OnDestroy {
     this.autoRefreshSub?.unsubscribe();
     if (!this.autoRefresh) return;
 
-    this.autoRefreshSub = timer(this.refreshSeconds * 1000, this.refreshSeconds * 1000).subscribe(
-      () => this.loadAlerts(true),
-    );
+    const cadenceMs = this.refreshSeconds * 1000;
+    const initialJitterMs = Math.floor(Math.random() * Math.min(5000, cadenceMs * 0.08));
+    this.autoRefreshSub = timer(cadenceMs + initialJitterMs, cadenceMs).subscribe(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      this.loadAlerts(true, false);
+    });
   }
 
   private showNewAlertNotice(alerts: AlertRecord[]): void {

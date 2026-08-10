@@ -15,6 +15,8 @@ export class ReportDatePickerComponent {
   @Input() mode: ReportDateMode = 'date';
   @Input() value = '';
   @Input() disabled = false;
+  @Input() min = '';
+  @Input() max = '';
 
   @Output() valueChange = new EventEmitter<string>();
 

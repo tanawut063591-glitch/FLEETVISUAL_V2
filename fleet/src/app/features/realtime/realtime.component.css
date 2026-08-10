@@ -3157,3 +3157,57 @@
     transition: none;
   }
 }
+
+
+/* ========================================================================
+   2026-08-10 PREMIUM MACHINERY ALIGNMENT
+   Keep every machinery outer card ending on the same baseline while compact
+   Live Fuel Rate ribbons reduce visual dominance inside the card.
+   CSS-only: zero additional server requests or runtime polling.
+   ======================================================================== */
+.col-right {
+  align-items: stretch;
+}
+
+.col-right > .premium-card.dg-card {
+  height: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.dg-card .card-body.pd-0 {
+  min-width: 0;
+  height: 100%;
+}
+
+.dg-card .card-body.pd-0 > app-main-engine,
+.dg-card .card-body.pd-0 > app-aux-engine,
+.dg-card .card-body.pd-0 > app-diesel-generator-no-rpm,
+.dg-card .card-body.pd-0 > app-diesel-generator-no-rpm-vtotal,
+.dg-card .card-body.pd-0 > app-electric-motor {
+  display: block;
+  height: 100%;
+}
+
+/* A restrained cyan/blue header rail keeps the machinery cards modern without
+   competing with the telemetry values. */
+.dg-card > .card-header {
+  position: relative;
+  overflow: hidden;
+}
+
+.dg-card > .card-header::after {
+  content: '';
+  position: absolute;
+  right: 13px;
+  bottom: 0;
+  left: 13px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.26), rgba(6, 182, 212, 0.2), transparent);
+  pointer-events: none;
+}
+
+:host-context([data-theme='dark']) .dg-card > .card-header::after {
+  background: linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.35), rgba(34, 211, 238, 0.2), transparent);
+}

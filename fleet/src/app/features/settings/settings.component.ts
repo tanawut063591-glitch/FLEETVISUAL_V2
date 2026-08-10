@@ -244,7 +244,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.groupDefinitions = [];
     this.theme = this.themeMode.getMode();
     this.defaultLandingPage = this.readLandingPage(localStorage.getItem('fleet-default-landing-page'));
-    this.alertRefreshSeconds = Number(localStorage.getItem('fleet-alert-refresh-seconds')) || 20;
+    this.alertRefreshSeconds = Math.max(60, Number(localStorage.getItem('fleet-alert-refresh-seconds')) || 60);
     this.alarmAutoRefresh = localStorage.getItem('fleet-alert-auto-refresh') !== 'false';
     this.presenceRefreshSeconds =
       Number(localStorage.getItem('fleet-user-presence-refresh-seconds')) || 20;
@@ -329,7 +329,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.filteredCacheKey = key;
     return this.filteredCache;
   }
-
+  
   get filteredUsers(): UserSessionRecord[] {
     const search = this.userSearchTerm.trim().toLowerCase();
     return this.userSessions.filter((user) => {
@@ -1748,7 +1748,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   saveGeneral(): void {
     this.themeMode.setMode(this.theme);
-    this.alertRefreshSeconds = this.clampSeconds(this.alertRefreshSeconds, 20);
+    this.alertRefreshSeconds = Math.min(300, Math.max(60, Number(this.alertRefreshSeconds) || 60));
     this.presenceRefreshSeconds = this.clampSeconds(this.presenceRefreshSeconds, 20);
 
     localStorage.setItem('fleet-default-landing-page', this.defaultLandingPage);

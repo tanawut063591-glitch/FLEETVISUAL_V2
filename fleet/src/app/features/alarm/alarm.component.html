@@ -62,13 +62,13 @@
         (click)="toggleAutoRefresh()"
       >
         <i class="fa" [class.fa-toggle-on]="autoRefresh" [class.fa-toggle-off]="!autoRefresh"></i>
-        Auto {{ refreshSeconds }}s
+        Auto {{ autoRefreshLabel }}
       </button>
       <button
         type="button"
         class="refresh-btn"
         [disabled]="loading || refreshing"
-        (click)="loadAlerts(true)"
+        (click)="loadAlerts(true, true)"
         title="Refresh alarms"
       >
         <i class="fa fa-refresh" [class.fa-spin]="refreshing"></i>

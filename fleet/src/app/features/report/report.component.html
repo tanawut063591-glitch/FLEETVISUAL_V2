@@ -1,95 +1,714 @@
-<section class="report-page">
-  <div class="report-container">
-    <section class="report-header">
-      <div class="report-title-block">
-        <span class="section-label">Fleet Visual PDF</span>
-        <h1>Report Center</h1>
-        <p>Select a vessel, choose a report type and date, then load the PDF from the backend.</p>
+<section class="report-page" [class.report-page--official]="activeTab === 'files'">
+  <div class="report-dashboard">
+    <header class="report-page-header">
+      <div class="report-heading">
+        <span class="report-heading-icon"><i class="fa fa-file-text-o" aria-hidden="true"></i></span>
+        <div>
+          <div class="report-title-line">
+            <h1>Report</h1>
+          </div>
+          <p>Live vessel performance and completed official PDF reports in one workspace.</p>
+        </div>
       </div>
 
-      <app-selected-vessel-card [vesselName]="selectedVesselName"></app-selected-vessel-card>
-    </section>
+      <div class="report-header-actions" *ngIf="activeTab === 'live'; else officialHeaderActions">
+        <button
+          type="button"
+          class="report-button report-button--light"
+          [disabled]="liveLoading || !selectedVesselName"
+          (click)="refreshLive()"
+        >
+          <i
+            class="fa"
+            [class.fa-refresh]="!liveLoading"
+            [class.fa-circle-o-notch]="liveLoading"
+            [class.fa-spin]="liveLoading"
+            aria-hidden="true"
+          ></i>
+          <span>{{ liveLoading ? 'Refreshing' : 'Refresh data' }}</span>
+        </button>
 
-    <section class="report-controls" aria-label="Report filters">
-      <label class="simple-field">
-        <span>Report Type</span>
-        <div class="select-wrap">
-          <i [class]="selectedReportIcon" aria-hidden="true"></i>
-          <select [(ngModel)]="selectedReportType" (ngModelChange)="onReportTypeChange()">
-            <option *ngFor="let item of reportOptions" [ngValue]="item.value">
-              {{ item.label }}
-            </option>
-          </select>
+        <button
+          type="button"
+          class="report-button report-button--primary"
+          [disabled]="!canExportLivePdf"
+          (click)="exportLivePdf()"
+        >
+          <i
+            class="fa"
+            [class.fa-file-pdf-o]="!exportingLivePdf"
+            [class.fa-circle-o-notch]="exportingLivePdf"
+            [class.fa-spin]="exportingLivePdf"
+            aria-hidden="true"
+          ></i>
+          <span>{{ exportingLivePdf ? 'Preparing PDF' : 'Export Live PDF' }}</span>
+        </button>
+      </div>
+
+      <ng-template #officialHeaderActions>
+        <div class="report-header-actions">
+          <button type="button" class="report-button report-button--primary" [disabled]="!hasPdf" (click)="download()">
+            <i class="fa fa-download" aria-hidden="true"></i><span>Download PDF</span>
+          </button>
         </div>
-      </label>
+      </ng-template>
+    </header>
 
-      <app-report-date-picker
-        *ngIf="selectedReportType === 'd'"
-        label="Date"
-        icon="fa fa-calendar-o"
-        mode="date"
-        [value]="selectedDate"
-        hint=""
-        (valueChange)="onReportDateChange($event, 'd')"
-      ></app-report-date-picker>
+    <section class="report-context-bar">
+      <div class="context-vessel">
+        <app-selected-vessel-card [vesselName]="selectedVesselName"></app-selected-vessel-card>
+      </div>
 
-      <app-report-date-picker
-        *ngIf="selectedReportType === 'm'"
-        label="Month"
-        icon="fa fa-calendar"
-        mode="month"
-        [value]="selectedMonth"
-        hint=""
-        (valueChange)="onReportDateChange($event, 'm')"
-      ></app-report-date-picker>
-
-      <button type="button" class="load-btn" [disabled]="!canLoadReport" (click)="loadReport()">
-        <i
-          class="fa"
-          [class.fa-circle-o-notch]="loading"
-          [class.fa-spin]="loading"
-          [class.fa-file-pdf-o]="!loading"
-          aria-hidden="true"
-        ></i>
-        <span>{{ loading ? 'Loading...' : 'Load Report' }}</span>
-      </button>
+      <nav class="report-tabs" aria-label="Report workspace">
+        <button
+          type="button"
+          [class.active]="activeTab === 'live'"
+          (click)="setActiveTab('live')"
+        >
+          <i class="fa fa-bolt" aria-hidden="true"></i>
+          <span>Live Daily</span>
+        </button>
+        <button
+          type="button"
+          [class.active]="activeTab === 'files'"
+          (click)="setActiveTab('files')"
+        >
+          <i class="fa fa-file-pdf-o" aria-hidden="true"></i>
+          <span>Official PDF</span>
+        </button>
+      </nav>
     </section>
 
-    <section class="message-row" *ngIf="errorMessage || successMessage">
+    <section class="message-stack" *ngIf="liveExportErrorMessage || liveExportSuccessMessage">
       <app-report-message-alert
-        *ngIf="errorMessage"
+        *ngIf="liveExportErrorMessage"
         type="error"
-        [message]="errorMessage"
-        (dismissed)="clearError()"
+        [message]="liveExportErrorMessage"
+        (dismissed)="clearLiveExportError()"
       ></app-report-message-alert>
-
       <app-report-message-alert
-        *ngIf="successMessage"
+        *ngIf="liveExportSuccessMessage"
         type="success"
-        [message]="successMessage"
-        [meta]="loadedAtLabel"
-        (dismissed)="clearSuccess()"
+        [message]="liveExportSuccessMessage"
+        meta="Client-side export · no report server load"
+        (dismissed)="clearLiveExportSuccess()"
       ></app-report-message-alert>
     </section>
 
-    <section class="report-content">
-      <app-report-pdf-viewer
-        [src]="pdfUrl"
-        [fileName]="reportFileName"
-        [zoom]="pdfZoom"
-        [loading]="loading"
-        [canLoad]="canLoadReport"
-        emptyTitle="No PDF Loaded"
-        emptyMessage="Select a vessel from the sidebar, choose a report period, and click Load Report."
-        (reload)="reloadReport()"
-        (download)="download()"
-        (openNewTab)="openPdfNewTab()"
-        (zoomIn)="zoomIn()"
-        (zoomOut)="zoomOut()"
-        (resetZoom)="resetZoom()"
-        (load)="loadReport()"
-        (pdfError)="onPdfError($event)"
-      ></app-report-pdf-viewer>
-    </section>
+    <ng-container *ngIf="activeTab === 'live'">
+      <section class="live-loading-state" *ngIf="!liveSnapshot && selectedVesselName && liveLoading" aria-live="polite">
+        <div class="loading-skeleton loading-skeleton--icon"></div>
+        <div class="loading-copy">
+          <div class="loading-skeleton loading-skeleton--title"></div>
+          <div class="loading-skeleton loading-skeleton--text"></div>
+          <div class="loading-skeleton loading-skeleton--text short"></div>
+        </div>
+        <span>Preparing live report for {{ selectedVesselName }}</span>
+      </section>
+
+      <section class="live-empty-state" *ngIf="!liveSnapshot && !selectedVesselName">
+        <span class="empty-state-icon"><i class="fa fa-ship" aria-hidden="true"></i></span>
+        <div>
+          <h2>Select a vessel to view its report</h2>
+          <p>Fleet Visual will map the vessel engines, generators and operating modes automatically.</p>
+        </div>
+      </section>
+
+      <section class="live-empty-state live-empty-state--waiting" *ngIf="!liveSnapshot && selectedVesselName && !liveLoading">
+        <span class="empty-state-icon"><i class="fa fa-signal" aria-hidden="true"></i></span>
+        <div>
+          <h2>Waiting for valid telemetry</h2>
+          <p>The selected vessel is ready. The dashboard will appear when a valid telemetry snapshot is received.</p>
+        </div>
+        <button type="button" class="report-button report-button--light" (click)="refreshLive()">
+          <i class="fa fa-refresh" aria-hidden="true"></i><span>Try again</span>
+        </button>
+      </section>
+
+      <ng-container *ngIf="liveSnapshot as snapshot">
+        <section
+          class="live-mode-spotlight"
+          [class.is-verified]="currentModeIsVerified"
+          [class.is-estimated]="currentModeIsEstimated"
+          aria-label="Current vessel operating mode"
+        >
+          <div class="live-mode-spotlight__main">
+            <span class="live-mode-spotlight__icon" aria-hidden="true">
+              <i class="fa fa-compass"></i>
+            </span>
+            <div class="live-mode-spotlight__copy">
+              <span class="live-mode-spotlight__eyebrow">Current vessel mode</span>
+              <div class="live-mode-spotlight__title-row">
+                <h2>{{ currentModeLabel }}</h2>
+                <span
+                  class="live-mode-spotlight__quality"
+                  [class.verified]="currentModeIsVerified"
+                  [class.reported]="currentModeIsReported"
+                  [class.estimated]="currentModeIsEstimated"
+                >
+                  <i
+                    class="fa"
+                    [class.fa-check-circle]="currentModeIsVerified"
+                    [class.fa-info-circle]="!currentModeIsVerified"
+                    aria-hidden="true"
+                  ></i>
+                  {{ modeSourceQualityLabel }}
+                </span>
+              </div>
+              <p>{{ currentModeSourceLabel }}</p>
+            </div>
+          </div>
+
+          <div class="live-mode-spotlight__meta">
+            <div>
+              <span>Vessel profile</span>
+              <strong [title]="snapshot.profileLabel">{{ snapshot.profileLabel }}</strong>
+            </div>
+            <div>
+              <span>Configured modes</span>
+              <strong>{{ snapshot.modes.length }} modes</strong>
+            </div>
+            <div>
+              <span>Telemetry</span>
+              <strong>{{ telemetryStateLabel }}</strong>
+              <small>{{ telemetryAgeLabel }}</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="report-filter-row">
+          <div class="filter-summary">
+            <span class="filter-icon"><i class="fa fa-calendar-check-o" aria-hidden="true"></i></span>
+            <div>
+              <small>Report type</small>
+              <strong>Live Daily Report</strong>
+            </div>
+          </div>
+
+          <div class="filter-summary filter-summary--wide">
+            <span class="filter-icon"><i class="fa fa-calendar-o" aria-hidden="true"></i></span>
+            <div>
+              <small>Date range</small>
+              <strong>{{ livePeriodLabel }}</strong>
+            </div>
+          </div>
+
+          <div class="filter-summary">
+            <span class="filter-icon"><i class="fa fa-clock-o" aria-hidden="true"></i></span>
+            <div>
+              <small>Refresh policy</small>
+              <strong>Every {{ liveRefreshSeconds }} seconds</strong>
+            </div>
+          </div>
+
+        </section>
+
+        <section class="report-kpi-grid" aria-label="Daily report key performance indicators">
+          <article
+            class="report-kpi-card"
+            *ngFor="let metric of snapshot.metrics | slice: 0 : 6; trackBy: trackByMetric"
+            [attr.data-tone]="metric.tone"
+            [class.is-empty]="!metric.available"
+          >
+            <span class="report-kpi-icon"><i [class]="metric.icon" aria-hidden="true"></i></span>
+            <div>
+              <span>{{ metric.label }}</span>
+              <strong>{{ metric.value }} <small *ngIf="metric.available">{{ metric.unit }}</small></strong>
+            </div>
+          </article>
+        </section>
+
+        <section class="report-content-grid">
+          <article class="report-panel parameter-panel">
+            <header class="panel-header">
+              <div>
+                <span class="panel-eyebrow">PARAMETER SUMMARY</span>
+                <h2>Machinery Performance</h2>
+              </div>
+              <span class="panel-count">{{ snapshot.engines.length }} units</span>
+            </header>
+
+            <div class="compact-table-wrap">
+              <table class="compact-report-table">
+                <thead>
+                  <tr>
+                    <th>Equipment</th>
+                    <th>Fuel today</th>
+                    <th>Fuel rate</th>
+                    <th>Speed</th>
+                    <th>Load / Power</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let engine of snapshot.engines; trackBy: trackByEngine" [attr.data-state]="engine.state">
+                    <td data-label="Equipment">
+                      <div class="equipment-cell">
+                        <i
+                          class="fa"
+                          [class.fa-bolt]="engine.kind === 'generator'"
+                          [class.fa-cog]="engine.kind !== 'generator'"
+                          aria-hidden="true"
+                        ></i>
+                        <span><strong>{{ engine.label }}</strong><small>{{ engineTypeLabel(engine) }}</small></span>
+                      </div>
+                    </td>
+                    <td data-label="Fuel today"><strong>{{ formatLiveValue(engine.fuelToday) }}</strong><small>L</small></td>
+                    <td data-label="Fuel rate"><strong>{{ formatLiveValue(engine.fuelRate) }}</strong><small>L/h</small></td>
+                    <td data-label="Speed" [class.value-filtered]="engine.speedQuality === 'invalid'">
+                      <strong>{{ engine.speedQuality === 'valid' ? formatLiveValue(engine.speed) : engine.speedQuality === 'invalid' ? 'Filtered' : '—' }}</strong>
+                      <small>{{ engine.speedQuality === 'valid' ? 'RPM' : '' }}</small>
+                    </td>
+                    <td data-label="Load / Power">
+                      <strong>{{ engine.power !== null ? formatLiveValue(engine.power) : formatLiveValue(engine.load) }}</strong>
+                      <small>{{ engine.power !== null ? 'kW' : '%' }}</small>
+                    </td>
+                    <td data-label="Status">
+                      <span class="equipment-status"><i aria-hidden="true"></i>{{ engineStateLabel(engine) }}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="machinery-panel-footer">
+              <div><span>Running now</span><strong>{{ snapshot.runningEngineCount }}<small>/{{ snapshot.engines.length }}</small></strong></div>
+              <div><span>Equipment with data</span><strong>{{ snapshot.availableEngineCount }}<small> units</small></strong></div>
+              <div><span>Combined fuel rate</span><strong>{{ formatLiveValue(snapshot.totalFuelRate) }}<small> L/h</small></strong></div>
+              <div><span>Data completeness</span><strong>{{ snapshot.dataCompleteness }}<small>%</small></strong></div>
+            </div>
+          </article>
+
+          <article class="report-panel fuel-panel">
+            <header class="panel-header">
+              <div>
+                <span class="panel-eyebrow">FUEL CONSUMPTION</span>
+                <h2>Today by Equipment Type</h2>
+              </div>
+              <span class="panel-badge">Live total</span>
+            </header>
+
+            <div class="fuel-overview">
+              <div class="fuel-donut" [style.background]="fuelDonutBackground">
+                <div class="fuel-donut-center">
+                  <strong>{{ fuelTotalLabel }}</strong>
+                  <span>Litres today</span>
+                </div>
+              </div>
+
+              <div class="fuel-legend">
+                <div *ngFor="let item of fuelBreakdown; trackBy: trackByFuelGroup">
+                  <span class="fuel-color" [style.background]="item.color"></span>
+                  <span class="fuel-legend-name">{{ item.label }}</span>
+                  <strong>{{ formatLiveValue(item.value) }} L</strong>
+                  <small>{{ item.percent | number: '1.0-1' }}%</small>
+                </div>
+                <div class="fuel-empty" *ngIf="fuelBreakdown.length === 0">No cumulative fuel values available.</div>
+              </div>
+            </div>
+
+            <div class="fuel-footer-stats">
+              <div><span>Live fuel rate</span><strong>{{ formatLiveValue(snapshot.totalFuelRate) }} <small>L/h</small></strong></div>
+              <div><span>Running equipment</span><strong>{{ snapshot.runningEngineCount }} <small>units</small></strong></div>
+              <div><span>Data completeness</span><strong>{{ snapshot.dataCompleteness }}<small>%</small></strong></div>
+            </div>
+
+            <p class="panel-note"><i class="fa fa-shield" aria-hidden="true"></i>No historian time-series request is made by this panel.</p>
+          </article>
+
+          <article class="report-panel operating-panel">
+            <header class="panel-header">
+              <div>
+                <span class="panel-eyebrow">OPERATING PROFILE</span>
+                <h2>Configured Vessel Modes</h2>
+              </div>
+              <span class="panel-count">{{ snapshot.modes.length }} modes</span>
+            </header>
+
+            <div class="mode-catalog-header mode-catalog-header--profile">
+              <div>
+                <strong>Mode library</strong>
+                <span>The active mode is highlighted from the current telemetry snapshot.</span>
+              </div>
+              <button
+                *ngIf="snapshot.modes.length > 6"
+                type="button"
+                class="mode-catalog-toggle"
+                (click)="toggleAllModes()"
+              >
+                <span>{{ showAllModes ? 'Show less' : 'View all modes' }}</span>
+                <i class="fa" [class.fa-angle-down]="!showAllModes" [class.fa-angle-up]="showAllModes" aria-hidden="true"></i>
+              </button>
+            </div>
+
+            <div class="mode-profile-grid" role="list" aria-label="Configured operating modes">
+              <div
+                *ngFor="let mode of visibleModes; let index = index; trackBy: trackByMode"
+                [class.current]="mode.isCurrent"
+                role="listitem"
+              >
+                <span>{{ index + 1 | number: '2.0-0' }}</span>
+                <strong [title]="mode.label">{{ mode.label }}</strong>
+                <small>{{ mode.isCurrent ? (currentModeIsVerified ? 'Verified current' : 'Estimated current') : 'Configured' }}</small>
+              </div>
+            </div>
+
+            <div class="mode-catalog-foot" *ngIf="!showAllModes && hiddenModeCount > 0">
+              <i class="fa fa-th-large" aria-hidden="true"></i>
+              {{ hiddenModeCount }} additional modes are available in the full vessel profile.
+            </div>
+          </article>
+
+          <article class="report-panel voyage-panel">
+            <header class="panel-header">
+              <div>
+                <span class="panel-eyebrow">VOYAGE & DATA QUALITY</span>
+                <h2>Navigation Summary</h2>
+              </div>
+              <span class="position-state" [class.valid]="hasTrackingPosition">
+                <i class="fa fa-map-marker" aria-hidden="true"></i>{{ hasTrackingPosition ? 'Position valid' : 'No position' }}
+              </span>
+            </header>
+
+            <div class="coordinate-summary">
+              <div><span>Latitude</span><strong>{{ latitudeLabel }}</strong></div>
+              <div><span>Longitude</span><strong>{{ longitudeLabel }}</strong></div>
+            </div>
+
+            <div class="voyage-metric-grid">
+              <div><span>Distance</span><strong>{{ formatLiveValue(snapshot.tracking.distanceToday) }} <small>NM</small></strong></div>
+              <div><span>Current speed</span><strong>{{ formatLiveValue(snapshot.tracking.currentSpeed) }} <small>kn</small></strong></div>
+              <div><span>Average speed</span><strong>{{ formatLiveValue(snapshot.tracking.averageSpeed) }} <small>kn</small></strong></div>
+              <div><span>Maximum speed</span><strong>{{ formatLiveValue(snapshot.tracking.maximumSpeed) }} <small>kn</small></strong></div>
+              <div><span>Heading</span><strong>{{ formatLiveValue(snapshot.tracking.heading) }}<small>°</small></strong></div>
+              <div><span>Telemetry</span><strong>{{ telemetryStateLabel }}</strong></div>
+            </div>
+
+            <div class="validation-list">
+              <div><span><i class="fa fa-check-circle-o" aria-hidden="true"></i>Equipment with data</span><strong>{{ snapshot.availableEngineCount }}/{{ snapshot.engines.length }}</strong></div>
+              <div><span><i class="fa fa-filter" aria-hidden="true"></i>RPM validation</span><strong>{{ engineSpeedValidationLabel }}</strong></div>
+              <div><span><i class="fa fa-server" aria-hidden="true"></i>Official PDF generation</span><strong>Manual only</strong></div>
+            </div>
+          </article>
+        </section>
+
+      </ng-container>
+    </ng-container>
+
+    <ng-container *ngIf="activeTab === 'files'">
+      <section class="official-report-workspace" aria-label="Official PDF report workspace">
+        <section class="official-control-bar">
+          <div class="official-control-field official-control-field--type">
+            <label for="official-report-type">
+              <span>Report type</span>
+              <small>Completed official document</small>
+            </label>
+            <div class="official-select-wrap">
+              <i class="fa fa-file-text-o" aria-hidden="true"></i>
+              <select
+                id="official-report-type"
+                [value]="selectedReportType"
+                [disabled]="loading"
+                (change)="selectReportType($any($event.target).value)"
+              >
+                <option value="d">Daily Report</option>
+                <option value="m">Monthly Report</option>
+              </select>
+              <i class="fa fa-angle-down official-select-caret" aria-hidden="true"></i>
+            </div>
+          </div>
+
+          <div class="official-control-field official-control-field--date">
+            <app-report-date-picker
+              *ngIf="selectedReportType === 'd'"
+              label="Report date"
+              icon="fa fa-calendar-o"
+              mode="date"
+              [value]="selectedDate"
+              [max]="maxDailyReportDate"
+              (valueChange)="onReportDateChange($event, 'd')"
+            ></app-report-date-picker>
+
+            <app-report-date-picker
+              *ngIf="selectedReportType === 'm'"
+              label="Report month"
+              icon="fa fa-calendar"
+              mode="month"
+              [value]="selectedMonth"
+              [max]="maxMonthlyReportPeriod"
+              (valueChange)="onReportDateChange($event, 'm')"
+            ></app-report-date-picker>
+          </div>
+
+          <div
+            class="official-load-state"
+            [class.is-ready]="localArchiveAvailable && !selectedPeriodIsFuture"
+            [class.is-invalid]="selectedPeriodIsFuture"
+          >
+            <div class="official-load-state__copy">
+              <i
+                class="fa"
+                [class.fa-check-circle]="localArchiveAvailable && !selectedPeriodIsFuture"
+                [class.fa-file-pdf-o]="!localArchiveAvailable && !selectedPeriodIsFuture"
+                [class.fa-exclamation-triangle]="selectedPeriodIsFuture"
+                aria-hidden="true"
+              ></i>
+              <span>
+                <small>{{ selectedPeriodIsFuture ? 'Invalid period' : localArchiveAvailable ? 'Completed file ready' : 'Ready to request' }}</small>
+                <strong>{{ selectedVesselName || 'Select a vessel' }}</strong>
+                <em>{{ selectedReportLabel }} · {{ selectedPeriodLabel }}</em>
+              </span>
+            </div>
+
+            <button type="button" class="official-load-button" [disabled]="!canLoadReport" (click)="loadReport()">
+              <i
+                class="fa"
+                [class.fa-circle-o-notch]="loading"
+                [class.fa-spin]="loading"
+                [class.fa-file-pdf-o]="!loading"
+                aria-hidden="true"
+              ></i>
+              <span>{{ officialLoadButtonLabel }}</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="period-warning" *ngIf="selectedPeriodIsFuture" role="alert">
+          <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+          <div>
+            <strong>Future report period blocked</strong>
+            <span>Select a completed date. Fleet Visual will not send an invalid request to the report server.</span>
+          </div>
+          <button type="button" (click)="useLatestCompletedPeriod()">Use latest completed</button>
+        </section>
+
+        <section class="message-stack" *ngIf="errorMessage || successMessage">
+          <app-report-message-alert
+            *ngIf="errorMessage"
+            type="error"
+            [message]="errorMessage"
+            (dismissed)="clearError()"
+          ></app-report-message-alert>
+          <app-report-message-alert
+            *ngIf="successMessage"
+            type="success"
+            [message]="successMessage"
+            [meta]="officialPdfSourceLabel + ' · ' + loadedAtLabel"
+            (dismissed)="clearSuccess()"
+          ></app-report-message-alert>
+        </section>
+
+        <section class="official-pdf-card" [class.has-document]="hasPdf">
+          <app-report-pdf-viewer
+            [src]="pdfUrl"
+            [fileName]="reportFileName"
+            [zoom]="pdfZoom"
+            [loading]="loading"
+            [canLoad]="canLoadReport"
+            emptyTitle="Yesterday's official report"
+            emptyMessage="Choose a completed period above. A matching local PDF opens automatically without creating a new report on the server."
+            (reload)="reloadReport()"
+            (download)="download()"
+            (openNewTab)="openPdfNewTab()"
+            (zoomIn)="zoomIn()"
+            (zoomOut)="zoomOut()"
+            (resetZoom)="resetZoom()"
+            (load)="loadReport()"
+            (pdfError)="onPdfError($event)"
+          ></app-report-pdf-viewer>
+        </section>
+      </section>
+    </ng-container>
   </div>
+</section>
+
+<!-- Off-screen A4 export document. It is created only while an export is running. -->
+<section class="pdf-export-root" *ngIf="pdfExportVisible && liveSnapshot as exportSnapshot" aria-hidden="true">
+  <article class="pdf-export-page" #pdfPage>
+    <header class="pdf-report-header">
+      <div>
+        <span>FLEET VISUAL</span>
+        <strong>DAILY OPERATIONS REPORT</strong>
+      </div>
+      <div class="pdf-header-period">
+        <small>REPORT PERIOD</small>
+        <strong>{{ livePeriodLabel }}</strong>
+      </div>
+    </header>
+
+    <section class="pdf-vessel-title">
+      <div>
+        <span>VESSEL</span>
+        <h1>{{ exportSnapshot.vesselName }}</h1>
+        <p>{{ exportSnapshot.profileLabel }}</p>
+      </div>
+      <div class="pdf-status-box" [attr.data-state]="exportSnapshot.telemetryState">
+        <small>TELEMETRY STATUS</small>
+        <strong>{{ telemetryStateLabel }}</strong>
+        <span>{{ telemetryAgeLabel }}</span>
+      </div>
+    </section>
+
+    <section class="pdf-section">
+      <header class="pdf-section-title"><strong>Executive Summary</strong><span>00:00 to latest telemetry</span></header>
+      <div class="pdf-summary-grid">
+        <div><span>Total Fuel Used</span><strong>{{ liveExportTotalFuelLabel }}</strong></div>
+        <div><span>Live Fuel Rate</span><strong>{{ formatLiveValue(exportSnapshot.totalFuelRate) }} L/h</strong></div>
+        <div><span>Distance Today</span><strong>{{ liveExportDistanceLabel }}</strong></div>
+        <div><span>Average Speed</span><strong>{{ liveExportAverageSpeedLabel }}</strong></div>
+        <div><span>Maximum Speed</span><strong>{{ liveExportMaximumSpeedLabel }}</strong></div>
+        <div><span>Course Over Ground</span><strong>{{ formatLiveValue(exportSnapshot.tracking.heading) }}°</strong></div>
+      </div>
+    </section>
+
+    <section class="pdf-two-column">
+      <div class="pdf-section">
+        <header class="pdf-section-title"><strong>Current Operation</strong><span>{{ modeSourceQualityLabel }}</span></header>
+        <div class="pdf-current-mode">
+          <small>CURRENT MODE</small>
+          <strong>{{ currentModeLabel }}</strong>
+          <p>{{ currentModeSourceLabel }}</p>
+        </div>
+        <div class="pdf-mini-table">
+          <div><span>Running equipment</span><strong>{{ exportSnapshot.runningEngineCount }} / {{ exportSnapshot.engines.length }}</strong></div>
+          <div><span>Equipment with data</span><strong>{{ exportSnapshot.availableEngineCount }}</strong></div>
+          <div><span>Configured modes</span><strong>{{ exportSnapshot.modes.length }}</strong></div>
+          <div><span>Data completeness</span><strong>{{ exportSnapshot.dataCompleteness }}%</strong></div>
+        </div>
+      </div>
+
+      <div class="pdf-section">
+        <header class="pdf-section-title"><strong>Vessel Tracking</strong><span>Latest position</span></header>
+        <div class="pdf-mini-table tracking">
+          <div><span>Latitude</span><strong>{{ latitudeLabel }}</strong></div>
+          <div><span>Longitude</span><strong>{{ longitudeLabel }}</strong></div>
+          <div><span>Current speed</span><strong>{{ formatLiveValue(exportSnapshot.tracking.currentSpeed) }} kn</strong></div>
+          <div><span>Average speed</span><strong>{{ formatLiveValue(exportSnapshot.tracking.averageSpeed) }} kn</strong></div>
+          <div><span>Maximum speed</span><strong>{{ formatLiveValue(exportSnapshot.tracking.maximumSpeed) }} kn</strong></div>
+          <div><span>Heading</span><strong>{{ formatLiveValue(exportSnapshot.tracking.heading) }}°</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="pdf-section pdf-governance">
+      <header class="pdf-section-title"><strong>Report Validation</strong><span>System safeguards</span></header>
+      <div class="pdf-validation-grid">
+        <div><span>Engine speed validation</span><strong>{{ engineSpeedValidationLabel }}</strong></div>
+        <div><span>Mode source</span><strong>{{ modeSourceQualityLabel }}</strong></div>
+        <div><span>Profile reference</span><strong>{{ reportSourceLabel }}</strong></div>
+        <div><span>PDF generation</span><strong>Client-side · manual</strong></div>
+      </div>
+      <p>
+        This live report uses the latest cumulative daily telemetry available to Fleet Visual. It does not replace
+        the official backend-generated daily report for audited per-mode aggregates.
+      </p>
+    </section>
+
+    <footer class="pdf-report-footer"><span>Fleet Visual · Generated {{ liveExportGeneratedAtLabel }}</span><strong>Page 1 of {{ liveExportPageCount }}</strong></footer>
+  </article>
+
+  <article
+    class="pdf-export-page"
+    #pdfPage
+    *ngFor="let enginePage of exportEnginePages; let pageIndex = index; trackBy: trackByPdfPage"
+  >
+    <header class="pdf-report-header">
+      <div><span>FLEET VISUAL</span><strong>DAILY OPERATIONS REPORT</strong></div>
+      <div class="pdf-header-period"><small>VESSEL</small><strong>{{ exportSnapshot.vesselName }}</strong></div>
+    </header>
+
+    <section class="pdf-page-heading">
+      <span>ENGINE SUMMARY</span>
+      <h1>Engine & Generator Performance</h1>
+      <p>Validated live machinery data for the current daily period.</p>
+    </section>
+
+    <table class="pdf-equipment-table">
+      <thead>
+        <tr><th>Equipment</th><th>Status</th><th>Fuel Used</th><th>Fuel Rate</th><th>Speed</th><th>Load / Power</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let engine of enginePage; trackBy: trackByEngine">
+          <td><strong>{{ engine.label }}</strong><span>{{ engineTypeLabel(engine) }}</span></td>
+          <td><span class="pdf-state" [attr.data-state]="engine.state">{{ engineStateLabel(engine) }}</span></td>
+          <td><strong>{{ formatLiveValue(engine.fuelToday) }}</strong><span>L</span></td>
+          <td><strong>{{ formatLiveValue(engine.fuelRate) }}</strong><span>L/h</span></td>
+          <td>
+            <strong>{{ engine.speedQuality === 'valid' ? formatLiveValue(engine.speed) : engine.speedQuality === 'invalid' ? 'Filtered' : '—' }}</strong>
+            <span>{{ engine.speedQuality === 'valid' ? 'RPM' : engineSpeedSourceLabel(engine) }}</span>
+          </td>
+          <td>
+            <strong>{{ engine.power !== null ? formatLiveValue(engine.power) : formatLiveValue(engine.load) }}</strong>
+            <span>{{ engine.power !== null ? 'kW' : '%' }}</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <section class="pdf-engine-notes">
+      <div><span>Available equipment</span><strong>{{ exportSnapshot.availableEngineCount }} / {{ exportSnapshot.engines.length }}</strong></div>
+      <div><span>Running equipment</span><strong>{{ exportSnapshot.runningEngineCount }}</strong></div>
+      <div><span>Combined fuel rate</span><strong>{{ formatLiveValue(exportSnapshot.totalFuelRate) }} L/h</strong></div>
+      <div><span>Filtered RPM values</span><strong>{{ exportSnapshot.invalidEngineSpeedCount }}</strong></div>
+    </section>
+
+    <div class="pdf-safety-note">
+      <strong>Validation note</strong>
+      <p>Values outside the vessel-specific RPM ceiling are marked Filtered and are not presented as valid engine speed.</p>
+    </div>
+
+    <footer class="pdf-report-footer">
+      <span>Fleet Visual · {{ livePeriodLabel }}</span>
+      <strong>Page {{ pageIndex + 2 }} of {{ liveExportPageCount }}</strong>
+    </footer>
+  </article>
+
+  <article
+    class="pdf-export-page"
+    #pdfPage
+    *ngFor="let modePage of exportModePages; let modePageIndex = index; trackBy: trackByPdfPage"
+  >
+    <header class="pdf-report-header">
+      <div><span>FLEET VISUAL</span><strong>DAILY OPERATIONS REPORT</strong></div>
+      <div class="pdf-header-period"><small>VESSEL</small><strong>{{ exportSnapshot.vesselName }}</strong></div>
+    </header>
+
+    <section class="pdf-page-heading">
+      <span>OPERATION PROFILE</span>
+      <h1>Configured Vessel Modes</h1>
+      <p>Mode structure mapped from the vessel-specific official report profile.</p>
+    </section>
+
+    <div class="pdf-mode-highlight">
+      <div><small>CURRENT MODE</small><strong>{{ currentModeLabel }}</strong></div>
+      <div><small>MODE SOURCE</small><strong>{{ modeSourceQualityLabel }}</strong></div>
+      <div><small>CONFIDENCE</small><strong>{{ currentModeConfidenceLabel || 'Not available' }}</strong></div>
+    </div>
+
+    <table class="pdf-mode-table">
+      <thead><tr><th>No.</th><th>Operating Mode</th><th>Configuration Status</th><th>Live Status</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let mode of modePage; let rowIndex = index; trackBy: trackByMode" [class.current]="mode.isCurrent">
+          <td>{{ modePageIndex * 14 + rowIndex + 1 | number: '2.0-0' }}</td>
+          <td><strong>{{ mode.label }}</strong></td>
+          <td>Configured</td>
+          <td><span *ngIf="mode.isCurrent">{{ currentModeIsVerified ? 'Verified current' : 'Estimated current' }}</span><span *ngIf="!mode.isCurrent">—</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <section class="pdf-section pdf-mode-disclaimer">
+      <header class="pdf-section-title"><strong>Aggregation Policy</strong><span>Accuracy first</span></header>
+      <p>
+        Per-mode fuel consumption, running hours, distance, L/NM and LPH require historian aggregation from the
+        official reporting service. These values remain available in the Official PDF Archive and are not inferred
+        from a single live telemetry snapshot.
+      </p>
+    </section>
+
+    <footer class="pdf-report-footer">
+      <span>Fleet Visual · Profile {{ exportSnapshot.profileLabel }}</span>
+      <strong>Page {{ modePageIndex + exportEnginePages.length + 2 }} of {{ liveExportPageCount }}</strong>
+    </footer>
+  </article>
 </section>

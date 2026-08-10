@@ -7,6 +7,9 @@
       [type]="mode"
       [ngModel]="value"
       [disabled]="disabled"
+      [attr.min]="min || null"
+      [attr.max]="max || null"
+      [attr.aria-label]="label"
       (ngModelChange)="onValueChange($event)"
     />
   </div>

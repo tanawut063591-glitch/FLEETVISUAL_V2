@@ -94,11 +94,13 @@
 }
 
 
-/* Popup */
+
+/* Popup: original speech-bubble card, anchored behind vessel name. */
+
 .vessel-popup {
   position: absolute;
-  top: 32%;
-  left: 54%;
+  top: 18px;
+  left: 18px;
   z-index: 35;
 
   width: 430px;
@@ -110,21 +112,28 @@
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
 
   box-sizing: border-box;
+  will-change: left, top;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .popup-arrow {
   position: absolute;
-  left: -9px;
-  top: 42px;
-
-  width: 18px;
-  height: 18px;
-
-  transform: rotate(45deg);
-
+  left: -15px;
+  top: 46px;
+  width: 16px;
+  height: 24px;
   background: #ffffff;
-  border-left: 1px solid rgba(226, 232, 240, 0.95);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+  clip-path: polygon(100% 0, 100% 100%, 0 50%);
+  filter: drop-shadow(-2px 2px 2px rgba(15, 23, 42, 0.08));
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Desktop always keeps the original tail on the LEFT side of the popup.
+   The tip is positioned at the right edge of the selected vessel-name label. */
+.vessel-popup.popup-right-of-marker .popup-arrow {
+  left: -15px;
+  right: auto;
 }
 
 .popup-close {
@@ -148,20 +157,49 @@
   color: #ef4444;
 }
 
+@media (min-width: 901px) {
+  /* Avoid a one-frame flash at the fallback top-left coordinates while the
+     Google Maps projection is being measured. */
+  .vessel-popup:not(.popup-right-of-marker) {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .vessel-popup.popup-right-of-marker {
+    opacity: 1;
+    border-color: rgba(191, 219, 254, 0.98);
+    box-shadow:
+      0 28px 78px rgba(15, 23, 42, 0.24),
+      0 0 0 1px rgba(37, 99, 235, 0.04);
+    animation: vessel-callout-in 150ms ease-out;
+  }
+
+  @keyframes vessel-callout-in {
+    from {
+      opacity: 0;
+      transform: translateY(3px) scale(0.994);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+}
+
 .popup-head {
   display: flex;
-  gap: 14px;
+  gap: 13px;
 
-  padding-bottom: 16px;
+  padding-bottom: 15px;
   border-bottom: 1px solid #e2e8f0;
 }
 
 .vessel-img-wrap {
   position: relative;
 
-  width: 78px;
-  height: 78px;
-  flex: 0 0 78px;
+  width: 74px;
+  height: 74px;
+  flex: 0 0 74px;
 
   border-radius: 10px;
   overflow: hidden;
@@ -265,33 +303,77 @@
   color: #b91c1c;
 }
 
-.summary-title {
-  margin: 16px 0 12px;
+.summary-title-row {
+  margin: 15px 0 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 
+.summary-title {
+  margin: 0;
   color: #1455ff;
   font-size: 12px;
   font-weight: 950;
+  letter-spacing: 0.02em;
+}
+
+.summary-live-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  background: #f8fbff;
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.summary-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.11);
+}
+
+.summary-live-state.error .summary-live-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.11);
 }
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-
-  border-top: 1px solid #f1f5f9;
-  border-left: 1px solid #f1f5f9;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid #e8eef7;
+  border-radius: 13px;
+  background: #ffffff;
 }
 
 .summary-item {
-  min-height: 86px;
-  padding: 12px 8px;
+  min-height: 102px;
+  padding: 12px 8px 10px;
 
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
 
-  border-right: 1px solid #f1f5f9;
-  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #edf2f8;
+  border-bottom: 1px solid #edf2f8;
+}
+
+.summary-grid.six-kpi .summary-item:nth-child(3n) {
+  border-right: 0;
+}
+
+.summary-grid.six-kpi .summary-item:nth-last-child(-n + 3) {
+  border-bottom: 0;
 }
 
 .summary-icon {
@@ -315,6 +397,16 @@
 .summary-icon.engine {
   background: #eef2ff;
   color: #4f46e5;
+}
+
+.summary-icon.violet {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.summary-icon.cyan {
+  background: #e0f7ff;
+  color: #0891b2;
 }
 
 .summary-icon.orange {
@@ -345,8 +437,10 @@
   margin-top: 4px;
 
   color: #0f172a;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 950;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.08;
 }
 
 .summary-item small {
@@ -452,7 +546,20 @@
   }
 
   .summary-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary-grid.six-kpi .summary-item {
+    border-right: 1px solid #edf2f8;
+    border-bottom: 1px solid #edf2f8;
+  }
+
+  .summary-grid.six-kpi .summary-item:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .summary-grid.six-kpi .summary-item:nth-last-child(-n + 2) {
+    border-bottom: 0;
   }
 
   .popup-actions {
@@ -473,31 +580,24 @@
 }
 
 .vessel-popup {
-  width: 405px;
-  top: 31%;
-  left: 49%;
+  width: 470px;
+  max-width: calc(100vw - 36px);
   border-radius: 17px;
-  padding: 16px;
+  padding: 15px;
 }
 
 .summary-item {
-  min-height: 78px;
+  min-height: 98px;
 }
 
 .popup-actions .action-btn {
-  height: 52px;
+  height: 50px;
 }
 
 
-@media (max-width: 1280px) {
+@media (max-width: 1280px) and (min-width: 901px) {
   .vessel-popup {
-    left: auto;
-    right: 18px;
-    width: min(430px, calc(100% - 36px));
-  }
-
-  .popup-arrow {
-    display: none;
+    width: min(470px, calc(100% - 36px));
   }
 }
 
@@ -583,5 +683,65 @@
   .filter-dot {
     width: 9px;
     height: 9px;
+  }
+}
+
+
+/* Overview KPI popup: compact premium layout on narrow phones. */
+@media (max-width: 430px) {
+  .vessel-popup {
+    left: 8px;
+    right: 8px;
+    bottom: 68px;
+    padding: 13px;
+    max-height: calc(100% - 136px);
+  }
+
+  .summary-title-row {
+    margin-top: 13px;
+  }
+
+  .summary-item {
+    min-height: 92px;
+    padding: 10px 5px 9px;
+  }
+
+  .summary-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+
+  .summary-item span {
+    font-size: 9px;
+  }
+
+  .summary-item strong {
+    font-size: 16px;
+  }
+
+  .summary-item small {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 900px) {
+  .vessel-popup.popup-right-of-marker {
+    animation: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .popup-connector {
+    display: none !important;
+  }
+}
+
+
+/* Behind-name callout is desktop-only. Mobile keeps the existing compact popup
+   and does not draw a map tail that would consume horizontal space. */
+@media (max-width: 900px) {
+  .vessel-popup .popup-arrow {
+    display: none !important;
   }
 }

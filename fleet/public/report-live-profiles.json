@@ -1,0 +1,4562 @@
+{
+  "version": 5,
+  "defaultProfile": {
+    "id": "generic-five-mode",
+    "label": "Standard 5-Mode Vessel Profile",
+    "aliases": [],
+    "prefixes": [],
+    "modeTags": [
+      "VES_MODE",
+      "VES_OPERATION_MODE",
+      "OPERATION_MODE",
+      "CURRENT_MODE",
+      "VES_MODE_CODE"
+    ],
+    "modes": [
+      {
+        "key": "passage",
+        "label": "Passage",
+        "codes": [
+          "PASSAGE"
+        ]
+      },
+      {
+        "key": "sea-passage-economics",
+        "label": "Sea Passage Economics",
+        "codes": [
+          "SEA PASSAGE ECONOMICS",
+          "ECO PASSAGE"
+        ]
+      },
+      {
+        "key": "manoeuvring",
+        "label": "Manoeuvring",
+        "codes": [
+          "MANOEUVRING",
+          "MANEUVERING"
+        ]
+      },
+      {
+        "key": "cargo-operation",
+        "label": "Cargo Operation",
+        "codes": [
+          "CARGO OPERATION",
+          "CARGO"
+        ]
+      },
+      {
+        "key": "standby",
+        "label": "Standby",
+        "codes": [
+          "STANDBY"
+        ]
+      }
+    ],
+    "engines": [
+      {
+        "key": "port-main",
+        "label": "Port Main Engine",
+        "kind": "main",
+        "fuelTodayTags": [
+          "PME_CONS_TODAY"
+        ],
+        "fuelRateTags": [
+          "PME_CONS_RATE"
+        ],
+        "speedTags": [
+          "PME_SPD_CALC",
+          "PME_SPD"
+        ],
+        "loadTags": [
+          "PME_ENGINE_LOAD",
+          "PME_GEN_LOAD"
+        ],
+        "powerTags": [
+          "PME_GEN_LOAD_KW"
+        ],
+        "flowSupplyTags": [
+          "PME_FIN_RATE"
+        ],
+        "flowReturnTags": [
+          "PME_FOUT_RATE"
+        ],
+        "maxSpeedRpm": 3000
+      },
+      {
+        "key": "center-main",
+        "label": "Center Main Engine",
+        "kind": "main",
+        "fuelTodayTags": [
+          "CME_CONS_TODAY"
+        ],
+        "fuelRateTags": [
+          "CME_CONS_RATE"
+        ],
+        "speedTags": [
+          "CME_SPD_CALC",
+          "CME_SPD"
+        ],
+        "loadTags": [
+          "CME_ENGINE_LOAD",
+          "CME_GEN_LOAD"
+        ],
+        "powerTags": [
+          "CME_GEN_LOAD_KW"
+        ],
+        "flowSupplyTags": [
+          "CME_FIN_RATE"
+        ],
+        "flowReturnTags": [
+          "CME_FOUT_RATE"
+        ],
+        "maxSpeedRpm": 3000
+      },
+      {
+        "key": "starboard-main",
+        "label": "Starboard Main Engine",
+        "kind": "main",
+        "fuelTodayTags": [
+          "SME_CONS_TODAY"
+        ],
+        "fuelRateTags": [
+          "SME_CONS_RATE"
+        ],
+        "speedTags": [
+          "SME_SPD_CALC",
+          "SME_SPD"
+        ],
+        "loadTags": [
+          "SME_ENGINE_LOAD",
+          "SME_GEN_LOAD"
+        ],
+        "powerTags": [
+          "SME_GEN_LOAD_KW"
+        ],
+        "flowSupplyTags": [
+          "SME_FIN_RATE"
+        ],
+        "flowReturnTags": [
+          "SME_FOUT_RATE"
+        ],
+        "maxSpeedRpm": 3000
+      },
+      {
+        "key": "port-aux",
+        "label": "Port Auxiliary Engine",
+        "kind": "auxiliary",
+        "fuelTodayTags": [
+          "PAE_CONS_TODAY"
+        ],
+        "fuelRateTags": [
+          "PAE_CONS_RATE"
+        ],
+        "speedTags": [
+          "PAE_SPD_CALC",
+          "PAE_SPD"
+        ],
+        "loadTags": [
+          "PAE_ENGINE_LOAD",
+          "PAE_GEN_LOAD"
+        ],
+        "powerTags": [
+          "PAE_GEN_LOAD_KW"
+        ],
+        "flowSupplyTags": [
+          "PAE_FIN_RATE"
+        ],
+        "flowReturnTags": [
+          "PAE_FOUT_RATE"
+        ],
+        "maxSpeedRpm": 4000
+      },
+      {
+        "key": "starboard-aux",
+        "label": "Starboard Auxiliary Engine",
+        "kind": "auxiliary",
+        "fuelTodayTags": [
+          "SAE_CONS_TODAY"
+        ],
+        "fuelRateTags": [
+          "SAE_CONS_RATE"
+        ],
+        "speedTags": [
+          "SAE_SPD_CALC",
+          "SAE_SPD"
+        ],
+        "loadTags": [
+          "SAE_ENGINE_LOAD",
+          "SAE_GEN_LOAD"
+        ],
+        "powerTags": [
+          "SAE_GEN_LOAD_KW"
+        ],
+        "flowSupplyTags": [
+          "SAE_FIN_RATE"
+        ],
+        "flowReturnTags": [
+          "SAE_FOUT_RATE"
+        ],
+        "maxSpeedRpm": 4000
+      }
+    ],
+    "sourceReport": "",
+    "modeVerification": {
+      "kind": "fallback-or-derived",
+      "mappingSource": "generic-profile"
+    }
+  },
+  "profiles": [
+    {
+      "id": "sc-glory-6",
+      "label": "5-Mode Triple Main Engine Profile",
+      "aliases": [
+        "SC GLORY 6",
+        "SC_GLORY_6"
+      ],
+      "prefixes": [
+        "A01",
+        "A01-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "passage",
+          "label": "Passage",
+          "codes": [
+            "PASSAGE"
+          ]
+        },
+        {
+          "key": "sea-passage-economics",
+          "label": "Sea Passage Economics",
+          "codes": [
+            "SEA PASSAGE ECONOMICS",
+            "ECO PASSAGE"
+          ]
+        },
+        {
+          "key": "manoeuvring",
+          "label": "Manoeuvring",
+          "codes": [
+            "MANOEUVRING",
+            "MANEUVERING"
+          ]
+        },
+        {
+          "key": "cargo-operation",
+          "label": "Cargo Operation",
+          "codes": [
+            "CARGO OPERATION",
+            "CARGO"
+          ]
+        },
+        {
+          "key": "standby",
+          "label": "Standby",
+          "codes": [
+            "STANDBY"
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "port-main",
+          "label": "Port Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "PME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PME_CONS_RATE"
+          ],
+          "speedTags": [
+            "PME_SPD_CALC",
+            "PME_SPD"
+          ],
+          "loadTags": [
+            "PME_ENGINE_LOAD",
+            "PME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "center-main",
+          "label": "Center Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "CME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "CME_CONS_RATE"
+          ],
+          "speedTags": [
+            "CME_SPD_CALC",
+            "CME_SPD"
+          ],
+          "loadTags": [
+            "CME_ENGINE_LOAD",
+            "CME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "CME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "CME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "CME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "starboard-main",
+          "label": "Starboard Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "SME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SME_CONS_RATE"
+          ],
+          "speedTags": [
+            "SME_SPD_CALC",
+            "SME_SPD"
+          ],
+          "loadTags": [
+            "SME_ENGINE_LOAD",
+            "SME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "port-aux",
+          "label": "Port Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "PAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "PAE_SPD_CALC",
+            "PAE_SPD"
+          ],
+          "loadTags": [
+            "PAE_ENGINE_LOAD",
+            "PAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "starboard-aux",
+          "label": "Starboard Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "SAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "SAE_SPD_CALC",
+            "SAE_SPD"
+          ],
+          "loadTags": [
+            "SAE_ENGINE_LOAD",
+            "SAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "SC-GLORY-6-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "fallback-or-derived",
+        "mappingSource": "profile-or-report-rules"
+      }
+    },
+    {
+      "id": "sc-glory-2",
+      "label": "5-Mode Triple Main Engine Profile",
+      "aliases": [
+        "SC GLORY 2",
+        "SC_GLORY_2"
+      ],
+      "prefixes": [
+        "A02",
+        "A02-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "passage",
+          "label": "Passage",
+          "codes": [
+            "PASSAGE"
+          ]
+        },
+        {
+          "key": "sea-passage-economics",
+          "label": "Sea Passage Economics",
+          "codes": [
+            "SEA PASSAGE ECONOMICS",
+            "ECO PASSAGE"
+          ]
+        },
+        {
+          "key": "manoeuvring",
+          "label": "Manoeuvring",
+          "codes": [
+            "MANOEUVRING",
+            "MANEUVERING"
+          ]
+        },
+        {
+          "key": "cargo-operation",
+          "label": "Cargo Operation",
+          "codes": [
+            "CARGO OPERATION",
+            "CARGO"
+          ]
+        },
+        {
+          "key": "standby",
+          "label": "Standby",
+          "codes": [
+            "STANDBY"
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "port-main",
+          "label": "Port Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "PME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PME_CONS_RATE"
+          ],
+          "speedTags": [
+            "PME_SPD_CALC",
+            "PME_SPD"
+          ],
+          "loadTags": [
+            "PME_ENGINE_LOAD",
+            "PME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "center-main",
+          "label": "Center Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "CME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "CME_CONS_RATE"
+          ],
+          "speedTags": [
+            "CME_SPD_CALC",
+            "CME_SPD"
+          ],
+          "loadTags": [
+            "CME_ENGINE_LOAD",
+            "CME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "CME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "CME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "CME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "starboard-main",
+          "label": "Starboard Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "SME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SME_CONS_RATE"
+          ],
+          "speedTags": [
+            "SME_SPD_CALC",
+            "SME_SPD"
+          ],
+          "loadTags": [
+            "SME_ENGINE_LOAD",
+            "SME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "port-aux",
+          "label": "Port Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "PAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "PAE_SPD_CALC",
+            "PAE_SPD"
+          ],
+          "loadTags": [
+            "PAE_ENGINE_LOAD",
+            "PAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "starboard-aux",
+          "label": "Starboard Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "SAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "SAE_SPD_CALC",
+            "SAE_SPD"
+          ],
+          "loadTags": [
+            "SAE_ENGINE_LOAD",
+            "SAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "SC-GLORY-2-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "fallback-or-derived",
+        "mappingSource": "profile-or-report-rules"
+      }
+    },
+    {
+      "id": "sc-brave",
+      "label": "5-Mode Triple Main Engine Profile",
+      "aliases": [
+        "SC BRAVE",
+        "SC_BRAVE"
+      ],
+      "prefixes": [
+        "A03",
+        "A03-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "passage",
+          "label": "Passage",
+          "codes": [
+            "PASSAGE"
+          ]
+        },
+        {
+          "key": "sea-passage-economics",
+          "label": "Sea Passage Economics",
+          "codes": [
+            "SEA PASSAGE ECONOMICS",
+            "ECO PASSAGE"
+          ]
+        },
+        {
+          "key": "manoeuvring",
+          "label": "Manoeuvring",
+          "codes": [
+            "MANOEUVRING",
+            "MANEUVERING"
+          ]
+        },
+        {
+          "key": "cargo-operation",
+          "label": "Cargo Operation",
+          "codes": [
+            "CARGO OPERATION",
+            "CARGO"
+          ]
+        },
+        {
+          "key": "standby",
+          "label": "Standby",
+          "codes": [
+            "STANDBY"
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "port-main",
+          "label": "Port Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "PME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PME_CONS_RATE"
+          ],
+          "speedTags": [
+            "PME_SPD_CALC",
+            "PME_SPD"
+          ],
+          "loadTags": [
+            "PME_ENGINE_LOAD",
+            "PME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "center-main",
+          "label": "Center Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "CME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "CME_CONS_RATE"
+          ],
+          "speedTags": [
+            "CME_SPD_CALC",
+            "CME_SPD"
+          ],
+          "loadTags": [
+            "CME_ENGINE_LOAD",
+            "CME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "CME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "CME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "CME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "starboard-main",
+          "label": "Starboard Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "SME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SME_CONS_RATE"
+          ],
+          "speedTags": [
+            "SME_SPD_CALC",
+            "SME_SPD"
+          ],
+          "loadTags": [
+            "SME_ENGINE_LOAD",
+            "SME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "port-aux",
+          "label": "Port Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "PAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "PAE_SPD_CALC",
+            "PAE_SPD"
+          ],
+          "loadTags": [
+            "PAE_ENGINE_LOAD",
+            "PAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "starboard-aux",
+          "label": "Starboard Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "SAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "SAE_SPD_CALC",
+            "SAE_SPD"
+          ],
+          "loadTags": [
+            "SAE_ENGINE_LOAD",
+            "SAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "SC-BRAVE-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "fallback-or-derived",
+        "mappingSource": "profile-or-report-rules"
+      }
+    },
+    {
+      "id": "sc-glory-7",
+      "label": "5-Mode Triple Main Engine Profile",
+      "aliases": [
+        "SC GLORY 7",
+        "SC_GLORY_7"
+      ],
+      "prefixes": [
+        "A04",
+        "A04-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "passage",
+          "label": "Passage",
+          "codes": [
+            "PASSAGE"
+          ]
+        },
+        {
+          "key": "sea-passage-economics",
+          "label": "Sea Passage Economics",
+          "codes": [
+            "SEA PASSAGE ECONOMICS",
+            "ECO PASSAGE"
+          ]
+        },
+        {
+          "key": "manoeuvring",
+          "label": "Manoeuvring",
+          "codes": [
+            "MANOEUVRING",
+            "MANEUVERING"
+          ]
+        },
+        {
+          "key": "cargo-operation",
+          "label": "Cargo Operation",
+          "codes": [
+            "CARGO OPERATION",
+            "CARGO"
+          ]
+        },
+        {
+          "key": "standby",
+          "label": "Standby",
+          "codes": [
+            "STANDBY"
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "port-main",
+          "label": "Port Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "PME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PME_CONS_RATE"
+          ],
+          "speedTags": [
+            "PME_SPD_CALC",
+            "PME_SPD"
+          ],
+          "loadTags": [
+            "PME_ENGINE_LOAD",
+            "PME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "center-main",
+          "label": "Center Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "CME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "CME_CONS_RATE"
+          ],
+          "speedTags": [
+            "CME_SPD_CALC",
+            "CME_SPD"
+          ],
+          "loadTags": [
+            "CME_ENGINE_LOAD",
+            "CME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "CME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "CME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "CME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "starboard-main",
+          "label": "Starboard Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "SME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SME_CONS_RATE"
+          ],
+          "speedTags": [
+            "SME_SPD_CALC",
+            "SME_SPD"
+          ],
+          "loadTags": [
+            "SME_ENGINE_LOAD",
+            "SME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "port-aux",
+          "label": "Port Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "PAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "PAE_SPD_CALC",
+            "PAE_SPD"
+          ],
+          "loadTags": [
+            "PAE_ENGINE_LOAD",
+            "PAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "starboard-aux",
+          "label": "Starboard Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "SAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "SAE_SPD_CALC",
+            "SAE_SPD"
+          ],
+          "loadTags": [
+            "SAE_ENGINE_LOAD",
+            "SAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "SC-GLORY-7-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "fallback-or-derived",
+        "mappingSource": "profile-or-report-rules"
+      }
+    },
+    {
+      "id": "sc-emerald",
+      "label": "Offshore 15-Mode Twin Main Engine Profile",
+      "aliases": [
+        "SC EMERALD",
+        "SC_EMERALD"
+      ],
+      "prefixes": [
+        "A05",
+        "A05-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "underway-eco",
+          "label": "Underway (ECO Speed)",
+          "codes": [
+            1
+          ]
+        },
+        {
+          "key": "underway-full",
+          "label": "Underway (Full Speed)",
+          "codes": [
+            2
+          ]
+        },
+        {
+          "key": "alongside-jack-up-rig",
+          "label": "Alongside Jack up Rig (BDB)",
+          "codes": [
+            3
+          ]
+        },
+        {
+          "key": "alongside-tender-rig",
+          "label": "Alongside Tender Rig",
+          "codes": [
+            4
+          ]
+        },
+        {
+          "key": "alongside-fso",
+          "label": "Alongside FSO",
+          "codes": [
+            5
+          ]
+        },
+        {
+          "key": "snatching-cargo",
+          "label": "Snatching for Cargo operation",
+          "codes": [
+            6
+          ]
+        },
+        {
+          "key": "berth-jetty",
+          "label": "Berth at Jetty (Cargo/Bunker/Maintenance)",
+          "codes": [
+            7
+          ]
+        },
+        {
+          "key": "moored-transfer",
+          "label": "Moored with another Vessel for transferring",
+          "codes": [
+            8
+          ]
+        },
+        {
+          "key": "standby-outside-500m",
+          "label": "Standby (Idling) outside 500 meter zone",
+          "codes": [
+            9
+          ]
+        },
+        {
+          "key": "standby-inside-500m",
+          "label": "Standby (Idling) inside 500 meter zone",
+          "codes": [
+            10
+          ]
+        },
+        {
+          "key": "standby-mooring-buoy",
+          "label": "Standby at mooring buoy",
+          "codes": [
+            11
+          ]
+        },
+        {
+          "key": "port-movements",
+          "label": "Port Movements",
+          "codes": [
+            12
+          ]
+        },
+        {
+          "key": "towing",
+          "label": "Towing operation",
+          "codes": [
+            13
+          ]
+        },
+        {
+          "key": "anchor-handling",
+          "label": "Anchor Handling operation",
+          "codes": [
+            14
+          ]
+        },
+        {
+          "key": "other",
+          "label": "Other",
+          "codes": [
+            15
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "port-main",
+          "label": "Port Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "PME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PME_CONS_RATE"
+          ],
+          "speedTags": [
+            "PME_SPD_CALC",
+            "PME_SPD"
+          ],
+          "loadTags": [
+            "PME_ENGINE_LOAD",
+            "PME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "starboard-main",
+          "label": "Starboard Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "SME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SME_CONS_RATE"
+          ],
+          "speedTags": [
+            "SME_SPD_CALC",
+            "SME_SPD"
+          ],
+          "loadTags": [
+            "SME_ENGINE_LOAD",
+            "SME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "port-aux",
+          "label": "Port Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "PAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "PAE_SPD_CALC",
+            "PAE_SPD"
+          ],
+          "loadTags": [
+            "PAE_ENGINE_LOAD",
+            "PAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "center-aux",
+          "label": "Center / Thruster Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "CAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "CAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "CAE_SPD_CALC",
+            "CAE_SPD"
+          ],
+          "loadTags": [
+            "CAE_ENGINE_LOAD",
+            "CAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "CAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "CAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "CAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "starboard-aux",
+          "label": "Starboard Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "SAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "SAE_SPD_CALC",
+            "SAE_SPD"
+          ],
+          "loadTags": [
+            "SAE_ENGINE_LOAD",
+            "SAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "SC-EMERALD-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "direct-telemetry-tag",
+        "tagSuffix": "VES-MODE",
+        "mappingSource": "legacy-report-service/SCEmerald.cs"
+      }
+    },
+    {
+      "id": "sc-bongkot",
+      "label": "Offshore 15-Mode Generator Profile",
+      "aliases": [
+        "SC BONGKOT",
+        "SC_BONGKOT"
+      ],
+      "prefixes": [
+        "A06",
+        "A06-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "underway-eco",
+          "label": "Underway (ECO Speed)",
+          "codes": [
+            1
+          ]
+        },
+        {
+          "key": "underway-full",
+          "label": "Underway (Full Speed)",
+          "codes": [
+            2
+          ]
+        },
+        {
+          "key": "alongside-jack-up-rig",
+          "label": "Alongside Jack up Rig (BDB)",
+          "codes": [
+            3
+          ]
+        },
+        {
+          "key": "alongside-tender-rig",
+          "label": "Alongside Tender Rig",
+          "codes": [
+            4
+          ]
+        },
+        {
+          "key": "alongside-fso",
+          "label": "Alongside FSO",
+          "codes": [
+            5
+          ]
+        },
+        {
+          "key": "snatching-cargo",
+          "label": "Snatching for Cargo operation",
+          "codes": [
+            6
+          ]
+        },
+        {
+          "key": "berth-jetty",
+          "label": "Berth at Jetty (Cargo/Bunker/Maintenance)",
+          "codes": [
+            7
+          ]
+        },
+        {
+          "key": "moored-transfer",
+          "label": "Moored with another Vessel for transferring",
+          "codes": [
+            8
+          ]
+        },
+        {
+          "key": "standby-outside-500m",
+          "label": "Standby (Idling) outside 500 meter zone",
+          "codes": [
+            9
+          ]
+        },
+        {
+          "key": "standby-inside-500m",
+          "label": "Standby (Idling) inside 500 meter zone",
+          "codes": [
+            10
+          ]
+        },
+        {
+          "key": "standby-mooring-buoy",
+          "label": "Standby at mooring buoy",
+          "codes": [
+            11
+          ]
+        },
+        {
+          "key": "port-movements",
+          "label": "Port Movements",
+          "codes": [
+            12
+          ]
+        },
+        {
+          "key": "towing",
+          "label": "Towing operation",
+          "codes": [
+            13
+          ]
+        },
+        {
+          "key": "anchor-handling",
+          "label": "Anchor Handling operation",
+          "codes": [
+            14
+          ]
+        },
+        {
+          "key": "other",
+          "label": "Other",
+          "codes": [
+            15
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "dg1",
+          "label": "Diesel Generator 1",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG1_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG1_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG1_SPD_CALC",
+            "DG1_SPD"
+          ],
+          "loadTags": [
+            "DG1_ENGINE_LOAD",
+            "DG1_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG1_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG1_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG1_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg2",
+          "label": "Diesel Generator 2",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG2_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG2_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG2_SPD_CALC",
+            "DG2_SPD"
+          ],
+          "loadTags": [
+            "DG2_ENGINE_LOAD",
+            "DG2_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG2_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG2_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG2_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg3",
+          "label": "Diesel Generator 3",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG3_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG3_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG3_SPD_CALC",
+            "DG3_SPD"
+          ],
+          "loadTags": [
+            "DG3_ENGINE_LOAD",
+            "DG3_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG3_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG3_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG3_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg4",
+          "label": "Diesel Generator 4",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG4_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG4_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG4_SPD_CALC",
+            "DG4_SPD"
+          ],
+          "loadTags": [
+            "DG4_ENGINE_LOAD",
+            "DG4_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG4_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG4_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG4_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "SC-BONGKOT-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "direct-telemetry-tag",
+        "tagSuffix": "VES-MODE",
+        "mappingSource": "legacy-report-service/SCBongkot.cs"
+      }
+    },
+    {
+      "id": "sc-pailin",
+      "label": "4-Mode Twin Main Engine Profile",
+      "aliases": [
+        "SC PAILIN",
+        "SC_PAILIN"
+      ],
+      "prefixes": [
+        "A07",
+        "A07-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "passage",
+          "label": "Passage",
+          "codes": [
+            "PASSAGE"
+          ]
+        },
+        {
+          "key": "manoeuvring",
+          "label": "Manoeuvring",
+          "codes": [
+            "MANOEUVRING",
+            "MANEUVERING"
+          ]
+        },
+        {
+          "key": "cargo-operation",
+          "label": "Cargo Operation",
+          "codes": [
+            "CARGO OPERATION",
+            "CARGO"
+          ]
+        },
+        {
+          "key": "standby",
+          "label": "Standby",
+          "codes": [
+            "STANDBY"
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "port-main",
+          "label": "Port Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "PME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PME_CONS_RATE"
+          ],
+          "speedTags": [
+            "PME_SPD_CALC",
+            "PME_SPD"
+          ],
+          "loadTags": [
+            "PME_ENGINE_LOAD",
+            "PME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "starboard-main",
+          "label": "Starboard Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "SME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SME_CONS_RATE"
+          ],
+          "speedTags": [
+            "SME_SPD_CALC",
+            "SME_SPD"
+          ],
+          "loadTags": [
+            "SME_ENGINE_LOAD",
+            "SME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "port-aux",
+          "label": "Port Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "PAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "PAE_SPD_CALC",
+            "PAE_SPD"
+          ],
+          "loadTags": [
+            "PAE_ENGINE_LOAD",
+            "PAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "center-aux",
+          "label": "Center / Thruster Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "CAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "CAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "CAE_SPD_CALC",
+            "CAE_SPD"
+          ],
+          "loadTags": [
+            "CAE_ENGINE_LOAD",
+            "CAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "CAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "CAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "CAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "starboard-aux",
+          "label": "Starboard Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "SAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "SAE_SPD_CALC",
+            "SAE_SPD"
+          ],
+          "loadTags": [
+            "SAE_ENGINE_LOAD",
+            "SAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "SC-PAILIN-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "fallback-or-derived",
+        "mappingSource": "profile-or-report-rules"
+      }
+    },
+    {
+      "id": "sc-winter",
+      "label": "4-Mode Generator Profile",
+      "aliases": [
+        "SC WINTER",
+        "SC_WINTER"
+      ],
+      "prefixes": [
+        "A09",
+        "A09-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "passage",
+          "label": "Passage",
+          "codes": [
+            "PASSAGE"
+          ]
+        },
+        {
+          "key": "manoeuvring",
+          "label": "Manoeuvring",
+          "codes": [
+            "MANOEUVRING",
+            "MANEUVERING"
+          ]
+        },
+        {
+          "key": "cargo-operation",
+          "label": "Cargo Operation",
+          "codes": [
+            "CARGO OPERATION",
+            "CARGO"
+          ]
+        },
+        {
+          "key": "standby",
+          "label": "Standby",
+          "codes": [
+            "STANDBY"
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "dg1",
+          "label": "Diesel Generator 1",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG1_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG1_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG1_SPD_CALC",
+            "DG1_SPD"
+          ],
+          "loadTags": [
+            "DG1_ENGINE_LOAD",
+            "DG1_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG1_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG1_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG1_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg2",
+          "label": "Diesel Generator 2",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG2_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG2_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG2_SPD_CALC",
+            "DG2_SPD"
+          ],
+          "loadTags": [
+            "DG2_ENGINE_LOAD",
+            "DG2_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG2_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG2_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG2_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg3",
+          "label": "Diesel Generator 3",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG3_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG3_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG3_SPD_CALC",
+            "DG3_SPD"
+          ],
+          "loadTags": [
+            "DG3_ENGINE_LOAD",
+            "DG3_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG3_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG3_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG3_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg4",
+          "label": "Diesel Generator 4",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG4_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG4_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG4_SPD_CALC",
+            "DG4_SPD"
+          ],
+          "loadTags": [
+            "DG4_ENGINE_LOAD",
+            "DG4_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG4_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG4_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG4_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "SC-WINTER-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "fallback-or-derived",
+        "mappingSource": "profile-or-report-rules"
+      }
+    },
+    {
+      "id": "sc-glory-1",
+      "label": "5-Mode Triple Main Engine Profile",
+      "aliases": [
+        "SC GLORY 1",
+        "SC_GLORY_1",
+        "SC_GLORY1"
+      ],
+      "prefixes": [
+        "SC_GLORY1",
+        "SC_GLORY1-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "passage",
+          "label": "Passage",
+          "codes": [
+            "PASSAGE"
+          ]
+        },
+        {
+          "key": "sea-passage-economics",
+          "label": "Sea Passage Economics",
+          "codes": [
+            "SEA PASSAGE ECONOMICS",
+            "ECO PASSAGE"
+          ]
+        },
+        {
+          "key": "manoeuvring",
+          "label": "Manoeuvring",
+          "codes": [
+            "MANOEUVRING",
+            "MANEUVERING"
+          ]
+        },
+        {
+          "key": "cargo-operation",
+          "label": "Cargo Operation",
+          "codes": [
+            "CARGO OPERATION",
+            "CARGO"
+          ]
+        },
+        {
+          "key": "standby",
+          "label": "Standby",
+          "codes": [
+            "STANDBY"
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "port-main",
+          "label": "Port Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "PME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PME_CONS_RATE"
+          ],
+          "speedTags": [
+            "PME_SPD_CALC",
+            "PME_SPD"
+          ],
+          "loadTags": [
+            "PME_ENGINE_LOAD",
+            "PME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "center-main",
+          "label": "Center Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "CME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "CME_CONS_RATE"
+          ],
+          "speedTags": [
+            "CME_SPD_CALC",
+            "CME_SPD"
+          ],
+          "loadTags": [
+            "CME_ENGINE_LOAD",
+            "CME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "CME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "CME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "CME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "starboard-main",
+          "label": "Starboard Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "SME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SME_CONS_RATE"
+          ],
+          "speedTags": [
+            "SME_SPD_CALC",
+            "SME_SPD"
+          ],
+          "loadTags": [
+            "SME_ENGINE_LOAD",
+            "SME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "port-aux",
+          "label": "Port Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "PAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "PAE_SPD_CALC",
+            "PAE_SPD"
+          ],
+          "loadTags": [
+            "PAE_ENGINE_LOAD",
+            "PAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "starboard-aux",
+          "label": "Starboard Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "SAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "SAE_SPD_CALC",
+            "SAE_SPD"
+          ],
+          "loadTags": [
+            "SAE_ENGINE_LOAD",
+            "SAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "SC-GLORY-1-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "fallback-or-derived",
+        "mappingSource": "profile-or-report-rules"
+      }
+    },
+    {
+      "id": "sc-glory-3",
+      "label": "5-Mode Triple Main Engine Profile",
+      "aliases": [
+        "SC GLORY 3",
+        "SC_GLORY_3",
+        "SC_GLORY3"
+      ],
+      "prefixes": [
+        "SC_GLORY3",
+        "SC_GLORY3-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "passage",
+          "label": "Passage",
+          "codes": [
+            "PASSAGE"
+          ]
+        },
+        {
+          "key": "sea-passage-economics",
+          "label": "Sea Passage Economics",
+          "codes": [
+            "SEA PASSAGE ECONOMICS",
+            "ECO PASSAGE"
+          ]
+        },
+        {
+          "key": "manoeuvring",
+          "label": "Manoeuvring",
+          "codes": [
+            "MANOEUVRING",
+            "MANEUVERING"
+          ]
+        },
+        {
+          "key": "cargo-operation",
+          "label": "Cargo Operation",
+          "codes": [
+            "CARGO OPERATION",
+            "CARGO"
+          ]
+        },
+        {
+          "key": "standby",
+          "label": "Standby",
+          "codes": [
+            "STANDBY"
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "port-main",
+          "label": "Port Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "PME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PME_CONS_RATE"
+          ],
+          "speedTags": [
+            "PME_SPD_CALC",
+            "PME_SPD"
+          ],
+          "loadTags": [
+            "PME_ENGINE_LOAD",
+            "PME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "center-main",
+          "label": "Center Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "CME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "CME_CONS_RATE"
+          ],
+          "speedTags": [
+            "CME_SPD_CALC",
+            "CME_SPD"
+          ],
+          "loadTags": [
+            "CME_ENGINE_LOAD",
+            "CME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "CME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "CME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "CME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "starboard-main",
+          "label": "Starboard Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "SME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SME_CONS_RATE"
+          ],
+          "speedTags": [
+            "SME_SPD_CALC",
+            "SME_SPD"
+          ],
+          "loadTags": [
+            "SME_ENGINE_LOAD",
+            "SME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "port-aux",
+          "label": "Port Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "PAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "PAE_SPD_CALC",
+            "PAE_SPD"
+          ],
+          "loadTags": [
+            "PAE_ENGINE_LOAD",
+            "PAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "starboard-aux",
+          "label": "Starboard Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "SAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "SAE_SPD_CALC",
+            "SAE_SPD"
+          ],
+          "loadTags": [
+            "SAE_ENGINE_LOAD",
+            "SAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "SC-GLORY-3-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "fallback-or-derived",
+        "mappingSource": "profile-or-report-rules"
+      }
+    },
+    {
+      "id": "sc-choluedee",
+      "label": "4-Mode Twin Main Engine Profile",
+      "aliases": [
+        "SC CHOLUEDEE",
+        "SC CHOLRUEDEE",
+        "SC_CHOLUEDEE"
+      ],
+      "prefixes": [
+        "SC_CHOLUEDEE",
+        "SC_CHOLUEDEE-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "passage",
+          "label": "Passage",
+          "codes": [
+            "PASSAGE"
+          ]
+        },
+        {
+          "key": "manoeuvring",
+          "label": "Manoeuvring",
+          "codes": [
+            "MANOEUVRING",
+            "MANEUVERING"
+          ]
+        },
+        {
+          "key": "cargo-operation",
+          "label": "Cargo Operation",
+          "codes": [
+            "CARGO OPERATION",
+            "CARGO"
+          ]
+        },
+        {
+          "key": "standby",
+          "label": "Standby",
+          "codes": [
+            "STANDBY"
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "port-main",
+          "label": "Port Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "PME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PME_CONS_RATE"
+          ],
+          "speedTags": [
+            "PME_SPD_CALC",
+            "PME_SPD"
+          ],
+          "loadTags": [
+            "PME_ENGINE_LOAD",
+            "PME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "starboard-main",
+          "label": "Starboard Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "SME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SME_CONS_RATE"
+          ],
+          "speedTags": [
+            "SME_SPD_CALC",
+            "SME_SPD"
+          ],
+          "loadTags": [
+            "SME_ENGINE_LOAD",
+            "SME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "port-aux",
+          "label": "Port Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "PAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "PAE_SPD_CALC",
+            "PAE_SPD"
+          ],
+          "loadTags": [
+            "PAE_ENGINE_LOAD",
+            "PAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "starboard-aux",
+          "label": "Starboard Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "SAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "SAE_SPD_CALC",
+            "SAE_SPD"
+          ],
+          "loadTags": [
+            "SAE_ENGINE_LOAD",
+            "SAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "SC-CHOLUEDEE-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "fallback-or-derived",
+        "mappingSource": "profile-or-report-rules"
+      }
+    },
+    {
+      "id": "mv-gemia",
+      "label": "Offshore 15-Mode Twin Main Engine Profile",
+      "aliases": [
+        "MV GEMIA",
+        "MV_GEMIA"
+      ],
+      "prefixes": [
+        "MV_GEMIA",
+        "MV_GEMIA-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "underway-eco",
+          "label": "Underway (ECO Speed)"
+        },
+        {
+          "key": "underway-full",
+          "label": "Underway (Full Speed)"
+        },
+        {
+          "key": "alongside-jack-up-rig",
+          "label": "Alongside Jack up Rig (BDB)"
+        },
+        {
+          "key": "alongside-tender-rig",
+          "label": "Alongside Tender Rig"
+        },
+        {
+          "key": "alongside-fso",
+          "label": "Alongside FSO"
+        },
+        {
+          "key": "snatching-cargo",
+          "label": "Snatching for Cargo operation"
+        },
+        {
+          "key": "berth-jetty",
+          "label": "Berth at Jetty (Cargo/Bunker/Maintenance)"
+        },
+        {
+          "key": "moored-transfer",
+          "label": "Moored with another Vessel for transferring"
+        },
+        {
+          "key": "standby-outside-500m",
+          "label": "Standby (Idling) outside 500 meter zone"
+        },
+        {
+          "key": "standby-inside-500m",
+          "label": "Standby (Idling) inside 500 meter zone"
+        },
+        {
+          "key": "standby-mooring-buoy",
+          "label": "Standby at mooring buoy"
+        },
+        {
+          "key": "port-movements",
+          "label": "Port Movements"
+        },
+        {
+          "key": "towing",
+          "label": "Towing operation"
+        },
+        {
+          "key": "anchor-handling",
+          "label": "Anchor Handling operation"
+        },
+        {
+          "key": "other",
+          "label": "Other"
+        }
+      ],
+      "engines": [
+        {
+          "key": "port-main",
+          "label": "Port Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "PME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PME_CONS_RATE"
+          ],
+          "speedTags": [
+            "PME_SPD_CALC",
+            "PME_SPD"
+          ],
+          "loadTags": [
+            "PME_ENGINE_LOAD",
+            "PME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "starboard-main",
+          "label": "Starboard Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "SME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SME_CONS_RATE"
+          ],
+          "speedTags": [
+            "SME_SPD_CALC",
+            "SME_SPD"
+          ],
+          "loadTags": [
+            "SME_ENGINE_LOAD",
+            "SME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "port-aux",
+          "label": "Port Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "PAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "PAE_SPD_CALC",
+            "PAE_SPD"
+          ],
+          "loadTags": [
+            "PAE_ENGINE_LOAD",
+            "PAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "center-aux",
+          "label": "Center / Thruster Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "CAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "CAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "CAE_SPD_CALC",
+            "CAE_SPD"
+          ],
+          "loadTags": [
+            "CAE_ENGINE_LOAD",
+            "CAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "CAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "CAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "CAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "starboard-aux",
+          "label": "Starboard Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "SAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "SAE_SPD_CALC",
+            "SAE_SPD"
+          ],
+          "loadTags": [
+            "SAE_ENGINE_LOAD",
+            "SAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "MV-GEMIA-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "fallback-or-derived",
+        "mappingSource": "profile-or-report-rules"
+      }
+    },
+    {
+      "id": "bb-liberty-233",
+      "label": "Offshore 16-Mode DG/EG Profile",
+      "aliases": [
+        "BB LIBERTY 233",
+        "BOURBON LIBERTY 233",
+        "BB_LIBERTY233",
+        "BB_LIBERTY_233"
+      ],
+      "prefixes": [
+        "BB_LIBERTY233",
+        "BB_LIBERTY233-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "underway-eco",
+          "label": "Underway (ECO Speed)",
+          "codes": [
+            1
+          ]
+        },
+        {
+          "key": "underway-full",
+          "label": "Underway (Full Speed)",
+          "codes": [
+            2
+          ]
+        },
+        {
+          "key": "alongside-jack-up-rig",
+          "label": "Alongside Jack up Rig (BDB)",
+          "codes": [
+            3
+          ]
+        },
+        {
+          "key": "alongside-tender-rig",
+          "label": "Alongside Tender Rig",
+          "codes": [
+            4
+          ]
+        },
+        {
+          "key": "alongside-fso",
+          "label": "Alongside FSO",
+          "codes": [
+            5
+          ]
+        },
+        {
+          "key": "snatching-cargo",
+          "label": "Snatching for Cargo operation",
+          "codes": [
+            6
+          ]
+        },
+        {
+          "key": "berth-jetty",
+          "label": "Berth at Jetty (Cargo/Bunker/Maintenance)",
+          "codes": [
+            7
+          ]
+        },
+        {
+          "key": "moored-transfer",
+          "label": "Moored with another Vessel for transferring",
+          "codes": [
+            8
+          ]
+        },
+        {
+          "key": "standby-outside-500m",
+          "label": "Standby (Idling) outside 500 meter zone",
+          "codes": [
+            9
+          ]
+        },
+        {
+          "key": "standby-inside-500m",
+          "label": "Standby (Idling) inside 500 meter zone",
+          "codes": [
+            10
+          ]
+        },
+        {
+          "key": "standby-mooring-buoy",
+          "label": "Standby at mooring buoy",
+          "codes": [
+            11
+          ]
+        },
+        {
+          "key": "port-movements",
+          "label": "Port Movements",
+          "codes": [
+            12
+          ]
+        },
+        {
+          "key": "towing",
+          "label": "Towing operation",
+          "codes": [
+            13
+          ]
+        },
+        {
+          "key": "anchor-handling",
+          "label": "Anchor Handling operation",
+          "codes": [
+            14
+          ]
+        },
+        {
+          "key": "other",
+          "label": "Other",
+          "codes": [
+            15
+          ]
+        },
+        {
+          "key": "dynamic-positioning",
+          "label": "Dynamic Positioning (DP)",
+          "codes": [
+            16
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "dg1",
+          "label": "Diesel Generator 1",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG1_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG1_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG1_SPD_CALC",
+            "DG1_SPD"
+          ],
+          "loadTags": [
+            "DG1_ENGINE_LOAD",
+            "DG1_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG1_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG1_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG1_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg2",
+          "label": "Diesel Generator 2",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG2_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG2_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG2_SPD_CALC",
+            "DG2_SPD"
+          ],
+          "loadTags": [
+            "DG2_ENGINE_LOAD",
+            "DG2_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG2_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG2_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG2_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg3",
+          "label": "Diesel Generator 3",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG3_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG3_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG3_SPD_CALC",
+            "DG3_SPD"
+          ],
+          "loadTags": [
+            "DG3_ENGINE_LOAD",
+            "DG3_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG3_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG3_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG3_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "eg",
+          "label": "Emergency Generator",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG4_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG4_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG4_SPD_CALC",
+            "DG4_SPD"
+          ],
+          "loadTags": [
+            "DG4_ENGINE_LOAD",
+            "DG4_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG4_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG4_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG4_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "BB-LIBERTY-233-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "direct-telemetry-tag",
+        "tagSuffix": "VES-MODE",
+        "mappingSource": "legacy-report-service/BourbonLiberty233.cs"
+      }
+    },
+    {
+      "id": "bahtera-intan",
+      "label": "Offshore 16-Mode DG/EG Profile",
+      "aliases": [
+        "BAHTERA INTAN",
+        "BB INTAN",
+        "BB_INTAN"
+      ],
+      "prefixes": [
+        "BB_INTAN",
+        "BB_INTAN-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "underway-eco",
+          "label": "Underway (ECO Speed)",
+          "codes": [
+            1
+          ]
+        },
+        {
+          "key": "underway-full",
+          "label": "Underway (Full Speed)",
+          "codes": [
+            2
+          ]
+        },
+        {
+          "key": "alongside-jack-up-rig",
+          "label": "Alongside Jack up Rig (BDB)",
+          "codes": [
+            3
+          ]
+        },
+        {
+          "key": "alongside-tender-rig",
+          "label": "Alongside Tender Rig",
+          "codes": [
+            4
+          ]
+        },
+        {
+          "key": "alongside-fso",
+          "label": "Alongside FSO",
+          "codes": [
+            5
+          ]
+        },
+        {
+          "key": "snatching-cargo",
+          "label": "Snatching for Cargo operation",
+          "codes": [
+            6
+          ]
+        },
+        {
+          "key": "berth-jetty",
+          "label": "Berth at Jetty (Cargo/Bunker/Maintenance)",
+          "codes": [
+            7
+          ]
+        },
+        {
+          "key": "moored-transfer",
+          "label": "Moored with another Vessel for transferring",
+          "codes": [
+            8
+          ]
+        },
+        {
+          "key": "standby-outside-500m",
+          "label": "Standby (Idling) outside 500 meter zone",
+          "codes": [
+            9
+          ]
+        },
+        {
+          "key": "standby-inside-500m",
+          "label": "Standby (Idling) inside 500 meter zone",
+          "codes": [
+            10
+          ]
+        },
+        {
+          "key": "standby-mooring-buoy",
+          "label": "Standby at mooring buoy",
+          "codes": [
+            11
+          ]
+        },
+        {
+          "key": "port-movements",
+          "label": "Port Movements",
+          "codes": [
+            12
+          ]
+        },
+        {
+          "key": "towing",
+          "label": "Towing operation",
+          "codes": [
+            13
+          ]
+        },
+        {
+          "key": "anchor-handling",
+          "label": "Anchor Handling operation",
+          "codes": [
+            14
+          ]
+        },
+        {
+          "key": "other",
+          "label": "Other",
+          "codes": [
+            15
+          ]
+        },
+        {
+          "key": "dynamic-positioning",
+          "label": "Dynamic Positioning (DP)",
+          "codes": [
+            16
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "dg1",
+          "label": "Diesel Generator 1",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG1_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG1_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG1_SPD_CALC",
+            "DG1_SPD"
+          ],
+          "loadTags": [
+            "DG1_ENGINE_LOAD",
+            "DG1_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG1_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG1_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG1_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg2",
+          "label": "Diesel Generator 2",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG2_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG2_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG2_SPD_CALC",
+            "DG2_SPD"
+          ],
+          "loadTags": [
+            "DG2_ENGINE_LOAD",
+            "DG2_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG2_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG2_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG2_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg3",
+          "label": "Diesel Generator 3",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG3_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG3_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG3_SPD_CALC",
+            "DG3_SPD"
+          ],
+          "loadTags": [
+            "DG3_ENGINE_LOAD",
+            "DG3_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG3_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG3_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG3_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "eg",
+          "label": "Emergency Generator",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG4_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG4_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG4_SPD_CALC",
+            "DG4_SPD"
+          ],
+          "loadTags": [
+            "DG4_ENGINE_LOAD",
+            "DG4_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG4_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG4_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG4_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "BAHTERA-INTAN-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "direct-telemetry-tag",
+        "tagSuffix": "VES-MODE",
+        "mappingSource": "legacy-report-service/BahteraIntan.cs"
+      }
+    },
+    {
+      "id": "bahtera-lazurit",
+      "label": "Offshore 16-Mode DG/EG Profile",
+      "aliases": [
+        "BAHTERA LAZURIT",
+        "BB LAZURIT",
+        "BB_LAZURIT"
+      ],
+      "prefixes": [
+        "BB_LAZURIT",
+        "BB_LAZURIT-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "underway-eco",
+          "label": "Underway (ECO Speed)",
+          "codes": [
+            1
+          ]
+        },
+        {
+          "key": "underway-full",
+          "label": "Underway (Full Speed)",
+          "codes": [
+            2
+          ]
+        },
+        {
+          "key": "alongside-jack-up-rig",
+          "label": "Alongside Jack up Rig (BDB)",
+          "codes": [
+            3
+          ]
+        },
+        {
+          "key": "alongside-tender-rig",
+          "label": "Alongside Tender Rig",
+          "codes": [
+            4
+          ]
+        },
+        {
+          "key": "alongside-fso",
+          "label": "Alongside FSO",
+          "codes": [
+            5
+          ]
+        },
+        {
+          "key": "snatching-cargo",
+          "label": "Snatching for Cargo operation",
+          "codes": [
+            6
+          ]
+        },
+        {
+          "key": "berth-jetty",
+          "label": "Berth at Jetty (Cargo/Bunker/Maintenance)",
+          "codes": [
+            7
+          ]
+        },
+        {
+          "key": "moored-transfer",
+          "label": "Moored with another Vessel for transferring",
+          "codes": [
+            8
+          ]
+        },
+        {
+          "key": "standby-outside-500m",
+          "label": "Standby (Idling) outside 500 meter zone",
+          "codes": [
+            9
+          ]
+        },
+        {
+          "key": "standby-inside-500m",
+          "label": "Standby (Idling) inside 500 meter zone",
+          "codes": [
+            10
+          ]
+        },
+        {
+          "key": "standby-mooring-buoy",
+          "label": "Standby at mooring buoy",
+          "codes": [
+            11
+          ]
+        },
+        {
+          "key": "port-movements",
+          "label": "Port Movements",
+          "codes": [
+            12
+          ]
+        },
+        {
+          "key": "towing",
+          "label": "Towing operation",
+          "codes": [
+            13
+          ]
+        },
+        {
+          "key": "anchor-handling",
+          "label": "Anchor Handling operation",
+          "codes": [
+            14
+          ]
+        },
+        {
+          "key": "other",
+          "label": "Other",
+          "codes": [
+            15
+          ]
+        },
+        {
+          "key": "dynamic-positioning",
+          "label": "Dynamic Positioning (DP)",
+          "codes": [
+            16
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "dg1",
+          "label": "Diesel Generator 1",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG1_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG1_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG1_SPD_CALC",
+            "DG1_SPD"
+          ],
+          "loadTags": [
+            "DG1_ENGINE_LOAD",
+            "DG1_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG1_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG1_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG1_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg2",
+          "label": "Diesel Generator 2",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG2_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG2_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG2_SPD_CALC",
+            "DG2_SPD"
+          ],
+          "loadTags": [
+            "DG2_ENGINE_LOAD",
+            "DG2_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG2_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG2_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG2_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg3",
+          "label": "Diesel Generator 3",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG3_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG3_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG3_SPD_CALC",
+            "DG3_SPD"
+          ],
+          "loadTags": [
+            "DG3_ENGINE_LOAD",
+            "DG3_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG3_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG3_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG3_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "eg",
+          "label": "Emergency Generator",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG4_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG4_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG4_SPD_CALC",
+            "DG4_SPD"
+          ],
+          "loadTags": [
+            "DG4_ENGINE_LOAD",
+            "DG4_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG4_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG4_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG4_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "BAHTERA-LAZURIT-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "direct-telemetry-tag",
+        "tagSuffix": "VES-MODE",
+        "mappingSource": "legacy-report-service/BahteraLazurit.cs"
+      }
+    },
+    {
+      "id": "bahtera-zamrud",
+      "label": "Offshore 16-Mode DG/EG Profile",
+      "aliases": [
+        "BAHTERA ZAMRUD",
+        "BB ZAMRUD",
+        "BB_ZAMRUD"
+      ],
+      "prefixes": [
+        "BB_ZAMRUD",
+        "BB_ZAMRUD-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "underway-eco",
+          "label": "Underway (ECO Speed)",
+          "codes": [
+            1
+          ]
+        },
+        {
+          "key": "underway-full",
+          "label": "Underway (Full Speed)",
+          "codes": [
+            2
+          ]
+        },
+        {
+          "key": "alongside-jack-up-rig",
+          "label": "Alongside Jack up Rig (BDB)",
+          "codes": [
+            3
+          ]
+        },
+        {
+          "key": "alongside-tender-rig",
+          "label": "Alongside Tender Rig",
+          "codes": [
+            4
+          ]
+        },
+        {
+          "key": "alongside-fso",
+          "label": "Alongside FSO",
+          "codes": [
+            5
+          ]
+        },
+        {
+          "key": "snatching-cargo",
+          "label": "Snatching for Cargo operation",
+          "codes": [
+            6
+          ]
+        },
+        {
+          "key": "berth-jetty",
+          "label": "Berth at Jetty (Cargo/Bunker/Maintenance)",
+          "codes": [
+            7
+          ]
+        },
+        {
+          "key": "moored-transfer",
+          "label": "Moored with another Vessel for transferring",
+          "codes": [
+            8
+          ]
+        },
+        {
+          "key": "standby-outside-500m",
+          "label": "Standby (Idling) outside 500 meter zone",
+          "codes": [
+            9
+          ]
+        },
+        {
+          "key": "standby-inside-500m",
+          "label": "Standby (Idling) inside 500 meter zone",
+          "codes": [
+            10
+          ]
+        },
+        {
+          "key": "standby-mooring-buoy",
+          "label": "Standby at mooring buoy",
+          "codes": [
+            11
+          ]
+        },
+        {
+          "key": "port-movements",
+          "label": "Port Movements",
+          "codes": [
+            12
+          ]
+        },
+        {
+          "key": "towing",
+          "label": "Towing operation",
+          "codes": [
+            13
+          ]
+        },
+        {
+          "key": "anchor-handling",
+          "label": "Anchor Handling operation",
+          "codes": [
+            14
+          ]
+        },
+        {
+          "key": "other",
+          "label": "Other",
+          "codes": [
+            15
+          ]
+        },
+        {
+          "key": "dynamic-positioning",
+          "label": "Dynamic Positioning (DP)",
+          "codes": [
+            16
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "dg1",
+          "label": "Diesel Generator 1",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG1_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG1_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG1_SPD_CALC",
+            "DG1_SPD"
+          ],
+          "loadTags": [
+            "DG1_ENGINE_LOAD",
+            "DG1_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG1_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG1_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG1_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg2",
+          "label": "Diesel Generator 2",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG2_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG2_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG2_SPD_CALC",
+            "DG2_SPD"
+          ],
+          "loadTags": [
+            "DG2_ENGINE_LOAD",
+            "DG2_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG2_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG2_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG2_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg3",
+          "label": "Diesel Generator 3",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG3_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG3_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG3_SPD_CALC",
+            "DG3_SPD"
+          ],
+          "loadTags": [
+            "DG3_ENGINE_LOAD",
+            "DG3_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG3_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG3_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG3_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "eg",
+          "label": "Emergency Generator",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG4_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG4_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG4_SPD_CALC",
+            "DG4_SPD"
+          ],
+          "loadTags": [
+            "DG4_ENGINE_LOAD",
+            "DG4_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG4_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG4_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG4_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "BAHTERA-ZAMRUD-Daily-Report-2026-08-02.pdf",
+      "modeVerification": {
+        "kind": "direct-telemetry-tag",
+        "tagSuffix": "VES-MODE",
+        "mappingSource": "legacy-report-service/BahteraZamrud.cs"
+      }
+    },
+    {
+      "id": "bb-tongkam",
+      "label": "Offshore 16-Mode DG Profile",
+      "aliases": [
+        "BB TONGKAM",
+        "BOURBON TONGKAM",
+        "BB_TONGKAM"
+      ],
+      "prefixes": [
+        "BB_TONGKAM",
+        "BB_TONGKAM-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "underway-eco",
+          "label": "Underway (ECO Speed)",
+          "codes": [
+            1
+          ]
+        },
+        {
+          "key": "underway-full",
+          "label": "Underway (Full Speed)",
+          "codes": [
+            2
+          ]
+        },
+        {
+          "key": "alongside-jack-up-rig",
+          "label": "Alongside Jack up Rig (BDB)",
+          "codes": [
+            3
+          ]
+        },
+        {
+          "key": "alongside-tender-rig",
+          "label": "Alongside Tender Rig",
+          "codes": [
+            4
+          ]
+        },
+        {
+          "key": "alongside-fso",
+          "label": "Alongside FSO",
+          "codes": [
+            5
+          ]
+        },
+        {
+          "key": "snatching-cargo",
+          "label": "Snatching for Cargo operation",
+          "codes": [
+            6
+          ]
+        },
+        {
+          "key": "berth-jetty",
+          "label": "Berth at Jetty (Cargo/Bunker/Maintenance)",
+          "codes": [
+            7
+          ]
+        },
+        {
+          "key": "moored-transfer",
+          "label": "Moored with another Vessel for transferring",
+          "codes": [
+            8
+          ]
+        },
+        {
+          "key": "standby-outside-500m",
+          "label": "Standby (Idling) outside 500 meter zone",
+          "codes": [
+            9
+          ]
+        },
+        {
+          "key": "standby-inside-500m",
+          "label": "Standby (Idling) inside 500 meter zone",
+          "codes": [
+            10
+          ]
+        },
+        {
+          "key": "standby-mooring-buoy",
+          "label": "Standby at mooring buoy",
+          "codes": [
+            11
+          ]
+        },
+        {
+          "key": "port-movements",
+          "label": "Port Movements",
+          "codes": [
+            12
+          ]
+        },
+        {
+          "key": "towing",
+          "label": "Towing operation",
+          "codes": [
+            13
+          ]
+        },
+        {
+          "key": "anchor-handling",
+          "label": "Anchor Handling operation",
+          "codes": [
+            14
+          ]
+        },
+        {
+          "key": "other",
+          "label": "Other",
+          "codes": [
+            15
+          ]
+        },
+        {
+          "key": "dynamic-positioning",
+          "label": "Dynamic Positioning (DP)",
+          "codes": [
+            16
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "dg1",
+          "label": "Diesel Generator 1",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG1_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG1_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG1_SPD_CALC",
+            "DG1_SPD"
+          ],
+          "loadTags": [
+            "DG1_ENGINE_LOAD",
+            "DG1_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG1_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG1_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG1_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg2",
+          "label": "Diesel Generator 2",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG2_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG2_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG2_SPD_CALC",
+            "DG2_SPD"
+          ],
+          "loadTags": [
+            "DG2_ENGINE_LOAD",
+            "DG2_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG2_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG2_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG2_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg3",
+          "label": "Diesel Generator 3",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG3_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG3_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG3_SPD_CALC",
+            "DG3_SPD"
+          ],
+          "loadTags": [
+            "DG3_ENGINE_LOAD",
+            "DG3_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG3_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG3_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG3_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "dg4",
+          "label": "Diesel Generator 4",
+          "kind": "generator",
+          "fuelTodayTags": [
+            "DG4_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "DG4_CONS_RATE"
+          ],
+          "speedTags": [
+            "DG4_SPD_CALC",
+            "DG4_SPD"
+          ],
+          "loadTags": [
+            "DG4_ENGINE_LOAD",
+            "DG4_GEN_LOAD"
+          ],
+          "powerTags": [
+            "DG4_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "DG4_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "DG4_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "",
+      "modeVerification": {
+        "kind": "direct-telemetry-tag",
+        "tagSuffix": "VES-MODE",
+        "mappingSource": "legacy-report-service/BourbonTongkam.cs"
+      }
+    },
+    {
+      "id": "sc-sultan",
+      "label": "Verified 10-Mode Twin Main Engine Profile",
+      "aliases": [
+        "SC SULTAN",
+        "SC_SULTAN"
+      ],
+      "prefixes": [
+        "SC_SULTAN",
+        "SC_SULTAN-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "in-port-anchor",
+          "label": "In Port / Tie up buoy / Anchorage",
+          "codes": [
+            1,
+            "IN PORT / TIE UP BUOY / ANCHORAGE"
+          ]
+        },
+        {
+          "key": "shifting-manoeuvring",
+          "label": "Shifting and Maneuvering",
+          "codes": [
+            2,
+            "SHIFTING AND MANEUVERING"
+          ]
+        },
+        {
+          "key": "sea-passage-6-7",
+          "label": "Sea Passage Average Speed 6-7 Kts. (Without Barge)",
+          "codes": [
+            3,
+            "SEA PASSAGE AVERAGE SPEED 6-7 KTS. (WITHOUT BARGE)"
+          ]
+        },
+        {
+          "key": "sea-passage-8-9",
+          "label": "Sea Passage Average Speed 8-9 Kts. (Without Barge)",
+          "codes": [
+            4,
+            "SEA PASSAGE AVERAGE SPEED 8-9 KTS. (WITHOUT BARGE)"
+          ]
+        },
+        {
+          "key": "cargo-offshore-transport",
+          "label": "Cargo Work / Offshore Transportation",
+          "codes": [
+            5,
+            "CARGO WORK / OFFSHORE TRANSPORTATION"
+          ]
+        },
+        {
+          "key": "towing-empty-barge",
+          "label": "Voyage Towing Empty Barge Operation",
+          "codes": [
+            6,
+            "VOYAGE TOWING EMPTY BARGE OPERATION"
+          ]
+        },
+        {
+          "key": "towing-loaded-barge",
+          "label": "Voyage Towing Loaded Barge Operation",
+          "codes": [
+            7,
+            "VOYAGE TOWING LOADED BARGE OPERATION"
+          ]
+        },
+        {
+          "key": "standby-1me-1ae",
+          "label": "Standby (Idling) (1M/E + 1A/E)",
+          "codes": [
+            8,
+            "STANDBY (IDLING) (1M/E + 1A/E)"
+          ]
+        },
+        {
+          "key": "standby-2me-1ae",
+          "label": "Standby (Idling) (2M/E + 1A/E)",
+          "codes": [
+            9,
+            "STANDBY (IDLING) (2M/E + 1A/E)"
+          ]
+        },
+        {
+          "key": "other",
+          "label": "Other",
+          "codes": [
+            10,
+            "OTHER"
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "port-main",
+          "label": "Port Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "PME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PME_CONS_RATE"
+          ],
+          "speedTags": [
+            "PME_SPD_CALC",
+            "PME_SPD"
+          ],
+          "loadTags": [
+            "PME_ENGINE_LOAD",
+            "PME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "starboard-main",
+          "label": "Starboard Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "SME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SME_CONS_RATE"
+          ],
+          "speedTags": [
+            "SME_SPD_CALC",
+            "SME_SPD"
+          ],
+          "loadTags": [
+            "SME_ENGINE_LOAD",
+            "SME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "port-aux",
+          "label": "Port Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "PAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "PAE_SPD_CALC",
+            "PAE_SPD"
+          ],
+          "loadTags": [
+            "PAE_ENGINE_LOAD",
+            "PAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "center-aux",
+          "label": "Center / Thruster Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "CAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "CAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "CAE_SPD_CALC",
+            "CAE_SPD"
+          ],
+          "loadTags": [
+            "CAE_ENGINE_LOAD",
+            "CAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "CAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "CAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "CAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "starboard-aux",
+          "label": "Starboard Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "SAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "SAE_SPD_CALC",
+            "SAE_SPD"
+          ],
+          "loadTags": [
+            "SAE_ENGINE_LOAD",
+            "SAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "",
+      "modeVerification": {
+        "kind": "direct-telemetry-tag",
+        "tagSuffix": "VES-MODE",
+        "mappingSource": "legacy-report-service/SCSultan.cs"
+      }
+    },
+    {
+      "id": "sc-raja",
+      "label": "Verified 10-Mode Twin Main Engine Profile",
+      "aliases": [
+        "SC RAJA",
+        "SC_RAJA"
+      ],
+      "prefixes": [
+        "SC_RAJA",
+        "SC_RAJA-"
+      ],
+      "modeTags": [
+        "VES_MODE",
+        "VES_OPERATION_MODE",
+        "OPERATION_MODE",
+        "CURRENT_MODE",
+        "VES_MODE_CODE"
+      ],
+      "modes": [
+        {
+          "key": "in-port-anchor",
+          "label": "In Port / Tie up buoy / Anchorage",
+          "codes": [
+            1,
+            "IN PORT / TIE UP BUOY / ANCHORAGE"
+          ]
+        },
+        {
+          "key": "shifting-manoeuvring",
+          "label": "Shifting and Maneuvering",
+          "codes": [
+            2,
+            "SHIFTING AND MANEUVERING"
+          ]
+        },
+        {
+          "key": "sea-passage-6-7",
+          "label": "Sea Passage Average Speed 6-7 Kts. (Without Barge)",
+          "codes": [
+            3,
+            "SEA PASSAGE AVERAGE SPEED 6-7 KTS. (WITHOUT BARGE)"
+          ]
+        },
+        {
+          "key": "sea-passage-8-9",
+          "label": "Sea Passage Average Speed 8-9 Kts. (Without Barge)",
+          "codes": [
+            4,
+            "SEA PASSAGE AVERAGE SPEED 8-9 KTS. (WITHOUT BARGE)"
+          ]
+        },
+        {
+          "key": "cargo-offshore-transport",
+          "label": "Cargo Work / Offshore Transportation",
+          "codes": [
+            5,
+            "CARGO WORK / OFFSHORE TRANSPORTATION"
+          ]
+        },
+        {
+          "key": "towing-empty-barge",
+          "label": "Voyage Towing Empty Barge Operation",
+          "codes": [
+            6,
+            "VOYAGE TOWING EMPTY BARGE OPERATION"
+          ]
+        },
+        {
+          "key": "towing-loaded-barge",
+          "label": "Voyage Towing Loaded Barge Operation",
+          "codes": [
+            7,
+            "VOYAGE TOWING LOADED BARGE OPERATION"
+          ]
+        },
+        {
+          "key": "standby-1me-1ae",
+          "label": "Standby (Idling) (1M/E + 1A/E)",
+          "codes": [
+            8,
+            "STANDBY (IDLING) (1M/E + 1A/E)"
+          ]
+        },
+        {
+          "key": "standby-2me-1ae",
+          "label": "Standby (Idling) (2M/E + 1A/E)",
+          "codes": [
+            9,
+            "STANDBY (IDLING) (2M/E + 1A/E)"
+          ]
+        },
+        {
+          "key": "other",
+          "label": "Other",
+          "codes": [
+            10,
+            "OTHER"
+          ]
+        }
+      ],
+      "engines": [
+        {
+          "key": "port-main",
+          "label": "Port Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "PME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PME_CONS_RATE"
+          ],
+          "speedTags": [
+            "PME_SPD_CALC",
+            "PME_SPD"
+          ],
+          "loadTags": [
+            "PME_ENGINE_LOAD",
+            "PME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "starboard-main",
+          "label": "Starboard Main Engine",
+          "kind": "main",
+          "fuelTodayTags": [
+            "SME_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SME_CONS_RATE"
+          ],
+          "speedTags": [
+            "SME_SPD_CALC",
+            "SME_SPD"
+          ],
+          "loadTags": [
+            "SME_ENGINE_LOAD",
+            "SME_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SME_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SME_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SME_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 3000
+        },
+        {
+          "key": "port-aux",
+          "label": "Port Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "PAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "PAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "PAE_SPD_CALC",
+            "PAE_SPD"
+          ],
+          "loadTags": [
+            "PAE_ENGINE_LOAD",
+            "PAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "PAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "PAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "PAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        },
+        {
+          "key": "starboard-aux",
+          "label": "Starboard Auxiliary Engine",
+          "kind": "auxiliary",
+          "fuelTodayTags": [
+            "SAE_CONS_TODAY"
+          ],
+          "fuelRateTags": [
+            "SAE_CONS_RATE"
+          ],
+          "speedTags": [
+            "SAE_SPD_CALC",
+            "SAE_SPD"
+          ],
+          "loadTags": [
+            "SAE_ENGINE_LOAD",
+            "SAE_GEN_LOAD"
+          ],
+          "powerTags": [
+            "SAE_GEN_LOAD_KW"
+          ],
+          "flowSupplyTags": [
+            "SAE_FIN_RATE"
+          ],
+          "flowReturnTags": [
+            "SAE_FOUT_RATE"
+          ],
+          "maxSpeedRpm": 4000
+        }
+      ],
+      "sourceReport": "",
+      "modeVerification": {
+        "kind": "direct-telemetry-tag",
+        "tagSuffix": "VES-MODE",
+        "mappingSource": "legacy-report-service/SCRaja.cs"
+      }
+    }
+  ]
+}

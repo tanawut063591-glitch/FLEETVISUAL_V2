@@ -41,7 +41,7 @@ interface TelemetrySnapshot {
 
 @Injectable({ providedIn: 'root' })
 export class TelemetryAlertsService {
-  private readonly cacheDurationMs = 15_000;
+  private readonly cacheDurationMs = 60_000;
   private readonly legacyStorageKeys = [
     'fleetTelemetryAlertLifecycleV1',
     'fleetTelemetrySnapshotV2',
@@ -160,11 +160,11 @@ export class TelemetryAlertsService {
 
   private loadVessels(): Observable<any[]> {
     return this.backend.getVesselInfo().pipe(
-      timeout(5000),
+      timeout(4000),
       catchError(() => of([] as any[])),
       switchMap((vessels) => {
         if (Array.isArray(vessels) && vessels.length > 0) return of(vessels);
-        return from(this.directBackend.getVesselInfo2()).pipe(timeout(5000));
+        return from(this.directBackend.getVesselInfo2()).pipe(timeout(4000));
       }),
       switchMap((vessels) =>
         Array.isArray(vessels) && vessels.length > 0

@@ -5508,3 +5508,175 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+/* ========================================================================
+   FleetVisual Premium Graphite Dark Theme
+   Final production override: neutral graphite surfaces + restrained blue.
+   ======================================================================== */
+:host-context([data-theme='dark']) .settings-page {
+  --set-bg: #07090c;
+  --set-surface: #0f1217;
+  --set-surface-2: #141820;
+  --set-soft: #171c24;
+  --set-border: rgba(148, 163, 184, 0.18);
+  --set-border-strong: rgba(148, 163, 184, 0.28);
+  --set-text: #f4f7fb;
+  --set-muted: #97a6ba;
+  --set-primary: #4f8df7;
+  --set-primary-dark: #3b82f6;
+  --set-primary-soft: rgba(79, 141, 247, 0.13);
+  --set-green: #3fd08a;
+  --set-green-soft: rgba(63, 208, 138, 0.11);
+  --set-amber: #f2b84b;
+  --set-amber-soft: rgba(242, 184, 75, 0.11);
+  --set-red: #ff6b78;
+  --set-red-soft: rgba(255, 107, 120, 0.10);
+  --set-purple: #a78bfa;
+  --set-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
+  --set-shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.24);
+  background:
+    radial-gradient(circle at 96% -8%, rgba(59, 130, 246, 0.09), transparent 28%),
+    radial-gradient(circle at 4% 8%, rgba(14, 165, 233, 0.045), transparent 24%),
+    linear-gradient(180deg, #090b0f 0%, #06080b 100%);
+}
+
+:host-context([data-theme='dark']) .settings-tabs,
+:host-context([data-theme='dark']) .general-panel,
+:host-context([data-theme='dark']) .users-panel,
+:host-context([data-theme='dark']) .groups-panel,
+:host-context([data-theme='dark']) .vessel-panel,
+:host-context([data-theme='dark']) .preference-card,
+:host-context([data-theme='dark']) .user-card,
+:host-context([data-theme='dark']) .summary-cards > div,
+:host-context([data-theme='dark']) .vessel-summary-cards > div,
+:host-context([data-theme='dark']) .user-summary-grid > div,
+:host-context([data-theme='dark']) .engine-library-panel,
+:host-context([data-theme='dark']) .professional-engine-setup,
+:host-context([data-theme='dark']) .group-readonly-card,
+:host-context([data-theme='dark']) .effective-access-card {
+  border-color: var(--set-border);
+  background: linear-gradient(180deg, #11151b 0%, #0c0f14 100%);
+  box-shadow: var(--set-shadow-soft);
+}
+
+:host-context([data-theme='dark']) .settings-tabs button { color: #a7b4c7; }
+:host-context([data-theme='dark']) .settings-tabs button:hover {
+  color: #d8e8ff;
+  background: rgba(79, 141, 247, 0.09);
+}
+:host-context([data-theme='dark']) .settings-tabs button.active {
+  color: #9cc2ff;
+  background: linear-gradient(180deg, #1a2029 0%, #151a21 100%);
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.20), 0 5px 16px rgba(0, 0, 0, 0.18);
+}
+:host-context([data-theme='dark']) .settings-tabs button.active::after {
+  background: linear-gradient(90deg, #4f8df7, #5bb9ee);
+}
+
+:host-context([data-theme='dark']) .table-search input,
+:host-context([data-theme='dark']) .filter-select,
+:host-context([data-theme='dark']) .table-footer select,
+:host-context([data-theme='dark']) .drawer-content input,
+:host-context([data-theme='dark']) .drawer-content select,
+:host-context([data-theme='dark']) .drawer-content textarea,
+:host-context([data-theme='dark']) .preference-card input,
+:host-context([data-theme='dark']) .preference-card select,
+:host-context([data-theme='dark']) .engine-profile-search input,
+:host-context([data-theme='dark']) .engine-library-select,
+:host-context([data-theme='dark']) .manual-engine-composer-grid input,
+:host-context([data-theme='dark']) .manual-engine-composer-grid select {
+  color: var(--set-text);
+  border-color: var(--set-border);
+  background: #0a0d11;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.015);
+}
+:host-context([data-theme='dark']) .table-search input::placeholder,
+:host-context([data-theme='dark']) .drawer-content input::placeholder,
+:host-context([data-theme='dark']) .drawer-content textarea::placeholder { color: #6f7d90; }
+
+:host-context([data-theme='dark']) .vessel-table-wrap,
+:host-context([data-theme='dark']) .user-table-wrap,
+:host-context([data-theme='dark']) .vessel-mobile-list,
+:host-context([data-theme='dark']) .module-permission-table {
+  border-color: var(--set-border);
+  background: #0b0e12;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+}
+:host-context([data-theme='dark']) .vessel-table th,
+:host-context([data-theme='dark']) .user-table th,
+:host-context([data-theme='dark']) .module-permission-head {
+  color: #99a9bf;
+  border-color: var(--set-border);
+  background: #151a21;
+}
+:host-context([data-theme='dark']) .vessel-table td,
+:host-context([data-theme='dark']) .user-table td,
+:host-context([data-theme='dark']) .module-permission-row {
+  color: #c8d2df;
+  border-color: rgba(148, 163, 184, 0.13);
+  background: transparent;
+}
+:host-context([data-theme='dark']) .vessel-table tbody tr:hover,
+:host-context([data-theme='dark']) .user-table tbody tr:hover { background: rgba(79, 141, 247, 0.055); }
+
+:host-context([data-theme='dark']) .prefix-chip,
+:host-context([data-theme='dark']) .source-chip,
+:host-context([data-theme='dark']) .backend-label,
+:host-context([data-theme='dark']) .scope-chip,
+:host-context([data-theme='dark']) .module-count,
+:host-context([data-theme='dark']) .group-count,
+:host-context([data-theme='dark']) .engine-count-chip,
+:host-context([data-theme='dark']) .realtime-linked-chip {
+  color: #9cc2ff;
+  border-color: rgba(96, 165, 250, 0.20);
+  background: rgba(79, 141, 247, 0.11);
+}
+
+:host-context([data-theme='dark']) .ghost-btn,
+:host-context([data-theme='dark']) .cancel-btn,
+:host-context([data-theme='dark']) .pagination button,
+:host-context([data-theme='dark']) .row-actions button,
+:host-context([data-theme='dark']) .engine-library-btn,
+:host-context([data-theme='dark']) .engine-sync-btn,
+:host-context([data-theme='dark']) .engine-manual-btn {
+  color: var(--set-text);
+  border-color: var(--set-border);
+  background: #10141a;
+  box-shadow: none;
+}
+:host-context([data-theme='dark']) .primary-btn {
+  color: #fff;
+  border-color: rgba(96, 165, 250, 0.22);
+  background: linear-gradient(135deg, #3578eb 0%, #2563d8 100%);
+  box-shadow: 0 10px 24px rgba(37, 99, 216, 0.22);
+}
+
+:host-context([data-theme='dark']) .drawer-backdrop,
+:host-context([data-theme='dark']) .user-access-backdrop {
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(3px);
+}
+:host-context([data-theme='dark']) .vessel-drawer,
+:host-context([data-theme='dark']) .group-drawer,
+:host-context([data-theme='dark']) .user-access-drawer {
+  color: var(--set-text);
+  border-color: var(--set-border);
+  background: linear-gradient(180deg, #11151b 0%, #090c10 100%);
+  box-shadow: -18px 0 56px rgba(0, 0, 0, 0.42);
+}
+
+:host-context([data-theme='dark']) .loading-box,
+:host-context([data-theme='dark']) .empty-inline,
+:host-context([data-theme='dark']) .compact-empty,
+:host-context([data-theme='dark']) .engine-empty-state,
+:host-context([data-theme='dark']) .group-empty-state {
+  color: var(--set-muted);
+  border-color: var(--set-border-strong);
+  background: #0b0e12;
+}
+
+@media (max-width: 680px) {
+  :host-context([data-theme='dark']) .settings-page {
+    background: linear-gradient(180deg, #090b0f 0%, #06080b 100%);
+  }
+}

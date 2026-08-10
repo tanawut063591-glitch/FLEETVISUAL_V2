@@ -1,650 +1,667 @@
 {
     "dashboard": {
-        "knot_current":{
-            "tagName":"VES-GPS-SPEED",
-            "name":"VES_GPS_SPEED"
+        "knot_current": {
+            "tagName": "VES-GPS-SPEED",
+            "name": "VES_GPS_SPEED"
         },
-        "max_current":{
-            "tagName":"VES-GPS-SPEED-MAX",
-            "name":"VES_GPS_SPEED_MAX",
-            "cal":true
+        "max_current": {
+            "tagName": "VES-GPS-SPEED-MAX",
+            "name": "VES_GPS_SPEED_MAX",
+            "cal": true
         },
-        "avg_current":{
-            "tagName":"VES-GPS-SPEED-AVG",
-            "name":"VES_GPS_SPEED_AVG",
-            "cal":true
+        "avg_current": {
+            "tagName": "VES-GPS-SPEED-AVG",
+            "name": "VES_GPS_SPEED_AVG",
+            "cal": true
         },
-        "mile_current":{
-            "tagName":"VES-GPS-DIS-TODAY",
-            "name":"VES_GPS_DIS_TODAY"
+        "mile_current": {
+            "tagName": "VES-GPS-DIS-TODAY",
+            "name": "VES_GPS_DIS_TODAY"
         },
-        "heading":{
-            "tagName":"VES-GPS-HEAD",
-            "name":"VES_GPS_HEAD"
+        "heading": {
+            "tagName": "VES-GPS-HEAD",
+            "name": "VES_GPS_HEAD"
         },
-        "l_h_total":{
-            "tagName":"VES-CONS-TODAY",
-            "name":"VES_CONS_TODAY"
+        "l_h_total": {
+            "tagName": "VES-CONS-TODAY",
+            "name": "VES_CONS_TODAY"
         }
     },
     "status": {
-        "dcp_atop1":{
-            "tagName":"DCP-ATOP1-ALIVE",
-            "name":"DCP_ATOP1_ALIVE"
+        "dcp_atop1": {
+            "tagName": "DCP-ATOP1-ALIVE",
+            "name": "DCP_ATOP1_ALIVE"
         },
-        "dcp_atop2":{
-            "tagName":"DCP-ATOP2-ALIVE",
-            "name":"DCP_ATOP2_ALIVE"
+        "dcp_atop2": {
+            "tagName": "DCP-ATOP2-ALIVE",
+            "name": "DCP_ATOP2_ALIVE"
         },
-        "dcp_et2251":{
-            "tagName":"DCP-ET2251-ALIVE",
-            "name":"DCP_ET2251_ALIVE"
+        "dcp_et2251": {
+            "tagName": "DCP-ET2251-ALIVE",
+            "name": "DCP_ET2251_ALIVE"
         },
-        "dcp_gateway":{
-            "tagName":"DCP-GATEWAY-ALIVE",
-            "name":"DCP_GATEWAY_ALIVE"
+        "dcp_gateway": {
+            "tagName": "DCP-GATEWAY-ALIVE",
+            "name": "DCP_GATEWAY_ALIVE"
         },
-        "dcp_gateway2":{
-            "tagName":"DCP-GATEWAY2-ALIVE",
-            "name":"DCP_GATEWAY2_ALIVE"
+        "dcp_gateway2": {
+            "tagName": "DCP-GATEWAY2-ALIVE",
+            "name": "DCP_GATEWAY2_ALIVE"
         },
-        "dcp_gateway3":{
-            "tagName":"DCP-GATEWAY3-ALIVE",
-            "name":"DCP_GATEWAY3_ALIVE"
+        "dcp_gateway3": {
+            "tagName": "DCP-GATEWAY3-ALIVE",
+            "name": "DCP_GATEWAY3_ALIVE"
         },
-        "dcp_plc":{
-            "tagName":"DCP-PLC-ALIVE",
-            "name":"DCP_PLC_ALIVE"
+        "dcp_plc": {
+            "tagName": "DCP-PLC-ALIVE",
+            "name": "DCP_PLC_ALIVE"
         },
-        "fv_server":{
-            "tagName":"FV-API-ALIVE",
-            "name":"FV_API_ALIVE"
+        "fv_server": {
+            "tagName": "FV-API-ALIVE",
+            "name": "FV_API_ALIVE"
         },
-        "gen1_gwkw":{
-            "tagName":"GATEWAY-GEN1-KW-ALIVE",
-            "name":"GATEWAY_GEN1_KW_ALIVE"
+        "gen1_gwkw": {
+            "tagName": "GATEWAY-GEN1-KW-ALIVE",
+            "name": "GATEWAY_GEN1_KW_ALIVE"
         },
-        "gen2_gwkw":{
-            "tagName":"GATEWAY-GEN2-KW-ALIVE",
-            "name":"GATEWAY_GEN2_KW_ALIVE"
+        "gen2_gwkw": {
+            "tagName": "GATEWAY-GEN2-KW-ALIVE",
+            "name": "GATEWAY_GEN2_KW_ALIVE"
         },
-        "gen3_gwkw":{
-            "tagName":"GATEWAY-GEN3-KW-ALIVE",
-            "name":"GATEWAY_GEN3_KW_ALIVE"
+        "gen3_gwkw": {
+            "tagName": "GATEWAY-GEN3-KW-ALIVE",
+            "name": "GATEWAY_GEN3_KW_ALIVE"
         },
-        "gen4_gwkw":{
-            "tagName":"GATEWAY-GEN4-KW-ALIVE",
-            "name":"GATEWAY_GEN4_KW_ALIVE"
+        "gen4_gwkw": {
+            "tagName": "GATEWAY-GEN4-KW-ALIVE",
+            "name": "GATEWAY_GEN4_KW_ALIVE"
         },
-         "gen1_tgw":{
-            "tagName":"TGW-ECM-DG1-ALIVE",
-            "name":"TGW_ECM_DG1_ALIVE"
+        "gen1_tgw": {
+            "tagName": "TGW-ECM-DG1-ALIVE",
+            "name": "TGW_ECM_DG1_ALIVE"
         },
-        "gen2_tgw":{
-            "tagName":"TGW-ECM-DG2-ALIVE",
-            "name":"TGW_ECM_DG2_ALIVE"
+        "gen2_tgw": {
+            "tagName": "TGW-ECM-DG2-ALIVE",
+            "name": "TGW_ECM_DG2_ALIVE"
         },
-        "gen3_tgw":{
-            "tagName":"TGW-ECM-DG3-ALIVE",
-            "name":"TGW_ECM_DG3_ALIVE"
+        "gen3_tgw": {
+            "tagName": "TGW-ECM-DG3-ALIVE",
+            "name": "TGW_ECM_DG3_ALIVE"
         },
-        "gen4_tgw":{
-            "tagName":"TGW-ECM-DG4-ALIVE",
-            "name":"TGW_ECM_DG4_ALIVE"
+        "gen4_tgw": {
+            "tagName": "TGW-ECM-DG4-ALIVE",
+            "name": "TGW_ECM_DG4_ALIVE"
         },
-        "gps_panel":{
-            "tagName":"GPS-PANEL-ALIVE",
-            "name":"GPS_PANEL_ALIVE"
+        "gps_panel": {
+            "tagName": "GPS-PANEL-ALIVE",
+            "name": "GPS_PANEL_ALIVE"
         },
-        "hmi":{
-            "tagName":"HMI-ALIVE",
-            "name":"HMI_ALIVE"
+        "hmi": {
+            "tagName": "HMI-ALIVE",
+            "name": "HMI_ALIVE"
         },
-        "rut":{
-            "tagName":"RUT-ALIVE",
-            "name":"RUT_ALIVE"
+        "rut": {
+            "tagName": "RUT-ALIVE",
+            "name": "RUT_ALIVE"
         },
-        "ecm1_anybus":{
-            "tagName":"ANYBUS-ECM1-ALIVE",
-            "name":"ANYBUS_ECM1_ALIVE"
+        "ecm1_anybus": {
+            "tagName": "ANYBUS-ECM1-ALIVE",
+            "name": "ANYBUS_ECM1_ALIVE"
         },
-        "ecm2_anybus":{
-            "tagName":"ANYBUS-ECM2-ALIVE",
-            "name":"ANYBUS_ECM2_ALIVE"
+        "ecm2_anybus": {
+            "tagName": "ANYBUS-ECM2-ALIVE",
+            "name": "ANYBUS_ECM2_ALIVE"
         },
-        "ecm3_anybus":{
-            "tagName":"ANYBUS-ECM3-ALIVE",
-            "name":"ANYBUS_ECM3_ALIVE"
+        "ecm3_anybus": {
+            "tagName": "ANYBUS-ECM3-ALIVE",
+            "name": "ANYBUS_ECM3_ALIVE"
         },
-        "ecm4_anybus":{
-            "tagName":"ANYBUS-ECM4-ALIVE",
-            "name":"ANYBUS_ECM4_ALIVE"
-        }           
+        "ecm4_anybus": {
+            "tagName": "ANYBUS-ECM4-ALIVE",
+            "name": "ANYBUS_ECM4_ALIVE"
+        }
     },
-    "map":{
-        "lat":{
-            "tagName":"VES-GPS-LAT",
-            "name":"VES_GPS_LAT"
+    "map": {
+        "lat": {
+            "tagName": "VES-GPS-LAT",
+            "name": "VES_GPS_LAT"
         },
-        "long":{
-            "tagName":"VES-GPS-LONG",
-            "name":"VES_GPS_LONG"
+        "long": {
+            "tagName": "VES-GPS-LONG",
+            "name": "VES_GPS_LONG"
         }
     },
     "port_main_engine": {
-        "flow_supply":{
-            "tagName":"PME-FIN-RATE",
-            "name":"PME_FIN_RATE"
+        "flow_supply": {
+            "tagName": "PME-FIN-RATE",
+            "name": "PME_FIN_RATE"
         },
-        "TEMPC_supply":{
-            "tagName":"PME-FIN-TEMP",
-            "name":"PME_FIN_TEMP"
+        "TEMPC_supply": {
+            "tagName": "PME-FIN-TEMP",
+            "name": "PME_FIN_TEMP"
         },
-        "dens_supply":{
-            "tagName":"PME-FIN-DENS",
-            "name":"PME_FIN_DENS"
+        "dens_supply": {
+            "tagName": "PME-FIN-DENS",
+            "name": "PME_FIN_DENS"
         },
-        "flow_return":{
-            "tagName":"PME-FOUT-RATE",
-            "name":"PME_FOUT_RATE"
+        "flow_return": {
+            "tagName": "PME-FOUT-RATE",
+            "name": "PME_FOUT_RATE"
         },
-        "TEMPC_return":{
-            "tagName":"PME-FOUT-TEMP",
-            "name":"PME_FOUT_TEMP"
+        "TEMPC_return": {
+            "tagName": "PME-FOUT-TEMP",
+            "name": "PME_FOUT_TEMP"
         },
-        "dens_return":{
-            "tagName":"PME-FOUT-DENS",
-            "name":"PME_FOUT_DENS"
+        "dens_return": {
+            "tagName": "PME-FOUT-DENS",
+            "name": "PME_FOUT_DENS"
         },
-        "consL":{
-            "tagName":"PME-CONS-TODAY",
-            "name":"PME_CONS_TODAY"
+        "consL": {
+            "tagName": "PME-CONS-TODAY",
+            "name": "PME_CONS_TODAY"
         },
-        "consF":{
-            "tagName":"PME-CONS-RATE",
-            "name":"PME_CONS_RATE"
+        "consF": {
+            "tagName": "PME-CONS-RATE",
+            "name": "PME_CONS_RATE"
         },
-        "speed_engine":{
-            "tagName":"PME-SPD",
-            "name":"PME_SPD"
+        "speed_engine": {
+            "tagName": "PME-SPD",
+            "name": "PME_SPD"
         },
-        "speed_gear":{
-            "tagName":"PPS-SPD",
-            "name":"PPS_SPD"
+        "speed_gear": {
+            "tagName": "PPS-SPD",
+            "name": "PPS_SPD"
         },
-        "speed_engine_cal":{
-            "tagName":"PME-SPD-CALC",
-            "name":"PME_SPD_CALC"
+        "speed_engine_cal": {
+            "tagName": "PME-SPD-CALC",
+            "name": "PME_SPD_CALC"
         },
-        "speed_gear_cal":{
-            "tagName":"PPS-SPD-CALC",
-            "name":"PPS_SPD_CALC"
+        "speed_gear_cal": {
+            "tagName": "PPS-SPD-CALC",
+            "name": "PPS_SPD_CALC"
         },
-		"load": {
-			"tagName":"PME-ENGINE-LOAD",
-            "name":"PME_ENGINE_LOAD"
-		}
+        "load": {
+            "tagName": "PME-ENGINE-LOAD",
+            "name": "PME_ENGINE_LOAD"
+        }
     },
     "center_main_engine": {
-        "flow_supply":{
-            "tagName":"CME-FIN-RATE",
-            "name":"CME_FIN_RATE"
+        "flow_supply": {
+            "tagName": "CME-FIN-RATE",
+            "name": "CME_FIN_RATE"
         },
-        "TEMPC_supply":{
-            "tagName":"CME-FIN-TEMP",
-            "name":"CME_FIN_TEMP"
+        "TEMPC_supply": {
+            "tagName": "CME-FIN-TEMP",
+            "name": "CME_FIN_TEMP"
         },
-        "dens_supply":{
-            "tagName":"CME-FIN-DENS",
-            "name":"CME_FIN_DENS"
+        "dens_supply": {
+            "tagName": "CME-FIN-DENS",
+            "name": "CME_FIN_DENS"
         },
-        "flow_return":{
-            "tagName":"CME-FOUT-RATE",
-            "name":"CME_FOUT_RATE"
+        "flow_return": {
+            "tagName": "CME-FOUT-RATE",
+            "name": "CME_FOUT_RATE"
         },
-        "TEMPC_return":{
-            "tagName":"CME-FOUT-TEMP",
-            "name":"CME_FOUT_TEMP"
+        "TEMPC_return": {
+            "tagName": "CME-FOUT-TEMP",
+            "name": "CME_FOUT_TEMP"
         },
-        "dens_return":{
-            "tagName":"CME-FOUT-DENS",
-            "name":"CME_FOUT_DENS"
+        "dens_return": {
+            "tagName": "CME-FOUT-DENS",
+            "name": "CME_FOUT_DENS"
         },
-        "consL":{
-            "tagName":"CME-CONS-TODAY",
-            "name":"CME_CONS_TODAY"
+        "consL": {
+            "tagName": "CME-CONS-TODAY",
+            "name": "CME_CONS_TODAY"
         },
-        "consF":{
-            "tagName":"CME-CONS-RATE",
-            "name":"CME_CONS_RATE"
+        "consF": {
+            "tagName": "CME-CONS-RATE",
+            "name": "CME_CONS_RATE"
         },
-        "speed_engine":{
-            "tagName":"CME-SPD",
-            "name":"CME_SPD"
+        "speed_engine": {
+            "tagName": "CME-SPD",
+            "name": "CME_SPD"
         },
-        "speed_gear":{
-            "tagName":"CPS-SPD",
-            "name":"CPS_SPD"
+        "speed_gear": {
+            "tagName": "CPS-SPD",
+            "name": "CPS_SPD"
         },
-        "speed_engine_cal":{
-            "tagName":"CME-SPD-CALC",
-            "name":"CME_SPD_CALC"
+        "speed_engine_cal": {
+            "tagName": "CME-SPD-CALC",
+            "name": "CME_SPD_CALC"
         },
-        "speed_gear_cal":{
-            "tagName":"CPS-SPD-CALC",
-            "name":"CPS_SPD_CALC"
+        "speed_gear_cal": {
+            "tagName": "CPS-SPD-CALC",
+            "name": "CPS_SPD_CALC"
         }
     },
     "starboard_main_engine": {
-        "flow_supply":{
-            "tagName":"SME-FIN-RATE",
-            "name":"SME_FIN_RATE"
+        "flow_supply": {
+            "tagName": "SME-FIN-RATE",
+            "name": "SME_FIN_RATE"
         },
-        "TEMPC_supply":{
-            "tagName":"SME-FIN-TEMP",
-            "name":"SME_FIN_TEMP"
+        "TEMPC_supply": {
+            "tagName": "SME-FIN-TEMP",
+            "name": "SME_FIN_TEMP"
         },
-        "dens_supply":{
-            "tagName":"SME-FIN-DENS",
-            "name":"SME_FIN_DENS"
+        "dens_supply": {
+            "tagName": "SME-FIN-DENS",
+            "name": "SME_FIN_DENS"
         },
-        "flow_return":{
-            "tagName":"SME-FOUT-RATE",
-            "name":"SME_FOUT_RATE"
+        "flow_return": {
+            "tagName": "SME-FOUT-RATE",
+            "name": "SME_FOUT_RATE"
         },
-        "TEMPC_return":{
-            "tagName":"SME-FOUT-TEMP",
-            "name":"SME_FOUT_TEMP"
+        "TEMPC_return": {
+            "tagName": "SME-FOUT-TEMP",
+            "name": "SME_FOUT_TEMP"
         },
-        "dens_return":{
-            "tagName":"SME-FOUT-DENS",
-            "name":"SME_FOUT_DENS"
+        "dens_return": {
+            "tagName": "SME-FOUT-DENS",
+            "name": "SME_FOUT_DENS"
         },
-        "consL":{
-            "tagName":"SME-CONS-TODAY",
-            "name":"SME_CONS_TODAY"
+        "consL": {
+            "tagName": "SME-CONS-TODAY",
+            "name": "SME_CONS_TODAY"
         },
-        "consF":{
-            "tagName":"SME-CONS-RATE",
-            "name":"SME_CONS_RATE"
+        "consF": {
+            "tagName": "SME-CONS-RATE",
+            "name": "SME_CONS_RATE"
         },
-        "speed_engine":{
-            "tagName":"SME-SPD",
-            "name":"SME_SPD"
+        "speed_engine": {
+            "tagName": "SME-SPD",
+            "name": "SME_SPD"
         },
-        "speed_gear":{
-            "tagName":"SPS-SPD",
-            "name":"SPS_SPD"
+        "speed_gear": {
+            "tagName": "SPS-SPD",
+            "name": "SPS_SPD"
         },
-        "speed_engine_cal":{
-            "tagName":"SME-SPD-CALC",
-            "name":"SME_SPD_CALC"
+        "speed_engine_cal": {
+            "tagName": "SME-SPD-CALC",
+            "name": "SME_SPD_CALC"
         },
-        "speed_gear_cal":{
-            "tagName":"SPS-SPD-CALC",
-            "name":"SPS_SPD_CALC"
+        "speed_gear_cal": {
+            "tagName": "SPS-SPD-CALC",
+            "name": "SPS_SPD_CALC"
         },
-		"load": {
-			"tagName":"SME-ENGINE-LOAD",
-            "name":"SME_ENGINE_LOAD"
-		}
+        "load": {
+            "tagName": "SME-ENGINE-LOAD",
+            "name": "SME_ENGINE_LOAD"
+        }
     },
     "port_aux_engine": {
-        "flow_supply":{
-            "tagName":"PAE-FIN-RATE",
-            "name":"PAE_FIN_RATE"
+        "flow_supply": {
+            "tagName": "PAE-FIN-RATE",
+            "name": "PAE_FIN_RATE"
         },
-        "TEMPC_supply":{
-            "tagName":"PAE-FIN-TEMP",
-            "name":"PAE_FIN_TEMP"
+        "TEMPC_supply": {
+            "tagName": "PAE-FIN-TEMP",
+            "name": "PAE_FIN_TEMP"
         },
-        "dens_supply":{
-            "tagName":"PAE-FIN-DENS",
-            "name":"PAE_FIN_DENS"
+        "dens_supply": {
+            "tagName": "PAE-FIN-DENS",
+            "name": "PAE_FIN_DENS"
         },
-        "flow_return":{
-            "tagName":"PAE-FOUT-RATE",
-            "name":"PAE_FOUT_RATE"
+        "flow_return": {
+            "tagName": "PAE-FOUT-RATE",
+            "name": "PAE_FOUT_RATE"
         },
-        "TEMPC_return":{
-            "tagName":"PAE-FOUT-TEMP",
-            "name":"PAE_FOUT_TEMP"
+        "TEMPC_return": {
+            "tagName": "PAE-FOUT-TEMP",
+            "name": "PAE_FOUT_TEMP"
         },
-        "dens_return":{
-            "tagName":"PAE-FOUT-DENS",
-            "name":"PAE_FOUT_DENS"
+        "dens_return": {
+            "tagName": "PAE-FOUT-DENS",
+            "name": "PAE_FOUT_DENS"
         },
-        "consL":{
-            "tagName":"PAE-CONS-TODAY",
-            "name":"PAE_CONS_TODAY"
+        "consL": {
+            "tagName": "PAE-CONS-TODAY",
+            "name": "PAE_CONS_TODAY"
         },
-        "consF":{
-            "tagName":"PAE-CONS-RATE",
-            "name":"PAE_CONS_RATE"
+        "consF": {
+            "tagName": "PAE-CONS-RATE",
+            "name": "PAE_CONS_RATE"
         },
-        "speed_engine":{
-            "tagName":"PAE-SPD",
-            "name":"PAE_SPD"
+        "speed_engine": {
+            "tagName": "PAE-SPD",
+            "name": "PAE_SPD"
         },
-        "speed_engine_cal":{
-            "tagName":"PAE-SPD-CALC",
-            "name":"PAE_SPD_CALC"
+        "speed_engine_cal": {
+            "tagName": "PAE-SPD-CALC",
+            "name": "PAE_SPD_CALC"
         }
     },
     "center_aux_engine": {
-        "flow_supply":{
-            "tagName":"CAE-FIN-RATE",
-            "name":"CAE_FIN_RATE"
+        "flow_supply": {
+            "tagName": "CAE-FIN-RATE",
+            "name": "CAE_FIN_RATE"
         },
-        "TEMPC_supply":{
-            "tagName":"CAE-FIN-TEMP",
-            "name":"CAE_FIN_TEMP"
+        "TEMPC_supply": {
+            "tagName": "CAE-FIN-TEMP",
+            "name": "CAE_FIN_TEMP"
         },
-        "dens_supply":{
-            "tagName":"CAE-FIN-DENS",
-            "name":"CAE_FIN_DENS"
+        "dens_supply": {
+            "tagName": "CAE-FIN-DENS",
+            "name": "CAE_FIN_DENS"
         },
-        "flow_return":{
-            "tagName":"CAE-FOUT-RATE",
-            "name":"CAE_FOUT_RATE"
+        "flow_return": {
+            "tagName": "CAE-FOUT-RATE",
+            "name": "CAE_FOUT_RATE"
         },
-        "TEMPC_return":{
-            "tagName":"CAE-FOUT-TEMP",
-            "name":"CAE_FOUT_TEMP"
+        "TEMPC_return": {
+            "tagName": "CAE-FOUT-TEMP",
+            "name": "CAE_FOUT_TEMP"
         },
-        "dens_return":{
-            "tagName":"CAE-FOUT-DENS",
-            "name":"CAE_FOUT_DENS"
+        "dens_return": {
+            "tagName": "CAE-FOUT-DENS",
+            "name": "CAE_FOUT_DENS"
         },
-        "consL":{
-            "tagName":"CAE-CONS-TODAY",
-            "name":"CAE_CONS_TODAY"
+        "consL": {
+            "tagName": "CAE-CONS-TODAY",
+            "name": "CAE_CONS_TODAY"
         },
-        "consF":{
-            "tagName":"CAE-CONS-RATE",
-            "name":"CAE_CONS_RATE"
+        "consF": {
+            "tagName": "CAE-CONS-RATE",
+            "name": "CAE_CONS_RATE"
         },
-        "speed_engine":{
-            "tagName":"CAE-SPD",
-            "name":"CAE_SPD"
+        "speed_engine": {
+            "tagName": "CAE-SPD",
+            "name": "CAE_SPD"
         },
-        "speed_engine_cal":{
-            "tagName":"CAE-SPD-CALC",
-            "name":"CAE_SPD_CALC"
+        "speed_engine_cal": {
+            "tagName": "CAE-SPD-CALC",
+            "name": "CAE_SPD_CALC"
         }
     },
     "starboard_aux_engine": {
-        "flow_supply":{
-            "tagName":"SAE-FIN-RATE",
-            "name":"SAE_FIN_RATE"
+        "flow_supply": {
+            "tagName": "SAE-FIN-RATE",
+            "name": "SAE_FIN_RATE"
         },
-        "TEMPC_supply":{
-            "tagName":"SAE-FIN-TEMP",
-            "name":"SAE_FIN_TEMP"
+        "TEMPC_supply": {
+            "tagName": "SAE-FIN-TEMP",
+            "name": "SAE_FIN_TEMP"
         },
-        "dens_supply":{
-            "tagName":"SAE-FIN-DENS",
-            "name":"SAE_FIN_DENS"
+        "dens_supply": {
+            "tagName": "SAE-FIN-DENS",
+            "name": "SAE_FIN_DENS"
         },
-        "flow_return":{
-            "tagName":"SAE-FOUT-RATE",
-            "name":"SAE_FOUT_RATE"
+        "flow_return": {
+            "tagName": "SAE-FOUT-RATE",
+            "name": "SAE_FOUT_RATE"
         },
-        "TEMPC_return":{
-            "tagName":"SAE-FOUT-TEMP",
-            "name":"SAE_FOUT_TEMP"
+        "TEMPC_return": {
+            "tagName": "SAE-FOUT-TEMP",
+            "name": "SAE_FOUT_TEMP"
         },
-        "dens_return":{
-            "tagName":"SAE-FOUT-DENS",
-            "name":"SAE_FOUT_DENS"
+        "dens_return": {
+            "tagName": "SAE-FOUT-DENS",
+            "name": "SAE_FOUT_DENS"
         },
-        "consL":{
-            "tagName":"SAE-CONS-TODAY",
-            "name":"SAE_CONS_TODAY"
+        "consL": {
+            "tagName": "SAE-CONS-TODAY",
+            "name": "SAE_CONS_TODAY"
         },
-        "consF":{
-            "tagName":"SAE-CONS-RATE",
-            "name":"SAE_CONS_RATE"
+        "consF": {
+            "tagName": "SAE-CONS-RATE",
+            "name": "SAE_CONS_RATE"
         },
-        "speed_engine":{
-            "tagName":"SAE-SPD",
-            "name":"SAE_SPD"
+        "speed_engine": {
+            "tagName": "SAE-SPD",
+            "name": "SAE_SPD"
         },
-        "speed_engine_cal":{
-            "tagName":"SAE-SPD-CALC",
-            "name":"SAE_SPD_CALC"
+        "speed_engine_cal": {
+            "tagName": "SAE-SPD-CALC",
+            "name": "SAE_SPD_CALC"
         }
     },
-	"diesel_generator_1": {
-        "flow_supply":{
-            "tagName":"DG1-FIN-RATE",
-            "name":"DG1_FIN_RATE"
+    "diesel_generator_1": {
+        "flow_supply": {
+            "tagName": "DG1-FIN-RATE",
+            "name": "DG1_FIN_RATE"
         },
-        "TEMPC_supply":{
-            "tagName":"DG1-FIN-TEMP",
-            "name":"DG1_FIN_TEMP"
+        "TEMPC_supply": {
+            "tagName": "DG1-FIN-TEMP",
+            "name": "DG1_FIN_TEMP"
         },
-        "dens_supply":{
-            "tagName":"DG1-FIN-DENS",
-            "name":"DG1_FIN_DENS"
+        "dens_supply": {
+            "tagName": "DG1-FIN-DENS",
+            "name": "DG1_FIN_DENS"
         },
-        "flow_return":{
-            "tagName":"DG1-FOUT-RATE",
-            "name":"DG1_FOUT_RATE"
+        "flow_return": {
+            "tagName": "DG1-FOUT-RATE",
+            "name": "DG1_FOUT_RATE"
         },
-        "TEMPC_return":{
-            "tagName":"DG1-FOUT-TEMP",
-            "name":"DG1_FOUT_TEMP"
+        "TEMPC_return": {
+            "tagName": "DG1-FOUT-TEMP",
+            "name": "DG1_FOUT_TEMP"
         },
-        "dens_return":{
-            "tagName":"DG1-FOUT-DENS",
-            "name":"DG1_FOUT_DENS"
+        "dens_return": {
+            "tagName": "DG1-FOUT-DENS",
+            "name": "DG1_FOUT_DENS"
         },
-        "consL":{
-            "tagName":"DG1-CONS-TODAY",
-            "name":"DG1_CONS_TODAY"
+        "consL": {
+            "tagName": "DG1-CONS-TODAY",
+            "name": "DG1_CONS_TODAY"
         },
-        "consF":{
-            "tagName":"DG1-CONS-RATE",
-            "name":"DG1_CONS_RATE"
+        "consF": {
+            "tagName": "DG1-CONS-RATE",
+            "name": "DG1_CONS_RATE"
         },
         "load": {
-			"tagName":"DG1-GEN-LOAD",
-            "name":"DG1_GEN_LOAD"
-		},
+            "tagName": "DG1-GEN-LOAD",
+            "name": "DG1_GEN_LOAD"
+        },
         "loadkW": {
-			"tagName":"DG1-GEN-LOAD-KW",
-            "name":"DG1_GEN_LOAD_KW"
-		},
+            "tagName": "DG1-GEN-LOAD-KW",
+            "name": "DG1_GEN_LOAD_KW"
+        },
         "inlet_com": {
-			"tagName":"GEN1-FLOW-INLET-COM-FAIL",
-            "name":"GEN1_FLOW_INLET_COM_FAIL"
-		},
+            "tagName": "GEN1-FLOW-INLET-COM-FAIL",
+            "name": "GEN1_FLOW_INLET_COM_FAIL"
+        },
         "outlet_com": {
-			"tagName":"GEN1-FLOW-OUTLET-COM-FAIL",
-            "name":"GEN1_FLOW_OUTLET_COM_FAIL"
-		},
+            "tagName": "GEN1-FLOW-OUTLET-COM-FAIL",
+            "name": "GEN1_FLOW_OUTLET_COM_FAIL"
+        },
         "ecm_com": {
-			"tagName":"GEN1-ECM-COM-FAIL",
-            "name":"GEN1_ECM_COM_FAIL"
-		},
+            "tagName": "GEN1-ECM-COM-FAIL",
+            "name": "GEN1_ECM_COM_FAIL"
+        },
         "load_com": {
-			"tagName":"GEN1-ENGINE-LOAD-COM-FAIL",
-            "name":"GEN1_ENGINE_LOAD_COM_FAIL"
-		}
+            "tagName": "GEN1-ENGINE-LOAD-COM-FAIL",
+            "name": "GEN1_ENGINE_LOAD_COM_FAIL"
+        }
     },
-	"diesel_generator_2": {
-        "flow_supply":{
-            "tagName":"DG2-FIN-RATE",
-            "name":"DG2_FIN_RATE"
+    "diesel_generator_2": {
+        "flow_supply": {
+            "tagName": "DG2-FIN-RATE",
+            "name": "DG2_FIN_RATE"
         },
-        "TEMPC_supply":{
-            "tagName":"DG2-FIN-TEMP",
-            "name":"DG2_FIN_TEMP"
+        "TEMPC_supply": {
+            "tagName": "DG2-FIN-TEMP",
+            "name": "DG2_FIN_TEMP"
         },
-        "dens_supply":{
-            "tagName":"DG2-FIN-DENS",
-            "name":"DG2_FIN_DENS"
+        "dens_supply": {
+            "tagName": "DG2-FIN-DENS",
+            "name": "DG2_FIN_DENS"
         },
-        "flow_return":{
-            "tagName":"DG2-FOUT-RATE",
-            "name":"DG2_FOUT_RATE"
+        "flow_return": {
+            "tagName": "DG2-FOUT-RATE",
+            "name": "DG2_FOUT_RATE"
         },
-        "TEMPC_return":{
-            "tagName":"DG2-FOUT-TEMP",
-            "name":"DG2_FOUT_TEMP"
+        "TEMPC_return": {
+            "tagName": "DG2-FOUT-TEMP",
+            "name": "DG2_FOUT_TEMP"
         },
-        "dens_return":{
-            "tagName":"DG2-FOUT-DENS",
-            "name":"DG2_FOUT_DENS"
+        "dens_return": {
+            "tagName": "DG2-FOUT-DENS",
+            "name": "DG2_FOUT_DENS"
         },
-        "consL":{
-            "tagName":"DG2-CONS-TODAY",
-            "name":"DG2_CONS_TODAY"
+        "consL": {
+            "tagName": "DG2-CONS-TODAY",
+            "name": "DG2_CONS_TODAY"
         },
-        "consF":{
-            "tagName":"DG2-CONS-RATE",
-            "name":"DG2_CONS_RATE"
+        "consF": {
+            "tagName": "DG2-CONS-RATE",
+            "name": "DG2_CONS_RATE"
         },
         "load": {
-			"tagName":"DG2-GEN-LOAD",
-            "name":"DG2_GEN_LOAD"
-		},
+            "tagName": "DG2-GEN-LOAD",
+            "name": "DG2_GEN_LOAD"
+        },
         "loadkW": {
-			"tagName":"DG2-GEN-LOAD-KW",
-            "name":"DG2_GEN_LOAD_KW"
-		},
+            "tagName": "DG2-GEN-LOAD-KW",
+            "name": "DG2_GEN_LOAD_KW"
+        },
         "inlet_com": {
-			"tagName":"GEN2-FLOW-INLET-COM-FAIL",
-            "name":"GEN2_FLOW_INLET_COM_FAIL"
-		},
+            "tagName": "GEN2-FLOW-INLET-COM-FAIL",
+            "name": "GEN2_FLOW_INLET_COM_FAIL"
+        },
         "outlet_com": {
-			"tagName":"GEN2-FLOW-OUTLET-COM-FAIL",
-            "name":"GEN2_FLOW_OUTLET_COM_FAIL"
-		},
+            "tagName": "GEN2-FLOW-OUTLET-COM-FAIL",
+            "name": "GEN2_FLOW_OUTLET_COM_FAIL"
+        },
         "ecm_com": {
-			"tagName":"GEN2-ECM-COM-FAIL",
-            "name":"GEN2_ECM_COM_FAIL"
-		},
+            "tagName": "GEN2-ECM-COM-FAIL",
+            "name": "GEN2_ECM_COM_FAIL"
+        },
         "load_com": {
-			"tagName":"GEN2-ENGINE-LOAD-COM-FAIL",
-            "name":"GEN2_ENGINE_LOAD_COM_FAIL"
-		}
+            "tagName": "GEN2-ENGINE-LOAD-COM-FAIL",
+            "name": "GEN2_ENGINE_LOAD_COM_FAIL"
+        }
     },
-	"diesel_generator_3": {
-        "flow_supply":{
-            "tagName":"DG3-FIN-RATE",
-            "name":"DG3_FIN_RATE"
+    "diesel_generator_3": {
+        "flow_supply": {
+            "tagName": "DG3-FIN-RATE",
+            "name": "DG3_FIN_RATE"
         },
-        "TEMPC_supply":{
-            "tagName":"DG3-FIN-TEMP",
-            "name":"DG3_FIN_TEMP"
+        "TEMPC_supply": {
+            "tagName": "DG3-FIN-TEMP",
+            "name": "DG3_FIN_TEMP"
         },
-        "dens_supply":{
-            "tagName":"DG3-FIN-DENS",
-            "name":"DG3_FIN_DENS"
+        "dens_supply": {
+            "tagName": "DG3-FIN-DENS",
+            "name": "DG3_FIN_DENS"
         },
-        "flow_return":{
-            "tagName":"DG3-FOUT-RATE",
-            "name":"DG3_FOUT_RATE"
+        "flow_return": {
+            "tagName": "DG3-FOUT-RATE",
+            "name": "DG3_FOUT_RATE"
         },
-        "TEMPC_return":{
-            "tagName":"DG3-FOUT-TEMP",
-            "name":"DG3_FOUT_TEMP"
+        "TEMPC_return": {
+            "tagName": "DG3-FOUT-TEMP",
+            "name": "DG3_FOUT_TEMP"
         },
-        "dens_return":{
-            "tagName":"DG3-FOUT-DENS",
-            "name":"DG3_FOUT_DENS"
+        "dens_return": {
+            "tagName": "DG3-FOUT-DENS",
+            "name": "DG3_FOUT_DENS"
         },
-        "consL":{
-            "tagName":"DG3-CONS-TODAY",
-            "name":"DG3_CONS_TODAY"
+        "consL": {
+            "tagName": "DG3-CONS-TODAY",
+            "name": "DG3_CONS_TODAY"
         },
-        "consF":{
-            "tagName":"DG3-CONS-RATE",
-            "name":"DG3_CONS_RATE"
+        "consF": {
+            "tagName": "DG3-CONS-RATE",
+            "name": "DG3_CONS_RATE"
         },
         "load": {
-			"tagName":"DG3-GEN-LOAD",
-            "name":"DG3_GEN_LOAD"
-		},
+            "tagName": "DG3-GEN-LOAD",
+            "name": "DG3_GEN_LOAD"
+        },
         "loadkW": {
-			"tagName":"DG3-GEN-LOAD-KW",
-            "name":"DG3_GEN_LOAD_KW"
-		},
+            "tagName": "DG3-GEN-LOAD-KW",
+            "name": "DG3_GEN_LOAD_KW"
+        },
         "inlet_com": {
-			"tagName":"GEN3-FLOW-INLET-COM-FAIL",
-            "name":"GEN3_FLOW_INLET_COM_FAIL"
-		},
+            "tagName": "GEN3-FLOW-INLET-COM-FAIL",
+            "name": "GEN3_FLOW_INLET_COM_FAIL"
+        },
         "outlet_com": {
-			"tagName":"GEN3-FLOW-OUTLET-COM-FAIL",
-            "name":"GEN3_FLOW_OUTLET_COM_FAIL"
-		},
+            "tagName": "GEN3-FLOW-OUTLET-COM-FAIL",
+            "name": "GEN3_FLOW_OUTLET_COM_FAIL"
+        },
         "ecm_com": {
-			"tagName":"GEN3-ECM-COM-FAIL",
-            "name":"GEN3_ECM_COM_FAIL"
-		},
+            "tagName": "GEN3-ECM-COM-FAIL",
+            "name": "GEN3_ECM_COM_FAIL"
+        },
         "load_com": {
-			"tagName":"GEN3-ENGINE-LOAD-COM-FAIL",
-            "name":"GEN3_ENGINE_LOAD_COM_FAIL"
-		}
+            "tagName": "GEN3-ENGINE-LOAD-COM-FAIL",
+            "name": "GEN3_ENGINE_LOAD_COM_FAIL"
+        }
     },
-	"diesel_generator_4": {
-        "flow_supply":{
-            "tagName":"DG4-FIN-RATE",
-            "name":"DG4_FIN_RATE"
+    "diesel_generator_4": {
+        "flow_supply": {
+            "tagName": "DG4-FIN-RATE",
+            "name": "DG4_FIN_RATE"
         },
-        "TEMPC_supply":{
-            "tagName":"DG4-FIN-TEMP",
-            "name":"DG4_FIN_TEMP"
+        "TEMPC_supply": {
+            "tagName": "DG4-FIN-TEMP",
+            "name": "DG4_FIN_TEMP"
         },
-        "dens_supply":{
-            "tagName":"DG4-FIN-DENS",
-            "name":"DG4_FIN_DENS"
+        "dens_supply": {
+            "tagName": "DG4-FIN-DENS",
+            "name": "DG4_FIN_DENS"
         },
-        "flow_return":{
-            "tagName":"DG4-FOUT-RATE",
-            "name":"DG4_FOUT_RATE"
+        "flow_return": {
+            "tagName": "DG4-FOUT-RATE",
+            "name": "DG4_FOUT_RATE"
         },
-        "TEMPC_return":{
-            "tagName":"DG4-FOUT-TEMP",
-            "name":"DG4_FOUT_TEMP"
+        "TEMPC_return": {
+            "tagName": "DG4-FOUT-TEMP",
+            "name": "DG4_FOUT_TEMP"
         },
-        "dens_return":{
-            "tagName":"DG4-FOUT-DENS",
-            "name":"DG4_FOUT_DENS"
+        "dens_return": {
+            "tagName": "DG4-FOUT-DENS",
+            "name": "DG4_FOUT_DENS"
         },
-        "consL":{
-            "tagName":"DG4-CONS-TODAY",
-            "name":"DG4_CONS_TODAY"
+        "consL": {
+            "tagName": "DG4-CONS-TODAY",
+            "name": "DG4_CONS_TODAY"
         },
-        "consF":{
-            "tagName":"DG4-CONS-RATE",
-            "name":"DG4_CONS_RATE"
+        "consF": {
+            "tagName": "DG4-CONS-RATE",
+            "name": "DG4_CONS_RATE"
         },
         "load": {
-			"tagName":"DG4-GEN-LOAD",
-            "name":"DG4_GEN_LOAD"
-		},
+            "tagName": "DG4-GEN-LOAD",
+            "name": "DG4_GEN_LOAD"
+        },
         "loadkW": {
-			"tagName":"DG4-GEN-LOAD-KW",
-            "name":"DG4_GEN_LOAD_KW"
-		},
+            "tagName": "DG4-GEN-LOAD-KW",
+            "name": "DG4_GEN_LOAD_KW"
+        },
         "inlet_com": {
-			"tagName":"GEN4-FLOW-INLET-COM-FAIL",
-            "name":"GEN4_FLOW_INLET_COM_FAIL"
-		},
+            "tagName": "GEN4-FLOW-INLET-COM-FAIL",
+            "name": "GEN4_FLOW_INLET_COM_FAIL"
+        },
         "outlet_com": {
-			"tagName":"GEN4-FLOW-OUTLET-COM-FAIL",
-            "name":"GEN4_FLOW_OUTLET_COM_FAIL"
-		},
+            "tagName": "GEN4-FLOW-OUTLET-COM-FAIL",
+            "name": "GEN4_FLOW_OUTLET_COM_FAIL"
+        },
         "ecm_com": {
-			"tagName":"GEN4-ECM-COM-FAIL",
-            "name":"GEN4_ECM_COM_FAIL"
-		},
+            "tagName": "GEN4-ECM-COM-FAIL",
+            "name": "GEN4_ECM_COM_FAIL"
+        },
         "load_com": {
-			"tagName":"GEN4-ENGINE-LOAD-COM-FAIL",
-            "name":"GEN4_ENGINE_LOAD_COM_FAIL"
-		}
+            "tagName": "GEN4-ENGINE-LOAD-COM-FAIL",
+            "name": "GEN4_ENGINE_LOAD_COM_FAIL"
+        }
+    },
+    "vessel_mode": {
+        "current_mode": {
+            "tagName": "VES-MODE",
+            "name": "VES_MODE",
+            "prefixes": [
+                "A05",
+                "A06",
+                "BB_LIBERTY233",
+                "BB_INTAN",
+                "BB_LAZURIT",
+                "BB_ZAMRUD",
+                "BB_TONGKAM",
+                "SC_SULTAN",
+                "SC_RAJA"
+            ]
+        }
     }
 }

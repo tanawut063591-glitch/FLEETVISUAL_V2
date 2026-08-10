@@ -331,20 +331,26 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
    */
   private syncRouteServices(url: string): void {
     const needsFvInfo = /\/main\/(realtime|diagram|report)(?:\/|$)/.test(url);
-    const needsRealtime = /\/main\/(realtime|diagram)(?:\/|$)/.test(url);
+    const isLiveReport = /\/main\/report(?:\/|$)/.test(url);
+    const needsRealtime = /\/main\/(realtime|diagram|report)(?:\/|$)/.test(url);
+    const realtimeInterval = isLiveReport ? 60_000 : this.refreshTimer;
+    const fvInfoInterval = isLiveReport ? 60_000 : this.refreshTimer;
 
-    if (needsFvInfo && !this.fvInfoStarted) {
-      this.fvInfoService.start(this.refreshTimer);
+    if (needsFvInfo) {
+      this.fvInfoService.ensureStarted(fvInfoInterval);
       this.fvInfoStarted = true;
-    } else if (!needsFvInfo && this.fvInfoStarted) {
+    } else if (this.fvInfoStarted) {
       this.fvInfoService.stop();
       this.fvInfoStarted = false;
     }
 
-    if (needsRealtime && !this.realtimeStarted) {
-      this.fvRealtimeService.ensureStarted(this.refreshTimer);
+    if (needsRealtime) {
+      // Realtime/Diagram keep their fast operational refresh. Report reuses the
+      // same current-values service at a bounded 60-second interval, so it never
+      // creates a second polling loop or regenerates PDFs automatically.
+      this.fvRealtimeService.ensureStarted(realtimeInterval);
       this.realtimeStarted = true;
-    } else if (!needsRealtime && this.realtimeStarted) {
+    } else if (this.realtimeStarted) {
       this.fvRealtimeService.stop();
       this.realtimeStarted = false;
     }

@@ -56,9 +56,9 @@
         <span class="preference-icon"><i class="fa fa-refresh"></i></span>
         <span>
           <strong>Alarm refresh interval</strong>
-          <small>Refresh Alarm Center every 10–300 seconds.</small>
+          <small>Refresh Alarm Center every 60–300 seconds. Recommended: 60 seconds.</small>
         </span>
-        <input type="number" min="10" max="300" [(ngModel)]="alertRefreshSeconds" />
+        <input type="number" min="60" max="300" step="30" [(ngModel)]="alertRefreshSeconds" />
       </label>
 
       <label class="preference-card preference-toggle">

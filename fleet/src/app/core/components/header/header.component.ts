@@ -270,7 +270,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
               startTime: start.toISOString(),
               endTime: end.toISOString(),
               page: 1,
-              pageSize: 1000,
+              pageSize: 100,
             })
             .pipe(catchError(() => of(null)));
         }),

@@ -1,7 +1,9 @@
 import { inject } from '@angular/core';
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { throwError } from 'rxjs';
 
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../../shared/services/auth.service';
 
 const SUSPICIOUS_PATTERNS: { pattern: RegExp; label: string }[] = [
@@ -19,26 +21,61 @@ const SUSPICIOUS_PATTERNS: { pattern: RegExp; label: string }[] = [
   { pattern: /window\s*\.\s*location/i, label: 'window.location manipulation' },
 ];
 
-function inspectPayload(value: unknown, path: string): string[] {
+const MAX_INSPECTION_DEPTH = 6;
+
+function isBinaryOrFormValue(value: unknown): boolean {
+  return (
+    (typeof Blob !== 'undefined' && value instanceof Blob) ||
+    (typeof FormData !== 'undefined' && value instanceof FormData) ||
+    (typeof ArrayBuffer !== 'undefined' && value instanceof ArrayBuffer)
+  );
+}
+
+function inspectPayload(
+  value: unknown,
+  path: string,
+  depth = 0,
+  seen: WeakSet<object> = new WeakSet<object>(),
+): string[] {
+  if (depth > MAX_INSPECTION_DEPTH || value === null || value === undefined) return [];
+
   if (typeof value === 'string') {
-    return SUSPICIOUS_PATTERNS
-      .filter(({ pattern }) => pattern.test(value))
-      .map(({ label }) =>
-        `  [${path}] พบ "${label}" → "${value.substring(0, 100)}${value.length > 100 ? '…' : ''}"`
-      );
+    return SUSPICIOUS_PATTERNS.filter(({ pattern }) => pattern.test(value)).map(
+      ({ label }) =>
+        `  [${path}] detected "${label}" -> "${value.substring(0, 100)}${value.length > 100 ? '…' : ''}"`,
+    );
   }
+
+  if (isBinaryOrFormValue(value)) return [];
 
   if (Array.isArray(value)) {
-    return value.flatMap((item, index) => inspectPayload(item, `${path}[${index}]`));
+    return value.flatMap((item, index) => inspectPayload(item, `${path}[${index}]`, depth + 1, seen));
   }
 
-  if (value !== null && typeof value === 'object') {
-    return Object.keys(value as object).flatMap((key) =>
-      inspectPayload((value as Record<string, unknown>)[key], `${path}.${key}`)
+  if (typeof value === 'object') {
+    const objectValue = value as Record<string, unknown>;
+    if (seen.has(objectValue)) return [];
+    seen.add(objectValue);
+    return Object.keys(objectValue).flatMap((key) =>
+      inspectPayload(objectValue[key], `${path}.${key}`, depth + 1, seen),
     );
   }
 
   return [];
+}
+
+function normalizeBase(value: string): string {
+  return String(value || '').trim().replace(/\/+$/, '');
+}
+
+function isTrustedBackendUrl(url: string): boolean {
+  const requestUrl = String(url || '').trim();
+  if (!requestUrl) return false;
+
+  return [environment.API_URL, environment.API2_URL]
+    .map(normalizeBase)
+    .filter(Boolean)
+    .some((base) => requestUrl === base || requestUrl.startsWith(`${base}/`));
 }
 
 export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
@@ -48,31 +85,36 @@ export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
   const url = req.url || '';
   const isLoginRequest = url.includes('/authen') || url.includes('/token');
   const isAssetRequest = url.includes('/assets/');
+  const isTrustedBackend = isTrustedBackendUrl(url);
 
-  if (!isAssetRequest && req.body !== null && req.body !== undefined) {
+  if (isTrustedBackend && !isAssetRequest && req.body !== null && req.body !== undefined) {
     const warnings = inspectPayload(req.body, 'body');
-
     if (warnings.length > 0) {
-      console.warn('[tokenInterceptor] suspicious payload blocked', warnings);
-      localStorage.clear();
-      sessionStorage.clear();
+      console.warn('[FleetVisual Security] unsafe request payload blocked', warnings);
+      authService.logout();
       router.navigate(['/login']);
+
+      return throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 400,
+            statusText: 'Unsafe request blocked',
+            url,
+            error: { message: 'The request payload failed the client safety check.' },
+          }),
+      );
     }
   }
 
-  if (!isLoginRequest && !isAssetRequest) {
+  if (!isLoginRequest && !isAssetRequest && isTrustedBackend) {
     const token = authService.getToken();
     const username = authService.getUser() || '';
+    const headers: Record<string, string> = {};
 
-    if (token) {
-      req = req.clone({
-        setHeaders: {
-          // API2 จาก Angular 5 ใช้ token แบบ raw
-          Authorization: token,
-          user: username,
-        },
-      });
-    }
+    if (token && !req.headers.has('Authorization')) headers['Authorization'] = token;
+    if (username && !req.headers.has('user')) headers['user'] = username;
+
+    if (Object.keys(headers).length > 0) req = req.clone({ setHeaders: headers });
   }
 
   return next(req);

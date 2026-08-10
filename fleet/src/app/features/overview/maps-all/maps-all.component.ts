@@ -10,12 +10,14 @@ import {
 } from '@angular/core';
 
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, finalize, map, of, switchMap, take, timeout } from 'rxjs';
 
 import { VesselPopupService } from '../../../shared/services/vessel-popup.service';
 import { FvRealtimeService } from '../../../shared/services/fv-realtime.service';
 import { NewHttpClientService } from '../../../shared/services/http-client1.service';
 import { getVesselStatusFromTimestamp } from '../../../shared/utils/vessel-status.util';
+import { LiveReportService } from '../../report/live-report.service';
+import { LiveReportSnapshot } from '../../report/live-report.model';
 
 declare var google: any;
 
@@ -30,6 +32,8 @@ type MapStatus = 'online' | 'idle' | 'offline';
 export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('mapElement', { static: true })
   mapElement?: ElementRef<HTMLDivElement>;
+  @ViewChild('vesselPopup')
+  vesselPopupElement?: ElementRef<HTMLElement>;
 
   map: any = null;
   markers: any[] = [];
@@ -53,46 +57,43 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedStatus: MapStatus = 'online';
   selectedMarker: any = null;
 
+  private popupProjectionOverlay: any = null;
+  private popupPositionRaf: number | null = null;
+  private mapViewportListeners: any[] = [];
+  private readonly popupDesktopBreakpointPx = 900;
+  // Desktop callout keeps the original speech-bubble shape and points to
+  // the BACK (right edge) of the selected vessel name label. The offsets below
+  // match getPremiumShipIcon(): 190x54 icon, anchor (24,52), label x=45..170.
+  // Therefore the right edge of the label is +146px from the projected GPS
+  // anchor and the label vertical centre is -25.5px above it.
+  private readonly selectedLabelRightOffsetPx = 146;
+  private readonly selectedLabelCenterYOffsetPx = -25.5;
+  private readonly popupArrowReachPx = 15;
+  private readonly popupArrowHeightPx = 24;
+  private readonly popupPreferredArrowCenterYpx = 58;
+  private popupAutoPanPending = false;
+
   private popupSub?: Subscription;
   private popupSummarySub?: Subscription;
-  private popupSummaryCache: Record<string, { newData: Record<string, any> }> = {};
+  private popupSummaryCache: Record<
+    string,
+    { newData: Record<string, any>; snapshot: LiveReportSnapshot; fetchedAt: number }
+  > = {};
+  popupSnapshot: LiveReportSnapshot | null = null;
+  popupSummaryLoading = false;
+  popupSummaryError = false;
+  private popupSummaryRequestKey = '';
+  private readonly popupSummaryCacheTtlMs = 55_000 + Math.floor(Math.random() * 15_001);
+  private readonly popupSummaryRetryAfter: Record<string, number> = {};
+  private readonly popupSummaryFailureBackoffMs = 60_000;
   private realtimeTimer: any = null;
   private resizeObserver?: ResizeObserver;
   private resizeTimer: ReturnType<typeof setTimeout> | null = null;
   private mapInitRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly realtimeRefreshMs = 15000; // รีเฟรช popup/map เพื่อให้ Last seen เดินตามข้อมูล
 
-  // tag ที่ใช้แสดง Today Summary ใน popup
-  // ดึงเพิ่มจาก dashboard tag เพราะ overview tag เดิมมีแค่ lat/long บางตัว
-  private readonly popupSummaryTagSuffixes: string[] = [
-    'VES-GPS-SPEED',
-    'VES-GPS-HEAD',
-    'VES-GPS-COURSE',
-    'VES-GPS-DIS-TODAY',
-    'VES-GPS-DIS',
-    'VES-DISTANCE',
-    'VES-CONS-TODAY',
-    'VES-FUEL-CONSUMPTION',
 
-    // Engine load จริงของ dashboard เดิมใช้ PME/SME เป็นหลัก
-    // เพิ่มหลายชื่อไว้เผื่อเรือบางลำใช้ tag คนละชุด
-    'PME-ENGINE-LOAD',
-    'CME-ENGINE-LOAD',
-    'SME-ENGINE-LOAD',
-    'PAE-ENGINE-LOAD',
-    'CAE-ENGINE-LOAD',
-    'SAE-ENGINE-LOAD',
-    'ENGINE-LOAD',
-    'VES-ENGINE-LOAD',
 
-    'PME-CONS-TODAY',
-    'CME-CONS-TODAY',
-    'SME-CONS-TODAY',
-    'DG1-CONS-TODAY',
-    'DG2-CONS-TODAY',
-    'DG3-CONS-TODAY',
-    'DG4-CONS-TODAY',
-  ];
 
   @Input('data')
   set data(value: any[]) {
@@ -116,7 +117,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     private zone: NgZone,
     private vesselPopup: VesselPopupService,
     private fvRealtimeService: FvRealtimeService,
-    private newHttp: NewHttpClientService
+    private newHttp: NewHttpClientService,
+    private liveReportService: LiveReportService
   ) {}
 
   ngOnInit(): void {
@@ -143,6 +145,25 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     this.popupSub?.unsubscribe();
     this.popupSummarySub?.unsubscribe();
     this.resizeObserver?.disconnect();
+
+    if (this.popupPositionRaf !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.popupPositionRaf);
+      this.popupPositionRaf = null;
+    }
+
+    this.mapViewportListeners.forEach((listener) => {
+      try {
+        listener?.remove?.();
+      } catch {}
+    });
+    this.mapViewportListeners = [];
+
+    if (this.popupProjectionOverlay) {
+      try {
+        this.popupProjectionOverlay.setMap(null);
+      } catch {}
+      this.popupProjectionOverlay = null;
+    }
 
     if (this.realtimeTimer) {
       clearInterval(this.realtimeTimer);
@@ -207,6 +228,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       styles: [],
     });
 
+    this.setupPopupProjectionOverlay();
     this.setupMapResizeObserver(mapElement);
     this.refreshMapSize();
 
@@ -230,6 +252,150 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     this.resizeObserver.observe(mapElement);
   }
 
+  private setupPopupProjectionOverlay(): void {
+    if (!this.map || typeof google === 'undefined' || !google.maps?.OverlayView) {
+      return;
+    }
+
+    this.mapViewportListeners.forEach((listener) => {
+      try {
+        listener?.remove?.();
+      } catch {}
+    });
+    this.mapViewportListeners = [];
+
+    if (this.popupProjectionOverlay) {
+      try {
+        this.popupProjectionOverlay.setMap(null);
+      } catch {}
+    }
+
+    const overlay = new google.maps.OverlayView();
+    overlay.onAdd = () => {};
+    overlay.onRemove = () => {};
+    overlay.draw = () => this.schedulePopupPositionUpdate();
+    overlay.setMap(this.map);
+    this.popupProjectionOverlay = overlay;
+
+    // Coalesced with requestAnimationFrame, so map drag/zoom keeps the callout
+    // attached to the vessel marker without triggering Angular/API work.
+    this.mapViewportListeners = [
+      this.map.addListener('bounds_changed', () => this.schedulePopupPositionUpdate()),
+      this.map.addListener('idle', () => this.schedulePopupPositionUpdate()),
+    ];
+  }
+
+  private schedulePopupPositionUpdate(): void {
+    if (!this.selectedVessel || !this.selectedMarker || !this.map) {
+      return;
+    }
+
+    if (typeof requestAnimationFrame !== 'function') {
+      this.updatePopupPosition();
+      return;
+    }
+
+    if (this.popupPositionRaf !== null) {
+      cancelAnimationFrame(this.popupPositionRaf);
+    }
+
+    this.popupPositionRaf = requestAnimationFrame(() => {
+      this.popupPositionRaf = null;
+      this.updatePopupPosition();
+    });
+  }
+
+  private updatePopupPosition(): void {
+    const popup = this.vesselPopupElement?.nativeElement;
+    const mapElement = this.mapElement?.nativeElement;
+
+    if (!popup || !mapElement || !this.selectedMarker || !this.popupProjectionOverlay) {
+      return;
+    }
+
+    // Phones/tablets use the compact bottom-sheet layout. Keeping it detached
+    // from the map projection avoids a large card covering the selected marker.
+    if (mapElement.clientWidth <= this.popupDesktopBreakpointPx) {
+      popup.style.removeProperty('left');
+      popup.style.removeProperty('right');
+      popup.style.removeProperty('top');
+      popup.classList.remove('popup-right-of-marker', 'popup-left-of-marker');
+      return;
+    }
+
+    const projection = this.popupProjectionOverlay.getProjection?.();
+    const markerPosition = this.selectedMarker.getPosition?.();
+
+    if (!projection || !markerPosition) {
+      return;
+    }
+
+    const point = projection.fromLatLngToContainerPixel(markerPosition);
+
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+      return;
+    }
+
+    const mapWidth = mapElement.clientWidth;
+    const mapHeight = mapElement.clientHeight;
+    const popupWidth = popup.offsetWidth || 430;
+    const popupHeight = popup.offsetHeight || 500;
+    const edgePadding = 18;
+
+    // The selected marker retains its white vessel-name label. The popup tail
+    // points to the right edge of that label ("behind the vessel name"), not
+    // to the GPS pin itself and not through a long connector line.
+    const targetX = point.x + this.selectedLabelRightOffsetPx;
+    const targetY = point.y + this.selectedLabelCenterYOffsetPx;
+    const left = targetX + this.popupArrowReachPx;
+
+    // Keep the original callout relationship even when the vessel is close to
+    // the right edge. Google Maps pans the canvas (browser-only) just enough to
+    // make room, rather than flipping the speech bubble to the wrong side.
+    const overflowRight = left + popupWidth + edgePadding - mapWidth;
+    if (overflowRight > 0 && !this.popupAutoPanPending && this.map?.panBy) {
+      this.popupAutoPanPending = true;
+      this.map.panBy(Math.ceil(overflowRight + 12), 0);
+      setTimeout(() => {
+        this.popupAutoPanPending = false;
+        this.schedulePopupPositionUpdate();
+      }, 180);
+      return;
+    }
+
+    let top = targetY - this.popupPreferredArrowCenterYpx;
+    top = this.clampNumber(
+      top,
+      edgePadding,
+      Math.max(edgePadding, mapHeight - popupHeight - edgePadding)
+    );
+
+    const arrowTop = this.clampNumber(
+      targetY - top - this.popupArrowHeightPx / 2,
+      22,
+      Math.max(22, popupHeight - this.popupArrowHeightPx - 22)
+    );
+    const arrow = popup.querySelector<HTMLElement>('.popup-arrow');
+
+    popup.style.left = `${Math.round(left)}px`;
+    popup.style.right = 'auto';
+    popup.style.top = `${Math.round(top)}px`;
+    popup.classList.add('popup-right-of-marker');
+    popup.classList.remove('popup-left-of-marker');
+
+    if (arrow) {
+      arrow.style.top = `${Math.round(arrowTop)}px`;
+    }
+  }
+
+  private clampNumber(value: number, min: number, max: number): number {
+    if (max < min) {
+      return min;
+    }
+
+    return Math.min(Math.max(value, min), max);
+  }
+
   private refreshMapSize(): void {
     if (!this.map || typeof google === 'undefined' || !google.maps) {
       return;
@@ -248,6 +414,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       } else {
         this.map.setCenter(this.centerPosition);
       }
+
+      this.schedulePopupPositionUpdate();
     }, 80);
   }
 
@@ -265,6 +433,13 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       this.calculateStatusCount(this._data);
       this.renderMap(this._data);
       this.syncSelectedPopup(selectedKey);
+
+      // Popup metrics refresh at most once per minute and only for the one
+      // vessel currently open. loadPopupSummary() serves fresh cache instantly,
+      // skips overlapping requests and never polls the whole fleet.
+      if (this.selectedVessel) {
+        this.loadPopupSummary(this.selectedVessel);
+      }
     }, this.realtimeRefreshMs);
   }
 
@@ -299,16 +474,17 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
       const status = this.getVesselStatus(vessel);
       const vesselName = this.getVesselName(vessel);
+      const vesselKey = this.getVesselKey(vessel);
+      const selectedKey = this.getVesselKey(this.selectedVessel);
+      const isSelected = Boolean(vesselKey && selectedKey && vesselKey === selectedKey);
 
       const marker = new google.maps.Marker({
         position: { lat, lng },
         map: this.map,
         title: vesselName,
-        icon: this.getPremiumShipIcon(status, vesselName),
-        zIndex: this.getMarkerZIndex(status),
+        icon: this.getPremiumShipIcon(status, vesselName, isSelected),
+        zIndex: isSelected ? 1000 : this.getMarkerZIndex(status),
       });
-
-      const vesselKey = this.getVesselKey(vessel);
 
       if (vesselKey) {
         this.markerMap[vesselKey] = {
@@ -328,18 +504,30 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
   bindMarkerClick(marker: any, vessel: any, status: MapStatus): void {
     marker.addListener('click', () => {
-      this.openVesselPopup(vessel, status, marker);
+      this.openVesselPopup(vessel, status, marker, false);
     });
   }
 
-  openVesselPopup(vessel: any, status: MapStatus, marker: any): void {
+  openVesselPopup(vessel: any, status: MapStatus, marker: any, ensureVisible = false): void {
     this.zone.run(() => {
+      this.restoreSelectedMarkerVisual();
+
       // เก็บข้อมูลเรือแบบ normalize เพื่อให้ popup อ่านค่า speed/load/fuel ได้ครบ
       const normalizedVessel = this.normalizePopupVessel(vessel);
+
+      if (this.selectedMarker && this.selectedMarker !== marker) {
+        this.selectedMarker.setZIndex?.(this.getMarkerZIndex(this.selectedStatus));
+      }
 
       this.selectedVessel = normalizedVessel;
       this.selectedStatus = status;
       this.selectedMarker = marker;
+      this.applySelectedMarkerVisual(marker, normalizedVessel, status);
+
+      const summaryCacheKey = this.getSummaryCacheKey(normalizedVessel);
+      const cachedSummary = this.popupSummaryCache[summaryCacheKey];
+      this.popupSnapshot = cachedSummary?.snapshot || null;
+      this.popupSummaryError = false;
 
       try {
         localStorage.setItem('selectedVessel', JSON.stringify(normalizedVessel));
@@ -353,7 +541,10 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
       this.loadPopupSummary(normalizedVessel);
 
-      if (this.map && marker) {
+      // Clicking a marker keeps the operator's current map context intact.
+      // Sidebar/programmatic selection can request centering because the target
+      // vessel may currently be outside the visible viewport.
+      if (ensureVisible && this.map && marker) {
         this.map.panTo(marker.getPosition());
 
         const currentZoom = this.map.getZoom();
@@ -361,6 +552,10 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
           this.map.setZoom(8);
         }
       }
+
+      // The card is created by *ngIf, so wait one frame before measuring it.
+      // No server request is involved; this is browser-only map positioning.
+      setTimeout(() => this.schedulePopupPositionUpdate(), 0);
     });
   }
 
@@ -375,6 +570,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       this.selectedVessel = this.normalizePopupVessel(item.vessel);
       this.selectedStatus = item.status;
       this.selectedMarker = item.marker;
+      this.applySelectedMarkerVisual(item.marker, this.selectedVessel, item.status);
+      setTimeout(() => this.schedulePopupPositionUpdate(), 0);
     }
   }
 
@@ -397,7 +594,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         return;
       }
 
-      this.openVesselPopup(item.vessel, item.status, item.marker);
+      this.openVesselPopup(item.vessel, item.status, item.marker, true);
     }, 0);
   }
 
@@ -449,6 +646,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   setFilter(status: 'all' | MapStatus): void {
+    this.restoreSelectedMarkerVisual();
     this.activeFilter = status;
     this.selectedVessel = null;
     this.selectedMarker = null;
@@ -485,8 +683,48 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   closeSelectedCard(): void {
+    this.restoreSelectedMarkerVisual();
+
+    if (this.popupPositionRaf !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.popupPositionRaf);
+      this.popupPositionRaf = null;
+    }
+
+    this.selectedMarker?.setZIndex?.(this.getMarkerZIndex(this.selectedStatus));
+
+    this.popupSummarySub?.unsubscribe();
+    this.popupSummarySub = undefined;
+    this.popupSummaryRequestKey = '';
+    this.popupSummaryLoading = false;
+    this.popupSummaryError = false;
+    this.popupSnapshot = null;
     this.selectedVessel = null;
     this.selectedMarker = null;
+  }
+
+  private applySelectedMarkerVisual(marker: any, vessel: any, status: MapStatus): void {
+    if (!marker) {
+      return;
+    }
+
+    try {
+      marker.setIcon?.(this.getPremiumShipIcon(status, this.getVesselName(vessel), true));
+      marker.setZIndex?.(1000);
+    } catch {}
+  }
+
+  private restoreSelectedMarkerVisual(): void {
+    if (!this.selectedMarker || !this.selectedVessel) {
+      return;
+    }
+
+    try {
+      const status = this.getVesselStatus(this.selectedVessel);
+      this.selectedMarker.setIcon?.(
+        this.getPremiumShipIcon(status, this.getVesselName(this.selectedVessel), false)
+      );
+      this.selectedMarker.setZIndex?.(this.getMarkerZIndex(status));
+    } catch {}
   }
 
   resetView(): void {
@@ -563,11 +801,40 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     return '';
   }
 
-  getPremiumShipIcon(status: string, name: string): any {
+  getPremiumShipIcon(status: string, name: string, selected = false): any {
     const color = this.getStatusColor(status);
-    const text = this.escapeSvgText(this.truncateText(name, 18));
 
-    // คืน UI Marker แบบเดิม: pin สีตามสถานะ + ป้ายชื่อเรือขนาดเล็ก
+    if (selected) {
+      // Keep the original vessel-name label visible while the popup is open.
+      // A subtle blue focus ring/border marks selection without changing the
+      // marker geometry used by the exact behind-name popup anchor.
+      const text = this.escapeSvgText(this.truncateText(name, 18));
+      const selectedSvg =
+        '<svg width="190" height="54" viewBox="0 0 190 54" xmlns="http://www.w3.org/2000/svg">' +
+        '<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">' +
+        '<feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.25"/>' +
+        '</filter>' +
+        '<circle cx="24" cy="21" r="20" fill="#2563eb" fill-opacity="0.12" stroke="#2563eb" stroke-width="2.5" stroke-opacity="0.96"/>' +
+        '<path filter="url(#shadow)" d="M24 2C13.8 2 5.5 10.1 5.5 20C5.5 33.6 24 52 24 52C24 52 42.5 33.6 42.5 20C42.5 10.1 34.2 2 24 2Z" fill="' + color + '"/>' +
+        '<circle cx="24" cy="21" r="12" fill="white" fill-opacity="0.98"/>' +
+        '<path d="M15.5 24.5L19 17.5H29L32.5 24.5H15.5Z" fill="' + color + '"/>' +
+        '<path d="M19.5 17.5L21.5 13.5H26.5L28.5 17.5H19.5Z" fill="' + color + '"/>' +
+        '<path d="M17.5 26.2C21 28.3 27 28.3 30.5 26.2" stroke="' + color + '" stroke-width="2.2" stroke-linecap="round"/>' +
+        '<circle cx="21" cy="21" r="1.2" fill="white"/>' +
+        '<circle cx="24" cy="21" r="1.2" fill="white"/>' +
+        '<circle cx="27" cy="21" r="1.2" fill="white"/>' +
+        '<rect x="45" y="14" width="125" height="25" rx="6" fill="white" fill-opacity="0.98" stroke="#60a5fa" stroke-width="1.4"/>' +
+        '<text x="53" y="31" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">' + text + '</text>' +
+        '</svg>';
+
+      return {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(selectedSvg),
+        scaledSize: new google.maps.Size(190, 54),
+        anchor: new google.maps.Point(24, 52),
+      };
+    }
+
+    const text = this.escapeSvgText(this.truncateText(name, 18));
     const svg =
       '<svg width="190" height="54" viewBox="0 0 190 54" xmlns="http://www.w3.org/2000/svg">' +
       '<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">' +
@@ -838,61 +1105,210 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private loadPopupSummary(vessel: any): void {
     const prefix = this.getBackendPrefix(vessel);
+    const cacheKey = this.getSummaryCacheKey(vessel);
 
-    if (!prefix) {
+    if (!prefix || !cacheKey) {
       return;
     }
 
-    const tags = this.buildPopupSummaryTags(prefix);
+    const cached = this.popupSummaryCache[cacheKey];
+    const cacheAge = cached ? Date.now() - cached.fetchedAt : Number.POSITIVE_INFINITY;
 
-    if (tags.length === 0) {
+    // Stale-while-revalidate: show the last known KPI set immediately. Reopening
+    // the same vessel within one minute costs zero API requests.
+    if (cached?.snapshot) {
+      this.popupSnapshot = cached.snapshot;
+    }
+
+    if (cached && cacheAge < this.popupSummaryCacheTtlMs) {
+      this.popupSummaryLoading = false;
+      this.popupSummaryError = false;
+      return;
+    }
+
+    // A failing backend gets a quiet period instead of a retry storm from every
+    // open browser. Cached values stay visible while the circuit is cooling down.
+    if ((this.popupSummaryRetryAfter[cacheKey] || 0) > Date.now()) {
+      this.popupSummaryLoading = false;
+      this.popupSummaryError = true;
+      return;
+    }
+
+    // Never restart the same in-flight request on the 15-second map refresh.
+    if (this.popupSummaryLoading && this.popupSummaryRequestKey === cacheKey) {
       return;
     }
 
     this.popupSummarySub?.unsubscribe();
+    this.popupSummaryRequestKey = cacheKey;
+    this.popupSummaryLoading = true;
+    this.popupSummaryError = false;
 
-    this.popupSummarySub = this.newHttp.getCurrentValues(tags, prefix).subscribe({
-      next: (response: any) => {
-        const summaryData = this.buildTagMapFromCurrentResponse(response, prefix);
+    this.popupSummarySub = this.liveReportService.profileDocument$
+      .pipe(
+        take(1),
+        switchMap((document) => {
+          const suffixes = this.liveReportService.getOverviewMetricTagSuffixes(vessel, document);
+          const tags = this.buildPopupSummaryTags(prefix, suffixes);
 
-        if (Object.keys(summaryData).length === 0) {
-          return;
-        }
+          if (tags.length === 0) {
+            return of({ document, response: [] });
+          }
 
-        const cacheKey = this.getSummaryCacheKey(vessel);
-        this.popupSummaryCache[cacheKey] = { newData: summaryData };
+          return this.newHttp.getCurrentValues(tags, prefix).pipe(
+            timeout(15_000),
+            map((response: any) => ({ document, response }))
+          );
+        }),
+        finalize(() => {
+          if (this.popupSummaryRequestKey === cacheKey) {
+            this.popupSummaryLoading = false;
+            this.popupSummaryRequestKey = '';
+          }
+        })
+      )
+      .subscribe({
+        next: ({ document, response }) => {
+          const summaryData = this.buildTagMapFromCurrentResponse(response, prefix);
 
-        if (!this.selectedVessel || this.getSummaryCacheKey(this.selectedVessel) !== cacheKey) {
-          return;
-        }
+          if (Object.keys(summaryData).length === 0) {
+            this.popupSummaryRetryAfter[cacheKey] = Date.now() + this.popupSummaryFailureBackoffMs;
+            this.popupSummaryError = true;
+            return;
+          }
 
-        this.zone.run(() => {
-          this.selectedVessel = this.normalizePopupVessel({
-            ...this.selectedVessel,
-            newData: {
-              ...this.getTagMap(this.selectedVessel),
-              ...summaryData,
-            },
+          const mergedData = {
+            ...this.getTagMap(vessel),
+            ...summaryData,
+          };
+          const updatedAt = this.getNewestSummaryTimestamp(summaryData);
+          const snapshot = this.liveReportService.buildSnapshot(
+            vessel,
+            mergedData,
+            updatedAt,
+            document
+          );
+
+          this.popupSummaryCache[cacheKey] = {
+            newData: summaryData,
+            snapshot,
+            fetchedAt: Date.now(),
+          };
+          delete this.popupSummaryRetryAfter[cacheKey];
+
+          if (!this.selectedVessel || this.getSummaryCacheKey(this.selectedVessel) !== cacheKey) {
+            return;
+          }
+
+          this.zone.run(() => {
+            this.popupSnapshot = snapshot;
+            this.popupSummaryError = false;
+            this.selectedVessel = this.normalizePopupVessel({
+              ...this.selectedVessel,
+              newData: {
+                ...this.getTagMap(this.selectedVessel),
+                ...summaryData,
+              },
+            });
           });
-        });
-      },
-      error: (error: any) => {
-        console.warn('[MapsAllComponent] popup summary load failed:', error);
-      },
-    });
+        },
+        error: (error: any) => {
+          this.popupSummaryRetryAfter[cacheKey] = Date.now() + this.popupSummaryFailureBackoffMs;
+          if (this.getSummaryCacheKey(this.selectedVessel) === cacheKey) {
+            this.popupSummaryError = true;
+          }
+          console.warn('[MapsAllComponent] popup KPI load failed:', error);
+        },
+      });
   }
 
-  private buildPopupSummaryTags(prefix: string): any[] {
-    return this.popupSummaryTagSuffixes.map((suffix) => {
-      const tagName = `${prefix}-${suffix}`;
+  private buildPopupSummaryTags(prefix: string, suffixes: string[]): any[] {
+    const seen = new Set<string>();
 
-      return {
+    return (suffixes || [])
+      .map((suffix) => String(suffix || '').trim().replace(/_/g, '-'))
+      .filter((suffix) => suffix.length > 0)
+      .map((suffix) => `${prefix}-${suffix}`)
+      .filter((tagName) => {
+        const normalized = this.normalizeKey(tagName);
+        if (seen.has(normalized)) {
+          return false;
+        }
+        seen.add(normalized);
+        return true;
+      })
+      .map((tagName) => ({
         name: this.toShortTagName(tagName),
         tagName,
         cal: false,
-      };
-    });
+      }));
   }
+
+  private getNewestSummaryTimestamp(data: Record<string, any>): Date | null {
+    let newest = 0;
+
+    Object.values(data || {}).forEach((item: any) => {
+      const raw = item?.timestamp || item?.dateTime || item?.DateTime || item?.TimeStamp;
+      if (!raw) {
+        return;
+      }
+
+      const time = new Date(raw).getTime();
+      if (Number.isFinite(time) && time > newest) {
+        newest = time;
+      }
+    });
+
+    return newest > 0 ? new Date(newest) : null;
+  }
+
+  getPopupMetricValue(key: string): string {
+    const metric = this.popupSnapshot?.metrics?.find((item) => item.key === key);
+    if (metric) {
+      return metric.value;
+    }
+
+    // Before the lightweight KPI request returns, reuse any Overview values
+    // already present instead of flashing a false numeric zero.
+    const vessel = this.selectedVessel;
+    if (!vessel) {
+      return '—';
+    }
+
+    switch (key) {
+      case 'fuel': {
+        const direct = this.toCleanNumber(
+          this.getFirstTagValue(vessel, ['VES_CONS_TODAY', 'VES_FUEL_CONS_TODAY'])
+        );
+        return direct === null ? '—' : direct.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+      case 'distance': {
+        const value = this.toCleanNumber(
+          this.getFirstTagValue(vessel, ['VES_GPS_DIS_TODAY', 'VES_DISTANCE_TODAY', 'VES_DISTANCE']) ??
+            this.getDirectValue(vessel, ['distance', 'distanceToday'])
+        );
+        return value === null ? '—' : value.toFixed(2);
+      }
+      case 'speed': {
+        const value = this.toCleanNumber(
+          this.getFirstTagValue(vessel, ['VES_GPS_SPEED', 'GPS_SPEED']) ??
+            this.getDirectValue(vessel, ['speed'])
+        );
+        return value === null ? '—' : value.toFixed(2);
+      }
+      case 'average': {
+        const value = this.toCleanNumber(this.getFirstTagValue(vessel, ['VES_GPS_SPEED_AVG', 'GPS_SPEED_AVG']));
+        return value === null ? '—' : value.toFixed(2);
+      }
+      case 'maximum': {
+        const value = this.toCleanNumber(this.getFirstTagValue(vessel, ['VES_GPS_SPEED_MAX', 'GPS_SPEED_MAX']));
+        return value === null ? '—' : value.toFixed(2);
+      }
+      default:
+        return '—';
+    }
+  }
+
 
   private buildTagMapFromCurrentResponse(response: any, prefix: string): Record<string, any> {
     const map: Record<string, any> = {};

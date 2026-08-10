@@ -2274,3 +2274,389 @@
 [data-theme='dark'] .tag-side-content::-webkit-scrollbar-thumb:hover {
   background: #60a5fa !important;
 }
+
+/* Overview map popup - six Report KPI parity */
+[data-theme='dark'] .overview-page .summary-grid {
+  background: #0c1420;
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+[data-theme='dark'] .overview-page .summary-grid.six-kpi .summary-item {
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+[data-theme='dark'] .overview-page .summary-live-state {
+  background: rgba(15, 23, 42, 0.7);
+  border-color: rgba(96, 165, 250, 0.2);
+  color: #94a3b8;
+}
+
+/* ========================================================================
+   FleetVisual Color-Rich Dark Theme 2026-08-10
+   Purpose: keep the premium graphite foundation while restoring the semantic
+   color hierarchy that makes the Light theme easy to scan. Visual-only:
+   no polling, API, report, alarm, engine, or vessel logic is changed here.
+   ======================================================================== */
+[data-theme='dark'] {
+  --fv-dark-blue: #4f8df7;
+  --fv-dark-cyan: #22d3ee;
+  --fv-dark-green: #34d399;
+  --fv-dark-amber: #fbbf24;
+  --fv-dark-orange: #fb923c;
+  --fv-dark-violet: #a78bfa;
+  --fv-dark-red: #fb7185;
+  --fv-dark-card: #0d131c;
+  --fv-dark-card-2: #111a27;
+  --fv-dark-line: rgba(148, 163, 184, 0.18);
+}
+
+/* ---------- Overview: preserve Light-theme KPI color identity ---------- */
+[data-theme='dark'] .overview-page .vessel-popup {
+  background:
+    radial-gradient(circle at 92% 0%, rgba(79, 141, 247, 0.11), transparent 29%),
+    radial-gradient(circle at 8% 100%, rgba(34, 211, 238, 0.055), transparent 32%),
+    linear-gradient(180deg, rgba(14, 21, 31, 0.98), rgba(8, 13, 20, 0.985)) !important;
+  border-color: rgba(96, 165, 250, 0.28) !important;
+  box-shadow:
+    0 26px 70px rgba(0, 0, 0, 0.44),
+    0 0 0 1px rgba(79, 141, 247, 0.045) !important;
+}
+
+[data-theme='dark'] .overview-page .popup-arrow {
+  background: #0d151f !important;
+  filter: drop-shadow(-2px 2px 2px rgba(0, 0, 0, 0.22));
+}
+
+[data-theme='dark'] .overview-page .summary-title {
+  color: #60a5fa !important;
+  text-shadow: 0 0 18px rgba(59, 130, 246, 0.18);
+}
+
+[data-theme='dark'] .overview-page .summary-grid {
+  background: #0b111a !important;
+  border-color: rgba(96, 165, 250, 0.20) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+}
+
+[data-theme='dark'] .overview-page .summary-grid.six-kpi .summary-item {
+  border-color: rgba(148, 163, 184, 0.12) !important;
+  background: rgba(15, 23, 42, 0.28) !important;
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+[data-theme='dark'] .overview-page .summary-grid.six-kpi .summary-item:nth-child(1) {
+  background: linear-gradient(145deg, rgba(251, 146, 60, 0.105), rgba(15, 23, 42, 0.24)) !important;
+}
+[data-theme='dark'] .overview-page .summary-grid.six-kpi .summary-item:nth-child(2) {
+  background: linear-gradient(145deg, rgba(167, 139, 250, 0.105), rgba(15, 23, 42, 0.24)) !important;
+}
+[data-theme='dark'] .overview-page .summary-grid.six-kpi .summary-item:nth-child(3) {
+  background: linear-gradient(145deg, rgba(79, 141, 247, 0.105), rgba(15, 23, 42, 0.24)) !important;
+}
+[data-theme='dark'] .overview-page .summary-grid.six-kpi .summary-item:nth-child(4) {
+  background: linear-gradient(145deg, rgba(34, 211, 238, 0.095), rgba(15, 23, 42, 0.24)) !important;
+}
+[data-theme='dark'] .overview-page .summary-grid.six-kpi .summary-item:nth-child(5) {
+  background: linear-gradient(145deg, rgba(52, 211, 153, 0.10), rgba(15, 23, 42, 0.24)) !important;
+}
+[data-theme='dark'] .overview-page .summary-grid.six-kpi .summary-item:nth-child(6) {
+  background: linear-gradient(145deg, rgba(168, 85, 247, 0.105), rgba(15, 23, 42, 0.24)) !important;
+}
+
+/* The old global dark rule intentionally made every summary icon blue.
+   These scoped rules restore the six approved Light-theme semantic colors. */
+[data-theme='dark'] .overview-page .summary-icon.orange {
+  color: #fb923c !important;
+  background: rgba(251, 146, 60, 0.16) !important;
+  box-shadow: 0 0 0 1px rgba(251, 146, 60, 0.09), 0 7px 18px rgba(251, 146, 60, 0.08);
+}
+[data-theme='dark'] .overview-page .summary-icon.violet {
+  color: #a78bfa !important;
+  background: rgba(167, 139, 250, 0.16) !important;
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.09), 0 7px 18px rgba(139, 92, 246, 0.08);
+}
+[data-theme='dark'] .overview-page .summary-icon.blue,
+[data-theme='dark'] .overview-page .summary-icon.soft-blue {
+  color: #60a5fa !important;
+  background: rgba(59, 130, 246, 0.16) !important;
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.09), 0 7px 18px rgba(59, 130, 246, 0.08);
+}
+[data-theme='dark'] .overview-page .summary-icon.cyan {
+  color: #22d3ee !important;
+  background: rgba(34, 211, 238, 0.14) !important;
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.08), 0 7px 18px rgba(34, 211, 238, 0.07);
+}
+[data-theme='dark'] .overview-page .summary-icon.green {
+  color: #34d399 !important;
+  background: rgba(52, 211, 153, 0.15) !important;
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.08), 0 7px 18px rgba(52, 211, 153, 0.07);
+}
+
+[data-theme='dark'] .overview-page .summary-live-state {
+  color: #a7f3d0 !important;
+  border-color: rgba(52, 211, 153, 0.22) !important;
+  background: rgba(16, 185, 129, 0.075) !important;
+}
+[data-theme='dark'] .overview-page .summary-live-state.error {
+  color: #fde68a !important;
+  border-color: rgba(251, 191, 36, 0.24) !important;
+  background: rgba(245, 158, 11, 0.08) !important;
+}
+
+[data-theme='dark'] .overview-page .action-btn.past {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 60%, #0ea5e9 100%) !important;
+  box-shadow: 0 13px 28px rgba(37, 99, 235, 0.25) !important;
+}
+[data-theme='dark'] .overview-page .action-btn.realtime {
+  background: linear-gradient(135deg, #1b2a40 0%, #172033 55%, #111827 100%) !important;
+  border-color: rgba(96, 165, 250, 0.20) !important;
+}
+
+/* ---------- Report: colorful Light-theme hierarchy on graphite surfaces ---------- */
+[data-theme='dark'] .report-page {
+  background:
+    radial-gradient(circle at 88% -4%, rgba(79, 141, 247, 0.13), transparent 29%),
+    radial-gradient(circle at 5% 7%, rgba(34, 211, 238, 0.07), transparent 24%),
+    radial-gradient(circle at 68% 105%, rgba(167, 139, 250, 0.045), transparent 26%),
+    linear-gradient(180deg, #080c12 0%, #06090e 50%, #080b10 100%) !important;
+}
+
+[data-theme='dark'] .report-page .report-page-header,
+[data-theme='dark'] .report-page .report-context-bar {
+  border-color: rgba(96, 165, 250, 0.22) !important;
+  background:
+    linear-gradient(90deg, rgba(59, 130, 246, 0.055), transparent 38%),
+    linear-gradient(180deg, #111822 0%, #0b1119 100%) !important;
+}
+
+[data-theme='dark'] .report-page .live-mode-spotlight,
+[data-theme='dark'] .report-page .current-mode-card {
+  border-color: rgba(96, 165, 250, 0.30) !important;
+  background:
+    radial-gradient(circle at 9% 50%, rgba(59, 130, 246, 0.15), transparent 23%),
+    linear-gradient(100deg, rgba(30, 64, 175, 0.11), rgba(12, 20, 31, 0.98) 42%, rgba(14, 22, 33, 0.98)) !important;
+  box-shadow: 0 13px 34px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.018) !important;
+}
+[data-theme='dark'] .report-page .live-mode-spotlight.is-verified {
+  border-color: rgba(52, 211, 153, 0.34) !important;
+  background:
+    radial-gradient(circle at 10% 50%, rgba(52, 211, 153, 0.11), transparent 24%),
+    linear-gradient(100deg, rgba(16, 185, 129, 0.07), rgba(12, 20, 31, 0.98) 44%, rgba(14, 22, 33, 0.98)) !important;
+}
+[data-theme='dark'] .report-page .live-mode-spotlight.is-estimated {
+  border-color: rgba(251, 191, 36, 0.28) !important;
+  background:
+    radial-gradient(circle at 10% 50%, rgba(251, 191, 36, 0.095), transparent 24%),
+    linear-gradient(100deg, rgba(245, 158, 11, 0.055), rgba(12, 20, 31, 0.98) 44%, rgba(14, 22, 33, 0.98)) !important;
+}
+
+[data-theme='dark'] .report-page .report-kpi-card {
+  border-color: color-mix(in srgb, var(--kpi-color, #4f8df7) 25%, rgba(148, 163, 184, 0.18)) !important;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--kpi-color, #4f8df7) 9%, #111822), #0c121a 64%) !important;
+  box-shadow: 0 9px 24px rgba(0, 0, 0, 0.19), inset 0 1px 0 rgba(255, 255, 255, 0.018) !important;
+}
+[data-theme='dark'] .report-page .report-kpi-card[data-tone='orange'] { --kpi-color: #fb923c; }
+[data-theme='dark'] .report-page .report-kpi-card[data-tone='violet'] { --kpi-color: #a78bfa; }
+[data-theme='dark'] .report-page .report-kpi-card[data-tone='blue'] { --kpi-color: #60a5fa; }
+[data-theme='dark'] .report-page .report-kpi-card[data-tone='cyan'] { --kpi-color: #22d3ee; }
+[data-theme='dark'] .report-page .report-kpi-card[data-tone='green'] { --kpi-color: #34d399; }
+[data-theme='dark'] .report-page .report-kpi-card[data-tone='slate'] { --kpi-color: #94a3b8; }
+[data-theme='dark'] .report-page .report-kpi-icon {
+  color: var(--kpi-color, #60a5fa) !important;
+  background: color-mix(in srgb, var(--kpi-color, #60a5fa) 15%, #0d1520) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--kpi-color, #60a5fa) 12%, transparent),
+    0 7px 18px color-mix(in srgb, var(--kpi-color, #60a5fa) 8%, transparent) !important;
+}
+[data-theme='dark'] .report-page .report-kpi-card::after {
+  opacity: 0.92 !important;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--kpi-color, #60a5fa) 28%, transparent);
+}
+
+[data-theme='dark'] .report-page .filter-summary {
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.055), rgba(12, 18, 26, 0.98)) !important;
+}
+[data-theme='dark'] .report-page .report-filter-row > .filter-summary:nth-child(1) .filter-icon {
+  color: #60a5fa !important; background: rgba(59, 130, 246, 0.13) !important;
+}
+[data-theme='dark'] .report-page .report-filter-row > .filter-summary:nth-child(2) .filter-icon {
+  color: #a78bfa !important; background: rgba(167, 139, 250, 0.13) !important;
+}
+[data-theme='dark'] .report-page .report-filter-row > .filter-summary:nth-child(3) .filter-icon {
+  color: #22d3ee !important; background: rgba(34, 211, 238, 0.12) !important;
+}
+[data-theme='dark'] .report-page .official-link-button {
+  color: #bfdbfe !important;
+  border-color: rgba(96, 165, 250, 0.25) !important;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(14, 165, 233, 0.08)) !important;
+}
+
+[data-theme='dark'] .report-page .parameter-panel .panel-header {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.085), transparent 48%), #101720 !important;
+  border-bottom-color: rgba(96, 165, 250, 0.18) !important;
+}
+[data-theme='dark'] .report-page .fuel-panel .panel-header {
+  background: linear-gradient(90deg, rgba(52, 211, 153, 0.085), transparent 48%), #101720 !important;
+  border-bottom-color: rgba(52, 211, 153, 0.17) !important;
+}
+[data-theme='dark'] .report-page .operating-panel .panel-header {
+  background: linear-gradient(90deg, rgba(167, 139, 250, 0.085), transparent 48%), #101720 !important;
+  border-bottom-color: rgba(167, 139, 250, 0.17) !important;
+}
+[data-theme='dark'] .report-page .voyage-panel .panel-header {
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.075), transparent 48%), #101720 !important;
+  border-bottom-color: rgba(34, 211, 238, 0.17) !important;
+}
+
+/* ---------- Alarm: severity colors remain visible in Dark mode ---------- */
+[data-theme='dark'] .alarm-page {
+  --alert-red: #fb7185;
+  --alert-orange: #fbbf24;
+  --alert-info: #60a5fa;
+  --alert-green: #34d399;
+  --alert-red-soft: rgba(251, 113, 133, 0.13);
+  --alert-orange-soft: rgba(251, 191, 36, 0.12);
+  --alert-info-soft: rgba(96, 165, 250, 0.13);
+  --alert-green-soft: rgba(52, 211, 153, 0.12);
+  background:
+    radial-gradient(circle at 90% -5%, rgba(79, 141, 247, 0.11), transparent 29%),
+    radial-gradient(circle at 7% 10%, rgba(34, 211, 238, 0.055), transparent 24%),
+    linear-gradient(180deg, #080c12 0%, #06090e 100%) !important;
+}
+
+[data-theme='dark'] .alarm-page .summary-card {
+  border-color: color-mix(in srgb, currentColor 21%, rgba(148, 163, 184, 0.17)) !important;
+  box-shadow: 0 10px 27px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.015) !important;
+}
+[data-theme='dark'] .alarm-page .summary-card[data-tone='critical'] {
+  background: linear-gradient(145deg, rgba(251, 113, 133, 0.09), #0e141d 62%) !important;
+}
+[data-theme='dark'] .alarm-page .summary-card[data-tone='warning'] {
+  background: linear-gradient(145deg, rgba(251, 191, 36, 0.085), #0e141d 62%) !important;
+}
+[data-theme='dark'] .alarm-page .summary-card[data-tone='info'] {
+  background: linear-gradient(145deg, rgba(96, 165, 250, 0.09), #0e141d 62%) !important;
+}
+[data-theme='dark'] .alarm-page .summary-card[data-tone='resolved'] {
+  background: linear-gradient(145deg, rgba(52, 211, 153, 0.085), #0e141d 62%) !important;
+}
+[data-theme='dark'] .alarm-page .summary-card::before { content: none !important; display: none !important; }
+[data-theme='dark'] .alarm-page .summary-icon {
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 13%, transparent),
+    0 8px 20px color-mix(in srgb, currentColor 8%, transparent) !important;
+}
+[data-theme='dark'] .alarm-page .summary-card[data-tone='critical'] .summary-icon {
+  color: #fb7185 !important; background: rgba(251, 113, 133, 0.14) !important;
+}
+[data-theme='dark'] .alarm-page .summary-card[data-tone='warning'] .summary-icon {
+  color: #fbbf24 !important; background: rgba(251, 191, 36, 0.13) !important;
+}
+[data-theme='dark'] .alarm-page .summary-card[data-tone='info'] .summary-icon {
+  color: #60a5fa !important; background: rgba(96, 165, 250, 0.13) !important;
+}
+[data-theme='dark'] .alarm-page .summary-card[data-tone='resolved'] .summary-icon {
+  color: #34d399 !important; background: rgba(52, 211, 153, 0.13) !important;
+}
+[data-theme='dark'] .alarm-page .filter-panel,
+[data-theme='dark'] .alarm-page .feed-panel {
+  border-color: rgba(96, 165, 250, 0.17) !important;
+  background: linear-gradient(180deg, rgba(17, 24, 36, 0.97), rgba(10, 15, 23, 0.98)) !important;
+}
+[data-theme='dark'] .alarm-page .export-btn {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 58%, #0ea5e9 100%) !important;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.23) !important;
+}
+[data-theme='dark'] .alarm-page .auto-refresh-toggle.active {
+  color: #6ee7b7 !important;
+  border-color: rgba(52, 211, 153, 0.25) !important;
+  background: rgba(16, 185, 129, 0.075) !important;
+}
+
+/* ---------- Settings / Engine: matching color accents without visual noise ---------- */
+[data-theme='dark'] .settings-page {
+  background:
+    radial-gradient(circle at 90% -4%, rgba(79, 141, 247, 0.11), transparent 28%),
+    radial-gradient(circle at 7% 8%, rgba(34, 211, 238, 0.055), transparent 23%),
+    radial-gradient(circle at 66% 103%, rgba(167, 139, 250, 0.04), transparent 25%),
+    linear-gradient(180deg, #080c12 0%, #06090e 100%) !important;
+}
+[data-theme='dark'] .settings-page .summary-cards > div:nth-child(1),
+[data-theme='dark'] .settings-page .vessel-summary-cards > div:nth-child(1),
+[data-theme='dark'] .settings-page .user-summary-grid > div:nth-child(1) {
+  border-top-color: rgba(96, 165, 250, 0.48) !important;
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.065), #0e141d 58%) !important;
+}
+[data-theme='dark'] .settings-page .summary-cards > div:nth-child(2),
+[data-theme='dark'] .settings-page .vessel-summary-cards > div:nth-child(2),
+[data-theme='dark'] .settings-page .user-summary-grid > div:nth-child(2) {
+  border-top-color: rgba(52, 211, 153, 0.46) !important;
+  background: linear-gradient(145deg, rgba(52, 211, 153, 0.06), #0e141d 58%) !important;
+}
+[data-theme='dark'] .settings-page .summary-cards > div:nth-child(3),
+[data-theme='dark'] .settings-page .vessel-summary-cards > div:nth-child(3),
+[data-theme='dark'] .settings-page .user-summary-grid > div:nth-child(3) {
+  border-top-color: rgba(167, 139, 250, 0.46) !important;
+  background: linear-gradient(145deg, rgba(167, 139, 250, 0.06), #0e141d 58%) !important;
+}
+[data-theme='dark'] .settings-page .summary-cards > div:nth-child(4),
+[data-theme='dark'] .settings-page .vessel-summary-cards > div:nth-child(4),
+[data-theme='dark'] .settings-page .user-summary-grid > div:nth-child(4) {
+  border-top-color: rgba(251, 191, 36, 0.44) !important;
+  background: linear-gradient(145deg, rgba(251, 191, 36, 0.052), #0e141d 58%) !important;
+}
+[data-theme='dark'] .settings-page .professional-engine-setup,
+[data-theme='dark'] .settings-page .engine-library-panel {
+  border-color: rgba(96, 165, 250, 0.20) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.07), transparent 25%),
+    linear-gradient(180deg, #111822 0%, #0b1119 100%) !important;
+}
+
+/* Motion is decorative only; respect reduced-motion settings. */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='dark'] .overview-page .summary-item,
+  [data-theme='dark'] .alarm-page .summary-card,
+  [data-theme='dark'] .report-page .report-kpi-card {
+    transition: none !important;
+  }
+}
+
+
+/* ========================================================================
+   2026-08-10 REPORT KPI PSEUDO-ELEMENT SAFETY NET
+   report.component.css historically had more than one ::after decoration.
+   Force the final dark-theme layer to remain a 2px accent rail, never a large
+   circle that can overlap KPI values.
+   ======================================================================== */
+[data-theme='dark'] .report-page .report-kpi-card {
+  isolation: isolate;
+}
+
+[data-theme='dark'] .report-page .report-kpi-card::after {
+  content: '' !important;
+  top: auto !important;
+  right: 10px !important;
+  bottom: 0 !important;
+  left: 10px !important;
+  width: auto !important;
+  height: 2px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--kpi-color, #60a5fa) 72%, transparent) 24%,
+    var(--kpi-color, #60a5fa) 50%,
+    color-mix(in srgb, var(--kpi-color, #60a5fa) 72%, transparent) 76%,
+    transparent 100%
+  ) !important;
+  opacity: 0.86 !important;
+  box-shadow: 0 0 9px color-mix(in srgb, var(--kpi-color, #60a5fa) 22%, transparent) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+[data-theme='dark'] .report-page .report-kpi-card > * {
+  position: relative;
+  z-index: 1;
+}

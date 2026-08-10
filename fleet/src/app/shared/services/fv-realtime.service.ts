@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { BehaviorSubject, Observable, Subject, Subscription, timer } from 'rxjs';
+import { timeout } from 'rxjs/operators';
 
 import { HttpClientService } from './http-client.service';
 import { NewHttpClientService } from './http-client1.service';
@@ -15,6 +16,7 @@ export class FvRealtimeService {
   private realtimeRequestSubscription: Subscription | null = null;
 
   private readonly defaultInterval = 5000;
+  private activeInterval = 0;
 
   private realtimeTags: any[] = [];
   private loadedVessels: string[] = [];
@@ -22,7 +24,6 @@ export class FvRealtimeService {
   private pendingVessel: any = null;
   private isStarted = false;
   private isRequesting = false;
-  private refreshAgainAfterRequest = false;
 
   private readonly realtimePayloadSource = new Subject<any>();
   private readonly activeVesselSource = new BehaviorSubject<any>(this.readStoredVessel());
@@ -52,6 +53,7 @@ export class FvRealtimeService {
     this.isStarted = true;
 
     const safeInterval = interval && interval > 0 ? interval : this.defaultInterval;
+    this.activeInterval = safeInterval;
     this.loadRealtimeTags(safeInterval);
   }
 
@@ -60,11 +62,18 @@ export class FvRealtimeService {
    * ถ้า MainComponent ยังไม่ได้ start service ฟังก์ชันนี้จะ start ให้เอง
    */
   ensureStarted(interval?: number): void {
-    if (this.isStarted && this.realtimeTags.length > 0 && this.timerSubscription) {
+    const safeInterval = interval && interval > 0 ? interval : this.defaultInterval;
+
+    if (
+      this.isStarted &&
+      this.realtimeTags.length > 0 &&
+      this.timerSubscription &&
+      this.activeInterval === safeInterval
+    ) {
       return;
     }
 
-    this.start(interval);
+    this.start(safeInterval);
   }
 
   /**
@@ -126,6 +135,7 @@ export class FvRealtimeService {
             name: tag.name,
             tagName: tag.tagName,
             cal: tag.cal,
+            prefixes: Array.isArray(tag.prefixes) ? tag.prefixes : undefined,
           });
         }
       });
@@ -146,6 +156,21 @@ export class FvRealtimeService {
   setActiveVessel(vessel: any): void {
     if (!vessel) {
       return;
+    }
+
+    const previousIdentity = this.getVesselIdentity(this.activeVesselSource.value);
+    const nextIdentity = this.getVesselIdentity(vessel);
+
+    if (previousIdentity && nextIdentity && previousIdentity !== nextIdentity) {
+      // Never let a late response from the previous vessel populate the new
+      // vessel workspace. Cancelling one in-flight request also prevents a
+      // false engine speed or operating-mode estimate during vessel changes.
+      this.realtimeRequestSubscription?.unsubscribe();
+      this.realtimeRequestSubscription = null;
+      this.isRequesting = false;
+      this.currentDataSource.next({});
+      this.lastUpdatedSource.next(null);
+      this.loadingSource.next(false);
     }
 
     this.activeVesselSource.next(vessel);
@@ -195,6 +220,12 @@ export class FvRealtimeService {
   }
 
   private refreshActiveData(): void {
+    // Pause automatic telemetry requests while the browser tab is hidden.
+    // This prevents background tabs from multiplying server load.
+    if (typeof document !== 'undefined' && document.hidden) {
+      return;
+    }
+
     const payload = this.activePayload;
 
     if (!payload || !Array.isArray(payload.tags) || payload.tags.length === 0) {
@@ -208,7 +239,9 @@ export class FvRealtimeService {
     }
 
     if (this.isRequesting) {
-      this.refreshAgainAfterRequest = true;
+      // Drop overlapping timer ticks instead of queueing a catch-up request.
+      // This guarantees at most one current-values request in flight and avoids
+      // a burst immediately after a slow/timeout response.
       return;
     }
 
@@ -218,6 +251,7 @@ export class FvRealtimeService {
     this.realtimeRequestSubscription?.unsubscribe();
     this.realtimeRequestSubscription = this.newHttp
       .getCurrentValues(payload.tags, prefix)
+      .pipe(timeout(15_000))
       .subscribe({
         next: (response: any) => {
           const data = this.normalizeRealtimeResponse(response, prefix);
@@ -245,11 +279,8 @@ export class FvRealtimeService {
   private finishRealtimeRequest(): void {
     this.isRequesting = false;
     this.loadingSource.next(false);
-
-    if (this.refreshAgainAfterRequest) {
-      this.refreshAgainAfterRequest = false;
-      this.refreshActiveData();
-    }
+    // Do not replay missed timer ticks. The next scheduled interval will refresh
+    // normally, which keeps slow backends from being hit with catch-up bursts.
   }
 
   private normalizeRealtimeResponse(response: any, prefix: string): Record<string, any> {
@@ -267,11 +298,14 @@ export class FvRealtimeService {
       const value = this.readTagValue(item);
       const timestamp = this.readTagTimestamp(item);
 
+      const hasValue = value !== null && value !== undefined && value !== '';
       const normalizedItem = {
         ...item,
         name: cleanName,
         tagName,
-        value: value === null || value === undefined ? '0' : String(value),
+        value: hasValue ? String(value) : '',
+        rawValue: value,
+        hasValue,
         timestamp,
         cal: false,
       };
@@ -412,11 +446,23 @@ export class FvRealtimeService {
       return null;
     }
 
-    const tags = this.realtimeTags.map((tag) => ({
-      name: tag.name,
-      tagName: `${prefix}-${tag.tagName}`,
-      cal: tag.cal,
-    }));
+    const normalizedPrefix = this.normalizeKey(String(prefix)).replace(/_/g, '');
+    const tags = this.realtimeTags
+      .filter((tag) => {
+        if (!Array.isArray(tag?.prefixes) || tag.prefixes.length === 0) {
+          return true;
+        }
+
+        return tag.prefixes.some(
+          (allowedPrefix: string) =>
+            this.normalizeKey(String(allowedPrefix)).replace(/_/g, '') === normalizedPrefix
+        );
+      })
+      .map((tag) => ({
+        name: tag.name,
+        tagName: `${prefix}-${tag.tagName}`,
+        cal: tag.cal,
+      }));
 
     if (tags.length === 0) {
       return null;
@@ -434,6 +480,7 @@ export class FvRealtimeService {
   stop(): void {
     this.stopTimerOnly();
     this.isStarted = false;
+    this.activeInterval = 0;
     this.resetData(true);
   }
 
@@ -446,7 +493,6 @@ export class FvRealtimeService {
     this.tagFileSubscription = null;
     this.realtimeRequestSubscription = null;
     this.isRequesting = false;
-    this.refreshAgainAfterRequest = false;
     this.loadingSource.next(false);
   }
 
@@ -460,6 +506,22 @@ export class FvRealtimeService {
       this.currentDataSource.next({});
       this.lastUpdatedSource.next(null);
     }
+  }
+
+  private getVesselIdentity(vessel: any): string {
+    const info = vessel?.fvInfo || vessel?.fv || vessel || {};
+    return String(
+      info?.prefix ||
+        info?.id ||
+        info?._id ||
+        info?.vesselId ||
+        info?.name ||
+        info?.Name ||
+        ''
+    )
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
   }
 
   private readStoredVessel(): any {

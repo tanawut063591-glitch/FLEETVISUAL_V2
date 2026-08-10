@@ -844,3 +844,67 @@
 
   .engine-telemetry-bar .engine-live strong { font-size: 18px; }
 }
+
+
+/* ========================================================================
+   2026-08-10 COMPACT LIVE FUEL RATE — Premium balanced hierarchy
+   Keeps the parent machinery card size unchanged. Only the internal ribbon is
+   compressed so supply/return/speed telemetry gets equal visual priority.
+   ======================================================================== */
+.engine-telemetry-bar {
+  min-height: 44px;
+  padding: 6px 10px;
+  gap: 9px;
+  border-radius: 11px;
+  background:
+    radial-gradient(circle at 0% 50%, rgba(6, 182, 212, 0.075), transparent 40%),
+    linear-gradient(145deg, rgba(249, 252, 255, 0.99), rgba(255, 255, 255, 0.99));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.94), 0 5px 14px rgba(37, 99, 235, 0.035);
+}
+.engine-telemetry-bar__identity { gap: 8px; }
+.engine-telemetry-bar__icon {
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
+  border-radius: 9px;
+  font-size: 11px;
+}
+.engine-telemetry-bar__copy { gap: 2px; }
+.engine-telemetry-bar__copy strong {
+  font-size: 8.25px;
+  letter-spacing: 0.075em;
+}
+.engine-telemetry-bar__copy small {
+  font-size: 7.25px;
+  line-height: 1.1;
+}
+.engine-telemetry-bar .engine-live {
+  min-width: 92px;
+  padding: 1px 0 1px 10px;
+  gap: 3px;
+}
+.engine-telemetry-bar .engine-live strong {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+.engine-telemetry-bar .engine-live small {
+  font-size: 8.5px;
+}
+:host-context([data-theme='dark']) .engine-telemetry-bar {
+  border-color: rgba(34, 211, 238, 0.15);
+  background:
+    radial-gradient(circle at 0% 50%, rgba(34, 211, 238, 0.08), transparent 40%),
+    linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(8, 13, 22, 0.97));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+@media (max-width: 420px) {
+  .engine-telemetry-bar {
+    min-height: 42px;
+    padding: 6px 8px;
+    grid-template-columns: minmax(0, 1fr) 74px;
+    gap: 7px;
+  }
+  .engine-telemetry-bar__copy small { display: none; }
+  .engine-telemetry-bar .engine-live { min-width: 0; padding-left: 7px; }
+  .engine-telemetry-bar .engine-live strong { font-size: 17px; }
+}

@@ -2,6 +2,7 @@
 
   <div class="map" id="map" #mapElement></div>
 
+
   <div class="map-filter-bar">
 
     <button
@@ -43,6 +44,7 @@
   </div>
 
   <section
+    #vesselPopup
     class="vessel-popup"
     *ngIf="selectedVessel">
 
@@ -95,54 +97,68 @@
 
     </div>
 
-    <div class="summary-title">
-      TODAY SUMMARY
+    <div class="summary-title-row">
+      <div class="summary-title">TODAY SUMMARY</div>
+      <span class="summary-live-state" [class.error]="popupSummaryError">
+        <span class="summary-live-dot"></span>
+        {{ popupSummaryLoading ? 'Updating' : (popupSummaryError ? 'Last available' : 'Live KPI') }}
+      </span>
     </div>
 
-    <div class="summary-grid">
-
-      <div class="summary-item">
-        <div class="summary-icon blue">
-          <i class="fa fa-tachometer"></i>
-        </div>
-        <span>SPEED</span>
-        <strong>{{ getSpeedText(selectedVessel) }}</strong>
-        <small>knots</small>
-      </div>
-
-      <div class="summary-item">
-        <div class="summary-icon engine">
-          <i class="fa fa-cogs"></i>
-        </div>
-        <span>ENGINE LOAD</span>
-        <strong>{{ getEngineLoadText(selectedVessel) }}</strong>
-        <small>%</small>
-      </div>
+    <div class="summary-grid six-kpi">
 
       <div class="summary-item">
         <div class="summary-icon orange">
-          <i class="fa fa-fire"></i>
+          <i class="fa fa-tint"></i>
         </div>
-        <span>FUEL CONSUMPTION</span>
-        <strong>{{ getFuelConsumptionText(selectedVessel) }}</strong>
+        <span>TOTAL FUEL USED</span>
+        <strong>{{ getPopupMetricValue('fuel') }}</strong>
         <small>L</small>
       </div>
 
       <div class="summary-item">
-        <div class="summary-icon green">
-          <i class="fa fa-location-arrow"></i>
+        <div class="summary-icon violet">
+          <i class="fa fa-fire"></i>
         </div>
-        <span>COURSE</span>
-        <strong>{{ getCourseText(selectedVessel) }}°</strong>
+        <span>LIVE FUEL RATE</span>
+        <strong>{{ getPopupMetricValue('fuel-rate') }}</strong>
+        <small>L/h</small>
       </div>
 
       <div class="summary-item">
-        <div class="summary-icon soft-blue">
+        <div class="summary-icon blue">
           <i class="fa fa-arrows-h"></i>
         </div>
-        <span>DISTANCE</span>
-        <strong>{{ getDistanceText(selectedVessel) }}</strong>
-        <small>nm</small>
+        <span>DISTANCE TODAY</span>
+        <strong>{{ getPopupMetricValue('distance') }}</strong>
+        <small>NM</small>
+      </div>
+
+      <div class="summary-item">
+        <div class="summary-icon cyan">
+          <i class="fa fa-tachometer"></i>
+        </div>
+        <span>CURRENT SPEED</span>
+        <strong>{{ getPopupMetricValue('speed') }}</strong>
+        <small>knots</small>
+      </div>
+
+      <div class="summary-item">
+        <div class="summary-icon green">
+          <i class="fa fa-line-chart"></i>
+        </div>
+        <span>AVERAGE SPEED</span>
+        <strong>{{ getPopupMetricValue('average') }}</strong>
+        <small>knots</small>
+      </div>
+
+      <div class="summary-item">
+        <div class="summary-icon violet">
+          <i class="fa fa-area-chart"></i>
+        </div>
+        <span>MAXIMUM SPEED</span>
+        <strong>{{ getPopupMetricValue('maximum') }}</strong>
+        <small>knots</small>
       </div>
 
     </div>
