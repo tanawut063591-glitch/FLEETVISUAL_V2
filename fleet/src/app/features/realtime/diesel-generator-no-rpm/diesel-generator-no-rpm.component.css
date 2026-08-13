@@ -551,12 +551,12 @@
   }
 }
 
-/* =========================================================
-   COMPACT GENERATOR SUMMARY
-   The generator identity and premium core icon now live in the parent card
-   header. Keep only the live fuel-rate summary inside the telemetry body so
-   the same information is not repeated twice.
-   ========================================================= */
+
+
+
+
+
+
 .dg-live-strip {
   min-width: 0;
   min-height: 42px;
@@ -663,7 +663,7 @@
   }
 }
 
-/* Premium balanced generator telemetry strip. */
+
 .dg-live-strip {
   min-height: 48px;
   padding: 8px 10px;
@@ -750,7 +750,7 @@
   .dg-live-strip__value > span { font-size: 6.5px; letter-spacing: 0.04em; }
 }
 
-/* 2026-08-04: Premium single-metric fuel-rate ribbon. */
+
 .dg-live-strip {
   position: relative;
   min-height: 48px;
@@ -864,10 +864,10 @@
   }
 }
 
-/* =========================================================
-   2026-08-04 PROFESSIONAL LIVE FUEL RATE
-   Balanced single-metric ribbon shared by all diesel-generator variants.
-   ========================================================= */
+
+
+
+
 .dg-live-strip {
   position: relative;
   min-height: 56px;
@@ -991,9 +991,9 @@
 }
 
 
-/* ========================================================================
-   2026-08-10 COMPACT LIVE FUEL RATE — Generator premium balance
-   ======================================================================== */
+
+
+
 .dg-live-strip {
   min-height: 44px;
   padding: 6px 10px;

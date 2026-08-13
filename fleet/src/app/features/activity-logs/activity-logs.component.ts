@@ -344,7 +344,10 @@ export class ActivityLogsComponent implements OnInit, OnDestroy {
   private restartTimer(): void {
     this.timerSub?.unsubscribe();
     if (!this.autoRefresh) return;
-    this.timerSub = timer(20_000, 20_000).subscribe(() => this.loadLogs(true));
+    this.timerSub = timer(60_000, 60_000).subscribe(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      this.loadLogs(true);
+    });
   }
 
   private escapeCsv(value: unknown): string {

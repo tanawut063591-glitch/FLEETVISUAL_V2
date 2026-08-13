@@ -23,7 +23,7 @@ export interface LiveReportEngineProfile {
   speedTags?: string[];
   loadTags?: string[];
   powerTags?: string[];
-  /** Vessel-specific validation ceiling. Out-of-range values are filtered. */
+
   maxSpeedRpm?: number;
 }
 

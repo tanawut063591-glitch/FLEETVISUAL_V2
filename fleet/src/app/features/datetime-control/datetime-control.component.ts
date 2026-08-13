@@ -189,10 +189,10 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         this.setDefaultDateTime();
         this.loadLocalTagMemory();
 
-        // Chart and Data Logger do not start the old FV polling service because it
-        // would duplicate backend requests. Read the shared active-vessel stream
-        // used by the Sidebar instead, then keep the NgRx selector as a fallback
-        // for Realtime / Diagram and legacy navigation flows.
+
+
+
+
         this.activeVesselSub = this.fvRealtimeService.activeVessel$
             .subscribe((vessel: any) => this.applyActiveVessel(vessel));
 
@@ -201,8 +201,8 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
             .pipe(retry(2))
             .subscribe((res: any) => this.applyActiveVessel(res));
 
-        // BehaviorSubject normally emits the stored selection immediately. This
-        // snapshot also covers unusual lifecycle ordering during a hard refresh.
+
+
         this.applyActiveVessel(this.fvRealtimeService.getActiveVesselSnapshot());
     }
 
@@ -237,15 +237,15 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         }
     }
 
-    /**
-     * Accept all vessel shapes used across the application:
-     * - Sidebar/backend row: { prefix, name, ... }
-     * - NgRx row: { fvInfo: { prefix, name, ... } }
-     * - Realtime payload: { fv: { prefix, name, ... } }
-     *
-     * This keeps Manage Tags attached to the vessel selected in the global
-     * Sidebar without forcing Chart/Data Logger to run another polling service.
-     */
+
+
+
+
+
+
+
+
+
     private applyActiveVessel(value: any): void {
         var vessel = this.resolveVesselInfo(value);
         var nextPrefix = this.resolveVesselPrefix(vessel);
@@ -262,8 +262,8 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         };
 
         if (!changed) {
-            // Recover a dialog that was opened before the asynchronous Sidebar
-            // vessel list finished loading.
+
+
             if (this.displayDialog && !this.pointsLoading && this.tags.length === 0) {
                 this.hasPointError = false;
                 this.pointErrorMessage = '';
@@ -278,9 +278,9 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         this.hasPointError = false;
         this.pointErrorMessage = '';
 
-        // Prevent tags from the previous vessel flashing while the next request
-        // is in flight. The selected tag names are restored after the new list
-        // has been normalized.
+
+
+
         this.processTagsResult([], nextPrefix);
         this.getPoints(nextPrefix);
         this.markView();
@@ -430,13 +430,13 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         this.selectionSnapshot = this.selectedTags.map((tag: any) => this.getTagMemoryKey(tag));
         this.displayDialog = true;
 
-        // A hard refresh can render the page a few milliseconds before the
-        // Sidebar's vessel request completes. Rehydrate the shared selection
-        // first instead of showing a false "select a vessel" error.
+
+
+
         this.restoreActiveVessel();
 
-        // Retry automatically when the dialog is opened with no usable tag data.
-        // This also recovers from an older empty cache entry.
+
+
         if (this.prefix && !this.pointsLoading && this.tags.length === 0) {
             this.getPoints(this.prefix, true);
         } else if (!this.prefix) {
@@ -476,7 +476,7 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         if (!forceRefresh && this.tagService && this.tagService.hasPoint(prefix)) {
             var cachedPoint = this.tagService.getPoint(prefix);
 
-            // Never lock the UI to an empty cache. Empty data is fetched again.
+
             if (Array.isArray(cachedPoint) && cachedPoint.length > 0) {
                 this.processTagsResult(cachedPoint, prefix);
                 this.pointsLoading = false;
@@ -566,7 +566,7 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
             }
         }
 
-        // Some gateways wrap the list under a dynamic property name.
+
         var keys = Object.keys(response);
         for (var j = 0; j < keys.length; j++) {
             var nestedResult = this.extractArray(response[keys[j]], depth + 1);
@@ -671,8 +671,8 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
             }
         }
 
-        // Backend installations do not always use PME/SME/DG naming.
-        // Keep those sensors visible in an OTHER column instead of dropping them.
+
+
         this.tagGroup['other'].tags = this.tags.filter((tag: any) => {
             var memoryKey = this.getTagMemoryKey(tag).toUpperCase();
             return memoryKey && !assigned[memoryKey];
@@ -995,7 +995,7 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         this.clearListActive();
     }
 
-    selectedTag(tag: any, group: any) {
+    selectedTag(tag: any, _group: any) {
         if (!tag) {
             return;
         }
@@ -1109,7 +1109,7 @@ export class DatetimeControlComponent implements OnInit, OnDestroy, OnChanges {
         this.markView();
     }
 
-    selectHaederAll(head: string, data: any[], group: any) {
+    selectHaederAll(head: string, _data: any[], _group: any) {
         this.selectHeaderAll(head);
     }
 

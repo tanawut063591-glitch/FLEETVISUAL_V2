@@ -10,11 +10,11 @@
                 <th>LAST SEEN</th>
             </tr>
         </thead>
-        
+
         <tbody [@listAnimation]="data.length">
-            
+
             <tr *ngFor="let a of data" (click)="onRowClick(a)" [class.fv-row-active]="selectedVessel?.id === a?.id">
-                
+
                 <td class="fv-vessel-cell">
                     <div class="fv-img-placeholder"><i class="fa fa-ship"></i></div>
                     <div>
@@ -24,7 +24,7 @@
                 </td>
 
                 <td>
-                    <span class="fv-badge" 
+                    <span class="fv-badge"
                           [class.fv-badge-success]="a.status === 'Online'"
                           [class.fv-badge-warning]="a.status !== 'Online'">
                         {{ a.status }}

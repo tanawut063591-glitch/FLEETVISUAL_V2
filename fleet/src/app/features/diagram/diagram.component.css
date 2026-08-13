@@ -527,12 +527,12 @@
         padding: 14px 14px 22px;
         border-radius: 16px;
 
-        /*
-          Mobile uses one vertical scroll owner: the page itself.
-          Only horizontal overflow stays inside the diagram card. This avoids
-          the nested vertical scroller that previously trapped touch gestures
-          and made the generator cards at the bottom feel cut off.
-        */
+
+
+
+
+
+
         overflow-x: auto;
         overflow-y: hidden;
         overscroll-behavior-x: contain;
@@ -607,7 +607,7 @@
     }
 }
 
-/* Last Update now shows full date + time */
+
 .stat-card.update strong {
     font-size: 15px;
     line-height: 1.15;
@@ -620,10 +620,10 @@
 }
 
 
-/* =========================================================
-   BLACK PRO POLISH - Diagram detail pass
-   ทำให้หน้า Diagram เข้าธีมดำและอ่านชัดทุกจุด
-   ========================================================= */
+
+
+
+
 :host-context([data-theme='dark']) .diagram-page {
     background:
       radial-gradient(circle at 18% -8%, rgba(37, 99, 235, 0.15), transparent 28%),

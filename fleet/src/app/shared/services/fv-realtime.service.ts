@@ -23,6 +23,7 @@ export class FvRealtimeService {
   private activePayload: any = null;
   private pendingVessel: any = null;
   private isStarted = false;
+  private isLoadingTags = false;
   private isRequesting = false;
 
   private readonly realtimePayloadSource = new Subject<any>();
@@ -43,10 +44,10 @@ export class FvRealtimeService {
     private store: Store<any>
   ) {}
 
-  /**
-   * เริ่มระบบ live update ของหน้า Realtime / Diagram
-   * จะโหลด tag config ก่อน แล้วค่อยยิง getcurrentvalues ทุก ๆ interval
-   */
+
+
+
+
   start(interval?: number): void {
     this.stopTimerOnly();
     this.resetData(false);
@@ -54,21 +55,31 @@ export class FvRealtimeService {
 
     const safeInterval = interval && interval > 0 ? interval : this.defaultInterval;
     this.activeInterval = safeInterval;
+
+    if (this.realtimeTags.length > 0) {
+      this.startTimer(safeInterval);
+      const vessel = this.pendingVessel || this.activeVesselSource.value || this.readStoredVessel();
+      this.pendingVessel = null;
+      if (vessel) {
+        this.setActiveVessel(vessel);
+      }
+      return;
+    }
+
     this.loadRealtimeTags(safeInterval);
   }
 
-  /**
-   * ใช้กันกรณีเข้า /main/realtime หรือ /main/diagram ตรง ๆ
-   * ถ้า MainComponent ยังไม่ได้ start service ฟังก์ชันนี้จะ start ให้เอง
-   */
+
+
+
+
   ensureStarted(interval?: number): void {
     const safeInterval = interval && interval > 0 ? interval : this.defaultInterval;
 
     if (
       this.isStarted &&
-      this.realtimeTags.length > 0 &&
-      this.timerSubscription &&
-      this.activeInterval === safeInterval
+      this.activeInterval === safeInterval &&
+      (this.timerSubscription || this.isLoadingTags)
     ) {
       return;
     }
@@ -76,9 +87,9 @@ export class FvRealtimeService {
     this.start(safeInterval);
   }
 
-  /**
-   * บังคับโหลดค่าล่าสุดทันที ไม่ต้องรอรอบ timer
-   */
+
+
+
   refreshNow(): void {
     this.refreshActiveData();
   }
@@ -92,10 +103,16 @@ export class FvRealtimeService {
   }
 
   private loadRealtimeTags(interval: number): void {
+    if (this.isLoadingTags) {
+      return;
+    }
+
+    this.isLoadingTags = true;
     this.tagFileSubscription = this.http
       .getJsonFile('/assets/tags/dashboard.tag.json')
       .subscribe({
         next: (res: any) => {
+          this.isLoadingTags = false;
           this.realtimeTags = this.mapRealtimeTags(res);
           this.startTimer(interval);
 
@@ -107,6 +124,7 @@ export class FvRealtimeService {
           }
         },
         error: (error) => {
+          this.isLoadingTags = false;
           console.error('[FvRealtimeService] load tags error:', error);
           this.resetData(false);
         },
@@ -147,7 +165,7 @@ export class FvRealtimeService {
   private startTimer(interval: number): void {
     this.timerSubscription?.unsubscribe();
 
-    // timer(0, interval) = โหลดทันที 1 ครั้ง แล้วค่อยโหลดซ้ำทุก interval
+
     this.timerSubscription = timer(0, interval).subscribe(() => {
       this.refreshActiveData();
     });
@@ -162,9 +180,9 @@ export class FvRealtimeService {
     const nextIdentity = this.getVesselIdentity(vessel);
 
     if (previousIdentity && nextIdentity && previousIdentity !== nextIdentity) {
-      // Never let a late response from the previous vessel populate the new
-      // vessel workspace. Cancelling one in-flight request also prevents a
-      // false engine speed or operating-mode estimate during vessel changes.
+
+
+
       this.realtimeRequestSubscription?.unsubscribe();
       this.realtimeRequestSubscription = null;
       this.isRequesting = false;
@@ -220,8 +238,8 @@ export class FvRealtimeService {
   }
 
   private refreshActiveData(): void {
-    // Pause automatic telemetry requests while the browser tab is hidden.
-    // This prevents background tabs from multiplying server load.
+
+
     if (typeof document !== 'undefined' && document.hidden) {
       return;
     }
@@ -239,9 +257,9 @@ export class FvRealtimeService {
     }
 
     if (this.isRequesting) {
-      // Drop overlapping timer ticks instead of queueing a catch-up request.
-      // This guarantees at most one current-values request in flight and avoids
-      // a burst immediately after a slow/timeout response.
+
+
+
       return;
     }
 
@@ -279,8 +297,8 @@ export class FvRealtimeService {
   private finishRealtimeRequest(): void {
     this.isRequesting = false;
     this.loadingSource.next(false);
-    // Do not replay missed timer ticks. The next scheduled interval will refresh
-    // normally, which keeps slow backends from being hit with catch-up bursts.
+
+
   }
 
   private normalizeRealtimeResponse(response: any, prefix: string): Record<string, any> {
@@ -492,12 +510,12 @@ export class FvRealtimeService {
     this.timerSubscription = null;
     this.tagFileSubscription = null;
     this.realtimeRequestSubscription = null;
+    this.isLoadingTags = false;
     this.isRequesting = false;
     this.loadingSource.next(false);
   }
 
   private resetData(clearCurrentData: boolean): void {
-    this.realtimeTags = [];
     this.loadedVessels = [];
     this.activePayload = null;
     this.pendingVessel = null;

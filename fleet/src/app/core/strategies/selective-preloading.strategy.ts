@@ -14,11 +14,11 @@ type IdleWindow = Window & {
 
 @Injectable({ providedIn: 'root' })
 export class SelectivePreloadingStrategy implements PreloadingStrategy {
-  /**
-   * Give the first authenticated screen time to render before downloading
-   * secondary pages. This avoids the common "login then refresh once" feeling
-   * caused by every lazy route competing for CPU/network while Overview starts.
-   */
+
+
+
+
+
   private readonly authenticatedWarmupMs = 2_000;
 
   constructor(private authService: AuthService) {}
@@ -36,7 +36,7 @@ export class SelectivePreloadingStrategy implements PreloadingStrategy {
     return timer(this.authenticatedWarmupMs + routeDelayMs).pipe(
       switchMap(() => this.waitForBrowserIdle()),
       switchMap(() => load()),
-      // A failed background preload must never block navigation.
+
       catchError(() => of(null))
     );
   }

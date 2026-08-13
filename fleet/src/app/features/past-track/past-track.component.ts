@@ -105,7 +105,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       this.refreshMaxDateTime();
     }
   }
-  
+
   applyCustomRange(): void {
     const start = this.parseInputDate(this.customStartDate);
     const end = this.parseInputDate(this.customEndDate);
@@ -161,7 +161,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       this.errorMessage = 'Please select a vessel before loading past track data';
       return;
     }
-    
+
     this.loading = true;
     this.summary = null;
     this.trackPoints = [];
@@ -294,7 +294,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       ? 'Last 24 Hours'
       : `Last ${this.activeRangeMode} Days`;
   }
-  
+
   getRangeDurationLabel(): string {
     const start = this.parseInputDate(this.startDate);
     const end = this.parseInputDate(this.endDate);
@@ -375,11 +375,11 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     this.exportingMap = true;
 
     try {
-      // Google Maps renders its tiles in cross-origin image layers. html2canvas can
-      // return a valid-sized canvas while silently omitting those layers, which is
-      // why mobile exports previously contained a white map area. Build the export
-      // independently instead: prefer a Google Static Maps image and always retain
-      // a deterministic coordinate-route fallback.
+
+
+
+
+
       const staticMap = await this.loadStaticMapImage();
       const canvas = this.buildVectorMapCanvas(staticMap);
       await this.downloadCanvas(canvas, this.getMapExportFileName());
@@ -419,9 +419,9 @@ export class PastTrackComponent implements OnInit, OnDestroy {
         img.src = url;
       });
 
-      // Verify that the response can safely be copied into the final PNG. Some
-      // key/referrer configurations allow the image to display but do not expose
-      // CORS headers; in that case use the local coordinate fallback instead.
+
+
+
       const probe = document.createElement('canvas');
       probe.width = 2;
       probe.height = 2;
@@ -462,8 +462,8 @@ export class PastTrackComponent implements OnInit, OnDestroy {
         continue;
       }
 
-      // White halo followed by the status colour keeps the track readable on
-      // both road and satellite-style basemaps.
+
+
       url.searchParams.append('path', `color:0xffffffff|weight:8|enc:${encoded}`);
       url.searchParams.append('path', `color:${segment.color}|weight:4|enc:${encoded}`);
     }
@@ -528,7 +528,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     ctx.fillStyle = pageGradient;
     ctx.fillRect(0, 0, width, height);
 
-    // Header and export metadata.
+
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, 132);
     ctx.strokeStyle = '#d9e6f3';
@@ -726,8 +726,8 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       this.drawExportMarker(ctx, project(this.selectedPoint), 'P', '#2563eb');
     }
 
-    // North indicator and a truthful fallback label. No invented coastline is
-    // drawn when a network basemap cannot be captured.
+
+
     ctx.fillStyle = 'rgba(255,255,255,0.88)';
     this.roundedRectPath(ctx, x + width - 92, y + 22, 58, 76, 15);
     ctx.fill();

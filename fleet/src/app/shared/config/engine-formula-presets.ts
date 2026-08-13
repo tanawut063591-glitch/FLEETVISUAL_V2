@@ -76,11 +76,11 @@ export function getEngineFormulaPreset(
   return ENGINE_FORMULA_PRESETS.find((preset) => preset.id === id) ?? ENGINE_FORMULA_PRESETS[2];
 }
 
-/**
- * Safe reusable calculator for standard profiles. Missing or invalid inputs are
- * omitted instead of producing Infinity/NaN. Values are intentionally not
- * clamped because over-load conditions above 100% are operationally meaningful.
- */
+
+
+
+
+
 export function calculateEngineMetrics(
   presetId: EngineFormulaPresetId,
   inputs: EngineFormulaInputs,
@@ -129,7 +129,7 @@ export interface EngineTelemetryTemplateContext {
   index: number;
 }
 
-/** Resolves reusable tag templates such as {prefix}_ME{index}_POWER_KW. */
+
 export function resolveEngineTelemetryMapping(
   mapping: EngineTelemetryMapping,
   context: EngineTelemetryTemplateContext,

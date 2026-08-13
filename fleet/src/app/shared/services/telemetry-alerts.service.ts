@@ -56,9 +56,9 @@ export class TelemetryAlertsService {
   private snapshotExpiresAt = 0;
   private snapshotLoading = false;
   private readonly tagConfig$: Observable<Record<string, unknown>>;
-  // Keep the polling payload small and deterministic. Vessel connectivity is
-  // already checked from getvesselcurrentInfo; these are the highest-value
-  // machinery/status tags for alerting across the fleet.
+
+
+
   private readonly relevantTagPattern =
     /^(FV-API-ALIVE|DCP-PLC-ALIVE|DCP-GATEWAY-ALIVE|GPS-PANEL-ALIVE|(?:PME|SME|CME)-ENGINE-LOAD|(?:PME|SME|CME|DG[1-4])-(?:FIN|FOUT)-TEMP)$/i;
 
@@ -76,11 +76,11 @@ export class TelemetryAlertsService {
       );
   }
 
-  /**
-   * Creates alerts from current values returned by the existing FleetVisual backend.
-   * No sample, persisted snapshot, or browser-generated history is returned. Every row
-   * is calculated from the latest successful server response for vessel status/current values.
-   */
+
+
+
+
+
   fetch(query: AlertQuery, forceRefresh = false): Observable<AlertFetchResult> {
     return this.getSnapshot(forceRefresh).pipe(
       map((snapshot) => ({
@@ -489,8 +489,8 @@ export class TelemetryAlertsService {
     const isFuelTemperature = /(?:FIN|FOUT)-TEMP$/i.test(tagName);
     const labelledCelsius = /(?:deg\s*c|°c|celsius)/i.test(unit);
 
-    // Some live FIN/FOUT tags are returned as Kelvin while the payload label says Deg C.
-    // Constrain the correction to these temperature tags and a physically plausible Kelvin range.
+
+
     if (
       isFuelTemperature &&
       labelledCelsius &&

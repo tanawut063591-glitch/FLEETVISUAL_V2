@@ -4,9 +4,9 @@ import { RouterModule, Routes } from '@angular/router';
 import { LoginComponent } from './core/components/login/login.component';
 import { MainComponent } from './core/components/main/main.component';
 
-//import { RealtimeComponent } from './shared/components/realtime/realtime.component';
-//import { DataLoggerComponent } from './shared/components/data-logger/data-logger.component';
-//import { ChartComponent } from './shared/components/chart/chart.component';
+
+
+
 
 import { PermissionGuard } from './core/guards/auth-guard';
 import { LoginGuard } from './core/guards/login-guard';
@@ -146,8 +146,8 @@ export const routes: Routes = [
         data: {
           depth: 10,
           title: 'SETTINGS',
-          // Warm this lazy feature after the authenticated shell is stable.
-          // A cold first navigation used to look frozen until a browser refresh.
+
+
           preload: true,
           preloadDelayMs: 900,
         },

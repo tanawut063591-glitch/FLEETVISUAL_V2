@@ -306,7 +306,7 @@
 .aux-shaft > span {
   position: absolute;
   inset: 0;
-  /* Animate only the background so the highlight never leaves the shaft area. */
+
   background: linear-gradient(
     90deg,
     transparent 0%,
@@ -467,7 +467,7 @@
 :host-context([data-theme='dark']) .footer-stat strong { color: #f8fafc; }
 
 
-/* Mobile keeps the same compact three-column web composition. */
+
 @media (max-width: 720px) {
   .aux-console { min-height: 346px; padding: 10px; gap: 8px; }
   .aux-hero { grid-template-columns: 42px minmax(0, 1fr) auto; gap: 8px; }
@@ -478,7 +478,7 @@
   .footer-state { grid-column: auto; flex-direction: column; }
 }
 
-/* Compact telemetry identity: avoids repeating the card title inside the body. */
+
 .aux-telemetry-bar {
   min-width: 0;
   min-height: 48px;
@@ -576,10 +576,10 @@
   .aux-telemetry-bar .aux-live { min-width: 0; padding-inline: 6px; }
 }
 
-/* =========================================================
-   2026-08-04 PROFESSIONAL LIVE FUEL RATE
-   Same visual hierarchy as main engines and generators.
-   ========================================================= */
+
+
+
+
 .aux-telemetry-bar {
   position: relative;
   min-height: 56px;
@@ -688,9 +688,9 @@
 }
 
 
-/* ========================================================================
-   2026-08-10 COMPACT LIVE FUEL RATE — Auxiliary premium balance
-   ======================================================================== */
+
+
+
 .aux-telemetry-bar {
   min-height: 44px;
   padding: 6px 10px;

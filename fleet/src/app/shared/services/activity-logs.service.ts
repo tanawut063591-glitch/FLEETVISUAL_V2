@@ -47,11 +47,11 @@ export class ActivityLogsService {
     private databaseConfig: DatabaseApiConfigService,
   ) {}
 
-  /**
-   * Reads persisted audit/activity records through the configured backend API.
-   * If no database endpoint is enabled, the existing verified alert fallback can
-   * remain active so the page never invents browser-only events.
-   */
+
+
+
+
+
   fetch(query: ActivityLogQuery, forceRefresh = false): Observable<ActivityLogFetchResult> {
     const normalizedQuery = this.normalizeQuery(query);
     const key = JSON.stringify(normalizedQuery);

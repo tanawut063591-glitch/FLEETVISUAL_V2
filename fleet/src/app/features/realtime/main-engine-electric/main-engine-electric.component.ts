@@ -26,21 +26,21 @@ type EngineInput = RealtimeValue | number | string | null | undefined;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MainEngineElectricComponent implements OnChanges {
-  // Fuel supply
+
   @Input() flow_supply: EngineInput = null;
   @Input() temp_supply: EngineInput = null;
   @Input() dens_supply: EngineInput = null;
 
-  // Fuel return
+
   @Input() flow_return: EngineInput = null;
   @Input() temp_return: EngineInput = null;
   @Input() dens_return: EngineInput = null;
 
-  // Consumption
+
   @Input() cons: EngineInput = null;
   @Input() consL: EngineInput = null;
 
-  // Speed
+
   @Input() speed_eng: EngineInput = null;
   @Input() speed_gear: EngineInput = null;
 

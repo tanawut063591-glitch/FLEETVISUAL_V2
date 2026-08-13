@@ -23,12 +23,12 @@ export class HttpClientService {
     private authService: AuthService,
   ) {}
 
-  // โหลดไฟล์ JSON เช่น dashboard.tag.json / overview.tag.json
+
   getJsonFile(path: string): Observable<any> {
     return this.http.get(path).pipe(catchError((err) => this.handleError<any>(err)));
   }
 
-  // ดึงข้อมูลเรือทั้งหมด
+
   getVesselInfo(isRetry = false): Observable<any[]> {
     return this.http
       .post<any[]>(`${URL}/api/vessels/getvesselcurrentInfo`, null, {
@@ -56,7 +56,7 @@ export class HttpClientService {
       );
   }
 
-  // เรียงชื่อเรือ A-Z
+
   compare(a: any, b: any): number {
     const nameA = String(a?.name || '').toUpperCase();
     const nameB = String(b?.name || '').toUpperCase();
@@ -64,7 +64,7 @@ export class HttpClientService {
     return nameA.localeCompare(nameB);
   }
 
-  // แปลงพิกัด lat/long เป็นที่อยู่ด้วย Google API
+
   getAddress(lat: string, long: string, apiKey: string): Observable<any> {
     if (!lat || !long || !apiKey) {
       return of(null);
@@ -78,7 +78,7 @@ export class HttpClientService {
     return this.http.get(url).pipe(catchError((err) => this.handleError<any>(err)));
   }
 
-  // ดึงจุดพิกัด / เส้นทางของเรือ
+
   getPoints(prefix: string, isRetry = false): Observable<any> {
     if (!prefix) {
       return of([]);
@@ -100,7 +100,7 @@ export class HttpClientService {
       );
   }
 
-  // ขอ key สำหรับโหลดไฟล์ logger
+
   getLoggerKey(start: string, end: string, tags: string[], isRetry = false): Observable<any> {
     if (!start || !end || !Array.isArray(tags) || tags.length === 0) {
       return of(null);
@@ -124,7 +124,7 @@ export class HttpClientService {
       );
   }
 
-  // เปิดไฟล์ logger
+
   loadFile(key: string, name: string): void {
     if (!key || !name) {
       return;
@@ -136,7 +136,7 @@ export class HttpClientService {
     window.open(`${URL}/api/vessels/GetLoggerFile/${safeKey}/${safeName}`, '_self');
   }
 
-  // ดึงข้อมูลย้อนหลังแบบ raw data
+
   getRawData(start: string, end: string, tags: any[], isRetry = false): Observable<any> {
     if (!start || !end || !Array.isArray(tags) || tags.length === 0) {
       return of([]);
@@ -160,7 +160,7 @@ export class HttpClientService {
       );
   }
 
-  // ดึงข้อมูลย้อนหลังสำหรับกราฟ
+
   getChartRawData(start: string, end: string, tags: any[], isRetry = false): Observable<any> {
     if (!start || !end || !Array.isArray(tags) || tags.length === 0) {
       return of([]);
@@ -188,7 +188,7 @@ export class HttpClientService {
       );
   }
 
-  // ดึงรายงาน PDF
+
   getReport(
     reportType: string,
     timestamp: string,
@@ -224,7 +224,7 @@ export class HttpClientService {
       );
   }
 
-  // ดึงค่าปัจจุบันของ Realtime tags
+
   getCurrentValues(tagNames: any[], isRetry = false): Observable<any> {
     if (!Array.isArray(tagNames) || tagNames.length === 0) {
       return of([]);
@@ -242,7 +242,7 @@ export class HttpClientService {
       );
   }
 
-  // ดึงค่าปัจจุบันของ Overview หลายเรือ
+
   getOverviewCurrentsValues(tagNames: any[], isRetry = false): Observable<any> {
     const tags = this.flattenOverviewTags(tagNames);
 
@@ -266,7 +266,7 @@ export class HttpClientService {
       );
   }
 
-  // รวม tags จาก overviewDatas ให้เป็น array เดียว
+
   private flattenOverviewTags(tagNames: any[]): any[] {
     if (!Array.isArray(tagNames)) {
       return [];
@@ -283,7 +283,7 @@ export class HttpClientService {
     return tags;
   }
 
-  // สร้าง Header พร้อม Token
+
   private getAuthHeaders(): HttpHeaders {
     const token = this.authService.getToken();
 
@@ -292,12 +292,12 @@ export class HttpClientService {
     });
   }
 
-  // จัดการ error ทั่วไป
+
   private handleError<T>(err: any): Observable<T> {
     return throwError(() => err);
   }
 
-  // จัดการ error 401 รวมไว้ที่เดียว
+
   private handleAuthError<T>(
     err: any,
     retryFn: () => Observable<T>,
@@ -327,7 +327,7 @@ export class HttpClientService {
     return throwError(() => err);
   }
 
-  // เช็กผลลัพธ์จาก tryLogin()
+
   private isLoginSuccess(result: any): boolean {
     if (result === true) {
       return true;
@@ -348,7 +348,7 @@ export class HttpClientService {
     return false;
   }
 
-  // logout และกลับหน้า login
+
   private forceLogout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);

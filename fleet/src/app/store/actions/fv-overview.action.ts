@@ -23,7 +23,7 @@ export class GetFvOverviewFailure  implements Action  {
 
 
 
-export type All_FV_OVERVIEW_ACTIONS = 
+export type All_FV_OVERVIEW_ACTIONS =
     GetFVOverview |
     GetFvOverviewSuccess |
-    GetFvOverviewFailure 
+    GetFvOverviewFailure

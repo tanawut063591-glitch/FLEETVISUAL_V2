@@ -23,7 +23,7 @@ export class PermissionGuard implements CanActivate, CanActivateChild {
   ) {}
 
   async canActivate(
-    route: ActivatedRouteSnapshot,
+    _route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): Promise<boolean | UrlTree> {
     if (this.authService.isLoggedIn()) {

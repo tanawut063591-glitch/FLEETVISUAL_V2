@@ -11,7 +11,7 @@
       "
     >
       <ng-container *ngIf="selectedVesselAlertContext$ | async as alarmContext">
-      <!-- HEADER -->
+
       <div class="dash-header realtime-vessel-header">
         <div class="header-left">
           <div class="ship-avatar ship-photo">
@@ -64,7 +64,7 @@
         </div>
       </div>
 
-      <!-- KPI -->
+
       <div class="kpi-grid">
         <div
           class="kpi-card"
@@ -210,9 +210,9 @@
         </ng-container>
       </div>
 
-      <!-- CONTENT -->
+
       <div class="main-split">
-        <!-- LEFT -->
+
         <div class="col-left">
           <div class="premium-card today-summary-card today-summary-card--pro">
             <div class="today-summary-pro__header">
@@ -235,7 +235,7 @@
             </div>
 
             <div class="today-summary-pro__body">
-              <!-- Navigation performance -->
+
               <section
                 class="today-summary-pro__hero"
                 [class.realtime-alert-panel]="
@@ -298,7 +298,7 @@
                 </div>
               </section>
 
-              <!-- Voyage snapshot -->
+
               <section class="today-summary-pro__voyage" aria-label="Voyage snapshot">
                 <article
                   class="today-summary-pro__mini-card today-summary-pro__mini-card--distance"
@@ -366,7 +366,7 @@
                 </article>
               </section>
 
-              <!-- Fuel performance -->
+
               <section
                 class="today-summary-pro__fuel"
                 [ngClass]="'is-' + getSummaryFuelState(rtData)"
@@ -443,9 +443,9 @@
           </div>
         </div>
 
-        <!-- RIGHT -->
+
         <div class="col-right">
-          <!-- CARD 1 -->
+
           <ng-container *ngIf="getCardDetail(tag, 1, 1) as card11">
             <div
               class="premium-card dg-card"
@@ -541,7 +541,7 @@
             </div>
           </ng-container>
 
-          <!-- CARD 2 -->
+
           <ng-container *ngIf="getCardDetail(tag, 1, 2) as card12">
             <div
               class="premium-card dg-card"
@@ -642,7 +642,7 @@
             </div>
           </ng-container>
 
-          <!-- CARD 3 -->
+
           <ng-container *ngIf="getCardDetail(tag, 1, 3) as card13">
             <div
               class="premium-card dg-card"
@@ -738,7 +738,7 @@
             </div>
           </ng-container>
 
-          <!-- CARD 4 -->
+
           <ng-container *ngIf="getCardDetail(tag, 2, 1) as card21">
             <div
               class="premium-card dg-card"
@@ -816,7 +816,7 @@
             </div>
           </ng-container>
 
-          <!-- CARD 5 -->
+
           <ng-container *ngIf="getCardDetail(tag, 2, 2) as card22">
             <div
               class="premium-card dg-card"
@@ -872,7 +872,7 @@
             </div>
           </ng-container>
 
-          <!-- CARD 6 -->
+
           <ng-container *ngIf="getCardDetail(tag, 2, 3) as card23">
             <div
               class="premium-card dg-card"

@@ -10,10 +10,10 @@ export type LoginFailureReason =
   | 'invalid_response'
   | 'server';
 
-/**
- * Error ที่หน้า Login สามารถนำไปแสดงข้อความให้ผู้ใช้ได้อย่างถูกต้อง
- * โดยไม่ต้องเดาจากข้อความของ Backend
- */
+
+
+
+
 export class LoginError extends Error {
   constructor(
     public readonly reason: LoginFailureReason,
@@ -27,15 +27,14 @@ export class LoginError extends Error {
 
 const LOGIN_TIMEOUT_MS = 8_000;
 
-// URL API จาก environment
+
 const URL = environment.API_URL || '';
 const URL2 = environment.API2_URL || environment.API_URL || '';
 
-// key สำหรับเก็บข้อมูลใน localStorage
+
 const TOKEN_KEY = 'vesselToken2';
 const OLD_TOKEN_KEY = 'vesselToken';
 const USERNAME_KEY = 'username';
-const PASSWORD_KEY = 'password';
 const USER_KEY = 'user';
 const SITES_KEY = 'sites';
 
@@ -43,12 +42,12 @@ const SITES_KEY = 'sites';
   providedIn: 'root',
 })
 export class AuthService {
-  // เก็บ URL ที่ต้องการกลับไปหลัง Login สำเร็จ
+
   redirectUrl = '';
 
   constructor(private http: HttpClient) {}
 
-  // Login แบบเก่า ใช้ API /token
+
   async login(username: string, password: string): Promise<boolean> {
     if (!username || !password) {
       return false;
@@ -90,7 +89,7 @@ export class AuthService {
     }
   }
 
-  // Login แบบใหม่ ใช้ API /authen
+
   async login2(username: string, password: string): Promise<boolean> {
     if (!username || !password) {
       throw new LoginError(
@@ -100,7 +99,7 @@ export class AuthService {
       );
     }
 
-    // ป้องกัน token เก่าค้างแล้วทำให้เข้าใจผิดว่า Login สำเร็จ
+
     this.clearLoginSession();
 
     try {
@@ -180,7 +179,7 @@ export class AuthService {
     } catch (error: unknown) {
       const loginError = this.normalizeLoginError(error);
 
-      // ไม่พิมพ์ password หรือ request payload ลง Console
+
       console.warn('[AuthService] Login failed:', {
         reason: loginError.reason,
         status: loginError.status,
@@ -190,7 +189,7 @@ export class AuthService {
     }
   }
 
-  // Login แล้วคืน URL ที่ต้องไปต่อ
+
   async loginAndGetRedirect(
     username: string,
     password: string
@@ -201,10 +200,10 @@ export class AuthService {
       return '';
     }
 
-    /**
-     * ถ้า guard เคยบันทึกหน้าที่ต้องไปไว้ และไม่ใช่หน้า login ให้กลับไปหน้านั้น
-     * ถ้าไม่มี ให้ไปหน้า Main
-     */
+
+
+
+
     const redirect = this.redirectUrl;
 
     this.redirectUrl = '';
@@ -230,7 +229,7 @@ export class AuthService {
     return `/main/${allowedPages.has(preferredPage) ? preferredPage : 'overview'}`;
   }
 
-  // เช็กว่า token เดิมยังใช้ได้ไหม
+
   async tryLogin(): Promise<boolean> {
     const token = this.getToken();
 
@@ -269,25 +268,10 @@ export class AuthService {
       return true;
     } catch (err) {
       console.error('[AuthService] tryLogin error:', err);
-      return this.tryLoginUserPass();
-    }
-  }
-
-  // ลอง Login ใหม่ด้วย username/password เดิม
-  async tryLoginUserPass(): Promise<boolean> {
-    const username = localStorage.getItem(USERNAME_KEY);
-    const password = localStorage.getItem(PASSWORD_KEY);
-
-    if (!username || !password) {
       return false;
     }
-
-    return this.login(username, password);
   }
 
-  /**
-   * แปลง Error จาก HttpClient/RxJS ให้เป็นประเภทที่หน้า Login เข้าใจได้
-   */
   private normalizeLoginError(error: unknown): LoginError {
     if (error instanceof LoginError) {
       return error;
@@ -331,7 +315,7 @@ export class AuthService {
     );
   }
 
-  /** ล้างเฉพาะข้อมูล session ที่เกี่ยวกับการ Login ก่อนเริ่มรอบใหม่ */
+
   private clearLoginSession(): void {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(OLD_TOKEN_KEY);
@@ -339,7 +323,7 @@ export class AuthService {
     localStorage.removeItem(SITES_KEY);
   }
 
-  // ดึง token ปัจจุบัน
+
   getToken(): string {
     return (
       localStorage.getItem(TOKEN_KEY) ||
@@ -348,12 +332,12 @@ export class AuthService {
     );
   }
 
-  // ดึง username ที่เก็บไว้
+
   getUsername(): string {
     return localStorage.getItem(USERNAME_KEY) || '';
   }
 
-  // token.interceptor.ts เรียกใช้ตัวนี้
+
   getUser(): string {
     const username = localStorage.getItem(USERNAME_KEY);
 
@@ -384,7 +368,7 @@ export class AuthService {
     }
   }
 
-  // filtersite-pipe.ts เรียกใช้ตัวนี้
+
   getSites(): string[] {
     const rawSites = localStorage.getItem(SITES_KEY);
 
@@ -423,12 +407,12 @@ export class AuthService {
     }
   }
 
-  // เช็กว่า Login อยู่ไหม
+
   isLoggedIn(): boolean {
     return this.getToken().trim().length > 0;
   }
 
-  // Header สำหรับยิง API
+
   getAuthHeaders(): HttpHeaders {
     const token = this.getToken();
 
@@ -437,12 +421,11 @@ export class AuthService {
     });
   }
 
-  // Logout และลบข้อมูลออกจาก localStorage
+
   logout(): void {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(OLD_TOKEN_KEY);
     localStorage.removeItem(USERNAME_KEY);
-    localStorage.removeItem(PASSWORD_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(SITES_KEY);
 

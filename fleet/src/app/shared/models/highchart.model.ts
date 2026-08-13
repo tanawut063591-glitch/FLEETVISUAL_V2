@@ -1,4 +1,4 @@
-import { ChartOptions, LegendOptions, PlotOptions, ResponsiveOptions, SeriesAreaOptions, SeriesColumnOptions, SeriesLineOptions, SeriesOptions, SeriesOptionsType, TitleOptions, TooltipOptions, XAxisOptions, YAxisOptions } from "highcharts";
+import { ChartOptions, LegendOptions, PlotOptions, ResponsiveOptions, SeriesAreaOptions, SeriesColumnOptions, SeriesLineOptions, SeriesOptionsType, TitleOptions, TooltipOptions, XAxisOptions, YAxisOptions } from "highcharts";
 
 export interface ChartOptionConfigs{
     chart: ChartOptions;
@@ -16,7 +16,7 @@ export interface ChartParameters{
     yAxis?: YAxisOptions[];
     legend?: LegendOptions;
     plotOptions?: PlotOptions;
-    tooltip?: TooltipOptions; 
+    tooltip?: TooltipOptions;
     series?: SeriesOptionsType[] | SeriesLineOptions[] | SeriesAreaOptions[] | SeriesColumnOptions[];
     responsive?: ResponsiveOptions;
 }

@@ -12,12 +12,12 @@ export interface TagItems{
 
 export interface ResponseTagsModel{
     TagID: number;
-    Name: string; 
-    Address: string; 
+    Name: string;
+    Address: string;
     Description: string;
-    PointSource: string; 
+    PointSource: string;
     Group: string;
-    Unit: string; 
+    Unit: string;
     Scan: number;
     DataType: string;
     Alarm: number;

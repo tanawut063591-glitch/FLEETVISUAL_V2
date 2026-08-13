@@ -66,8 +66,8 @@ type UserAccountSetupMode = 'create' | 'link';
   standalone: false,
 })
 export class SettingsComponent implements OnInit, OnDestroy {
-  // Keep the original Settings tab UI and sequence:
-  // General → Users → Vessels → Groups.
+
+
   readonly tabs: SettingsTab[] = [
     { id: 'general', label: 'General', icon: 'fa fa-sun-o' },
     { id: 'users', label: 'Users', icon: 'fa fa-users' },
@@ -229,7 +229,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     private userAccountService: UserAccountService,
     private themeMode: ThemeModeService,
   ) {}
-  
+
   ngOnInit(): void {
     this.username = localStorage.getItem('username') || sessionStorage.getItem('username') || 'Admin';
     this.userAccountService.config$.pipe(takeUntil(this.destroy$)).subscribe((config) => {
@@ -329,7 +329,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.filteredCacheKey = key;
     return this.filteredCache;
   }
-  
+
   get filteredUsers(): UserSessionRecord[] {
     const search = this.userSearchTerm.trim().toLowerCase();
     return this.userSessions.filter((user) => {
@@ -375,7 +375,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   get userAccessRestrictedCount(): number {
     return this.userAccessRecords.filter((user) => user.accessScope !== 'all').length;
   }
-  
+
   get userAccessSuspendedCount(): number {
     return this.userAccessRecords.filter((user) => user.status === 'suspended').length;
   }
@@ -488,9 +488,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     this.clearInitialVesselLoadGuard();
     if (firstLoad) {
-      // Never leave the whole Settings panel behind a blocking spinner while a
-      // cold vessel endpoint is warming up. After a short grace period, render
-      // the page and continue the refresh unobtrusively in the header.
+
+
+
       this.initialVesselLoadGuard = setTimeout(() => {
         this.initialVesselLoadGuard = null;
         if (this.loading) {
@@ -506,8 +506,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (rows) => {
           this.clearInitialVesselLoadGuard();
-          // Reuse the exact machinery layout used by Realtime. This is a UI
-          // hydration step only; records are persisted when the vessel is saved.
+
+
           this.vessels = rows.map((vessel) => this.realtimeMachineryService.hydrateVessel(vessel));
           this.loading = false;
           this.refreshing = false;
@@ -1070,8 +1070,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.realtimeMachinery = this.realtimeMachineryService.getForPrefix(prefix);
 
     if (!this.realtimeMachinery.length) {
-      // Never keep engine positions from a previously selected prefix. Manual
-      // entries are preserved, but Realtime-derived rows are cleared safely.
+
+
       this.form.engineAssignments = (this.form.engineAssignments || []).filter(
         (assignment) => !this.isRealtimeAssignment(assignment),
       );
@@ -1937,7 +1937,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
     const seconds = this.clampSeconds(this.presenceRefreshSeconds, 20);
     this.presenceRefreshSub = timer(seconds * 1000, seconds * 1000)
       .pipe(takeUntil(this.destroy$))
-      .subscribe(() => this.loadUserSessions(true));
+      .subscribe(() => {
+        if (typeof document !== 'undefined' && document.hidden) return;
+        this.loadUserSessions(true);
+      });
   }
 
   private ensureVesselDerivatives(): void {

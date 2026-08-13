@@ -16,7 +16,7 @@ import { VesselPopupService } from '../../../shared/services/vessel-popup.servic
 import { FvRealtimeService } from '../../../shared/services/fv-realtime.service';
 import { NewHttpClientService } from '../../../shared/services/http-client1.service';
 import { getVesselStatusFromTimestamp } from '../../../shared/utils/vessel-status.util';
-import { LiveReportService } from '../../report/live-report.service';
+import { LiveReportService } from '../../../shared/services/live-report.service';
 import { LiveReportSnapshot } from '../../report/live-report.model';
 
 declare var google: any;
@@ -41,8 +41,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
   _data: any[] = [];
 
-  // มุมมองเริ่มต้นของหน้า Overview: ซูมเข้ามาที่อ่าวไทยและคาบสมุทรมาเลย์
-  // เพื่อให้ตำแหน่งเรือหลักอ่านง่ายใกล้เคียงภาพตัวอย่างที่ผู้ใช้กำหนด
+
+
   centerPosition = { lat: 10.25, lng: 102.25 };
   defaultZoom = 7;
 
@@ -61,11 +61,11 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   private popupPositionRaf: number | null = null;
   private mapViewportListeners: any[] = [];
   private readonly popupDesktopBreakpointPx = 900;
-  // Desktop callout keeps the original speech-bubble shape and points to
-  // the BACK (right edge) of the selected vessel name label. The offsets below
-  // match getPremiumShipIcon(): 190x54 icon, anchor (24,52), label x=45..170.
-  // Therefore the right edge of the label is +146px from the projected GPS
-  // anchor and the label vertical centre is -25.5px above it.
+
+
+
+
+
   private readonly selectedLabelRightOffsetPx = 146;
   private readonly selectedLabelCenterYOffsetPx = -25.5;
   private readonly popupArrowReachPx = 15;
@@ -90,7 +90,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   private resizeObserver?: ResizeObserver;
   private resizeTimer: ReturnType<typeof setTimeout> | null = null;
   private mapInitRetryTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly realtimeRefreshMs = 15000; // รีเฟรช popup/map เพื่อให้ Last seen เดินตามข้อมูล
+  private readonly realtimeRefreshMs = 60_000;
 
 
 
@@ -277,8 +277,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     overlay.setMap(this.map);
     this.popupProjectionOverlay = overlay;
 
-    // Coalesced with requestAnimationFrame, so map drag/zoom keeps the callout
-    // attached to the vessel marker without triggering Angular/API work.
+
+
     this.mapViewportListeners = [
       this.map.addListener('bounds_changed', () => this.schedulePopupPositionUpdate()),
       this.map.addListener('idle', () => this.schedulePopupPositionUpdate()),
@@ -313,8 +313,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    // Phones/tablets use the compact bottom-sheet layout. Keeping it detached
-    // from the map projection avoids a large card covering the selected marker.
+
+
     if (mapElement.clientWidth <= this.popupDesktopBreakpointPx) {
       popup.style.removeProperty('left');
       popup.style.removeProperty('right');
@@ -342,16 +342,16 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     const popupHeight = popup.offsetHeight || 500;
     const edgePadding = 18;
 
-    // The selected marker retains its white vessel-name label. The popup tail
-    // points to the right edge of that label ("behind the vessel name"), not
-    // to the GPS pin itself and not through a long connector line.
+
+
+
     const targetX = point.x + this.selectedLabelRightOffsetPx;
     const targetY = point.y + this.selectedLabelCenterYOffsetPx;
     const left = targetX + this.popupArrowReachPx;
 
-    // Keep the original callout relationship even when the vessel is close to
-    // the right edge. Google Maps pans the canvas (browser-only) just enough to
-    // make room, rather than flipping the speech bubble to the wrong side.
+
+
+
     const overflowRight = left + popupWidth + edgePadding - mapWidth;
     if (overflowRight > 0 && !this.popupAutoPanPending && this.map?.panBy) {
       this.popupAutoPanPending = true;
@@ -425,6 +425,10 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.realtimeTimer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) {
+        return;
+      }
+
       if (!this._data || this._data.length === 0) {
         return;
       }
@@ -434,9 +438,9 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       this.renderMap(this._data);
       this.syncSelectedPopup(selectedKey);
 
-      // Popup metrics refresh at most once per minute and only for the one
-      // vessel currently open. loadPopupSummary() serves fresh cache instantly,
-      // skips overlapping requests and never polls the whole fleet.
+
+
+
       if (this.selectedVessel) {
         this.loadPopupSummary(this.selectedVessel);
       }
@@ -512,7 +516,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     this.zone.run(() => {
       this.restoreSelectedMarkerVisual();
 
-      // เก็บข้อมูลเรือแบบ normalize เพื่อให้ popup อ่านค่า speed/load/fuel ได้ครบ
+
       const normalizedVessel = this.normalizePopupVessel(vessel);
 
       if (this.selectedMarker && this.selectedMarker !== marker) {
@@ -535,15 +539,15 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         localStorage.setItem('pastTrackVessel', JSON.stringify(normalizedVessel));
       } catch {}
 
-      // Publish the map selection to the shared vessel state. MainComponent
-      // listens to this stream and immediately updates the active Sidebar card.
+
+
       this.fvRealtimeService.setActiveVessel(normalizedVessel);
 
       this.loadPopupSummary(normalizedVessel);
 
-      // Clicking a marker keeps the operator's current map context intact.
-      // Sidebar/programmatic selection can request centering because the target
-      // vessel may currently be outside the visible viewport.
+
+
+
       if (ensureVisible && this.map && marker) {
         this.map.panTo(marker.getPosition());
 
@@ -553,8 +557,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       }
 
-      // The card is created by *ngIf, so wait one frame before measuring it.
-      // No server request is involved; this is browser-only map positioning.
+
+
       setTimeout(() => this.schedulePopupPositionUpdate(), 0);
     });
   }
@@ -738,16 +742,13 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
   getVesselStatus(vessel: any): MapStatus {
     const timestamp = this.getLatestTimestamp(vessel);
-    let diffMinutes: number | null = null;
-
     if (timestamp) {
       const date = new Date(timestamp);
 
       if (!Number.isNaN(date.getTime())) {
-        diffMinutes = Math.max(0, (Date.now() - date.getTime()) / 60000);
         const timestampStatus = getVesselStatusFromTimestamp(timestamp);
 
-        // Timestamp ใช้เกณฑ์เดียวกับ Sidebar และ Realtime
+
         if (timestampStatus === 'offline' || timestampStatus === 'idle') {
           return timestampStatus;
         }
@@ -771,8 +772,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getTextStatus(vessel: any): MapStatus | '' {
-    // ให้สถานะจาก Tag ข้อมูลจริงมาก่อน statusKey/status ที่อาจเป็นค่าค้าง
-    // ใช้ลำดับเดียวกับ Sidebar เพื่อให้สีและสถานะทั้งสองจุดตรงกัน
+
+
     const value =
       this.getFirstTagValue(vessel, [
         'VES_STATUS_TEXT',
@@ -805,9 +806,9 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     const color = this.getStatusColor(status);
 
     if (selected) {
-      // Keep the original vessel-name label visible while the popup is open.
-      // A subtle blue focus ring/border marks selection without changing the
-      // marker geometry used by the exact behind-name popup anchor.
+
+
+
       const text = this.escapeSvgText(this.truncateText(name, 18));
       const selectedSvg =
         '<svg width="190" height="54" viewBox="0 0 190 54" xmlns="http://www.w3.org/2000/svg">' +
@@ -872,7 +873,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getMarkerZIndex(status: string): number {
-    // ให้ Offline อยู่ด้านบนเมื่อเรือหลายลำมีตำแหน่งใกล้กัน
+
     if (status === 'offline') return 40;
     if (status === 'idle') return 30;
     return 20;
@@ -998,8 +999,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       ['engineLoad', 'engine_load', 'load']
     );
 
-    // ถ้ามีหลายเครื่อง ให้ใช้ค่าเฉลี่ยของเครื่องที่มี load จริง (> 0)
-    // เพื่อไม่ให้ tag ตัวแรกที่เป็น 0 ไปทับค่าจริงของอีกเครื่อง
+
+
     const activeLoads = values.filter((value) => value > 0);
     const value = activeLoads.length > 0
       ? activeLoads.reduce((sum, current) => sum + current, 0) / activeLoads.length
@@ -1056,7 +1057,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       ['distance', 'distanceToday', 'todayDistance', 'tripDistance']
     );
 
-    // เลือกค่าระยะทางที่มากกว่า 0 ก่อน เพราะ direct default บางเรือเป็น 0
+
     const value = values.find((item) => item > 0) ?? values[0];
 
     return this.formatNumber(value, 1);
@@ -1080,7 +1081,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   goRealtime(vessel: any, event?: Event): void {
-    // กัน click ซ้อนกับ Google Map และกันหน้าเว็บค้างจาก event bubble
+
     event?.preventDefault();
     event?.stopPropagation();
 
@@ -1091,12 +1092,12 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       localStorage.setItem('selectedVessel', JSON.stringify(selected));
     }
 
-    // สำคัญ: ไป /main/realtime ตรง ๆ ไม่ส่ง :id
-    // เพราะบาง prefix/name มีช่องว่างหรืออักขระพิเศษแล้วทำให้ route/realtime ค้างได้
+
+
     this.zone.run(() => {
       this.router.navigate(['/main/realtime']).then(() => {
         if (selected) {
-          // set active หลัง navigate สำเร็จ เพื่อให้ RealtimeComponent พร้อมรับข้อมูลก่อน
+
           setTimeout(() => this.fvRealtimeService.setActiveVessel(selected), 50);
         }
       });
@@ -1114,8 +1115,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     const cached = this.popupSummaryCache[cacheKey];
     const cacheAge = cached ? Date.now() - cached.fetchedAt : Number.POSITIVE_INFINITY;
 
-    // Stale-while-revalidate: show the last known KPI set immediately. Reopening
-    // the same vessel within one minute costs zero API requests.
+
+
     if (cached?.snapshot) {
       this.popupSnapshot = cached.snapshot;
     }
@@ -1126,15 +1127,15 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    // A failing backend gets a quiet period instead of a retry storm from every
-    // open browser. Cached values stay visible while the circuit is cooling down.
+
+
     if ((this.popupSummaryRetryAfter[cacheKey] || 0) > Date.now()) {
       this.popupSummaryLoading = false;
       this.popupSummaryError = true;
       return;
     }
 
-    // Never restart the same in-flight request on the 15-second map refresh.
+
     if (this.popupSummaryLoading && this.popupSummaryRequestKey === cacheKey) {
       return;
     }
@@ -1268,8 +1269,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       return metric.value;
     }
 
-    // Before the lightweight KPI request returns, reuse any Overview values
-    // already present instead of flashing a false numeric zero.
+
+
     const vessel = this.selectedVessel;
     if (!vessel) {
       return '—';
@@ -1464,9 +1465,9 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getLatestTimestamp(vessel: any): any {
-    // ใช้เวลาของข้อมูลตำแหน่ง GPS ก่อนเสมอ เพราะเป็นตัวบอกว่าเรือส่งตำแหน่งล่าสุดเมื่อไร
-    // ห้ามใช้เวลา STATUS / ENGINE LOAD เป็น Last seen ของ Marker เนื่องจาก tag เหล่านี้อาจยังอัปเดต
-    // แม้ข้อมูลตำแหน่งเรือจะหยุดส่งแล้ว ทำให้ Map แสดง Online ทั้งที่ Sidebar เป็น Offline
+
+
+
     return (
       this.getFirstTagTimestamp(vessel, [
         'VES_GPS_LAT',
@@ -1738,9 +1739,9 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     const cacheKey = this.getSummaryCacheKey(vessel);
     const cached = this.popupSummaryCache[cacheKey]?.newData || {};
 
-    // รวมข้อมูล 2 ส่วนเข้าด้วยกัน:
-    // 1) overview data ที่แผนที่ใช้วาง marker
-    // 2) popup summary data ที่ดึงเพิ่มจาก getcurrentvalues ตอนคลิกเรือ
+
+
+
     const mergedNewData = {
       ...this.getTagMap(vessel),
       ...cached,
@@ -1766,8 +1767,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       fuelConsumption: this.getFuelConsumptionText(mergedVessel),
       course: this.getCourseText(mergedVessel),
       distance: this.getDistanceText(mergedVessel),
-      // Last seen ต้องยึด timestamp จาก overview/GPS เดิม ไม่ให้ข้อมูล Summary ที่โหลดตอนเปิด Popup
-      // เข้ามาทำให้เวลาถูกเปลี่ยนเป็น Now และสถานะกลับเป็น Online
+
+
       timestamp: this.getLatestTimestamp(vessel),
       newData: mergedNewData,
     };
@@ -1824,7 +1825,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       return null;
     }
 
-    // ค่า sentinel จากระบบเดิม ไม่ใช่ค่าจริง
+
     if (num === 999999 || num === -999999) {
       return 0;
     }

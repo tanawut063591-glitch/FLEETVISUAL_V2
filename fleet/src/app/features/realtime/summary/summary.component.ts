@@ -20,18 +20,18 @@ type SummaryInput = RealtimeValue | number | string | null | undefined;
   styleUrls: ['./summary.component.css'],
 })
 export class SummaryComponent {
-  // Speed
+
   @Input() speedCurr: SummaryInput = null;
   @Input() speedAvg: SummaryInput = null;
   @Input() speedMax: SummaryInput = null;
 
-  // Position
+
   @Input() lat: SummaryInput = null;
   @Input() long: SummaryInput = null;
   @Input() heading: SummaryInput = null;
   @Input() distance: SummaryInput = null;
 
-  // Fuel
+
   @Input() fuel_cons: SummaryInput = null;
   @Input() fuelAvg: SummaryInput = null;
   @Input() fuelTotal: SummaryInput = null;
@@ -41,9 +41,9 @@ export class SummaryComponent {
     public coordinatesService: CoordinatesService
   ) {}
 
-  /**
-   * เปิดตำแหน่งเรือใน Google Maps
-   */
+
+
+
   linkToMap(): void {
     const latitude = this.getValue(this.lat);
     const longitude = this.getValue(this.long);
@@ -63,9 +63,9 @@ export class SummaryComponent {
     );
   }
 
-  /**
-   * ดึง value จาก object realtime หรือค่าตรง ๆ
-   */
+
+
+
   getValue(input: SummaryInput): string | number | null {
     if (input === null || input === undefined) {
       return null;
@@ -78,9 +78,9 @@ export class SummaryComponent {
     return input;
   }
 
-  /**
-   * ดึง tagName สำหรับ tooltip
-   */
+
+
+
   getTagName(input: SummaryInput): string {
     if (!input || typeof input !== 'object') {
       return '';
@@ -89,10 +89,10 @@ export class SummaryComponent {
     return input.tagName || input.name || '';
   }
 
-  /**
-   * ดึง timestamp สำหรับ tooltip
-   * คืนค่าเป็น string เสมอ เพื่อไม่ให้ Angular 20 error
-   */
+
+
+
+
   getTimestamp(input: SummaryInput): string {
     if (!input || typeof input !== 'object') {
       return '';
@@ -111,9 +111,9 @@ export class SummaryComponent {
     return String(timestamp);
   }
 
-  /**
-   * ใช้ใน HTML แทน tooltipFormatService.getTooltip(...) ตรง ๆ
-   */
+
+
+
   getTooltip(input: SummaryInput): string {
     return this.tooltipFormatService.getTooltip(
       this.getTagName(input),
@@ -121,9 +121,9 @@ export class SummaryComponent {
     );
   }
 
-  /**
-   * แสดงค่าทั่วไป
-   */
+
+
+
   displayValue(input: SummaryInput, fallback = '0'): string {
     const value = this.getValue(input);
 
@@ -134,9 +134,9 @@ export class SummaryComponent {
     return String(value);
   }
 
-  /**
-   * แสดงตัวเลข เช่น 6.5, 309.33
-   */
+
+
+
   displayNumber(input: SummaryInput, digits = 2, fallback = '0.00'): string {
     const value = Number(this.getValue(input));
 
@@ -147,9 +147,9 @@ export class SummaryComponent {
     return value.toFixed(digits);
   }
 
-  /**
-   * แสดงพิกัด lat / long เป็นทศนิยม 6 ตำแหน่ง
-   */
+
+
+
   displayCoordinate(input: SummaryInput, digits = 6): string {
     const value = Number(this.getValue(input));
 
@@ -160,9 +160,9 @@ export class SummaryComponent {
     return value.toFixed(digits);
   }
 
-  /**
-   * เช็กพิกัดก่อนเปิด Google Maps
-   */
+
+
+
   private isValidCoordinate(value: string | number | null): boolean {
     if (value === null || value === undefined || value === '') {
       return false;

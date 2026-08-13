@@ -19,17 +19,17 @@ export class LoginGuard implements CanActivate {
   ) {}
 
   async canActivate(
-    route: ActivatedRouteSnapshot,
-    state: RouterStateSnapshot
+    _route: ActivatedRouteSnapshot,
+    _state: RouterStateSnapshot
   ): Promise<boolean | UrlTree> {
-    return this.checkLogin(state.url);
+    return this.checkLogin();
   }
 
-  private async checkLogin(url: string): Promise<boolean | UrlTree> {
-    /**
-     * ตอนนี้โปรเจกต์ยังเหลือแค่หน้า Login
-     * เลยให้เข้า Login ได้ก่อนเสมอ
-     */
+  private async checkLogin(): Promise<boolean | UrlTree> {
+
+
+
+
     if (!this.authService.isLoggedIn()) {
       return true;
     }

@@ -1,4 +1,4 @@
-// ─── Auth / Session ───────────────────────────────────────────────────────────
+
 
 export interface InverterSessionResponse {
     status: 'success' | 'error';
@@ -19,7 +19,7 @@ export interface DestroyInverterSessionRequest {
     sessionId: string;
 }
 
-// ─── Devices ──────────────────────────────────────────────────────────────────
+
 
 export interface InverterDeviceModel {
     devDn?: string;
@@ -42,7 +42,7 @@ export interface InverterDevicesResponse {
     message?: string;
 }
 
-// ─── Realtime Status ──────────────────────────────────────────────────────────
+
 
 export interface InverterRealtimeModel {
     devId?: string;
@@ -71,7 +71,7 @@ export interface InverterStatusResponse {
     message?: string;
 }
 
-// ─── Control Commands ─────────────────────────────────────────────────────────
+
 
 export type InverterCommand = 'SHUTDOWN' | 'START' | 'POWER_LIMIT' | 'ZERO_EXPORT';
 
@@ -97,7 +97,7 @@ export interface InverterCommandResponse {
     message?: string;
 }
 
-// ─── Command Logs ─────────────────────────────────────────────────────────────
+
 
 export interface InverterCommandLogModel {
     id: number;

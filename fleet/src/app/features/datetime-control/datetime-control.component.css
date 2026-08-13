@@ -394,7 +394,7 @@
   box-shadow: 0 14px 30px rgba(37, 99, 235, 0.11);
 }
 
-/* DIALOG */
+
 :host ::ng-deep .ui-dialog {
   width: 94vw !important;
   max-width: 1544px !important;
@@ -429,7 +429,7 @@
   top: 3% !important;
 }
 
-/* MANAGE TAGS */
+
 .manage-tags-header {
   width: 100%;
   min-height: 78px;
@@ -642,7 +642,7 @@
   background: #fff1f2;
 }
 
-/* TAG GRID */
+
 .manage-tags-grid {
   width: 100%;
   display: grid;
@@ -935,7 +935,7 @@
   background: rgba(245, 158, 11, 0.10);
 }
 
-/* SELECTED PANEL */
+
 .selected-panel {
   width: 300px;
   min-height: 548px;
@@ -1104,7 +1104,7 @@
   line-height: 1.4;
 }
 
-/* SCROLLBAR */
+
 .tags-scroll::-webkit-scrollbar,
 .tag-list::-webkit-scrollbar,
 .selected-list::-webkit-scrollbar,
@@ -1129,7 +1129,7 @@
   border-radius: 999px;
 }
 
-/* GLOBAL */
+
 button {
   font-family: inherit;
   user-select: none;
@@ -1141,7 +1141,7 @@ select:focus {
   outline: none;
 }
 
-/* RESPONSIVE */
+
 @media screen and (max-width: 1360px) {
   .dl-top {
     grid-template-columns: 1fr;
@@ -1248,7 +1248,7 @@ select:focus {
 }
 
 
-/* Angular 20 / PrimeNG 20 detail polish */
+
 .tag-summary-chip strong small {
   margin-left: 2px;
   color: #60a5fa;
@@ -1266,9 +1266,9 @@ select:focus {
   font-weight: 900;
 }
 
-/* =========================================================
-   BLACK PRO THEME - Shared Chart / Data Logger filter panel
-   ========================================================= */
+
+
+
 :host-context([data-theme='dark']) .dl-panel {
   background:
     radial-gradient(circle at 14% -15%, rgba(37, 99, 235, 0.14), transparent 30%),
@@ -1376,7 +1376,7 @@ select:focus {
   color: #e2e8f0 !important;
 }
 
-/* Prime / tag management overlay keeps the same dark visual language. */
+
 :host-context([data-theme='dark']) ::ng-deep .ui-datepicker,
 :host-context([data-theme='dark']) ::ng-deep p-dialog .ui-widget-content,
 :host-context([data-theme='dark']) ::ng-deep .manage-tags-dialog .ui-dialog-content,
@@ -1411,9 +1411,9 @@ select:focus {
 }
 
 
-/* =========================================================
-   TAG LOADING + MOBILE DIALOG REFINEMENT (v47)
-   ========================================================= */
+
+
+
 .tag-load-state {
   min-height: 150px;
   padding: 22px;
@@ -1491,7 +1491,7 @@ select:focus {
   line-height: 1.35;
 }
 
-/* PrimeNG 20 uses .p-dialog; retain legacy .ui-dialog support. */
+
 :host ::ng-deep .manage-tags-dialog.p-dialog,
 :host ::ng-deep .pro-tags-dialog.p-dialog,
 :host ::ng-deep .manage-tags-dialog.ui-dialog,
@@ -1720,11 +1720,11 @@ select:focus {
   border-color: rgba(148, 163, 184, 0.2);
 }
 
-/* =========================================================
-   PREMIUM INLINE DATE PICKER — Chart / Data Logger (v54)
-   Keeps the existing header position while matching the
-   clean right-icon field shown in the UI reference.
-   ========================================================= */
+
+
+
+
+
 .dl-calendar {
   width: 310px;
   max-width: 100%;
@@ -1824,7 +1824,7 @@ select:focus {
   cursor: pointer !important;
 }
 
-/* Do not show the old left-side trigger when a legacy PrimeNG class is present. */
+
 :host ::ng-deep .dl-prime-calendar .ui-calendar-button,
 :host ::ng-deep .dl-calendar .ui-calendar-button {
   display: none !important;
@@ -1885,10 +1885,10 @@ select:focus {
 }
 
 
-/* =========================================================
-   COMPACT PREMIUM DATE CONTROLS (v54.1)
-   Keeps the existing Chart/Data Logger header placement.
-   ========================================================= */
+
+
+
+
 .dl-toolbar {
   gap: 8px;
 }
@@ -2014,9 +2014,9 @@ select:focus {
 }
 
 
-/* =========================================================
-   MANAGE TAGS — reliable touch scrolling and fewer nested traps
-   ========================================================= */
+
+
+
 .manage-tags-body {
   overflow-x: hidden;
   overflow-y: auto;
@@ -2131,8 +2131,8 @@ select:focus {
     flex: 0 0 auto;
   }
 
-  /* One natural page scroll is much easier on phones than a scroll area
-     inside every sensor group. */
+
+
   .tag-list,
   .selected-list {
     max-height: none !important;
@@ -2150,11 +2150,11 @@ select:focus {
   }
 }
 
-/* =========================================================
-   2026-08-04 WHITE REALTIME FRAME ALIGNMENT
-   Shared Data Logger / Chart filter surface. Light theme only;
-   dark mode remains unchanged below.
-   ========================================================= */
+
+
+
+
+
 .dl-panel {
   border-radius: 16px;
   border: 1px solid rgba(148, 163, 184, 0.24);
@@ -2200,7 +2200,7 @@ select:focus {
   box-shadow: none;
 }
 
-/* Preserve the established black professional theme. */
+
 :host-context([data-theme='dark']) .dl-panel {
   background:
     radial-gradient(circle at 14% -15%, rgba(37, 99, 235, 0.14), transparent 30%),
@@ -2225,11 +2225,11 @@ select:focus {
     inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
 }
 
-/* =========================================================
-   2026-08-04 REALTIME DARK SURFACE ALIGNMENT
-   Neutral black/graphite surfaces shared by Data Logger and
-   Chart. These values intentionally mirror Realtime cards.
-   ========================================================= */
+
+
+
+
+
 :host-context([data-theme='dark']) .dl-panel {
   background: linear-gradient(
     180deg,

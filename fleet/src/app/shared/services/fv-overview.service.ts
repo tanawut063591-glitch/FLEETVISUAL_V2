@@ -11,14 +11,17 @@ import * as fvOverviewActions from '../../store/actions/fv-overview.action';
 export class FvOverviewService {
   private timerSubscription: Subscription | null = null;
   private tagFileSubscription: Subscription | null = null;
-  private readonly defaultInterval = 5000;
+  private readonly defaultInterval = 30_000;
+  private readonly minimumInterval = 15_000;
+  private activeInterval = 0;
+  private isStarted = false;
+  private isLoadingTags = false;
 
   private overviewTags: any[] = [];
   private overviewDatas: any[] = [];
   private pendingVessels: any[] = [];
 
   private readonly overviewPayloadSource = new Subject<any[]>();
-
   readonly overviewPayload$: Observable<any[]> = this.overviewPayloadSource.asObservable();
 
   constructor(
@@ -27,30 +30,73 @@ export class FvOverviewService {
   ) {}
 
   start(interval?: number): void {
-    this.stop();
-    this.resetData();
+    const safeInterval = this.resolveInterval(interval);
+    this.stopTimerOnly();
+    this.isStarted = true;
+    this.activeInterval = safeInterval;
 
-    const safeInterval = interval && interval > 0 ? interval : this.defaultInterval;
+    if (this.overviewTags.length > 0) {
+      this.startTimer(safeInterval);
+      this.applyPendingVessels();
+      return;
+    }
+
     this.loadOverviewTags(safeInterval);
   }
 
+  ensureStarted(interval?: number): void {
+    const safeInterval = this.resolveInterval(interval);
+
+    if (this.isStarted && this.activeInterval === safeInterval) {
+      return;
+    }
+
+    this.start(safeInterval);
+  }
+
+  setVessels(fvInfos: any[]): void {
+    this.pendingVessels = Array.isArray(fvInfos) ? [...fvInfos] : [];
+
+    if (!this.isStarted || this.overviewTags.length === 0) {
+      return;
+    }
+
+    this.applyPendingVessels();
+  }
+
+  stop(): void {
+    this.stopTimerOnly();
+    this.isStarted = false;
+    this.activeInterval = 0;
+    this.overviewDatas = [];
+  }
+
+  private resolveInterval(interval?: number): number {
+    const parsed = Number(interval);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return this.defaultInterval;
+    }
+    return Math.max(this.minimumInterval, parsed);
+  }
+
   private loadOverviewTags(interval: number): void {
+    if (this.isLoadingTags) {
+      return;
+    }
+
+    this.isLoadingTags = true;
     this.tagFileSubscription = this.http
       .getJsonFile('/assets/tags/overview.tag.json')
       .subscribe({
         next: (res: any) => {
+          this.isLoadingTags = false;
           this.overviewTags = this.mapOverviewTags(res);
           this.startTimer(interval);
-
-          if (this.pendingVessels.length > 0) {
-            const pending = [...this.pendingVessels];
-            this.pendingVessels = [];
-            this.setVessels(pending);
-          }
+          this.applyPendingVessels();
         },
         error: (error) => {
+          this.isLoadingTags = false;
           console.error('[FvOverviewService] load tags error:', error);
-          this.resetData();
         },
       });
   }
@@ -63,7 +109,6 @@ export class FvOverviewService {
     return Object.keys(res)
       .map((key: string) => {
         const tag = res[key];
-
         return {
           name: tag?.name || '',
           tagName: tag?.tagName || '',
@@ -74,30 +119,36 @@ export class FvOverviewService {
   }
 
   private startTimer(interval: number): void {
+    this.timerSubscription?.unsubscribe();
     this.timerSubscription = timer(interval, interval).subscribe(() => {
       this.tick();
     });
   }
 
   private tick(): void {
-    if (this.overviewDatas.length > 0) {
-      this.emitOverviewPayload(this.overviewDatas);
+    if (!this.isStarted || this.overviewDatas.length === 0) {
+      return;
     }
+
+    if (typeof document !== 'undefined' && document.hidden) {
+      return;
+    }
+
+    this.emitOverviewPayload(this.overviewDatas);
   }
 
-  setVessels(fvInfos: any[]): void {
-    if (!Array.isArray(fvInfos) || fvInfos.length === 0) {
+  private applyPendingVessels(): void {
+    if (!this.isStarted) {
+      return;
+    }
+
+    if (this.pendingVessels.length === 0) {
       this.overviewDatas = [];
       this.emitOverviewPayload([]);
       return;
     }
 
-    if (!this.overviewTags || this.overviewTags.length === 0) {
-      this.pendingVessels = fvInfos;
-      return;
-    }
-
-    this.overviewDatas = this.buildOverviewDatas(fvInfos);
+    this.overviewDatas = this.buildOverviewDatas(this.pendingVessels);
     this.emitOverviewPayload(this.overviewDatas);
   }
 
@@ -113,7 +164,7 @@ export class FvOverviewService {
   }
 
   private generateTags(fv: any): any {
-    if (!fv) {
+    if (!fv || this.overviewTags.length === 0) {
       return null;
     }
 
@@ -121,10 +172,6 @@ export class FvOverviewService {
     const prefix = fvInfo?.prefix || fvInfo?.id || fvInfo?.name;
 
     if (!prefix) {
-      return null;
-    }
-
-    if (!this.overviewTags || this.overviewTags.length === 0) {
       return null;
     }
 
@@ -147,17 +194,11 @@ export class FvOverviewService {
     };
   }
 
-  stop(): void {
+  private stopTimerOnly(): void {
     this.timerSubscription?.unsubscribe();
     this.tagFileSubscription?.unsubscribe();
-
     this.timerSubscription = null;
     this.tagFileSubscription = null;
-  }
-
-  private resetData(): void {
-    this.overviewTags = [];
-    this.overviewDatas = [];
-    this.pendingVessels = [];
+    this.isLoadingTags = false;
   }
 }

@@ -1,10 +1,10 @@
 export type VesselOperationalStatus = 'online' | 'idle' | 'offline' | 'nodata';
 
-/**
- * Fleet-wide connectivity thresholds.
- * - Idle: no fresh data for 1 hour through 24 hours.
- * - Offline: no fresh data for more than 24 hours.
- */
+
+
+
+
+
 export const VESSEL_IDLE_AFTER_MINUTES = 60;
 export const VESSEL_OFFLINE_AFTER_MINUTES = 24 * 60;
 
@@ -35,7 +35,7 @@ export function getVesselStatusFromTimestamp(
   return 'online';
 }
 
-/** Supports compact labels returned by older endpoints, e.g. 45 M, 2 H, 3 D. */
+
 export function getVesselStatusFromLastSeenLabel(
   value: unknown,
 ): VesselOperationalStatus {

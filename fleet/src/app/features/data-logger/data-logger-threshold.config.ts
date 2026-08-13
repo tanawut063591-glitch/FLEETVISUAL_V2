@@ -5,10 +5,10 @@ export interface DataLoggerDefaultThresholdRule {
     threshold: DataLoggerThreshold;
 }
 
-/*
-    Threshold สำรอง ใช้เมื่อ backend ยังไม่ได้ส่ง limit มากับ tag
-    แนะนำระยะยาว: ให้ backend หรือ tag config ส่ง warningLow / warningHigh / alarmLow / alarmHigh มากับ tag โดยตรง
-*/
+
+
+
+
 export const DATA_LOGGER_DEFAULT_THRESHOLDS: DataLoggerDefaultThresholdRule[] = [
     {
         keywords: ['consumption today', 'consumption total', 'total consumption', 'cons today', 'vtot', 'vtotal'],

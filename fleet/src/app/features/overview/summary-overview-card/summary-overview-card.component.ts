@@ -17,7 +17,7 @@ export class SummaryOverviewCardComponent implements OnInit, OnChanges {
     public coordinatesService: CoordinatesService
   ) {}
 
-  ngOnChanges(changes: SimpleChanges): void {}
+  ngOnChanges(_changes: SimpleChanges): void {}
 
   ngOnInit(): void {}
 

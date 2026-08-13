@@ -13,7 +13,7 @@ export class App implements OnInit {
   constructor(private themeModeService: ThemeModeService) {}
 
   ngOnInit(): void {
-    // Initialize before routed pages render so Login and Dashboard use one theme state.
+
     this.themeModeService.init();
   }
 }

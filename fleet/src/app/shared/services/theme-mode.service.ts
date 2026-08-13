@@ -15,8 +15,8 @@ export class ThemeModeService {
     const isCurrentDefaultVersion =
       localStorage.getItem(this.defaultVersionKey) === this.defaultVersion;
 
-    // Apply the new Light default once after this update. Afterwards, keep the
-    // mode explicitly selected by the user in localStorage.
+
+
     const mode = isCurrentDefaultVersion ? this.getSavedMode() : this.defaultMode;
 
     if (!isCurrentDefaultVersion) {

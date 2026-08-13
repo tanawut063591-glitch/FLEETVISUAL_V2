@@ -9,7 +9,7 @@ import * as fvInfoActions from '../../store/actions/fv-info.action';
 })
 export class FvInfoService {
   private timerSubscription: Subscription | null = null;
-  private readonly defaultInterval = 5000;
+  private readonly defaultInterval = 60_000;
   private activeInterval = 0;
   private readonly refreshSource = new Subject<void>();
 
@@ -45,6 +45,10 @@ export class FvInfoService {
   }
 
   private tick(): void {
+    if (typeof document !== 'undefined' && document.hidden) {
+      return;
+    }
+
     this.refreshSource.next();
     this.store.dispatch(new fvInfoActions.InitialFVInfo());
   }

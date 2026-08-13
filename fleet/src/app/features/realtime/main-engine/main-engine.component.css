@@ -340,7 +340,7 @@
 .shaft__pulse {
   position: absolute;
   inset: 0;
-  /* Keep the moving highlight inside its own shaft segment. */
+
   background: linear-gradient(
     90deg,
     transparent 0%,
@@ -512,9 +512,9 @@
 :host-context([data-theme='dark']) .footer-stat strong { color: #f8fafc; }
 
 
-/* =========================================================
-   MOBILE CARD — preserve the compact desktop machinery layout
-   ========================================================= */
+
+
+
 @media (max-width: 720px) {
   .engine-console {
     min-height: 346px;
@@ -596,11 +596,11 @@
   }
 }
 
-/* =========================================================
-   COMPACT PREMIUM TELEMETRY BAR
-   The machinery title and premium icon live in the parent card header. This
-   bar preserves visual balance without repeating “Main Engine” and status.
-   ========================================================= */
+
+
+
+
+
 .engine-telemetry-bar {
   min-width: 0;
   min-height: 48px;
@@ -700,11 +700,11 @@
   .engine-telemetry-bar .engine-live { min-width: 0; padding-inline: 6px; }
 }
 
-/* =========================================================
-   2026-08-04 PROFESSIONAL LIVE FUEL RATE
-   Unified machinery reading: one clear metric, one subtle context line and
-   no nested metric card. CSS-only presentation; no extra polling or timers.
-   ========================================================= */
+
+
+
+
+
 .engine-telemetry-bar {
   position: relative;
   min-height: 56px;
@@ -846,11 +846,11 @@
 }
 
 
-/* ========================================================================
-   2026-08-10 COMPACT LIVE FUEL RATE — Premium balanced hierarchy
-   Keeps the parent machinery card size unchanged. Only the internal ribbon is
-   compressed so supply/return/speed telemetry gets equal visual priority.
-   ======================================================================== */
+
+
+
+
+
 .engine-telemetry-bar {
   min-height: 44px;
   padding: 6px 10px;

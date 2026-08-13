@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { firstValueFrom, Observable, of, timer } from 'rxjs';
 import { catchError, exhaustMap, shareReplay } from 'rxjs/operators';
 
+import { environment } from '../../../environments/environment';
+
 import { NewHttpClientService } from './http-client1.service';
 import { UserAccessControlService } from './user-access-control.service';
 
@@ -19,6 +21,7 @@ export interface OverviewPayloadRow {
 export class FleetVesselDataService {
   private readonly overviewTagPath = '/assets/tags/overview.tag.json';
   private overviewStream$?: Observable<OverviewPayloadRow[]>;
+  private sidebarStream$?: Observable<OverviewPayloadRow[]>;
   private lastRows: OverviewPayloadRow[] = [];
 
   constructor(
@@ -26,18 +29,38 @@ export class FleetVesselDataService {
     private userAccess: UserAccessControlService,
   ) {}
 
-  /**
-   * Main stream for Sidebar / Overview / Realtime.
-   * - Always tries backend first.
-   * - Refreshes every 5s by default.
-   * - Falls back to stable demo data instead of showing a blank page.
-   */
-  getOverviewVessels(refreshMs = 5000): Observable<OverviewPayloadRow[]> {
+
+
+
+
+
+
+  getSidebarVessels(refreshMs = 60_000): Observable<OverviewPayloadRow[]> {
+    const safeRefreshMs = Math.max(30_000, Number(refreshMs) || 60_000);
+
+    if (!this.sidebarStream$) {
+      this.sidebarStream$ = timer(0, safeRefreshMs).pipe(
+        exhaustMap(() => {
+          if (typeof document !== 'undefined' && document.hidden && this.lastRows.length > 0) {
+            return of(this.lastRows);
+          }
+          return this.loadSidebarRowsSafe();
+        }),
+        shareReplay({ bufferSize: 1, refCount: true })
+      );
+    }
+
+    return this.sidebarStream$;
+  }
+
+  getOverviewVessels(refreshMs = 30_000): Observable<OverviewPayloadRow[]> {
+    const safeRefreshMs = Math.max(15_000, Number(refreshMs) || 30_000);
+
     if (!this.overviewStream$) {
-      this.overviewStream$ = timer(0, refreshMs).pipe(
-        // Ignore the next timer tick while the current backend refresh is still
-        // running. Promise-based requests cannot be cancelled by switchMap and
-        // previously accumulated in the background on a slow first login.
+      this.overviewStream$ = timer(0, safeRefreshMs).pipe(
+
+
+
         exhaustMap(() => this.loadOverviewRowsSafe()),
         shareReplay({ bufferSize: 1, refCount: true })
       );
@@ -54,6 +77,35 @@ export class FleetVesselDataService {
     return this.loadOverviewRowsSafe();
   }
 
+  private async loadSidebarRowsSafe(): Promise<OverviewPayloadRow[]> {
+    try {
+      const vessels = await this.loadVessels();
+      const rows = this.buildSidebarRows(vessels);
+      this.lastRows = rows;
+      return rows;
+    } catch (error) {
+      console.warn('[FleetVesselDataService] sidebar stream fallback:', error);
+      const fallback = this.buildSidebarRows(
+        this.getSafeFallbackVessels()
+      );
+      this.lastRows = fallback;
+      return fallback;
+    }
+  }
+
+  private buildSidebarRows(vessels: any[]): OverviewPayloadRow[] {
+    return (Array.isArray(vessels) ? vessels : [])
+      .map((item: any) => this.normalizeVessel(item))
+      .filter((fv: any) => !!fv.name)
+      .map((fv: any) => ({
+        fv,
+        fvInfo: fv,
+        datas: [],
+        newData: {},
+        tags: [],
+      }));
+  }
+
   async loadVessels(): Promise<any[]> {
     try {
       const vessels = await this.newHttp.getVesselInfo2();
@@ -68,7 +120,7 @@ export class FleetVesselDataService {
       console.warn('[FleetVesselDataService] loadVessels fallback:', error);
     }
 
-    return this.userAccess.filterVessels(this.getFallbackVessels());
+    return this.getSafeFallbackVessels();
   }
 
   async loadOverviewRows(vessels?: any[]): Promise<OverviewPayloadRow[]> {
@@ -81,12 +133,12 @@ export class FleetVesselDataService {
     let payloadRows = this.buildPayloadRows(fvInfos, tags);
 
     if (payloadRows.length === 0) {
-      payloadRows = this.buildPayloadRows(this.userAccess.filterVessels(this.getFallbackVessels()), tags);
+      payloadRows = this.buildPayloadRows(this.getSafeFallbackVessels(), tags);
     }
 
     await this.attachCurrentValues(payloadRows);
 
-    // Keep direct values even when backend returns partial data.
+
     payloadRows.forEach((row) => this.seedDirectValues(row, row.fv));
 
     this.lastRows = payloadRows;
@@ -99,7 +151,7 @@ export class FleetVesselDataService {
         .then((rows) => {
           const safeRows = rows && rows.length > 0
             ? rows
-            : this.buildPayloadRows(this.userAccess.filterVessels(this.getFallbackVessels()), this.getDefaultOverviewTags());
+            : this.buildPayloadRows(this.getSafeFallbackVessels(), this.getDefaultOverviewTags());
 
           this.lastRows = safeRows;
           observer.next(safeRows);
@@ -107,7 +159,7 @@ export class FleetVesselDataService {
         })
         .catch((error) => {
           console.warn('[FleetVesselDataService] overview stream fallback:', error);
-          const fallback = this.buildPayloadRows(this.userAccess.filterVessels(this.getFallbackVessels()), this.getDefaultOverviewTags());
+          const fallback = this.buildPayloadRows(this.getSafeFallbackVessels(), this.getDefaultOverviewTags());
           this.lastRows = fallback;
           observer.next(fallback);
           observer.complete();
@@ -115,7 +167,7 @@ export class FleetVesselDataService {
     }).pipe(
       catchError((error) => {
         console.warn('[FleetVesselDataService] overview observable fallback:', error);
-        const fallback = this.buildPayloadRows(this.userAccess.filterVessels(this.getFallbackVessels()), this.getDefaultOverviewTags());
+        const fallback = this.buildPayloadRows(this.getSafeFallbackVessels(), this.getDefaultOverviewTags());
         this.lastRows = fallback;
         return of(fallback);
       })
@@ -353,8 +405,8 @@ export class FleetVesselDataService {
         return;
       }
 
-      // ถ้า backend ดึงค่าปัจจุบันมาแล้ว ห้ามเอาค่า default จาก vessel info ไปทับ
-      // สาเหตุเดิมที่ popup เป็น 0 คือ speed/fuel/distance จริงถูก seedDirectValues ทับด้วย 0
+
+
       const existing = row.newData[key];
       const existingValue = existing?.value;
 
@@ -521,6 +573,13 @@ export class FleetVesselDataService {
       { name: 'VES_GPS_DIS', tagName: 'VES-GPS-DIS', cal: false },
       { name: 'VES_STATUS', tagName: 'VES-STATUS', cal: false },
     ];
+  }
+
+  private getSafeFallbackVessels(): any[] {
+    if (environment.production) {
+      return [];
+    }
+    return this.userAccess.filterVessels(this.getFallbackVessels());
   }
 
   private getFallbackVessels(): any[] {

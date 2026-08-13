@@ -1,5 +1,3 @@
-import { ResponseRealtimeModel } from "./response.model";
-
 export interface PanelConfigModel{
     id: string;
     visible: boolean;

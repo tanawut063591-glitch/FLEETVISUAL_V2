@@ -1,7 +1,7 @@
-/* =========================================
-   1. GLOBAL & BASE DASHBOARD
-   ทำให้หน้า Realtime อยู่ในพื้นที่ด้านขวา ไม่ไปดัน Sidebar
-========================================= */
+
+
+
+
 :host {
   display: block;
   width: 100%;
@@ -24,7 +24,7 @@
   overflow: visible;
 }
 
-/* ลดขนาด content ข้างในนิดหน่อย ให้ Sidebar แสดงเต็ม */
+
 .premium-dashboard-inner {
   width: 100%;
   min-width: 1180px;
@@ -32,15 +32,15 @@
   transform-origin: top left;
 }
 
-/* ถ้า HTML ไม่มี .premium-dashboard-inner ให้ใช้ตัวนี้แทน */
+
 .premium-dashboard>* {
   max-width: 100%;
   box-sizing: border-box;
 }
 
-/* =========================================
-   2. HEADER BAR
-========================================= */
+
+
+
 .dash-header {
   width: 100%;
   background: #ffffff;
@@ -140,10 +140,10 @@
   box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
 }
 
-/* =========================================
-   3. TOP KPI ROW
-   ปรับให้ไม่กว้างเกินจนดัน Layout
-========================================= */
+
+
+
+
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(160px, 1fr));
@@ -207,8 +207,8 @@
   color: #ef4444;
 }
 
-/* Selected-vessel alarm KPI. The count is fed by the shared alarm polling
-   snapshot, so visual updates do not add another backend request. */
+
+
 .alarm-kpi-card {
   position: relative;
   isolation: isolate;
@@ -288,10 +288,10 @@
   color: #64748b;
 }
 
-/* =========================================
-   4. MAIN SPLIT LAYOUT
-   ปรับขนาด Card ให้ไม่ล้นขวา
-========================================= */
+
+
+
+
 .main-split {
   display: grid;
   grid-template-columns: 330px minmax(0, 1fr);
@@ -315,9 +315,9 @@
   min-width: 0;
 }
 
-/* =========================================
-   5. PREMIUM CARDS
-========================================= */
+
+
+
 .premium-card {
   min-width: 0;
   background: #ffffff;
@@ -361,7 +361,7 @@
   gap: 8px;
 }
 
-/* ป้องกัน component ลูกทะลุกรอบ */
+
 .card-body.pd-0 {
   padding: 0 !important;
   position: relative !important;
@@ -382,9 +382,9 @@
   flex-direction: column;
 }
 
-/* =========================================
-   TODAY SUMMARY
-========================================= */
+
+
+
 .sum-row {
   display: flex;
   align-items: center;
@@ -448,7 +448,7 @@
   margin-top: 2px;
 }
 
-/* Navigation Summary - scoped names avoid collision with the main header navigation */
+
 .summary-nav-item {
   display: flex;
   flex-direction: column;
@@ -476,9 +476,9 @@
   margin-bottom: 2px;
 }
 
-/* =========================================
-   MAP
-========================================= */
+
+
+
 .map-wrapper {
   position: relative;
   flex: 1;
@@ -493,9 +493,9 @@
   height: 100%;
 }
 
-/* =========================================
-   6. RESPONSIVE
-========================================= */
+
+
+
 @media (max-width: 1600px) {
   .premium-dashboard {
     padding: 18px;
@@ -547,9 +547,9 @@
   }
 }
 
-/* =========================================
-   PRO UPDATE: Vessel header with real vessel image/name
-========================================= */
+
+
+
 .realtime-vessel-header {
   min-height: 92px;
   gap: 18px;
@@ -667,14 +667,14 @@
 }
 
 
-/* Realtime page must scroll inside Main content, not get clipped by :host */
+
 :host ::ng-deep .realtime-page-scroll-fix {
   min-height: 0;
 }
 
-/* =========================================================
-   DARK BLACK MODE - Realtime dashboard polish
-   ========================================================= */
+
+
+
 :host-context([data-theme='dark']) .premium-dashboard {
   background:
     radial-gradient(circle at 20% 0%, rgba(37, 99, 235, 0.14), transparent 30%),
@@ -777,10 +777,10 @@
 }
 
 
-/* =========================================================
-   BLACK PRO POLISH - Realtime detail pass
-   แก้ความชัดของตัวหนังสือและ card ในธีมดำ
-   ========================================================= */
+
+
+
+
 :host-context([data-theme='dark']) .premium-dashboard {
   background:
     radial-gradient(circle at 18% -8%, rgba(37, 99, 235, 0.15), transparent 28%),
@@ -905,7 +905,7 @@
   color: #fecaca !important;
 }
 
-/* ให้ content ของเครื่องยนต์อ่านชัดขึ้น */
+
 :host-context([data-theme='dark']) .card-body.pd-0 {
   min-height: 292px;
   background: linear-gradient(180deg, rgba(6, 10, 16, 0.95), rgba(2, 4, 8, 0.96)) !important;
@@ -939,7 +939,7 @@
   }
 }
 
-/* Realtime numeric formatting safeguard */
+
 .ftd1-value,
 .kpi-val,
 .st-val,
@@ -951,11 +951,11 @@
 }
 
 
-/* =========================================================
-   TODAY SUMMARY - DARK THEME POLISH
-   แยกสไตล์ออกจากเมนู Header เพื่อไม่ให้ hover/active ของ .nav-item
-   มาทับช่อง Distance / Course / Coordinate
-   ========================================================= */
+
+
+
+
+
 :host-context([data-theme='dark']) .today-summary-card {
   background:
     linear-gradient(180deg, rgba(15, 22, 33, 0.99) 0%, rgba(6, 10, 16, 0.99) 100%) !important;
@@ -1078,9 +1078,9 @@
   line-height: 1.35;
 }
 
-/* =========================================================
-   GENERATOR COMMAND CARDS — Premium realtime redesign
-   ========================================================= */
+
+
+
 .dg-card {
   position: relative;
   border-radius: 18px;
@@ -1290,7 +1290,7 @@
   }
 }
 
-/* Keep the left navigation summary and map visually aligned with the machinery cards. */
+
 .today-summary-card,
 .col-left>.premium-card,
 .col-right>.premium-card {
@@ -1472,9 +1472,9 @@
   background: #05080d !important;
 }
 
-/* =========================================================
-   TODAY SUMMARY COMMAND CARD — professional information design
-   ========================================================= */
+
+
+
 .today-summary-card--pro {
   position: relative;
   overflow: hidden;
@@ -2073,7 +2073,7 @@
   }
 }
 
-/* Dark theme */
+
 :host-context([data-theme='dark']) .today-summary-card--pro {
   border-color: rgba(96, 165, 250, 0.2) !important;
   background:
@@ -2215,17 +2215,17 @@
   color: #fb923c;
 }
 
-/* =========================================================
-   LAPTOP 100% RESPONSIVE LAYOUT
-   Prevents Today Summary + 3 machinery cards from being
-   compressed after the vessel sidebar consumes page width.
-   ========================================================= */
+
+
+
+
+
 .main-split {
   container-type: inline-size;
   container-name: realtime-main-content;
 }
 
-/* Common 13–16 inch laptop viewport (1366–1680 CSS px). */
+
 @media (min-width: 1251px) and (max-width: 1740px) {
   .premium-dashboard {
     padding: 16px 16px 90px;
@@ -2267,8 +2267,8 @@
   }
 }
 
-/* Container-query safeguard: responds to the actual content width,
-   including sidebars, browser scaling, split-screen and OS DPI. */
+
+
 @container realtime-main-content (max-width: 1240px) {
   .col-right {
     grid-template-columns: repeat(2, minmax(290px, 1fr));
@@ -2309,7 +2309,7 @@
   }
 }
 
-/* Avoid clipped titles/statuses at intermediate browser zoom levels. */
+
 .dg-card>.card-header {
   min-width: 0;
 }
@@ -2349,7 +2349,7 @@
 }
 
 
-/* Realtime active-alarm state — dark theme */
+
 :host-context([data-theme='dark']) .alarm-kpi-card--active {
   border-color: rgba(248, 113, 113, 0.42) !important;
   background:
@@ -2374,9 +2374,9 @@
   }
 }
 
-/* =========================================================
-   SELECTED-VESSEL ALARM SOURCE HIGHLIGHT
-   ========================================================= */
+
+
+
 .realtime-alert-kpi {
   position: relative;
   isolation: isolate;
@@ -2457,13 +2457,13 @@
     linear-gradient(135deg, rgba(69, 10, 10, 0.42), rgba(11, 19, 32, 0.98)) !important;
 }
 
-/* =========================================================
-   FINAL MOBILE REALTIME LAYOUT
-   A later desktop breakpoint previously reset the KPI grid to three columns
-   on phones. The third column sat outside the clipped viewport, so Fuel
-   Consumption and Alarms looked as if they were missing. Keep this final in
-   the file so all six KPI cards are visible in a 2 x 3 mobile grid.
-   ========================================================= */
+
+
+
+
+
+
+
 @media (max-width: 900px) {
   .premium-dashboard {
     width: 100%;
@@ -2643,11 +2643,11 @@
 }
 
 
-/* =========================================================
-   MOBILE REALTIME VIEWPORT STABILITY
-   Keep the first card clear of the shell header and reserve enough safe
-   space for the floating vessel selector without covering final readings.
-   ========================================================= */
+
+
+
+
+
 @media (max-width: 991px) {
   :host {
     scroll-margin-top: 12px;
@@ -2665,9 +2665,9 @@
 }
 
 
-/* =========================================================
-   MOBILE REALTIME — web-card density without oversized panels
-   ========================================================= */
+
+
+
 @media (max-width: 720px) {
   .premium-dashboard {
     padding-inline: 8px;
@@ -2697,11 +2697,11 @@
     height: auto;
   }
 }
-/* =========================================================
-   PREMIUM GENERATOR HEADER ICON
-   Reuse the detailed generator-core visual in the card header and remove the
-   duplicate identity block from inside diesel-generator telemetry cards.
-   ========================================================= */
+
+
+
+
+
 .dg-card > .card-header {
   min-height: 60px;
 }
@@ -2791,11 +2791,11 @@
   }
 }
 
-/* =========================================================
-   PREMIUM MACHINERY HEADER SYSTEM
-   One strong identity per card: the machinery name stays in the header while
-   the large duplicate identity block is removed from the telemetry body.
-   ========================================================= */
+
+
+
+
+
 .dg-card > .card-header {
   min-height: 62px;
   padding: 10px 13px;
@@ -2928,11 +2928,11 @@
   .dg-header-icon--motor { border-radius: 50%; }
 }
 
-/* =========================================================
-   2026-08-04 REALTIME PROFESSIONAL FINISH
-   Visual-only refinement. It adds no subscriptions, polling, requests or
-   JavaScript work; off-screen machinery cards may skip paint work.
-   ========================================================= */
+
+
+
+
+
 .premium-dashboard {
   background:
     radial-gradient(circle at 82% 0%, rgba(37, 99, 235, 0.045), transparent 28%),
@@ -3159,12 +3159,12 @@
 }
 
 
-/* ========================================================================
-   2026-08-10 PREMIUM MACHINERY ALIGNMENT
-   Keep every machinery outer card ending on the same baseline while compact
-   Live Fuel Rate ribbons reduce visual dominance inside the card.
-   CSS-only: zero additional server requests or runtime polling.
-   ======================================================================== */
+
+
+
+
+
+
 .col-right {
   align-items: stretch;
 }
@@ -3190,8 +3190,8 @@
   height: 100%;
 }
 
-/* A restrained cyan/blue header rail keeps the machinery cards modern without
-   competing with the telemetry values. */
+
+
 .dg-card > .card-header {
   position: relative;
   overflow: hidden;

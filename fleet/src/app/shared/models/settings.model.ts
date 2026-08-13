@@ -85,7 +85,7 @@ export interface UserAccessRecord {
   email: string;
   role: UserAccessRole;
   status: UserAccountStatus;
-  /** Backend identity account id. Passwords are never stored in this record. */
+
   accountId?: string;
   accountProvisioning?: UserAccountProvisioning;
   accountLastSyncedAt?: string;
@@ -143,7 +143,7 @@ export interface VesselEngineAssignment {
   displayName: string;
   position: string;
   quantity: number;
-  /** Stable key generated from the Realtime prefix + card row/column. */
+
   realtimeKey?: string;
   realtimeRow?: number;
   realtimeCol?: number;

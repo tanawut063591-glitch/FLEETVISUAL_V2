@@ -29,7 +29,7 @@
   margin: 0;
 }
 
-/* เลื่อนลงมาเพื่อไม่ทับปุ่ม แผนที่ / ดาวเทียม ของ Google */
+
 .map-filter-bar {
   position: absolute;
   top: 58px;
@@ -95,7 +95,7 @@
 
 
 
-/* Popup: original speech-bubble card, anchored behind vessel name. */
+
 
 .vessel-popup {
   position: absolute;
@@ -129,8 +129,8 @@
   z-index: 2;
 }
 
-/* Desktop always keeps the original tail on the LEFT side of the popup.
-   The tip is positioned at the right edge of the selected vessel-name label. */
+
+
 .vessel-popup.popup-right-of-marker .popup-arrow {
   left: -15px;
   right: auto;
@@ -158,8 +158,8 @@
 }
 
 @media (min-width: 901px) {
-  /* Avoid a one-frame flash at the fallback top-left coordinates while the
-     Google Maps projection is being measured. */
+
+
   .vessel-popup:not(.popup-right-of-marker) {
     opacity: 0;
     pointer-events: none;
@@ -566,7 +566,7 @@
     grid-template-columns: 1fr;
   }
 }
-/* V7: align map overlays with approved reference */
+
 .map-filter-bar {
   top: 52px;
   left: 18px;
@@ -624,7 +624,7 @@
   }
 }
 
-/* Mobile status controls: keep every status visible without horizontal clipping. */
+
 @media (max-width: 900px) {
   .map-filter-bar {
     left: 10px;
@@ -687,7 +687,7 @@
 }
 
 
-/* Overview KPI popup: compact premium layout on narrow phones. */
+
 @media (max-width: 430px) {
   .vessel-popup {
     left: 8px;
@@ -738,8 +738,8 @@
 }
 
 
-/* Behind-name callout is desktop-only. Mobile keeps the existing compact popup
-   and does not draw a map tail that would consume horizontal space. */
+
+
 @media (max-width: 900px) {
   .vessel-popup .popup-arrow {
     display: none !important;

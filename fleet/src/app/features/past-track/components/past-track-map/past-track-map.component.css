@@ -274,7 +274,7 @@
     color: #1769ff;
 }
 
-/* Phone/tablet map layout */
+
 @media (max-width: 760px) {
     .map-panel {
         border-radius: 14px;

@@ -84,8 +84,8 @@ export class NewHttpClientService {
                 .filter((x: any) => this.securityService.hasAccess(x.name))
                 .sort(this.compare);
 
-              // ถ้า user ไม่อยู่ใน permission list เดิม อย่าให้หน้าจอว่าง
-              // แต่ยังคงตัดเรือที่ยกเลิกการใช้งานออกเสมอ
+
+
               return (accessible.length > 0 ? accessible : activeVessels).sort(this.compare);
             }),
             catchError((err) => {
@@ -148,15 +148,15 @@ export class NewHttpClientService {
   }
 
 
-  /**
-   * Loads historian values with the same API contract used by the legacy Angular 5 app.
-   *
-   * The project currently has two backend routes in use:
-   *  - API2 direct route: { Tags: string[] }
-   *  - FleetVisual gateway route: { HistorianTag: tag[] }
-   *
-   * The first successful contract is cached, so normal requests use only one HTTP call.
-   */
+
+
+
+
+
+
+
+
+
   getHistorianValues(start: string, end: string, tags: any[]): Observable<any> {
     const tagNames = this.mapTagNames(tags);
 
@@ -432,7 +432,7 @@ export class NewHttpClientService {
       return of([]);
     }
 
-    // _cacheBust ใช้กัน browser/backend คืนค่าค้าง ทำให้หน้า Realtime/Diagram อัปเดตจริงทุกรอบ
+
     const request = {
       Name: names,
       VesselName: name || '',
@@ -524,7 +524,7 @@ export class NewHttpClientService {
   private getAuthHeaders(): HttpHeaders {
     const token = this.authService.getToken();
 
-    // API2 เดิมของโปรเจกต์ Angular 5 ใช้ token แบบ raw ไม่ใช่ Bearer
+
     return new HttpHeaders({
       Authorization: token,
     });

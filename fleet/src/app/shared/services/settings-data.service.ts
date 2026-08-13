@@ -70,10 +70,10 @@ export class SettingsDataService {
     private fleetVesselData: FleetVesselDataService,
   ) {}
 
-  /**
-   * Combines live vessel telemetry with editable metadata stored in the admin database.
-   * Telemetry remains the source of truth for vessel status, coordinates and last-seen time.
-   */
+
+
+
+
   getVessels(forceRefresh = false): Observable<VesselSettingsRecord[]> {
     if (forceRefresh) this.backendVessels$ = undefined;
 
@@ -101,9 +101,9 @@ export class SettingsDataService {
         }),
       );
 
-      // Main/Sidebar normally already has the vessel list. Emit that snapshot
-      // immediately so Settings never blocks on a duplicate cold API request,
-      // then replace it with the refreshed backend result when available.
+
+
+
       this.backendVessels$ = (cachedRows.length
         ? concat(of(cachedRows), backendRows$)
         : backendRows$
@@ -288,11 +288,11 @@ export class SettingsDataService {
     );
   }
 
-  /**
-   * Loads server-side login sessions when the optional userSessions endpoint is configured.
-   * Until that endpoint is available, the current browser session is returned so the page
-   * remains useful without presenting mock users as real online accounts.
-   */
+
+
+
+
+
   getUserSessions(forceRefresh = false): Observable<UserSessionRecord[]> {
     if (forceRefresh) this.userSessions$ = undefined;
 
@@ -522,10 +522,10 @@ export class SettingsDataService {
     );
   }
 
-  /**
-   * The gateway and API2 vessel calls are started together. The first non-empty
-   * response wins, removing the old worst-case 12 second sequential wait.
-   */
+
+
+
+
   private loadCurrentInfoVessels(): Observable<VesselSettingsRecord[]> {
     const gateway$ = this.backend.getVesselInfo().pipe(
       timeout(4500),

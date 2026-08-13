@@ -24,16 +24,16 @@ import {
   LiveReportSnapshot,
   LiveReportTab,
 } from './live-report.model';
-import { LiveReportService } from './live-report.service';
+import { LiveReportService } from '../../shared/services/live-report.service';
 import {
   ReportPdfCacheService,
   ReportPdfCacheValue,
-} from './report-pdf-cache.service';
-import { ClientPdfExportService } from './client-pdf-export.service';
+} from '../../shared/services/report-pdf-cache.service';
+import { ClientPdfExportService } from '../../shared/services/client-pdf-export.service';
 import {
   OfficialReportArchiveEntry,
   OfficialReportLibraryService,
-} from './official-report-library.service';
+} from '../../shared/services/official-report-library.service';
 
 type ReportType = 'd' | 'm';
 
@@ -150,8 +150,8 @@ export class ReportComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadStoredVessel();
 
-    // Report uses one shared current-values request every 60 seconds. It does not
-    // regenerate PDFs or download a full historian range on an automatic timer.
+
+
     this.realtimeService.ensureStarted(this.liveRefreshSeconds * 1000);
 
     this.watchActiveVessel();
@@ -262,7 +262,7 @@ export class ReportComponent implements OnInit, OnDestroy {
     }
     return this.hasPdf ? 'Official report service' : 'Not loaded';
   }
-
+  
   get officialPdfPageLabel(): string {
     const pageCount = this.loadedArchiveEntry?.pageCount || this.localArchiveEntry?.pageCount;
     return pageCount ? `${pageCount} pages` : 'Page count from PDF';
@@ -612,8 +612,8 @@ export class ReportComponent implements OnInit, OnDestroy {
     if (tab === 'live') {
       this.realtimeService.ensureStarted(this.liveRefreshSeconds * 1000);
     } else {
-      // Stop current-value polling while the user is reading an official file.
-      // A bundled/local archive may open automatically without calling the report server.
+
+
       this.realtimeService.stop();
       this.refreshLocalArchiveAvailability(true);
     }
@@ -946,9 +946,9 @@ export class ReportComponent implements OnInit, OnDestroy {
       this.reportFileName = archiveEntry.fileName;
     }
 
-    // Local archive and cache loads are intentionally silent. The compact
-    // command bar already shows the source/status and a success banner would
-    // add visual noise every time yesterday's completed report auto-opens.
+
+
+
     this.successMessage = this.pdfFromLocalArchive || fromCache
       ? ''
       : 'Report PDF loaded and validated successfully.';

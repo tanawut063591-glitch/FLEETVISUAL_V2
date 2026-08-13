@@ -30,24 +30,24 @@ type AuxEngineInput = RealtimeValue | number | string | null | undefined;
 export class AuxEngineComponent implements OnChanges {
   @Input() activeAlerts: readonly AlertRecord[] = [];
 
-  // Fuel supply
+
   @Input() flow_supply: AuxEngineInput = null;
   @Input() temp_supply: AuxEngineInput = null;
   @Input() dens_supply: AuxEngineInput = null;
 
-  // Fuel return
+
   @Input() flow_return: AuxEngineInput = null;
   @Input() temp_return: AuxEngineInput = null;
   @Input() dens_return: AuxEngineInput = null;
 
-  // Consumption
+
   @Input() cons: AuxEngineInput = null;
   @Input() consL: AuxEngineInput = null;
 
-  // Engine speed
+
   @Input() speed_eng: AuxEngineInput = null;
 
-  // ค่าอุณหภูมิที่แปลงแล้ว ใช้แสดงใน HTML
+
   displayTempSupply = '';
   displayTempReturn = '';
   isRunning = false;
@@ -77,9 +77,9 @@ export class AuxEngineComponent implements OnChanges {
     }
   }
 
-  /**
-   * ดึง value จาก object realtime หรือค่าตรง ๆ
-   */
+
+
+
   getValue(input: AuxEngineInput): string {
     if (input === null || input === undefined) {
       return '';
@@ -98,9 +98,9 @@ export class AuxEngineComponent implements OnChanges {
     return String(input);
   }
 
-  /**
-   * ดึง tagName สำหรับ tooltip / logic
-   */
+
+
+
   getTagName(input: AuxEngineInput): string {
     if (!input || typeof input !== 'object') {
       return '';
@@ -109,9 +109,9 @@ export class AuxEngineComponent implements OnChanges {
     return input.tagName || input.name || '';
   }
 
-  /**
-   * ดึง timestamp สำหรับ tooltip
-   */
+
+
+
   getTimestamp(input: AuxEngineInput): string {
     if (!input || typeof input !== 'object') {
       return '';
@@ -130,9 +130,9 @@ export class AuxEngineComponent implements OnChanges {
     return String(timestamp);
   }
 
-  /**
-   * ใช้ใน HTML แทน tooltipFormatService.getTooltip(...) ตรง ๆ
-   */
+
+
+
   getTooltip(input: AuxEngineInput): string {
     return this.tooltipFormatService.getTooltip(
       this.getTagName(input),
@@ -140,9 +140,9 @@ export class AuxEngineComponent implements OnChanges {
     );
   }
 
-  /**
-   * แสดงตัวเลขแบบปลอดภัย
-   */
+
+
+
   displayNumber(
     input: AuxEngineInput,
     digits: number = 2,
@@ -157,9 +157,9 @@ export class AuxEngineComponent implements OnChanges {
     return value.toFixed(digits);
   }
 
-  /**
-   * ใช้กับค่าที่อาจติดลบ เช่น consumption
-   */
+
+
+
   displayAbsNumber(
     input: AuxEngineInput,
     digits: number = 2,
@@ -174,9 +174,9 @@ export class AuxEngineComponent implements OnChanges {
     return value.toFixed(digits);
   }
 
-  /**
-   * แปลงอุณหภูมิของบาง vessel เช่น A01 จาก Kelvin เป็น Celsius
-   */
+
+
+
   changeTemp(value: string, tagName: string): string {
     if (!value) {
       return '';

@@ -99,7 +99,7 @@ export interface SeriesOptions{
     showInLegend?: boolean;
     yAxis?: number;
     data?: any[];
-    fillOpacity?: number; 
+    fillOpacity?: number;
     borderColor?: string;
     borderRadius?: number;
     borderWidth?: number;

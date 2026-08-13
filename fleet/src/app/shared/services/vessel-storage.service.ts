@@ -20,7 +20,7 @@ export class VesselStorageService {
     try {
       localStorage.setItem(key, JSON.stringify(vessel));
     } catch {
-      // localStorage อาจถูกปิดในบาง browser mode
+
     }
   }
 

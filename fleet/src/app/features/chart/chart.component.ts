@@ -254,15 +254,15 @@ export class ChartComponent implements OnInit, OnDestroy {
         this.recreateChartsForTypeChange();
     }
 
-    /**
-     * Highcharts can keep the existing line-series renderer when a chart is
-     * updated from Line to Area in place. In that case the button changes but
-     * the SVG area path is never created, so Area looks identical to Line.
-     *
-     * Remove the chart components for one render cycle and create fresh chart
-     * instances. This is deterministic for every type transition and avoids
-     * stale series graphics, event handlers and clipped SVG paths.
-     */
+
+
+
+
+
+
+
+
+
     private recreateChartsForTypeChange(): void {
         if (this.chartRebuildTimer) {
             clearTimeout(this.chartRebuildTimer);
@@ -303,13 +303,13 @@ export class ChartComponent implements OnInit, OnDestroy {
         }
     }
 
-    /**
-     * Highcharts normally creates the area path from the supplied options. In a
-     * long-lived Angular chart, however, an existing Line series can occasionally
-     * survive a type switch and keep only its graph path. Apply the Area options
-     * once more to the actual chart instance so the SVG fill path is guaranteed
-     * to exist in both All Series and Separate Groups modes.
-     */
+
+
+
+
+
+
+
     private enforceAreaRendering(chart: Highcharts.Chart): void {
         if (!chart || this.chartType !== 'area') {
             return;
@@ -428,9 +428,9 @@ export class ChartComponent implements OnInit, OnDestroy {
             return;
         }
 
-        // Cancel a delayed restore from a previous fullscreen session. Without
-        // this guard, rapidly entering fullscreen again can resize the new
-        // fullscreen chart back to the dashboard dimensions.
+
+
+
         this.clearFullscreenRestoreTimers();
 
         var doc = document as any;
@@ -455,10 +455,10 @@ export class ChartComponent implements OnInit, OnDestroy {
 
         this.clearFullscreenFallback();
         this.fullscreenTarget = target;
-        // Highcharts appends an `outside` tooltip to document.body. Native
-        // fullscreen renders only the fullscreen element and its descendants,
-        // so that tooltip becomes invisible. Keep it inside the chart while the
-        // card is fullscreen, then restore the outside tooltip on exit.
+
+
+
+
         this.setChartTooltipOutside(target, false);
         this.markView();
 
@@ -482,7 +482,7 @@ export class ChartComponent implements OnInit, OnDestroy {
                 }
                 return;
             } catch (_error) {
-                // Continue with the deterministic CSS fallback below.
+
             }
         }
 
@@ -609,9 +609,9 @@ export class ChartComponent implements OnInit, OnDestroy {
     }
 
     private scheduleFullscreenResize(target: string): void {
-        // Native fullscreen dimensions settle over more than one animation frame.
-        // Re-measure a few times and keep a ResizeObserver attached so the plot
-        // continues to fill the viewport after browser UI, DPI or orientation changes.
+
+
+
         var delays = [0, 50, 140, 300, 650];
         for (var i = 0; i < delays.length; i++) {
             setTimeout(() => this.resizeChartForFullscreen(target), delays[i]);
@@ -638,9 +638,9 @@ export class ChartComponent implements OnInit, OnDestroy {
         var cardHeight = Math.max(420, Math.floor(cardRect.height || card.clientHeight || viewportHeight));
         var chartHeight = Math.max(320, cardHeight - headerHeight);
 
-        // Supplying both dimensions is important here. A fixed height from a prior
-        // render otherwise survives Highcharts reflow and leaves a large blank band
-        // below the plot in fullscreen mode.
+
+
+
         chart.setSize(cardWidth, chartHeight, false);
         chart.reflow();
     }
@@ -648,11 +648,11 @@ export class ChartComponent implements OnInit, OnDestroy {
     private restoreChartSize(target: string): void {
         this.clearFullscreenRestoreTimers();
 
-        // Highcharts.setSize(width, height) stores both fullscreen dimensions in
-        // chart.options. The previous implementation reset only the height, so
-        // the fullscreen width survived after exit and the normal dashboard plot
-        // overflowed behind the Selected Parameters panel. Reset both dimensions
-        // to null so Highcharts measures its responsive host again.
+
+
+
+
+
         var restore = () => {
             if (this.fullscreenTarget === target) {
                 return;
@@ -668,16 +668,16 @@ export class ChartComponent implements OnInit, OnDestroy {
             try {
                 chart.pointer?.reset(false, 0);
             } catch (_error) {
-                // A hover point may already have been destroyed during refresh.
+
             }
 
             chart.setSize(null, null, false);
             chart.reflow();
         };
 
-        // Browser fullscreen, flex layout and the side panel do not always settle
-        // in the same frame. Re-measure a few times so the chart always returns to
-        // its original responsive card size without requiring a page refresh.
+
+
+
         [0, 50, 160, 320].forEach((delay) => {
             var timer = setTimeout(() => {
                 if (typeof requestAnimationFrame === 'function') {
@@ -708,10 +708,10 @@ export class ChartComponent implements OnInit, OnDestroy {
         var isGroupChart = target.indexOf('group:') === 0;
         var groupSuffix = isGroupChart ? '-' + target.substring(6) : '';
 
-        // Export every chart as a wide 2:1 landscape image. Highcharts normally
-        // uses the on-screen chart size (600 x 550 for All Lines), which creates
-        // an almost portrait PNG. An explicit source size keeps All Lines and
-        // Separate Groups consistent, wide and presentation-ready.
+
+
+
+
         var sourceWidth = 1800;
         var sourceHeight = 900;
         var exportOptions = {
@@ -762,12 +762,12 @@ export class ChartComponent implements OnInit, OnDestroy {
     }
 
 
-    /**
-     * `tooltip.outside` is useful in the normal dashboard because the hover card
-     * may extend beyond the SVG. It cannot be used in native fullscreen because
-     * Highcharts mounts that tooltip under document.body, outside the browser's
-     * fullscreen top layer. Toggle the option without rebuilding the whole chart.
-     */
+
+
+
+
+
+
     private setChartTooltipOutside(target: string, outside: boolean): void {
         var chart = this.getChartInstance(target) as any;
         if (!chart) {
@@ -781,8 +781,8 @@ export class ChartComponent implements OnInit, OnDestroy {
             chart.update({ tooltip: { outside: outside } }, false);
         }
 
-        // Hide a tooltip created in the previous container so the next pointer
-        // movement recreates it at the correct position immediately.
+
+
         if (chart.tooltip && typeof chart.tooltip.hide === 'function') {
             chart.tooltip.hide(0);
         }
@@ -882,9 +882,9 @@ export class ChartComponent implements OnInit, OnDestroy {
         return item ? item.key : index;
     }
 
-    // ============================================================
-    // Data mapping
-    // ============================================================
+
+
+
 
     private buildSeries(raw: any[], tags: any[]): ChartSeriesItem[] {
         var items: ChartSeriesItem[] = [];
@@ -938,7 +938,7 @@ export class ChartComponent implements OnInit, OnDestroy {
         return items;
     }
 
-    private extractSeriesEntries(response: any, tags: any[]): any[] {
+    private extractSeriesEntries(response: any, _tags: any[]): any[] {
         var source = response;
 
         if (typeof source === 'string') {
@@ -1314,9 +1314,9 @@ export class ChartComponent implements OnInit, OnDestroy {
         return '';
     }
 
-    // ============================================================
-    // Chart building
-    // ============================================================
+
+
+
 
     private rebuildCharts() {
         if (!this.selectedSeries || this.selectedSeries.length === 0) {
@@ -1325,9 +1325,9 @@ export class ChartComponent implements OnInit, OnDestroy {
             return;
         }
 
-        // Update the existing tracked chart cards in place. Keeping the card
-        // element stable prevents the browser from leaving Fullscreen whenever
-        // Auto Refresh replaces the Highcharts options/data.
+
+
+
         this.mainChartOptions = this.createChartOptions('All Selected Parameters', this.selectedSeries, 550, 'main');
         this.groupCharts = this.createGroupedCharts(this.selectedSeries);
 
@@ -1366,7 +1366,7 @@ export class ChartComponent implements OnInit, OnDestroy {
         return result;
     }
 
-    private createChartOptions(title: string, seriesItems: ChartSeriesItem[], height: number, target: string): Highcharts.Options {
+    private createChartOptions(_title: string, seriesItems: ChartSeriesItem[], _height: number, target: string): Highcharts.Options {
         var highSeries: any[] = [];
         var darkTheme = this.isDarkTheme();
         var chartBackground = darkTheme ? '#05080d' : '#ffffff';
@@ -1376,8 +1376,8 @@ export class ChartComponent implements OnInit, OnDestroy {
         var primaryText = darkTheme ? '#f8fafc' : '#0f172a';
         var tooltipBackground = darkTheme ? '#121925' : '#ffffff';
         var tooltipBorder = darkTheme ? '#475569' : '#bfdbfe';
-        // Keep the hover card compact so it does not cover the chart. When
-        // many tags are selected, only the value list scrolls internally.
+
+
         var tooltipMaxHeight = Math.max(
             132,
             Math.min(182, (typeof window !== 'undefined' ? window.innerHeight : 900) - 230)
@@ -1410,8 +1410,8 @@ export class ChartComponent implements OnInit, OnDestroy {
                 return '-';
             }
 
-            // Preserve historian precision without forcing trailing zeroes.
-            // This produces values such as 801.7524, 820.377 and 562,245.
+
+
             return value.toLocaleString('en-US', {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 4
@@ -1423,8 +1423,8 @@ export class ChartComponent implements OnInit, OnDestroy {
                 return null;
             }
 
-            // Highcharts keeps points ordered by X. Binary search avoids scanning
-            // every historian sample whenever the pointer moves across the chart.
+
+
             var low = 0;
             var high = points.length - 1;
             while (low <= high) {
@@ -1492,22 +1492,22 @@ export class ChartComponent implements OnInit, OnDestroy {
                 data: chartData,
                 color: item.color,
                 yAxis: axisLayout.seriesAxis[i],
-                // Area uses a translucent fill, Step preserves each value until the
-                // next sample, and Column renders discrete historian samples.
+
+
                 step: isStepChart ? 'left' : undefined,
-                // Use a solid RGBA fill instead of an SVG gradient. This matches
-                // the proven Area rendering used by the original chart and avoids
-                // browsers retaining only the line path after a runtime type switch.
+
+
+
                 fillColor: isAreaChart
                     ? this.hexToRgba(item.color, darkTheme ? 0.24 : 0.17)
                     : undefined,
                 lineWidth: isColumnChart ? undefined : (isAreaChart ? 1.9 : 1.9),
                 trackByArea: isAreaChart ? true : undefined,
                 pointRange: isColumnChart && columnBucketMs ? columnBucketMs * 0.82 : undefined,
-                // Every Column series uses the same visual zero baseline. This keeps
-                // columns with very different units/scales anchored to the bottom of
-                // the plot instead of floating around an automatically selected axis
-                // threshold when historian data contains negative/outlier values.
+
+
+
+
                 threshold: isAreaChart ? null : (isColumnChart ? 0 : undefined),
                 softThreshold: (isAreaChart || isColumnChart) ? false : undefined,
                 borderColor: isColumnChart ? this.hexToRgba(item.color, 0.9) : undefined,
@@ -1533,8 +1533,8 @@ export class ChartComponent implements OnInit, OnDestroy {
             exporting: { enabled: false, fallbackToExportServer: false },
             chart: {
                 type: highchartsType,
-                // Height is controlled by the responsive host element. Keeping this
-                // auto-sized lets Highcharts fill the entire card in fullscreen.
+
+
                 height: null,
                 zoomType: 'x',
                 panning: { enabled: true, type: 'x' },
@@ -1677,9 +1677,9 @@ export class ChartComponent implements OnInit, OnDestroy {
                         minimumY = 12 - chartPosition.top;
                         maximumY = viewportHeight - chartPosition.top - labelHeight - 12;
                     } else {
-                        // In fullscreen the tooltip is a child of the chart. Use
-                        // chart-local coordinates and keep the complete value card
-                        // inside the visible canvas at every cursor position.
+
+
+
                         minimumX = 10;
                         maximumX = chart.chartWidth - labelWidth - 10;
                         minimumY = 10;
@@ -1704,11 +1704,11 @@ export class ChartComponent implements OnInit, OnDestroy {
                     var targetX = Number(this.x != null ? this.x : (contextPoint && contextPoint.x));
                     var tooltipPoints: any[] = [];
 
-                    // Standard Highcharts shared tooltips only include series that
-                    // contain an identical X timestamp. Historian tags often arrive
-                    // a few milliseconds/seconds apart, which previously produced a
-                    // one-row tooltip. Resolve the closest sample from every visible
-                    // series so one hover card consistently shows all selected tags.
+
+
+
+
+
                     if (chart && Array.isArray(chart.series)) {
                         for (var seriesIndex = 0; seriesIndex < chart.series.length; seriesIndex++) {
                             var chartSeries: any = chart.series[seriesIndex];
@@ -1779,8 +1779,8 @@ export class ChartComponent implements OnInit, OnDestroy {
                     linecap: 'round'
                 },
                 area: {
-                    // null fills from each line to its own Y-axis minimum, which is
-                    // visually the bottom edge of the shared plotting area.
+
+
                     threshold: null,
                     softThreshold: false,
                     fillOpacity: darkTheme ? 0.24 : 0.17,
@@ -1819,7 +1819,7 @@ export class ChartComponent implements OnInit, OnDestroy {
             return 'column';
         }
 
-        // Step Chart is a Highcharts line series with step interpolation.
+
         return 'line';
     }
 
@@ -1849,11 +1849,11 @@ export class ChartComponent implements OnInit, OnDestroy {
         return item.data;
     }
 
-    /**
-     * Uses the visible time span to select a finer resolution after zooming.
-     * The complete requested range remains in every series, so reset zoom and
-     * panning continue to work without downloading historian data again.
-     */
+
+
+
+
+
     private refreshVisibleChartDensity(
         chart: Highcharts.Chart,
         seriesItems: ChartSeriesItem[],
@@ -1993,8 +1993,8 @@ export class ChartComponent implements OnInit, OnDestroy {
     private getColumnAggregationMode(item: ChartSeriesItem): ColumnAggregationMode {
         var normalized = this.normalizeTagName(item.name + ' ' + item.label);
 
-        // Cumulative counters must show the latest value in each interval. Instantaneous
-        // sensors and rates are represented by their interval average to reduce noise.
+
+
         if (
             normalized.indexOf('TOTAL') >= 0 ||
             normalized.indexOf('TODAY') >= 0 ||
@@ -2121,11 +2121,11 @@ export class ChartComponent implements OnInit, OnDestroy {
         axisLayout: { axes: any[]; seriesAxis: number[] },
         seriesItems: ChartSeriesItem[]
     ): void {
-        // Column comparison is easiest to read when every independent Y axis starts
-        // at the same visual origin. Use an exact zero floor for every populated
-        // axis, even when raw historian data contains a negative spike/outlier.
-        // This rule is intentionally limited to Column Chart; Line, Area and Step
-        // continue to show their complete positive/negative ranges.
+
+
+
+
+
         var populatedAxes: boolean[] = axisLayout.axes.map(() => false);
 
         for (var i = 0; i < seriesItems.length; i++) {
@@ -2149,9 +2149,9 @@ export class ChartComponent implements OnInit, OnDestroy {
             options.endOnTick = true;
             options.softThreshold = false;
 
-            // Remove a negative range hint calculated for Line/Area/Step axes. The
-            // upper bound remains automatic so each parameter keeps its own useful
-            // scale while all zero labels line up along the bottom edge.
+
+
+
             if (typeof options.softMax === 'number' && options.softMax < 0) {
                 delete options.softMax;
             }
@@ -2164,8 +2164,8 @@ export class ChartComponent implements OnInit, OnDestroy {
         gridColor: string,
         axisColor: string
     ): { axes: any[]; seriesAxis: number[]; leftOffset: number; rightOffset: number } {
-        // With four parameters or fewer, each line receives its own axis. This keeps
-        // counters, rates and totals readable even when their numeric ranges differ.
+
+
         if (seriesItems.length <= 4) {
             var dedicatedAxes: any[] = [];
             var dedicatedMap: number[] = [];
@@ -2222,8 +2222,8 @@ export class ChartComponent implements OnInit, OnDestroy {
             };
         }
 
-        // For larger selections, group compatible units/scales so the chart does not
-        // create too many axes around the plotting area.
+
+
         var groups: Array<{ unit: string; bucket: number; color: string; series: number[] }> = [];
         var seriesAxis: number[] = [];
 
@@ -2379,9 +2379,9 @@ export class ChartComponent implements OnInit, OnDestroy {
         return document.documentElement.getAttribute('data-theme') === 'dark';
     }
 
-    // ============================================================
-    // Timer / helpers
-    // ============================================================
+
+
+
 
     private ensureRefreshTimer() {
         if (!this.refreshTimer) {
@@ -2392,7 +2392,11 @@ export class ChartComponent implements OnInit, OnDestroy {
     private startRefreshTimer() {
         this.clearRefreshTimer();
         this.refreshTimer = setInterval(() => {
-            if (this.autoRefresh && this.selectedEvent) {
+            if (typeof document !== 'undefined' && document.hidden) {
+                return;
+            }
+
+            if (this.autoRefresh && this.selectedEvent && !this.loading) {
                 this.loadChart(this.selectedEvent, true);
             }
         }, this.refreshMs);

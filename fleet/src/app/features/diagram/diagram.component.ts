@@ -206,10 +206,6 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Diagram ใช้ข้อมูล live ชุดเดียวกับหน้า Realtime
-    // service จะยิง /getcurrentvalues ทุก 5 วินาทีเอง ไม่ต้อง refresh browser
-    this.fvRealtimeService.ensureStarted(5000);
-
     this.watchRouteVessel();
     this.watchActiveVessel();
     this.watchRealtimeData();
@@ -240,7 +236,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
     this.subscription.unsubscribe();
   }
 
-  trackByDevice(index: number, device: DiagramDevice): string {
+  trackByDevice(_index: number, device: DiagramDevice): string {
     return device.id;
   }
 
@@ -308,9 +304,9 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
     const availableWidth = Math.max(220, viewport.clientWidth - horizontalPadding);
     const isMobile = window.matchMedia('(max-width: 560px)').matches;
 
-    // At 100%, preserve the natural diagram size for readable labels.
-    // Fit mode must genuinely fit the available width on narrow phones; the
-    // previous 0.42 clamp could still create horizontal clipping.
+
+
+
     const fitScale = Math.min(1, availableWidth / this.diagramNaturalWidth);
     const minimumFitScale = isMobile ? 0.24 : 0.28;
     const nextScale = this.diagramZoomMode === 'full' ? 1 : fitScale;
@@ -345,7 +341,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
       if (!id || !Array.isArray(vessels) || vessels.length === 0) {
         return;
       }
-      
+
       const match = vessels.find((item: any) => {
         const info = this.getVesselInfo(item);
 

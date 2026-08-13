@@ -11,7 +11,7 @@ import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
   LiveReportVesselProfile,
-} from './live-report.model';
+} from '../../features/report/live-report.model';
 
 interface BoundedNumberResult {
   value: number | null;
@@ -216,15 +216,15 @@ export class LiveReportService {
     });
   }
 
-  /**
-   * Returns only the current-value tags needed to reproduce the six headline
-   * Report KPIs in lightweight surfaces such as the Overview map popup.
-   *
-   * Keeping this planner beside buildSnapshot() gives Report and Overview one
-   * source of truth for vessel-specific engine fuel tags. The Overview popup
-   * therefore does not request the whole dashboard tag set and does not guess
-   * which engines belong to a vessel.
-   */
+
+
+
+
+
+
+
+
+
   getOverviewMetricTagSuffixes(
     vessel: any,
     document: LiveReportProfileDocument
@@ -401,20 +401,20 @@ export class LiveReportService {
     engines: LiveReportEngineSnapshot[],
     currentSpeed: number | null
   ): ModeResolution {
-    // A mode is only marked VERIFIED when it can be mapped from an actual
-    // configured telemetry item. This prevents GPS estimates or cached vessel
-    // metadata from being presented as a real PLC/SCADA vessel mode.
+
+
+
     const verifiedFromTelemetry = this.resolveCurrentMode(profile, data);
     if (verifiedFromTelemetry) {
       return verifiedFromTelemetry;
     }
 
-    // For vessels whose legacy report service proves a dedicated *-VES-MODE
-    // signal, never replace a missing/invalid real mode with a GPS estimate.
-    // Showing "unavailable" is safer than presenting an inferred operation as
-    // the vessel's actual PLC/SCADA mode. This also keeps server load flat: the
-    // real mode is one extra tag inside the existing batched realtime request,
-    // not a separate HTTP call.
+
+
+
+
+
+
     if (profile.modeVerification?.kind === 'direct-telemetry-tag') {
       const expectedTag = profile.modeVerification.tagSuffix || 'VES-MODE';
       return this.unavailableMode(
@@ -756,8 +756,8 @@ export class LiveReportService {
       }
     }
 
-    // Unknown mode codes are never promoted as verified values. Displaying an
-    // unconfigured raw value could assign the wrong operational state to a vessel.
+
+
     return null;
   }
 
@@ -781,8 +781,8 @@ export class LiveReportService {
     const normalizedName = this.normalizeIdentity(vesselName);
     const normalizedPrefix = this.normalizeIdentity(vesselPrefix);
 
-    // Vessel name is the strongest identity. It must win over a stale or
-    // duplicated prefix so the wrong engine/mode profile is never selected.
+
+
     if (normalizedName) {
       const nameMatch = document.profiles.find((item) =>
         (item.aliases || []).some(
@@ -794,7 +794,7 @@ export class LiveReportService {
         return nameMatch;
       }
     }
-    
+
     if (normalizedPrefix) {
       const prefixMatch = document.profiles.find((item) =>
         (item.prefixes || []).some(
@@ -940,18 +940,6 @@ export class LiveReportService {
     });
 
     return result;
-  }
-
-  private readNumber(data: Record<string, any>, candidates: string[]): number | null {
-    for (const candidate of candidates) {
-      const raw = this.readRaw(data, [candidate]);
-      const numberValue = this.parseNumber(raw);
-      if (numberValue !== null) {
-        return numberValue;
-      }
-    }
-
-    return null;
   }
 
   private readNonNegativeNumber(data: Record<string, any>, candidates: string[]): number | null {

@@ -55,7 +55,7 @@ export interface UpdateUserRequestModel {
 
 export interface DeleteUserRequestModel {
     _id: string;
-    
+
 }
 
 export interface ChnagePasswordRequestModel {

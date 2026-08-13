@@ -7,9 +7,10 @@ import {
 } from '@angular/core';
 
 import { Router } from '@angular/router';
+import { Store } from '@ngrx/store';
 import { Subscription } from 'rxjs';
 
-import { FleetVesselDataService } from '../../shared/services/fleet-vessel-data.service';
+import * as fvOverviewReducer from '../../store/reducers/fv-overview.reducer';
 import { FvTimeService } from '../../shared/services/fv-time.service';
 import { CoordinatesService } from '../../shared/services/coordinate.service';
 import {
@@ -59,7 +60,7 @@ export class OverviewComponent implements OnInit, OnDestroy {
   private overviewSub?: Subscription;
 
   constructor(
-    private vesselDataService: FleetVesselDataService,
+    private store: Store<any>,
     private router: Router,
     public fvTimeService: FvTimeService,
     public coordinatesService: CoordinatesService,
@@ -67,19 +68,21 @@ export class OverviewComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.overviewSub = this.vesselDataService.getOverviewVessels().subscribe({
-      next: (res: any[]) => this.applyVesselData(res),
-      error: (err: any) => {
-        console.warn('[OverviewComponent] getOverviewVessels failed:', err);
-        this.applyVesselData([]);
-      },
-    });
+    this.overviewSub = this.store
+      .select(fvOverviewReducer.getFvOverviewState)
+      .subscribe((state) => {
+        if (!state || (state.statuscode === 0 && state.fvOverview.length === 0)) {
+          return;
+        }
+
+        this.applyVesselData(state.fvOverview);
+      });
   }
 
   ngOnDestroy(): void {
     this.overviewSub?.unsubscribe();
   }
-  
+
   selectVesselFromSidebar(vesselFromSidebar: any): void {
     if (!vesselFromSidebar) {
       return;

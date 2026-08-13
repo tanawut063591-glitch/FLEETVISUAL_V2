@@ -11,15 +11,15 @@ import { Animations } from './summary-overview.animations';
     animations: [
         Animations.listAnimation
     ],
-    changeDetection: ChangeDetectionStrategy.OnPush 
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SummaryOverviewComponent {
 
-    @Input() data: any[] = []; 
+    @Input() data: any[] = [];
     @Input() blankData: any[] = [];
-    @Input() selectedVessel: any = null; 
+    @Input() selectedVessel: any = null;
 
-    @Output() vesselSelected = new EventEmitter<any>(); 
+    @Output() vesselSelected = new EventEmitter<any>();
 
     constructor(
         public fvTimeService: FvTimeService,

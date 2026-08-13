@@ -106,9 +106,9 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         this.requestVersion += 1;
     }
 
-    // ============================================================
-    // Main Event From DateTime Control
-    // ============================================================
+
+
+
 
     showLogger(event: any) {
         this.loadLogger(event, false);
@@ -156,7 +156,7 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
             }
             this.resetTableState();
         } else if (this.isRealtimeRange) {
-            // Live tables always return to the newest page after refresh.
+
             this.pageActive = 1;
         }
 
@@ -206,9 +206,9 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         this.pages = this.pagination(this.pageActive, this.pageCount);
     }
 
-    // ============================================================
-    // Load Data
-    // ============================================================
+
+
+
 
     getData(startTime: string, endTime: string, tags: any[], silent: boolean = false) {
         const requestVersion = ++this.requestVersion;
@@ -284,9 +284,9 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         });
     }
 
-    // ============================================================
-    // Auto Refresh / Clear Table
-    // ============================================================
+
+
+
 
     toggleAutoRefresh(): void {
         if (!this.selectedEvent) {
@@ -347,6 +347,10 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
     private startRefreshTimer(): void {
         this.clearRefreshTimer();
         this.refreshTimer = setInterval(() => {
+            if (typeof document !== 'undefined' && document.hidden) {
+                return;
+            }
+
             if (this.autoRefresh && this.selectedEvent && !this.loading && !this.requestPending) {
                 this.loadLogger(this.selectedEvent, true);
             }
@@ -399,9 +403,9 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         return { ...event, start: nextStart, end: nextEnd, movingWindow: true };
     }
 
-    // ============================================================
-    // Download CSV
-    // ============================================================
+
+
+
 
     downloadLogger(event: any) {
         if (!event || !event.start || !event.end || !event.tags || event.tags.length === 0) {
@@ -625,9 +629,9 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         return text;
     }
 
-    // ============================================================
-    // Data Mapping
-    // ============================================================
+
+
+
 
     private createHeaders(tags: any[]): DataLoggerHeader[] {
         if (!tags || !Array.isArray(tags)) {
@@ -837,9 +841,9 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         return '';
     }
 
-    // ============================================================
-    // Quick Tags
-    // ============================================================
+
+
+
 
     setQuickTag(key: string) {
         this.selectedQuickTag = key;
@@ -870,9 +874,9 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         this.visibleHeaders = result.length > 0 ? result : this.headers.slice(0);
     }
 
-    // ============================================================
-    // Sort / Filter
-    // ============================================================
+
+
+
 
     sortByTime() {
         if (this.sortColumnType === 'time') {
@@ -1078,9 +1082,9 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         return date.getTime();
     }
 
-    // ============================================================
-    // Status / Threshold
-    // ============================================================
+
+
+
 
     getCellClass(value: any, header: DataLoggerHeader): string {
         const status = this.getCellStatus(value, header);
@@ -1198,9 +1202,9 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         };
     }
 
-    // ============================================================
-    // Pagination
-    // ============================================================
+
+
+
 
     pagination(c: number, m: number): (string | number)[] {
         const dep = document.body.clientWidth > 520 ? 2 : 1;
@@ -1305,9 +1309,9 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         return this.formatNumber(this.tableRows.length) + ' rows shown';
     }
 
-    // ============================================================
-    // UI Helpers
-    // ============================================================
+
+
+
 
     displayValue(value: any): string {
         if (value === null || value === undefined || value === '') {
@@ -1342,7 +1346,7 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         return item ? item.timestamp : index;
     }
 
-    trackByPage(index: number, item: any) {
+    trackByPage(_index: number, item: any) {
         return item;
     }
 
@@ -1350,9 +1354,9 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         return item ? item.key : index;
     }
 
-    // ============================================================
-    // Tag Text Format
-    // ============================================================
+
+
+
 
     private getTagGroup(name: string): string {
         const upper = (name || '').toUpperCase();
@@ -1521,49 +1525,9 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         return 'engine';
     }
 
-    // ============================================================
-    // Date / Time Utils
-    // ============================================================
 
-    private createTimeKeys(value: any): string[] {
-        const keys: string[] = [];
 
-        if (!value) {
-            return keys;
-        }
 
-        const date = this.parseDateValue(value);
-
-        if (date && !isNaN(date.getTime())) {
-            const local = this.formatKeyTime(date);
-            const iso = date.toISOString().slice(0, 19);
-
-            this.addUnique(keys, local);
-            this.addUnique(keys, local.slice(0, 16));
-            this.addUnique(keys, local.replace(' ', 'T'));
-            this.addUnique(keys, local.replace(' ', 'T').slice(0, 16));
-
-            this.addUnique(keys, iso);
-            this.addUnique(keys, iso.slice(0, 16));
-            this.addUnique(keys, iso.replace('T', ' '));
-            this.addUnique(keys, iso.replace('T', ' ').slice(0, 16));
-        }
-
-        if (typeof value === 'string') {
-            const raw = value.trim();
-
-            const rawSpace = raw.replace('T', ' ').slice(0, 19);
-            const rawIso = raw.replace(' ', 'T').slice(0, 19);
-
-            this.addUnique(keys, rawSpace);
-            this.addUnique(keys, rawSpace.slice(0, 16));
-
-            this.addUnique(keys, rawIso);
-            this.addUnique(keys, rawIso.slice(0, 16));
-        }
-
-        return keys;
-    }
 
     private parseDateValue(value: any): Date {
         if (value instanceof Date) {
@@ -1644,12 +1608,6 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
 
     private normalizeTagName(value: string): string {
         return (value || '').replace(/\s+/g, '').toUpperCase();
-    }
-
-    private addUnique(arr: string[], value: string) {
-        if (value && arr.indexOf(value) === -1) {
-            arr.push(value);
-        }
     }
 
     private formatNumber(value: number): string {

@@ -1,7 +1,7 @@
 export interface CardInfo {
     prefix: string;
     details: CardDetail[];
-    
+
 }
 
 export interface CardDetail {

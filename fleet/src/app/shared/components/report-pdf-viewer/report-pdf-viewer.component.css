@@ -191,9 +191,9 @@ pdf-viewer {
 }
 
 
-/* =========================================================
-   RESPONSIVE PDF — page-width rendering on every device
-   ========================================================= */
+
+
+
 .pdf-viewer-wrap,
 pdf-viewer {
   width: 100%;
@@ -216,8 +216,8 @@ pdf-viewer {
 }
 
 :host ::ng-deep .pdfViewer .page {
-  /* ng2-pdf-viewer already computes page width from [zoom]. A max-width:100%
-     rule cancelled that calculation, which made the +/- buttons look broken. */
+
+
   max-width: none !important;
   margin: 0 auto 12px !important;
   border: 0 !important;

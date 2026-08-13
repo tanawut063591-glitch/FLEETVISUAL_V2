@@ -1,4 +1,11 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
@@ -6,6 +13,7 @@ import { filter, takeUntil } from 'rxjs/operators';
 import { CoordinatesService } from '../../../shared/services/coordinate.service';
 import { FvTimeService } from '../../../shared/services/fv-time.service';
 import { FvInfoService } from '../../../shared/services/fv-info.service';
+import { FvOverviewService } from '../../../shared/services/fv-overview.service';
 import { FvRealtimeService } from '../../../shared/services/fv-realtime.service';
 import { FleetVesselDataService } from '../../../shared/services/fleet-vessel-data.service';
 import { VesselPopupService } from '../../../shared/services/vessel-popup.service';
@@ -15,6 +23,18 @@ import { AuthService } from '../../../shared/services/auth.service';
 import { FleetModuleKey } from '../../../shared/models/settings.model';
 
 import { Animaions } from './main.animation';
+
+interface VesselLike {
+  id?: string | number;
+  _id?: string | number;
+  vesselId?: string | number;
+  shipId?: string | number;
+  prefix?: string;
+  name?: string;
+  vesselName?: string;
+  fv?: VesselLike;
+  fvInfo?: VesselLike;
+}
 
 @Component({
   selector: 'app-main',
@@ -31,16 +51,32 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
   showSidebar = true;
   isOverviewRoute = false;
 
-  vessels: any[] = [];
-  selectedVessel: any = null;
-  
-  private destroy$ = new Subject<void>();
-  private readonly defaultTimer = 5000;
-  private refreshTimer = this.defaultTimer;
+  vessels: VesselLike[] = [];
+  selectedVessel: VesselLike | null = null;
+
+  private readonly destroy$ = new Subject<void>();
+  private readonly defaultRealtimeInterval = 5_000;
+  private readonly minimumRealtimeInterval = 5_000;
+  private readonly sidebarRefreshInterval = 60_000;
+  private readonly fvInfoRefreshInterval = 60_000;
+  private readonly overviewRefreshInterval = 30_000;
+  private readonly reportRefreshInterval = 60_000;
+  private readonly liveRoutePattern = /\/main\/(realtime|diagram|report)(?:\/|$)/;
+  private readonly overviewRoutePattern = /\/main\/overview(?:\/|$)/;
+  private readonly layoutRoutePattern = /\/main\/(overview|realtime|diagram|chart|report)(?:\/|$)/;
+
+  private refreshTimer = this.defaultRealtimeInterval;
+  private accessReady = false;
+  private vesselsReady = false;
   private fvInfoStarted = false;
+  private overviewStarted = false;
   private realtimeStarted = false;
   private layoutSettleTimer: ReturnType<typeof setTimeout> | null = null;
   private scrollResetTimer: ReturnType<typeof setTimeout> | null = null;
+  private layoutFrameOne: number | null = null;
+  private layoutFrameTwo: number | null = null;
+  private scrollFrameOne: number | null = null;
+  private scrollFrameTwo: number | null = null;
   private lastPublishedVesselKey = '';
 
   constructor(
@@ -49,6 +85,7 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private fvInfoService: FvInfoService,
+    private fvOverviewService: FvOverviewService,
     private fvRealtimeService: FvRealtimeService,
     private vesselData: FleetVesselDataService,
     private vesselPopup: VesselPopupService,
@@ -58,32 +95,11 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.refreshTimer =
-      this.route.snapshot.data['timer'] || this.defaultTimer;
+    this.refreshTimer = this.resolveRealtimeInterval(this.route.snapshot.data['timer']);
 
     this.userPresence.start();
-    this.userAccess.refreshCurrentAccess()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (access) => {
-          if (access?.status === 'suspended' || !this.userAccess.hasAnyModuleAccess()) {
-            this.authService.logout();
-            void this.router.navigate(['/login']);
-            return;
-          }
-          const currentModule = this.moduleFromUrl(this.router.url);
-          const moduleAllowed = !currentModule || (currentModule === 'settings'
-            ? this.userAccess.canManageModule('settings')
-            : this.userAccess.canAccessModule(currentModule));
-          if (!moduleAllowed) {
-            void this.router.navigateByUrl(this.userAccess.firstAllowedRoute());
-          }
-          this.loadSidebarVessels();
-        },
-        error: () => this.loadSidebarVessels(),
-      });
     this.watchActiveVesselSelection();
-    this.applyRouteState(this.router.url);
+    this.updateLayout(this.router.url);
 
     this.router.events
       .pipe(
@@ -93,30 +109,57 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
       .subscribe((event: NavigationEnd) => {
         this.applyRouteState(event.urlAfterRedirects || event.url);
       });
+
+    this.userAccess
+      .refreshCurrentAccess()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (access) => {
+          if (access?.status === 'suspended' || !this.userAccess.hasAnyModuleAccess()) {
+            this.handleUnauthorizedAccess();
+            return;
+          }
+
+          this.accessReady = true;
+
+          const currentModule = this.moduleFromUrl(this.router.url);
+          const moduleAllowed =
+            !currentModule ||
+            (currentModule === 'settings'
+              ? this.userAccess.canManageModule('settings')
+              : this.userAccess.canAccessModule(currentModule));
+
+          this.loadSidebarVessels();
+
+          if (!moduleAllowed) {
+            void this.router.navigateByUrl(this.userAccess.firstAllowedRoute());
+            return;
+          }
+
+          this.applyRouteState(this.router.url);
+        },
+        error: (error) => {
+          console.error('[MainComponent] access check failed:', error);
+          this.accessReady = false;
+          this.vesselsReady = false;
+          this.vessels = [];
+          this.selectedVessel = null;
+          this.stopAllDataServices();
+        },
+      });
   }
 
   ngAfterViewInit(): void {
-    // ngOnInit runs before the authenticated grid and Header have their final
-    // dimensions. A second settle after paint prevents first-login hitboxes from
-    // being calculated against the old Login layout.
-    this.scheduleLayoutSettle();
+    if (this.layoutRoutePattern.test(this.router.url)) {
+      this.scheduleLayoutSettle();
+    }
   }
 
   ngOnDestroy(): void {
-    this.fvInfoService.stop();
-    this.fvRealtimeService.stop();
+    this.stopAllDataServices();
     this.userPresence.stop();
-
-    if (this.layoutSettleTimer !== null) {
-      clearTimeout(this.layoutSettleTimer);
-      this.layoutSettleTimer = null;
-    }
-
-    if (this.scrollResetTimer !== null) {
-      clearTimeout(this.scrollResetTimer);
-      this.scrollResetTimer = null;
-    }
-
+    this.clearLayoutWork();
+    this.clearScrollWork();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -125,39 +168,33 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
     this.activeOffCanvas = !this.activeOffCanvas;
   }
 
-  onSelectVessel(vessel: any): void {
+  onSelectVessel(vessel: VesselLike): void {
     if (!vessel) {
       return;
     }
 
+    const previousKey = this.normalizeVesselIdentity(this.selectedVessel);
+    const nextKey = this.normalizeVesselIdentity(vessel);
+
     this.selectedVessel = vessel;
     this.activeOffCanvas = false;
+    this.persistSelectedVessel(vessel);
 
-    try {
-      localStorage.setItem('selectedVessel', JSON.stringify(vessel));
-      localStorage.setItem('realtimeVessel', JSON.stringify(vessel));
-      localStorage.setItem('pastTrackVessel', JSON.stringify(vessel));
-    } catch {}
+    if (nextKey && (nextKey !== previousKey || nextKey !== this.lastPublishedVesselKey)) {
+      this.fvRealtimeService.setActiveVessel(vessel);
+      this.lastPublishedVesselKey = nextKey;
+    }
 
-    this.fvRealtimeService.setActiveVessel(vessel);
-    this.lastPublishedVesselKey = this.normalizeVesselIdentity(vessel);
     this.vesselPopup.openPopup(vessel);
 
-    // Realtime cards are long on phones. When a vessel is changed from the
-    // mobile drawer, returning to the previous scroll offset can leave the
-    // first card hidden under the fixed header. Start the selected vessel at
-    // the top so its identity and latest status are always visible.
     if (/\/main\/(realtime|diagram)(?:\/|$)/.test(this.router.url)) {
       this.scheduleContentScrollReset();
     }
 
-    // On Past Track, selecting another vessel must change the route parameter.
-    // PastTrackComponent subscribes to paramMap and reloads that vessel automatically.
     if (this.router.url.includes('/main/past-track')) {
       const routeId = this.getVesselRouteId(vessel);
-
       if (routeId) {
-        this.router.navigate(['/main/past-track', routeId]);
+        void this.router.navigate(['/main/past-track', routeId]);
       }
     }
   }
@@ -166,7 +203,15 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
     return outlet?.activatedRouteData?.['depth'] || 0;
   }
 
-  private getVesselRouteId(vessel: any): string {
+  private resolveRealtimeInterval(value: unknown): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return this.defaultRealtimeInterval;
+    }
+    return Math.max(parsed, this.minimumRealtimeInterval);
+  }
+
+  private getVesselRouteId(vessel: VesselLike): string {
     return String(
       vessel?.prefix ||
         vessel?.fv?.prefix ||
@@ -182,69 +227,75 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private loadSidebarVessels(): void {
+    this.vesselsReady = false;
+
     this.vesselData
-      .getOverviewVessels()
+      .getSidebarVessels(this.sidebarRefreshInterval)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (rows: any[]) => {
-          this.vessels = Array.isArray(rows) ? rows : [];
+        next: (rows) => {
+          this.vessels = Array.isArray(rows) ? (rows as VesselLike[]) : [];
 
           const selectedMatch = this.findMatchingVessel(this.selectedVessel, this.vessels);
 
           if (selectedMatch) {
-            // Keep the active vessel attached to the latest backend row so the
-            // Sidebar, Manage Tags, Realtime and Past Track share one selection.
             this.selectedVessel = selectedMatch;
-
-            const selectedKey = this.normalizeVesselIdentity(selectedMatch);
-            if (selectedKey && selectedKey !== this.lastPublishedVesselKey) {
-              this.fvRealtimeService.setActiveVessel(selectedMatch);
-              this.lastPublishedVesselKey = selectedKey;
-            }
+            this.publishSelectedVesselIfNeeded(selectedMatch);
           } else if (this.vessels.length > 0) {
-            // เรือที่เคยเลือกอาจถูกนำออกจากระบบ ให้ย้ายไปลำแรกที่ยังใช้งาน
-            // และเขียนทับ localStorage เพื่อไม่ให้ Realtime โหลดเรือเก่ากลับมาอีก
             this.selectedVessel = this.vessels[0];
-
-            try {
-              localStorage.setItem('selectedVessel', JSON.stringify(this.selectedVessel));
-              localStorage.setItem('realtimeVessel', JSON.stringify(this.selectedVessel));
-              localStorage.setItem('pastTrackVessel', JSON.stringify(this.selectedVessel));
-            } catch {}
-
-            this.fvRealtimeService.setActiveVessel(this.selectedVessel);
-            this.lastPublishedVesselKey = this.normalizeVesselIdentity(this.selectedVessel);
+            this.persistSelectedVessel(this.selectedVessel);
+            this.publishSelectedVesselIfNeeded(this.selectedVessel);
           } else {
             this.selectedVessel = null;
             this.lastPublishedVesselKey = '';
           }
+
+          this.vesselsReady = true;
+          this.fvOverviewService.setVessels(this.vessels);
+          this.applyRouteState(this.router.url);
         },
         error: (error) => {
           console.warn('[MainComponent] loadSidebarVessels error:', error);
           this.vessels = [];
+          this.selectedVessel = null;
+          this.vesselsReady = false;
+          this.stopAllDataServices();
         },
       });
   }
 
+  private publishSelectedVesselIfNeeded(vessel: VesselLike): void {
+    const selectedKey = this.normalizeVesselIdentity(vessel);
+    if (!selectedKey || selectedKey === this.lastPublishedVesselKey) {
+      return;
+    }
 
-  /**
-   * Central selection bridge.
-   * Sidebar clicks, Overview map markers and Alarm -> Realtime navigation all
-   * publish the selected vessel through FvRealtimeService.  MainComponent then
-   * updates the Sidebar highlight from the same source of truth.
-   */
+    this.fvRealtimeService.setActiveVessel(vessel);
+    this.lastPublishedVesselKey = selectedKey;
+  }
+
+  private persistSelectedVessel(vessel: VesselLike): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const serialized = JSON.stringify(vessel);
+      window.localStorage.setItem('selectedVessel', serialized);
+      window.localStorage.setItem('realtimeVessel', serialized);
+      window.localStorage.setItem('pastTrackVessel', serialized);
+    } catch {}
+  }
+
   private watchActiveVesselSelection(): void {
     this.fvRealtimeService.activeVessel$
       .pipe(takeUntil(this.destroy$))
-      .subscribe((vessel) => {
+      .subscribe((vessel: VesselLike | null) => {
         if (!vessel) {
           return;
         }
 
         const matchingVessel = this.findMatchingVessel(vessel, this.vessels);
-
-        // เมื่อรายการเรือโหลดแล้ว ห้ามรับ selection ที่ไม่อยู่ในรายการอีก
-        // ป้องกันเรือที่ถูกนำออกย้อนกลับมาจาก localStorage หรือ route เก่า
         if (this.vessels.length > 0 && !matchingVessel) {
           return;
         }
@@ -263,7 +314,7 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
       });
   }
 
-  private findMatchingVessel(target: any, rows: any[]): any | null {
+  private findMatchingVessel(target: VesselLike | null, rows: VesselLike[]): VesselLike | null {
     if (!target || !Array.isArray(rows) || rows.length === 0) {
       return null;
     }
@@ -281,12 +332,15 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
-  private collectVesselIdentities(vessel: any): Set<string> {
-    const sources = [vessel, vessel?.fv, vessel?.fvInfo];
+  private collectVesselIdentities(vessel: VesselLike): Set<string> {
+    const sources: Array<VesselLike | undefined> = [vessel, vessel?.fv, vessel?.fvInfo];
     const values: unknown[] = [];
 
     for (const source of sources) {
-      if (!source) continue;
+      if (!source) {
+        continue;
+      }
+
       values.push(
         source.id,
         source._id,
@@ -294,18 +348,21 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
         source.shipId,
         source.prefix,
         source.name,
-        source.vesselName,
+        source.vesselName
       );
     }
 
     return new Set(
       values
         .map((value) => this.normalizeIdentityPart(value))
-        .filter((value) => value.length > 0),
+        .filter((value) => value.length > 0)
     );
   }
 
-  private normalizeVesselIdentity(vessel: any): string {
+  private normalizeVesselIdentity(vessel: VesselLike | null): string {
+    if (!vessel) {
+      return '';
+    }
     return Array.from(this.collectVesselIdentities(vessel))[0] || '';
   }
 
@@ -318,79 +375,99 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private applyRouteState(url: string): void {
     this.updateLayout(url);
-    this.syncRouteServices(url);
-    this.scheduleContentScrollReset();
-    this.scheduleLayoutSettle();
+
+    if (this.accessReady && this.vesselsReady) {
+      this.syncRouteServices(url);
+    } else {
+      this.stopAllDataServices();
+    }
+
+    if (url.includes('/main/')) {
+      this.scheduleContentScrollReset();
+    }
+
+    if (this.layoutRoutePattern.test(url)) {
+      this.scheduleLayoutSettle();
+    }
   }
 
-  /**
-   * Only run expensive telemetry polling on pages that consume it. The old
-   * shell started Info, Realtime and Overview polling together immediately
-   * after login, which duplicated requests and made the first screen feel
-   * slower than a browser refresh.
-   */
   private syncRouteServices(url: string): void {
-    const needsFvInfo = /\/main\/(realtime|diagram|report)(?:\/|$)/.test(url);
-    const isLiveReport = /\/main\/report(?:\/|$)/.test(url);
-    const needsRealtime = /\/main\/(realtime|diagram|report)(?:\/|$)/.test(url);
-    const realtimeInterval = isLiveReport ? 60_000 : this.refreshTimer;
-    const fvInfoInterval = isLiveReport ? 60_000 : this.refreshTimer;
+    const needsOverview = this.overviewRoutePattern.test(url);
+    const needsLiveServices = this.liveRoutePattern.test(url);
 
-    if (needsFvInfo) {
-      this.fvInfoService.ensureStarted(fvInfoInterval);
-      this.fvInfoStarted = true;
-    } else if (this.fvInfoStarted) {
+    if (needsOverview) {
+      this.stopLiveServices();
+      this.fvOverviewService.ensureStarted(this.overviewRefreshInterval);
+      this.overviewStarted = true;
+      this.fvOverviewService.setVessels(this.vessels);
+      return;
+    }
+
+    this.stopOverviewService();
+
+    if (!needsLiveServices) {
+      this.stopLiveServices();
+      return;
+    }
+
+    const isLiveReport = /\/main\/report(?:\/|$)/.test(url);
+    const realtimeInterval = isLiveReport ? this.reportRefreshInterval : this.refreshTimer;
+
+    this.fvInfoService.ensureStarted(this.fvInfoRefreshInterval);
+    this.fvInfoStarted = true;
+
+    this.fvRealtimeService.ensureStarted(realtimeInterval);
+    this.realtimeStarted = true;
+  }
+
+  private stopOverviewService(): void {
+    if (!this.overviewStarted) {
+      return;
+    }
+    this.fvOverviewService.stop();
+    this.overviewStarted = false;
+  }
+
+  private stopLiveServices(): void {
+    if (this.fvInfoStarted) {
       this.fvInfoService.stop();
       this.fvInfoStarted = false;
     }
 
-    if (needsRealtime) {
-      // Realtime/Diagram keep their fast operational refresh. Report reuses the
-      // same current-values service at a bounded 60-second interval, so it never
-      // creates a second polling loop or regenerates PDFs automatically.
-      this.fvRealtimeService.ensureStarted(realtimeInterval);
-      this.realtimeStarted = true;
-    } else if (this.realtimeStarted) {
+    if (this.realtimeStarted) {
       this.fvRealtimeService.stop();
       this.realtimeStarted = false;
     }
   }
 
+  private stopAllDataServices(): void {
+    this.stopOverviewService();
+    this.stopLiveServices();
+  }
 
-  /**
-   * Main uses an internal scroll container instead of the browser window.
-   * Angular therefore keeps its old scrollTop when switching tabs. On mobile
-   * this could reopen Realtime halfway through an engine card, visually
-   * placing content underneath the fixed header. Reset after the routed view
-   * has rendered and repeat once after the route animation settles.
-   */
   private scheduleContentScrollReset(): void {
     if (typeof window === 'undefined') {
       return;
     }
 
-    if (this.scrollResetTimer !== null) {
-      clearTimeout(this.scrollResetTimer);
-      this.scrollResetTimer = null;
-    }
+    this.clearScrollWork();
 
-    const reset = () => {
+    const reset = (): void => {
       const viewport = this.contentViewport?.nativeElement;
       if (!viewport) {
         return;
       }
-
       viewport.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     };
 
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(reset);
+    this.scrollFrameOne = window.requestAnimationFrame(() => {
+      this.scrollFrameTwo = window.requestAnimationFrame(reset);
     });
 
     this.scrollResetTimer = setTimeout(() => {
       reset();
       this.scrollResetTimer = null;
-    }, 220);
+    }, 180);
   }
 
   private scheduleLayoutSettle(): void {
@@ -398,32 +475,92 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    if (this.layoutSettleTimer !== null) {
-      clearTimeout(this.layoutSettleTimer);
-    }
+    this.clearLayoutWork();
 
     const notify = (): void => {
       window.dispatchEvent(new Event('resize'));
     };
 
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(notify);
+    this.layoutFrameOne = window.requestAnimationFrame(() => {
+      this.layoutFrameTwo = window.requestAnimationFrame(notify);
     });
 
-    // The first authenticated page may still be decoding map imagery and lazy
-    // route chunks. Repeat after the shell has fully settled.
-    setTimeout(notify, 120);
     this.layoutSettleTimer = setTimeout(() => {
       notify();
       this.layoutSettleTimer = null;
-    }, 520);
+    }, 350);
+  }
+
+  private clearScrollWork(): void {
+    if (typeof window !== 'undefined') {
+      if (this.scrollFrameOne !== null) {
+        window.cancelAnimationFrame(this.scrollFrameOne);
+      }
+      if (this.scrollFrameTwo !== null) {
+        window.cancelAnimationFrame(this.scrollFrameTwo);
+      }
+    }
+
+    this.scrollFrameOne = null;
+    this.scrollFrameTwo = null;
+
+    if (this.scrollResetTimer !== null) {
+      clearTimeout(this.scrollResetTimer);
+      this.scrollResetTimer = null;
+    }
+  }
+
+  private clearLayoutWork(): void {
+    if (typeof window !== 'undefined') {
+      if (this.layoutFrameOne !== null) {
+        window.cancelAnimationFrame(this.layoutFrameOne);
+      }
+      if (this.layoutFrameTwo !== null) {
+        window.cancelAnimationFrame(this.layoutFrameTwo);
+      }
+    }
+
+    this.layoutFrameOne = null;
+    this.layoutFrameTwo = null;
+
+    if (this.layoutSettleTimer !== null) {
+      clearTimeout(this.layoutSettleTimer);
+      this.layoutSettleTimer = null;
+    }
+  }
+
+  private handleUnauthorizedAccess(): void {
+    this.accessReady = false;
+    this.vesselsReady = false;
+    this.vessels = [];
+    this.selectedVessel = null;
+    this.stopAllDataServices();
+    this.authService.logout();
+    void this.router.navigate(['/login']);
   }
 
   private moduleFromUrl(url: string): FleetModuleKey | null {
-    const path = String(url || '').split('?')[0].split('#').pop() || '';
-    if (path.includes('/main/data-logger') || path.includes('/main/datalogger')) return 'data-logger';
-    if (path.includes('/main/past-track')) return 'overview';
-    const modules: FleetModuleKey[] = ['overview', 'realtime', 'chart', 'diagram', 'report', 'alarm', 'log', 'settings'];
+    const path = String(url || '').split('?')[0].split('#')[0];
+
+    if (path.includes('/main/data-logger') || path.includes('/main/datalogger')) {
+      return 'data-logger';
+    }
+
+    if (path.includes('/main/past-track')) {
+      return 'overview';
+    }
+
+    const modules: FleetModuleKey[] = [
+      'overview',
+      'realtime',
+      'chart',
+      'diagram',
+      'report',
+      'alarm',
+      'log',
+      'settings',
+    ];
+
     return modules.find((module) => path.includes(`/main/${module}`)) || null;
   }
 

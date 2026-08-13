@@ -67,17 +67,17 @@ hr {
   padding-left: 5px;
 }
 
-/* Angular 20 fix: แทนของเก่า >>> .mat-tooltip */
+
 :host ::ng-deep .mat-tooltip {
   white-space: pre-line;
 }
 
-/* รองรับ Angular Material รุ่นใหม่ */
+
 :host ::ng-deep .mat-mdc-tooltip .mdc-tooltip__surface {
   white-space: pre-line;
 }
 
-/* Realtime numeric formatting safeguard */
+
 .ftd1-value,
 .kpi-val,
 .st-val,

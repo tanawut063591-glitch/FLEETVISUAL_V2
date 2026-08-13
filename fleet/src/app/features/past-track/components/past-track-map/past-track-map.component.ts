@@ -141,8 +141,8 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
       bounds.extend(position);
     }
 
-    // Split the route when historian data is missing for more than 90 minutes.
-    // This avoids drawing a misleading straight line across an unknown route.
+
+
     const routeSegments = this.buildRouteSegments(linePoints);
 
     for (const segment of routeSegments) {
@@ -151,7 +151,7 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
         lng: Number(point.lng),
       }));
 
-      // A soft halo keeps the route readable on both road and satellite maps.
+
       const halo = new google.maps.Polyline({
         path: segmentPath,
         geodesic: true,
@@ -177,8 +177,8 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
       this.polylines.push(halo, polyline);
     }
 
-    // Keep the map clean: the historical path is rendered as a continuous line.
-    // Only route endpoints and the currently selected playback position remain visible.
+
+
 
     this.addEndpointMarker(validPoints[0], 'START', '#10b981', 40);
 

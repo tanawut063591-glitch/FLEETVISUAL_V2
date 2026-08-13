@@ -80,11 +80,11 @@ export class AddRealtimeLazyFailure implements Action {
     constructor(public payload : any){}
 }
 
-export type All_FV_INFO_ACTIONS = 
+export type All_FV_INFO_ACTIONS =
     InitialFVInfo |
     GetFvInfoSuccess |
     GetFvInfoFailure |
-    SetFvActive | 
+    SetFvActive |
     SetFvActiveSuccess |
     SetFvActiveFailure |
     SetRealtimeActive |

@@ -136,7 +136,7 @@ export class AlarmComponent implements OnInit, OnDestroy {
     this.filteredCacheKey = key;
     return this.filteredCache;
   }
-  
+
   get pagedAlerts(): AlertRecord[] {
     const start = (this.page - 1) * this.pageSize;
     return this.filteredAlerts.slice(start, start + this.pageSize);
@@ -145,7 +145,7 @@ export class AlarmComponent implements OnInit, OnDestroy {
   get totalPages(): number {
     return Math.max(1, Math.ceil(this.filteredAlerts.length / this.pageSize));
   }
-  
+
   get pageStart(): number {
     return this.filteredAlerts.length === 0 ? 0 : (this.page - 1) * this.pageSize + 1;
   }
@@ -326,11 +326,11 @@ export class AlarmComponent implements OnInit, OnDestroy {
     this.detailOpen = false;
   }
 
-  /**
-   * Open the exact vessel that raised this alarm in the Realtime page.
-   * The method resolves the alert's vessel id/name against the shared vessel
-   * snapshot first, then publishes the same object used by the Sidebar.
-   */
+
+
+
+
+
   openAlertRealtime(alert: AlertRecord): void {
     const vessel = this.resolveAlertVessel(alert);
 
@@ -346,8 +346,8 @@ export class AlarmComponent implements OnInit, OnDestroy {
     this.closeAlertDetail();
 
     this.router.navigate(['/main/realtime']).then(() => {
-      // Re-emit after navigation so a lazy-loaded RealtimeComponent receives
-      // the selected vessel even on its first render.
+
+
       if (vessel) {
         setTimeout(() => this.fvRealtimeService.setActiveVessel(vessel), 60);
       }
@@ -367,8 +367,8 @@ export class AlarmComponent implements OnInit, OnDestroy {
       return match;
     }
 
-    // A safe fallback keeps navigation functional while the vessel snapshot is
-    // still loading. Realtime will replace it with the full backend row when available.
+
+
     const fallbackPrefix = String(alert.vesselId || alert.vesselName || '').trim();
     if (!fallbackPrefix && !alert.vesselName) {
       return null;

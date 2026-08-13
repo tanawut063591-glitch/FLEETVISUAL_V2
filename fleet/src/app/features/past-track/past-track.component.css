@@ -647,9 +647,9 @@
   background: rgba(10, 15, 24, 0.86);
 }
 
-/* Final phone pass: keep every Past Track block inside the viewport and make
-   information order predictable. These rules intentionally sit at the end of
-   the file so older tablet breakpoints cannot override them. */
+
+
+
 @media (max-width: 760px) {
   .past-track-page {
     width: 100%;
@@ -740,7 +740,7 @@
   }
 }
 
-/* Mobile information order: map -> playback -> selected-point detail -> timeline. */
+
 @media (max-width: 820px) {
   .mobile-playback,
   .mobile-point-detail {

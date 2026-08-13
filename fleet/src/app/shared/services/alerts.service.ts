@@ -50,12 +50,12 @@ export class AlertsService {
     );
   }
 
-  /**
-   * Database-first alert feed. Angular never connects to a SQL database directly;
-   * it calls a backend API which performs the database query. When the database
-   * endpoint is not enabled, the verified telemetry fallback remains available.
-   * Identical requests share one HTTP call and a short memory cache.
-   */
+
+
+
+
+
+
   fetchAlerts(query: AlertQuery, forceRefresh = false): Observable<AlertFetchResult> {
     const normalizedQuery = this.normalizeQuery(query);
     const key = this.queryKey(normalizedQuery);
@@ -190,7 +190,7 @@ export class AlertsService {
       module: query.module || null,
       page: query.page || 1,
       pageSize: query.pageSize || 500,
-      // PascalCase fields keep compatibility with common ASP.NET DTOs.
+
       StartTime: query.startTime,
       EndTime: query.endTime,
       Vessel: query.vessel || null,
@@ -554,15 +554,4 @@ export class AlertsService {
     return Number.isFinite(epoch) ? epoch : 0;
   }
 
-  private describeError(error: unknown): string {
-    const candidate = error as any;
-    const status = candidate?.status;
-    const message = candidate?.error?.message || candidate?.message || '';
-
-    if (status) {
-      return `Backend returned HTTP ${status}${message ? `: ${message}` : '.'}`;
-    }
-
-    return message ? String(message) : '';
-  }
 }

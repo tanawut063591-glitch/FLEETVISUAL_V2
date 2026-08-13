@@ -49,13 +49,13 @@ export class PastTrackService {
 
   constructor(private readonly newHttp: NewHttpClientService) {}
 
-  /**
-   * Loads historical route data for a single vessel.
-   * 1) Load the vessel tags by prefix.
-   * 2) Resolve GPS latitude / longitude and supporting tags.
-   * 3) Call the same historian contract used by Data Logger.
-   * 4) Pair latitude and longitude by timestamp and return a route-ready polyline dataset.
-   */
+
+
+
+
+
+
+
   getPastTrack(
     vesselId: string,
     startDate: string,
@@ -74,7 +74,7 @@ export class PastTrackService {
     return this.newHttp.getPoints(prefix).pipe(
       timeout(this.pointTimeoutMs),
       catchError((error: any) => {
-        // If /getpoints fails, continue with the platform's standard GPS tags.
+
         console.warn('[PastTrack] getPoints failed; using standard GPS tags', error);
         return of([]);
       }),
@@ -217,7 +217,7 @@ export class PastTrackService {
   ): PastTrackPoint[] {
     const source = this.parseJsonValue(response);
 
-    // Supports table responses such as { Headers: [...], Records: [...] }.
+
     const tablePoints = this.normalizeHeaderTables(
       source,
       vesselId,
@@ -230,7 +230,7 @@ export class PastTrackService {
       return this.sanitizeTrack(tablePoints);
     }
 
-    // Supports series, flat-record and nested-object response formats.
+
     const samples: HistorianSamples = {
       lat: [],
       lng: [],
@@ -650,7 +650,7 @@ export class PastTrackService {
     const map = new Map<number, HistorianSample>();
 
     for (const sample of sorted) {
-      // The historian is minute-based, so tiny second/millisecond differences share one bucket.
+
       const bucket = Math.floor(sample.time / 60_000) * 60_000;
       map.set(bucket, { time: sample.time, value: sample.value });
     }
@@ -1038,11 +1038,11 @@ export class PastTrackService {
     return [];
   }
 
-  /**
-   * Aligns irregular historian samples to the display interval selected by Past Track.
-   * The closest real GPS point within half an interval is selected; no coordinate
-   * is invented and the same raw sample is never reused for two slots.
-   */
+
+
+
+
+
   private resampleToFixedSlots(
     points: PastTrackPoint[],
     startDate: string,
@@ -1208,7 +1208,7 @@ export class PastTrackService {
       mmsi: this.getMmsi(vessel),
       status: displayPoints.length > 0 ? 'Available' : 'No Data',
       image: this.getVesselImage(vessel),
-      // KPIs use valid raw points. Map/timeline use the automatic display interval.
+
       totalDistance: this.calculateTotalDistance(metricPoints),
       trackPoints: displayPoints.length,
       rawTrackPoints: rawPoints.length,

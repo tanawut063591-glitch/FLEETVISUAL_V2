@@ -85,19 +85,19 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.map = null;
   }
 
-  /**
-   * รับตำแหน่ง realtime จาก Store
-   */
+
+
+
   private watchRealtimeLatLong(): void {
     this.store
       .select(fvInfoReducer.getFvRealtimeDataLatLong)
       .pipe(
         takeUntil(this.destroy$),
 
-        /**
-         * เช็กให้แน่ใจว่า value มี lat / long จริง
-         * TypeScript จะได้ไม่มองว่าเป็น undefined
-         */
+
+
+
+
         filter((value: any): value is LatLongValue => {
           return (
             !!value &&
@@ -115,9 +115,9 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
       });
   }
 
-  /**
-   * ใช้กรณีเรียก component แบบ <app-map [lat]="..." [lng]="...">
-   */
+
+
+
   private updateFromInput(): void {
     if (!this.viewReady) {
       return;
@@ -137,9 +137,9 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.setLatLong(this.lat, this.lng);
   }
 
-  /**
-   * สร้าง Google Map ครั้งแรก
-   */
+
+
+
   private initMap(lat: number, lng: number): void {
     if (!this.viewReady || this.map) {
       return;
@@ -183,9 +183,9 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
     });
   }
 
-  /**
-   * อัปเดตตำแหน่ง marker
-   */
+
+
+
   setLatLong(lat: string | number, long: string | number): void {
     const latNum = this.toNumber(lat);
     const lngNum = this.toNumber(long);
@@ -216,9 +216,9 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
     });
   }
 
-  /**
-   * resize map เวลา container เปลี่ยนขนาด
-   */
+
+
+
   private watchMapResize(): void {
     const mapEl = this.mapContainer?.nativeElement;
 

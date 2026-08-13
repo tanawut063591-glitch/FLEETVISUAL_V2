@@ -878,8 +878,8 @@ select {
   backdrop-filter: blur(3px);
 }
 
-/* Keep every editor above the blurred backdrop. The user access drawer used to
-   sit at z-index 1002, so the z-index 1300 backdrop blurred the editor itself. */
+
+
 .user-access-backdrop {
   z-index: 1390;
 }
@@ -1435,7 +1435,7 @@ select {
 }
 
 
-/* MOBILE PRO: turn the vessel table into readable cards instead of a wide desktop table. */
+
 @media (max-width: 680px) {
   .vessel-table-wrap {
     overflow: visible;
@@ -1544,7 +1544,7 @@ select {
   border-color: rgba(148, 163, 184, 0.2);
 }
 
-/* SETTINGS PRO: general controls, live users and vessel operational status. */
+
 .preference-toggle .toggle-input {
   width: 46px;
   height: 25px;
@@ -1986,7 +1986,7 @@ select {
 }
 
 
-/* Group management */
+
 .group-grid article {
   min-height: 168px;
   overflow: hidden;
@@ -2241,9 +2241,9 @@ select {
 }
 
 
-/* =========================================================
-   SETTINGS MOBILE CARD EXPERIENCE (v47)
-   ========================================================= */
+
+
+
 .vessel-mobile-list {
   display: none;
 }
@@ -2555,7 +2555,7 @@ select {
   }
 }
 
-/* User access management */
+
 .user-panel-switch {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3565,9 +3565,9 @@ select {
   color: #a8c7f4;
 }
 
-/* --------------------------------------------------------------------------
-   Shared Engine Profile Library
-   -------------------------------------------------------------------------- */
+
+
+
 .engine-profile-section {
   margin-top: 20px;
   padding-top: 15px;
@@ -4065,7 +4065,7 @@ select {
 :host-context([data-theme='dark']) .telemetry-template-note { color: #f4c978; }
 
 
-/* 2026-08-03: compact engine profile selector for faster daily use */
+
 .engine-profile-section {
   margin-top: 16px;
   padding-top: 12px;
@@ -4120,9 +4120,9 @@ select {
   }
 }
 
-/* --------------------------------------------------------------------------
-   2026-08-03: Realtime-driven vessel engine setup
-   -------------------------------------------------------------------------- */
+
+
+
 .vessel-drawer {
   width: min(580px, 100vw);
 }
@@ -4340,9 +4340,9 @@ select {
   background: rgba(245, 158, 11, 0.08);
 }
 
-/* --------------------------------------------------------------------------
-   Professional login account provisioning
-   -------------------------------------------------------------------------- */
+
+
+
 .account-setup-section .drawer-section-title {
   align-items: center;
 }
@@ -4799,9 +4799,9 @@ select {
   background: var(--set-green-soft) !important;
 }
 
-/* --------------------------------------------------------------------------
-   2026-08-04: Professional compact engine management
-   -------------------------------------------------------------------------- */
+
+
+
 .professional-engine-setup {
   margin-top: 20px;
   padding-top: 16px;
@@ -5509,10 +5509,10 @@ select {
   }
 }
 
-/* ========================================================================
-   FleetVisual Premium Graphite Dark Theme
-   Final production override: neutral graphite surfaces + restrained blue.
-   ======================================================================== */
+
+
+
+
 :host-context([data-theme='dark']) .settings-page {
   --set-bg: #07090c;
   --set-surface: #0f1217;

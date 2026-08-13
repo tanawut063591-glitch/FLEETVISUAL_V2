@@ -1190,9 +1190,9 @@ tr[data-severity='unknown'] .row-dot { background: var(--alert-info); }
   }
 }
 
-/* Keep the alert drawer below the global Fleet header. The main shell exposes
-   --fleet-header-height, so desktop and mobile stay aligned without hardcoding
-   two unrelated offsets. */
+
+
+
 .detail-backdrop {
   top: var(--fleet-header-height, 68px);
 }

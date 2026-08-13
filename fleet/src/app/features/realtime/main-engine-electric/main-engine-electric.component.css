@@ -55,7 +55,7 @@
     left: 69%;
     top: 163px;
 }
-    
+
 
 .ftd1{
 	position: relative;
@@ -222,7 +222,7 @@
     }
 }
 
-/* Realtime numeric formatting safeguard */
+
 .ftd1-value,
 .kpi-val,
 .st-val,

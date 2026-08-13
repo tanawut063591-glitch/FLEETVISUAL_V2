@@ -60,10 +60,6 @@ export class RealtimeComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // ให้ service เริ่มยิง /getcurrentvalues เองทุก 5 วินาที
-    // ใช้ได้แม้เปิดหน้า Realtime โดยตรง ไม่ต้อง refresh browser
-    this.fvRealtimeService.ensureStarted(5000);
-
     this.data$ = combineLatest([
       this.store.select(fvInfoReducer.getFvRealtimeData),
       this.fvRealtimeService.currentData$,
@@ -72,7 +68,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
         const normalizedLiveData = this.normalizeRealtimeData(liveData);
         const normalizedStoreData = this.normalizeRealtimeData(storeData);
 
-        // ให้ข้อมูล live จาก service มาก่อน เพราะเป็นค่าที่เพิ่งยิง backend รอบล่าสุด
+
         return Object.keys(normalizedLiveData).length > 0
           ? normalizedLiveData
           : normalizedStoreData;
@@ -93,9 +89,9 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       shareReplay({ bufferSize: 1, refCount: true })
     );
 
-    // Reuse the immutable alarm snapshot already polled by Header/Alarm Center.
-    // Realtime only filters the shared rows for the selected vessel, so no
-    // additional timer or backend request is created.
+
+
+
     this.selectedVesselAlerts$ = combineLatest([
       this.activeVessel$,
       this.alertState.activeAlerts$,
@@ -124,11 +120,11 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     this.watchRealtimePrefix();
   }
 
-  /**
-   * Returns the unresolved alarm rows that belong to the selected vessel.
-   * Matching is intentionally tolerant because different backend endpoints may
-   * identify the same vessel by id, prefix, ship id or display name.
-   */
+
+
+
+
+
   private getActiveAlertsForVessel(
     alerts: readonly AlertRecord[] | null | undefined,
     activeVessel: any
@@ -295,10 +291,10 @@ export class RealtimeComponent implements OnInit, OnDestroy {
   }
 
 
-  /**
-   * เปิดจากปุ่ม Realtime ใน popup จะเก็บเรือไว้ใน localStorage
-   * ฟังก์ชันนี้ดึงเรือนั้นมา set active อีกครั้ง กันหน้า realtime ว่าง/ค้าง
-   */
+
+
+
+
   private activateStoredVessel(): void {
     const stored = this.getStoredRealtimeVessel();
 
@@ -311,10 +307,10 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     }, 80);
   }
 
-  /**
-   * ถ้า active vessel มาจาก Store / Sidebar / URL ให้ส่งเข้า FvRealtimeService
-   * เพื่อให้ service ยิง backend ซ้ำอัตโนมัติ ไม่ต้อง refresh หน้าเว็บ
-   */
+
+
+
+
   private watchSelectedVesselForLiveUpdate(): void {
     this.activeVessel$
       .pipe(
@@ -331,17 +327,17 @@ export class RealtimeComponent implements OnInit, OnDestroy {
         this.fvRealtimeService.setActiveVessel(vessel);
       });
   }
-  
-  /**
-   * ใช้ดึงเรือจาก URL เช่น /main/realtime/BB_INTAN
-   * แล้ว set active vessel ให้ตรงกับ route
-   */
+
+
+
+
+
   private syncActiveVesselFromRoute(): void {
     const routeId$ = this.route.paramMap.pipe(
       map((params) => (params.get('id') || '').trim()),
       distinctUntilChanged()
     );
-    
+
     const vessels$ = this.store.select(fvInfoReducer.getFvInfos);
 
     combineLatest([routeId$, vessels$])
@@ -367,9 +363,9 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       });
   }
 
-  /**
-   * ใช้จับ prefix จาก tag realtime เช่น BB_INTAN-VES_GPS_SPEED
-   */
+
+
+
   private watchRealtimePrefix(): void {
     this.data$
       .pipe(takeUntil(this.destroy$))
@@ -386,9 +382,9 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       });
   }
 
-  /**
-   * ใช้หา config ของ card ตาม tag / row / col
-   */
+
+
+
   getCardDetail(tag: any, row: number, col: number): CardDetail | null {
     if (!tag || !tag.tagName) {
       return null;
@@ -473,7 +469,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     if (fv && fv.image) {
       return fv.image;
     }
-    
+
     return this.resolveFallbackImage(fv?.name || fv?.prefix || '');
   }
 
@@ -587,9 +583,9 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     return this.formatDate(timestamp);
   }
 
-  /**
-   * ใช้แสดงค่า tag ใน HTML ได้ เช่น getRealtimeValue(data, 'VES_GPS_SPEED')
-   */
+
+
+
   getRealtimeValue(rtData: any, key: string, fallback: any = '0'): any {
     const data = this.normalizeRealtimeData(rtData);
     const value = this.getTagValue(data, key);
@@ -601,9 +597,9 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     return value;
   }
 
-  /**
-   * ใช้แสดงตัวเลขแบบทศนิยม 2 ตำแหน่ง
-   */
+
+
+
   getRealtimeNumber(rtData: any, key: string, fallback = 0): string {
     const value = Number(this.getRealtimeValue(rtData, key, fallback));
 
@@ -615,9 +611,9 @@ export class RealtimeComponent implements OnInit, OnDestroy {
   }
 
 
-  /**
-   * แสดงค่า direction/course เป็นทศนิยม 2 ตำแหน่ง
-   */
+
+
+
   getRealtimeDirection(
     rtData: any,
     key: string,
@@ -635,9 +631,9 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     return value.toFixed(2);
   }
 
-  /**
-   * แสดง Latitude/Longitude เป็นทศนิยม 6 ตำแหน่ง
-   */
+
+
+
   getRealtimeCoordinateNumber(
     rtData: any,
     key: string,
@@ -686,7 +682,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
   abs(data: any): any {
     return data !== undefined && data !== null ? data : null;
   }
-  
+
   getAvg(data: any): any {
     if (data && data.tagName && data.value !== undefined) {
       const hours = this.getHour(data.timestamp);
@@ -736,10 +732,10 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     };
   }
 
-  /**
-   * คำนวณสัดส่วนความเร็วปัจจุบันเทียบกับค่าสูงสุดของวัน
-   * จำกัดค่าให้อยู่ระหว่าง 0-100 เพื่อใช้กับวงแสดงผลและ progress bar
-   */
+
+
+
+
   getSummarySpeedProgress(rtData: any): number {
     const current = Number(this.getRealtimeValue(rtData, 'VES_GPS_SPEED', 0));
     const maximum = Number(this.getRealtimeValue(rtData, 'VES_GPS_SPEED_MAX', 0));
@@ -751,9 +747,9 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     return Math.round(Math.min(100, Math.max(0, (current / maximum) * 100)));
   }
 
-  /**
-   * แปลงองศาเข็มทิศเป็นทิศย่อ เพื่อให้ผู้ปฏิบัติงานอ่านได้เร็วขึ้น
-   */
+
+
+
   getSummaryCourseCardinal(rtData: any): string {
     const heading = Number(this.getRealtimeValue(rtData, 'VES_GPS_HEAD', 0));
 
@@ -766,10 +762,10 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     return directions[Math.round(normalized / 45) % directions.length];
   }
 
-  /**
-   * รวม Fuel Rate ที่เป็นบวกจากเครื่องจักรทุกชุด
-   * ใช้รายการ Tag เดียวกับ KPI ด้านบน เพื่อให้ค่าทั้งหน้าตรงกัน
-   */
+
+
+
+
   getSummaryCurrentFuelRate(rtData: any): number {
     const keys = [
       'PME_CONS_RATE',
@@ -790,9 +786,9 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     }, 0);
   }
 
-  /**
-   * ค่าเฉลี่ยการใช้น้ำมันของวันนี้ = ปริมาณสะสม / ชั่วโมงที่ผ่านไป
-   */
+
+
+
   getSummaryAverageFuelRate(rtData: any): number {
     const data = this.normalizeRealtimeData(rtData);
     const total = Number(this.getRealtimeValue(data, 'VES_CONS_TODAY', 0));
@@ -860,9 +856,9 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       : `${amount}% above the daily average`;
   }
 
-  /**
-   * แปลงข้อมูล realtime ให้เป็น object กลาง
-   */
+
+
+
   private normalizeRealtimeData(data: any): Record<string, any> {
     if (!data) {
       return {};

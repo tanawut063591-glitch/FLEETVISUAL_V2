@@ -26,27 +26,27 @@ type EngineInput = RealtimeValue | number | string | null | undefined;
   templateUrl: './main-engine.component.html',
   styleUrls: ['./main-engine.component.css'],
 
-  // ลดการ render ซ้ำ เวลา realtime update
+
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Main2EngineComponent implements OnChanges {
   @Input() activeAlerts: readonly AlertRecord[] = [];
 
-  // Fuel supply
+
   @Input() flow_supply: EngineInput = null;
   @Input() temp_supply: EngineInput = null;
   @Input() dens_supply: EngineInput = null;
 
-  // Fuel return
+
   @Input() flow_return: EngineInput = null;
   @Input() temp_return: EngineInput = null;
   @Input() dens_return: EngineInput = null;
 
-  // Consumption
+
   @Input() cons: EngineInput = null;
   @Input() consL: EngineInput = null;
 
-  // Speed / Load
+
   @Input() speed_eng: EngineInput = null;
   @Input() speed_gear: EngineInput = null;
   @Input() load: EngineInput = null;
@@ -57,14 +57,14 @@ export class Main2EngineComponent implements OnChanges {
   loadPercent = 0;
   loadStateClass = 'load-panel--normal';
 
-  // ใช้แสดงอุณหภูมิที่แปลงแล้ว
+
   displayTempSupply = '';
   displayTempReturn = '';
 
   constructor(public tooltipFormatService: TooltipFormatService) {}
 
   ngOnChanges(changes: SimpleChanges): void {
-    // เช็กว่ามี Load หรือไม่
+
     if (changes['load']) {
       this.hasLoad = this.hasValidValue(this.load);
       this.loadPercent = this.clampPercent(this.toNumber(this.load));
@@ -83,7 +83,7 @@ export class Main2EngineComponent implements OnChanges {
       this.statusText = this.isRunning ? 'Running' : 'Stopped';
     }
 
-    // แปลงอุณหภูมิฝั่ง Supply
+
     if (changes['temp_supply']) {
       this.displayTempSupply = this.changeTemp(
         this.getValue(this.temp_supply),
@@ -91,7 +91,7 @@ export class Main2EngineComponent implements OnChanges {
       );
     }
 
-    // แปลงอุณหภูมิฝั่ง Return
+
     if (changes['temp_return']) {
       this.displayTempReturn = this.changeTemp(
         this.getValue(this.temp_return),
@@ -100,9 +100,9 @@ export class Main2EngineComponent implements OnChanges {
     }
   }
 
-  /**
-   * ดึง value จาก object realtime หรือค่าตรง ๆ
-   */
+
+
+
   getValue(input: EngineInput): string {
     if (input === null || input === undefined) {
       return '';
@@ -121,9 +121,9 @@ export class Main2EngineComponent implements OnChanges {
     return String(input);
   }
 
-  /**
-   * ดึง tagName สำหรับ tooltip / logic
-   */
+
+
+
   getTagName(input: EngineInput): string {
     if (!input || typeof input !== 'object') {
       return '';
@@ -132,9 +132,9 @@ export class Main2EngineComponent implements OnChanges {
     return input.tagName || input.name || '';
   }
 
-  /**
-   * ดึง timestamp สำหรับ tooltip
-   */
+
+
+
   getTimestamp(input: EngineInput): string {
     if (!input || typeof input !== 'object') {
       return '';
@@ -153,9 +153,9 @@ export class Main2EngineComponent implements OnChanges {
     return String(timestamp);
   }
 
-  /**
-   * ใช้ใน HTML สำหรับ tooltip
-   */
+
+
+
   getTooltip(input: EngineInput): string {
     return this.tooltipFormatService.getTooltip(
       this.getTagName(input),
@@ -163,9 +163,9 @@ export class Main2EngineComponent implements OnChanges {
     );
   }
 
-  /**
-   * แสดงตัวเลขแบบปลอดภัย
-   */
+
+
+
   displayNumber(input: EngineInput, digits = 2, fallback = '0.00'): string {
     const value = Number(this.getValue(input));
 
@@ -176,9 +176,9 @@ export class Main2EngineComponent implements OnChanges {
     return value.toFixed(digits);
   }
 
-  /**
-   * แสดงตัวเลขแบบค่าสัมบูรณ์ เช่น consumption ที่ติดลบ
-   */
+
+
+
   displayAbsNumber(input: EngineInput, digits = 2, fallback = '0.00'): string {
     const value = Math.abs(Number(this.getValue(input)));
 
@@ -189,9 +189,9 @@ export class Main2EngineComponent implements OnChanges {
     return value.toFixed(digits);
   }
 
-  /**
-   * เช็กว่ามีค่าจริงไหม
-   */
+
+
+
   private hasValidValue(input: EngineInput): boolean {
     const value = this.getValue(input);
 
@@ -212,9 +212,9 @@ export class Main2EngineComponent implements OnChanges {
     return Math.min(100, Math.max(0, value));
   }
 
-  /**
-   * แปลงอุณหภูมิของบาง vessel เช่น A01
-   */
+
+
+
   changeTemp(value: string, tagName: string): string {
     if (!value) {
       return '';

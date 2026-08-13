@@ -1323,7 +1323,7 @@ tr[data-state='stopped'] .equipment-status i {
   min-width: 0;
 }
 
-/* Dark theme keeps the same visual hierarchy as Realtime and Chart. */
+
 :host-context([data-theme='dark']) {
   --report-bg: #030407;
   --report-card: #080b10;
@@ -1677,7 +1677,7 @@ tr[data-state='stopped'] .equipment-status i {
   box-sizing: border-box;
 }
 
-/* ---------------------------- A4 live PDF export ---------------------------- */
+
 .pdf-export-root {
   position: fixed;
   top: 0;
@@ -2212,9 +2212,9 @@ tr[data-state='stopped'] .equipment-status i {
   font-weight: 900;
 }
 
-/* =========================================================
-   REFINED PRO V4 - balanced dashboard and official archive
-   ========================================================= */
+
+
+
 .report-page-header {
   position: relative;
   overflow: hidden;
@@ -2592,12 +2592,12 @@ tr[data-state='stopped'] .equipment-status i {
   }
 }
 
-/* ================================================================
-   PREMIUM REFINED v6
-   Subtle visual refinement, resilient empty states and local archive
-   history. These overrides intentionally stay aligned with the rest
-   of Fleet Visual instead of introducing a separate visual language.
-   ================================================================ */
+
+
+
+
+
+
 
 .report-page-header {
   position: relative;
@@ -3101,7 +3101,7 @@ tr[data-state='stopped'] .equipment-status i {
   }
 }
 
-/* ==========================================================================\n   Premium Refined v6 — customer-ready report workspace\n   ========================================================================== */
+
 
 .report-page {
   padding-bottom: 48px;
@@ -3465,7 +3465,7 @@ tr[data-state='stopped'] .equipment-status i {
   min-height: min(620px, calc(100vh - 330px));
 }
 
-/* Dark mode refinements */
+
 :host-context([data-theme='dark']) .official-command-panel,
 :host-context([data-theme='dark']) .official-type-control,
 :host-context([data-theme='dark']) .official-period-control,
@@ -3589,11 +3589,11 @@ tr[data-state='stopped'] .equipment-status i {
   }
 }
 
-/* ==========================================================================\n   Clean Official Archive v7 — compact completed-report workspace\n   ========================================================================== */
 
-/* The live workspace keeps the vessel context bar. Official PDF uses one
-   compact command bar so the selected vessel and report controls are not
-   repeated across multiple cards. */
+
+
+
+
 .official-quickbar {
   margin-top: 14px;
   min-width: 0;
@@ -3918,16 +3918,16 @@ tr[data-state='stopped'] .equipment-status i {
   min-height: min(680px, calc(100vh - 270px));
 }
 
-/* The previous archive banner, multi-column command center and history panel
-   are no longer rendered in v7. Keep them hidden if an older cached template
-   is briefly present during hot reload. */
+
+
+
 .official-report-header,
 .official-command-panel,
 .archive-history-panel {
   display: none !important;
 }
 
-/* Dark theme */
+
 :host-context([data-theme='dark']) .official-quickbar {
   border-color: #334155;
   background: #111c2f;
@@ -4030,11 +4030,11 @@ tr[data-state='stopped'] .equipment-status i {
   }
 }
 
-/* =========================================================
-   OFFICIAL PDF CLEAN WORKSPACE V9
-   Keeps the proven Live Report untouched while simplifying
-   the completed-file workflow to controls + original PDF.
-   ========================================================= */
+
+
+
+
+
 .report-context-bar {
   grid-template-columns: minmax(260px, 1fr) auto;
 }
@@ -4524,10 +4524,10 @@ tr[data-state='stopped'] .equipment-status i {
 }
 
 
-/* =========================================================
-   REPORT PREMIUM MODE SPOTLIGHT V10
-   UI-only enhancement: no additional telemetry or historian request.
-   ========================================================= */
+
+
+
+
 .live-mode-spotlight {
   position: relative;
   display: grid;
@@ -4696,8 +4696,8 @@ tr[data-state='stopped'] .equipment-status i {
 
 .mode-catalog-header--profile { padding-top: 14px; }
 
-/* Navigation was intentionally removed: the date field is the single,
-   predictable source of truth for completed report selection. */
+
+
 .official-control-bar {
   grid-template-columns: minmax(220px, 0.9fr) minmax(270px, 1fr) minmax(330px, 1.2fr);
 }
@@ -4756,11 +4756,11 @@ tr[data-state='stopped'] .equipment-status i {
 }
 
 
-/* =========================================================
-   OFFICIAL PDF COMPACT READING MODE V12
-   Balanced desktop dimensions + cleaner mobile layout.
-   UI-only: no additional report-server requests.
-   ========================================================= */
+
+
+
+
+
 .report-page.report-page--official {
   padding: 12px 16px 42px;
 }
@@ -4789,8 +4789,8 @@ tr[data-state='stopped'] .equipment-status i {
   height: auto;
 }
 
-/* Keep the loaded PDF closer to the first-reference screenshot: wide
-   enough to read comfortably, but not a near-full-screen scroll well. */
+
+
 :host ::ng-deep .report-page--official .official-pdf-card .pdf-viewer-wrap {
   width: 100%;
   min-height: 500px;
@@ -4822,7 +4822,7 @@ tr[data-state='stopped'] .equipment-status i {
   margin: 0 auto 12px !important;
 }
 
-/* Empty state should not create a huge blank page. */
+
 :host ::ng-deep .report-page--official .official-pdf-card .empty-state {
   min-height: clamp(430px, 50dvh, 540px);
   padding: 28px 20px;
@@ -4951,11 +4951,11 @@ tr[data-state='stopped'] .equipment-status i {
   }
 }
 
-/* =========================================================
-   MOBILE REPORT PRO POLISH V13
-   Final responsive overrides for 320-680px viewports.
-   Keeps desktop behavior unchanged and avoids extra API work.
-   ========================================================= */
+
+
+
+
+
 @media screen and (max-width: 680px) {
   .report-page,
   .report-page.report-page--official {
@@ -4973,7 +4973,7 @@ tr[data-state='stopped'] .equipment-status i {
     min-width: 0;
   }
 
-  /* Compact page heading without letting action buttons cover the title. */
+
   .report-page-header {
     min-height: 58px;
     display: grid;
@@ -5062,7 +5062,7 @@ tr[data-state='stopped'] .equipment-status i {
     font-size: 9.5px;
   }
 
-  /* Current mode remains prominent but no longer consumes three tall rows. */
+
   .live-mode-spotlight {
     margin-top: 10px;
     border-radius: 13px;
@@ -5152,7 +5152,7 @@ tr[data-state='stopped'] .equipment-status i {
     font-size: 9px;
   }
 
-  /* Live summary uses the phone width more efficiently. */
+
   .report-filter-row {
     min-height: 0;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5261,7 +5261,7 @@ tr[data-state='stopped'] .equipment-status i {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Official file workflow: compact, readable and no extra-tall scroll well. */
+
   .report-page--official .official-report-workspace {
     width: 100%;
     max-width: 100%;
@@ -5441,10 +5441,10 @@ tr[data-state='stopped'] .equipment-status i {
   }
 }
 
-/* ========================================================================
-   FleetVisual Premium Graphite Dark Theme
-   Final dark-mode pass for Report: neutral graphite, restrained blue accents.
-   ======================================================================== */
+
+
+
+
 :host-context([data-theme='dark']) {
   --report-bg: #07090c;
   --report-card: #0f1217;
@@ -5573,12 +5573,12 @@ tr[data-state='stopped'] .equipment-status i {
 }
 
 
-/* ========================================================================
-   2026-08-10 REPORT KPI OVERLAY GUARD + PREMIUM SAFE ACCENT
-   Fixes decorative pseudo-element overlap on dark mode. The accent is kept
-   behind content and reduced to a thin rail so values can never be covered.
-   Visual-only: no API, polling, timers or report logic changes.
-   ======================================================================== */
+
+
+
+
+
+
 .report-kpi-card {
   isolation: isolate;
 }
@@ -5622,7 +5622,7 @@ tr[data-state='stopped'] .equipment-status i {
   overflow: hidden;
 }
 
-/* REPORT MACHINERY FIT V13 */
+
 .compact-table-wrap {
   overflow-x: hidden;
   overflow-y: auto;

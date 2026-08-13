@@ -5,15 +5,14 @@ import {
   transition,
   query,
   stagger,
-  keyframes,
   group,
 } from '@angular/animations';
 
 export const Animations = {
-  /**
-   * ใช้กับ Sidebar / Vessel list
-   * เบากว่าเดิม ไม่กระตุกเวลา realtime update
-   */
+
+
+
+
   listAnimation: trigger('listAnimation', [
     transition(':enter', [
       query(
@@ -56,10 +55,10 @@ export const Animations = {
     ]),
   ]),
 
-  /**
-   * ใช้กับ router-outlet / main content
-   * ช่วยลด error ExpressionChangedAfterItHasBeenCheckedError
-   */
+
+
+
+
   routeAnimation: trigger('routeAnimation', [
     transition('* <=> *', [
       query(
@@ -112,9 +111,9 @@ export const Animations = {
     ]),
   ]),
 
-  /**
-   * ใช้กับ Card / Popup
-   */
+
+
+
   fadeSlideUp: trigger('fadeSlideUp', [
     transition(':enter', [
       style({

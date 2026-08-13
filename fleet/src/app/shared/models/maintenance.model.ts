@@ -1,4 +1,4 @@
-// ─── Common ───────────────────────────────────────────────────────────────────
+
 
 export interface MaintenanceResponse<T = any> {
     status: 'success' | 'error';
@@ -6,7 +6,7 @@ export interface MaintenanceResponse<T = any> {
     message?: string;
 }
 
-// ─── Plants ───────────────────────────────────────────────────────────────────
+
 
 export interface PlantModel {
     id: string;
@@ -19,7 +19,7 @@ export interface GetPlantByIdRequest {
     id: string;
 }
 
-// ─── Users ────────────────────────────────────────────────────────────────────
+
 
 export interface MaintenanceUserModel {
     id: string | number;
@@ -31,7 +31,7 @@ export interface MaintenanceUserModel {
     [key: string]: any;
 }
 
-// ─── Work Orders ──────────────────────────────────────────────────────────────
+
 
 export type WorkOrderStatus = 'draft' | 'assigned' | 'in_progress' | 'completed' | 'closed' | 'cancelled';
 export type WorkOrderPriority = 'low' | 'medium' | 'high' | 'critical';
@@ -129,7 +129,7 @@ export interface DeleteWorkOrderRequest {
     id: number;
 }
 
-// ─── Checklists ───────────────────────────────────────────────────────────────
+
 
 export interface ChecklistItemModel {
     id: number;
@@ -168,7 +168,7 @@ export interface DeleteChecklistRequest {
     id: number;
 }
 
-// ─── Reports ──────────────────────────────────────────────────────────────────
+
 
 export type FollowupAction = 'none' | 'monitor' | 'schedule_next' | 'escalate';
 
@@ -223,7 +223,7 @@ export interface DeleteWoReportRequest {
     id: number;
 }
 
-// ─── Signatures ───────────────────────────────────────────────────────────────
+
 
 export interface WoSignatureModel {
     id: number;
@@ -249,7 +249,7 @@ export interface DeleteSignatureRequest {
     id: number;
 }
 
-// ─── Maintenance Schedules ────────────────────────────────────────────────────
+
 
 export type ScheduleTaskType = 'preventive' | 'inspection' | 'cleaning' | 'calibration' | 'other';
 export type ScheduleRecurrence = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
@@ -297,7 +297,7 @@ export interface DeleteScheduleRequest {
     id: number;
 }
 
-// ─── Audit Logs ───────────────────────────────────────────────────────────────
+
 
 export interface MaintenanceLogModel {
     id: number;

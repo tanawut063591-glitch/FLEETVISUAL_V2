@@ -8,9 +8,9 @@
     font-family: "Inter", "Segoe UI", Arial, Helvetica, sans-serif;
 }
 
-/* ===============================
-   MAIN WRAPPER
-================================ */
+
+
+
 
 .main {
     width: 310px;
@@ -19,7 +19,7 @@
     height: 100%;
     min-height: calc(100vh - 72px);
 
-    /* พื้นหลังเทาอ่อน */
+
     background: #f3f6fb;
 
     border-right: 1px solid #dbe4f0;
@@ -36,7 +36,7 @@
     padding: 17px 14px 14px;
     box-sizing: border-box;
 
-    /* พื้นหลังเทาอ่อน ให้เห็น Card สีขาวด้านใน */
+
     background:
         radial-gradient(circle at 10% 0%, rgba(0, 82, 255, 0.035), transparent 28%),
         linear-gradient(180deg, #f7f9fc 0%, #f3f6fb 100%);
@@ -46,9 +46,9 @@
     overflow: hidden;
 }
 
-/* ===============================
-   HEADER
-================================ */
+
+
+
 
 .sidebar-header {
     flex-shrink: 0;
@@ -85,9 +85,9 @@
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
 }
 
-/* ===============================
-   SEARCH
-================================ */
+
+
+
 
 .search-box {
     position: relative;
@@ -150,9 +150,9 @@
     color: #64748b;
 }
 
-/* ===============================
-   VESSEL LIST
-================================ */
+
+
+
 
 .vessel-list {
     flex: 1;
@@ -165,9 +165,9 @@
     background: transparent;
 }
 
-/* ===============================
-   VESSEL CARD
-================================ */
+
+
+
 
 .vessel-card {
     position: relative;
@@ -176,7 +176,7 @@
     padding: 8px 8px;
     border-radius: 18px;
 
-    /* Card สีขาว เพื่อแยกจากพื้นหลังเทา */
+
     border: 1px solid #e4ebf5;
     background: #ffffff;
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.045);
@@ -196,7 +196,7 @@
         transform 0.2s ease;
 }
 
-/* Hover */
+
 .vessel-card:hover {
     background: #ffffff;
     border-color: #cbdaf0;
@@ -204,7 +204,7 @@
     transform: translateY(-1px);
 }
 
-/* เรือที่เลือก */
+
 .vessel-card.active {
     background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
     border-color: #4f9cff;
@@ -213,7 +213,7 @@
         inset 0 0 0 1px rgba(0, 82, 255, 0.08);
 }
 
-/* เส้นซ้าย ปกติไม่แสดง */
+
 .selected-line {
     position: absolute;
     left: 0;
@@ -225,14 +225,14 @@
     transition: 0.2s ease;
 }
 
-/* เส้นซ้ายแสดงเฉพาะตอน active */
+
 .vessel-card.active .selected-line {
     background: linear-gradient(180deg, #0052ff 0%, #4facfe 100%);
 }
 
-/* ===============================
-   IMAGE
-================================ */
+
+
+
 
 .vessel-image {
     width: 62px;
@@ -253,9 +253,9 @@
     object-fit: cover;
 }
 
-/* ===============================
-   INFO
-================================ */
+
+
+
 
 .vessel-info {
     min-width: 0;
@@ -326,9 +326,9 @@
     white-space: nowrap;
 }
 
-/* ===============================
-   STATUS BADGE
-================================ */
+
+
+
 
 .status-badge {
     flex: 0 0 auto;
@@ -372,9 +372,9 @@
     display: inline-block;
 }
 
-/* ===============================
-   EMPTY STATE
-================================ */
+
+
+
 
 .empty-state {
     margin-top: 20px;
@@ -412,9 +412,9 @@
     color: #7b879c;
 }
 
-/* ===============================
-   MOBILE BUTTON
-================================ */
+
+
+
 
 .sidebar-toggle-btn {
     display: none;
@@ -438,9 +438,9 @@
     display: none;
 }
 
-/* ===============================
-   SCROLLBAR
-================================ */
+
+
+
 
 .vessel-list::-webkit-scrollbar {
     width: 5px;
@@ -459,9 +459,9 @@
     background: #aebbd0;
 }
 
-/* ===============================
-   MOBILE
-================================ */
+
+
+
 
 @media (max-width: 991px) {
     :host {
@@ -601,9 +601,9 @@
     to { opacity: 1; }
 }
 
-/* =========================================================
-   DARK BLACK MODE - Sidebar polish
-   ========================================================= */
+
+
+
 :host-context([data-theme='dark']) {
   background: #05070b;
 }
@@ -652,10 +652,10 @@
 }
 
 
-/* =========================================================
-   BLACK PRO POLISH - Sidebar readability
-   แก้ข้อความมืด/มองไม่ชัดใน Black mode
-   ========================================================= */
+
+
+
+
 :host-context([data-theme='dark']) {
   color: #f8fafc;
 }
@@ -694,7 +694,7 @@
   color: #cbd5e1 !important;
 }
 
-/* Last seen follows the same operational status as the marker/map. */
+
 .vessel-time.online {
     color: #0891b2;
 }
@@ -720,9 +720,9 @@
 }
 
 
-/* =========================================================
-   MOBILE VESSEL BUTTON / DRAWER REFINEMENT (v47)
-   ========================================================= */
+
+
+
 @media (max-width: 991px) {
   .sidebar-toggle-btn {
     bottom: max(14px, env(safe-area-inset-bottom));

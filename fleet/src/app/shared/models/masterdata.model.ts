@@ -1,4 +1,4 @@
-// ─── Common ───────────────────────────────────────────────────────────────────
+
 
 export interface MasterDataResponse<T = any> {
     status: 'success' | 'error';
@@ -6,11 +6,11 @@ export interface MasterDataResponse<T = any> {
     message?: string;
 }
 
-// ─── Plant Information ────────────────────────────────────────────────────────
+
 
 export interface PlantInformationModel {
     id: number;
-    enable: number; // 1 = active, 0 = disabled
+    enable: number;
     siteid: string;
     name?: string;
     project?: string;
@@ -57,7 +57,7 @@ export interface DeletePlantRequest {
     hard?: boolean;
 }
 
-// ─── Plant SLA (yearly snapshot) ──────────────────────────────────────────────
+
 
 export interface PlantSlaModel {
     id: number;
@@ -101,7 +101,7 @@ export interface DeleteSlaRequest {
     id: number;
 }
 
-// ─── Plant Diagram (Single Line Diagram) ──────────────────────────────────────
+
 
 export interface PlantDiagramModel {
     id: number;

@@ -89,7 +89,7 @@ export class UserAccountService {
     return this.config$.pipe(
       switchMap((config) => {
         this.assertOperation(config, config.createUrl, 'Create user account');
-        // Password exists only in this in-memory request body. It is never logged or persisted.
+
         const payload = {
           username: request.username,
           password: request.password,

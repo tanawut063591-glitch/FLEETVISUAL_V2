@@ -317,11 +317,11 @@
 }
 
 
-/*
- * Stable card-level fullscreen.
- * The parent card remains mounted while Auto Refresh updates chart options,
- * so the browser does not leave fullscreen when Highcharts is reconstructed.
- */
+
+
+
+
+
 .chart-card:fullscreen,
 .chart-card:-webkit-full-screen,
 .chart-card--fullscreen-fallback {
@@ -362,8 +362,8 @@
     height: auto !important;
 }
 
-/* angular-highcharts nests two generated divs inside <highcharts-chart>.
-   Force those generated nodes to inherit the fullscreen flex height too. */
+
+
 :host ::ng-deep .chart-card:fullscreen .chart-instance > div,
 :host ::ng-deep .chart-card:-webkit-full-screen .chart-instance > div,
 :host ::ng-deep .chart-card--fullscreen-fallback .chart-instance > div,
@@ -699,10 +699,10 @@
     }
 }
 
-/* =========================================================
-   BLACK PRO THEME - Chart
-   Matches the Realtime / Diagram dark visual language.
-   ========================================================= */
+
+
+
+
 :host-context([data-theme='dark']) {
     background: #000000 !important;
     color: #f8fafc !important;
@@ -857,7 +857,7 @@
 }
 
 
-/* MOBILE PRO LAYOUT */
+
 @media screen and (max-width: 860px) {
   .chart-page {
     min-height: 100%;
@@ -1018,9 +1018,9 @@
   .group-chart { height: 300px; }
 }
 
-/* Keep Highcharts' HTML hover card above the SVG while the chart card is in
-   native/CSS fullscreen. The tooltip itself is moved inside the chart by the
-   component because an `outside` tooltip is not part of the fullscreen layer. */
+
+
+
 :host ::ng-deep .chart-card:fullscreen .highcharts-tooltip,
 :host ::ng-deep .chart-card:-webkit-full-screen .highcharts-tooltip,
 :host ::ng-deep .chart-card--fullscreen-fallback .highcharts-tooltip,
@@ -1031,9 +1031,9 @@
     pointer-events: auto !important;
 }
 
-/* =========================================================
-   2026-08-04 WHITE REALTIME FRAME ALIGNMENT
-   ========================================================= */
+
+
+
 :host {
     background: #f4f7fb;
 }
@@ -1093,10 +1093,10 @@
     background: #070b12 !important;
 }
 
-/* =========================================================
-   2026-08-04 CHART — REALTIME DARK PALETTE
-   Matches Realtime card, border and shadow treatment.
-   ========================================================= */
+
+
+
+
 :host-context([data-theme='dark']) {
   background: #000000 !important;
 }

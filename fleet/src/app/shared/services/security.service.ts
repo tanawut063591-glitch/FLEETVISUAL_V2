@@ -11,16 +11,16 @@ interface Security {
 export class SecurityService {
   repo: Security[] = [];
 
-  // เรือที่ยกเลิกการใช้งานและต้องไม่แสดงในทุกหน้าของระบบ
+
   private readonly excludedVesselKeys = new Set<string>([
     'BAHTERA MAKMUR',
     'BB MAKMUR',
   ]);
 
-  // กลุ่มเรือสำหรับทดสอบ
+
   test: string[] = [];
 
-  // กลุ่มเรือ BB
+
   bb_chevron: string[] = [];
 
   bb_ptt: string[] = [
@@ -31,7 +31,7 @@ export class SecurityService {
     'BB LIBERTY 233',
   ];
 
-  // กลุ่มเรือ SC
+
   sc_chevron: string[] = [
     'SC GLORY 2',
     'SC GLORY 6',
@@ -58,17 +58,17 @@ export class SecurityService {
     'SC RAJA',
   ];
 
-  // กลุ่มเรือ MV
+
   mv: string[] = [
     'MV GEMIA',
   ];
 
-  // เรือที่ไม่ใช้งานแล้ว
+
   obsolete: string[] = [
     'BB BUSSARAKHAM',
   ];
 
-  // รวมกลุ่มเรือ
+
   chevron: string[] = this.getUniqueVessels([
     ...this.sc_chevron,
     ...this.bb_chevron,
@@ -99,7 +99,7 @@ export class SecurityService {
   constructor() {
     this.clearExcludedStoredSelections();
 
-    // User ที่เห็นเรือเฉพาะลำ
+
     this.addPermission('scbrave', ['SC BRAVE']);
     this.addPermission('scemerald', ['SC EMERALD']);
     this.addPermission('scglory2', ['SC GLORY 2']);
@@ -110,15 +110,15 @@ export class SecurityService {
 
     this.addPermission('bbkaimook', ['BB KAIMOOK']);
 
-    // User ที่เห็นเรือทั้งหมด
+
     this.addPermission('systemadmin', this.all);
     this.addPermission('sat', this.all);
     this.addPermission('chatri', this.all);
 
-    // User สำหรับ Chevron Customer
+
     this.addPermission('sc', this.sc_chevron);
 
-    // User ตามกลุ่มเรือ
+
     this.addPermission('bbuser', this.bb);
     this.addPermission('scuser', this.sc);
     this.addPermission('chevronuser', this.chevron);
@@ -131,7 +131,7 @@ export class SecurityService {
     this.addPermission('mvgemia', ['MV GEMIA']);
   }
 
-  // ล้างเรือที่ถูกนำออกซึ่ง Browser อาจจำไว้จากการเลือกครั้งก่อน
+
   private clearExcludedStoredSelections(): void {
     const storageKeys = ['selectedVessel', 'realtimeVessel', 'pastTrackVessel'];
 
@@ -162,7 +162,7 @@ export class SecurityService {
     });
   }
 
-  // เช็กว่าเป็นเรือที่ถูกนำออกจากระบบหรือไม่ รองรับทั้งชื่อและ prefix
+
   isExcludedVessel(vesselNameOrPrefix: string): boolean {
     const normalized = String(vesselNameOrPrefix || '')
       .trim()
@@ -173,7 +173,7 @@ export class SecurityService {
     return this.excludedVesselKeys.has(normalized);
   }
 
-  // เช็กว่า user ปัจจุบันมีสิทธิ์ดูเรือลำนี้ไหม
+
   hasAccess(vesselName: string): boolean {
     const username = localStorage.getItem('username');
 
@@ -196,7 +196,7 @@ export class SecurityService {
     });
   }
 
-  // ดึงรายการเรือที่ user นี้มีสิทธิ์เห็น
+
   getAccessibleVessels(username?: string | null): string[] {
     const currentUsername =
       username ||
@@ -218,7 +218,7 @@ export class SecurityService {
     );
   }
 
-  // เพิ่มสิทธิ์ให้ user
+
   private addPermission(username: string, vesselNames: string[]): void {
     if (!username || !Array.isArray(vesselNames)) {
       return;
@@ -230,12 +230,12 @@ export class SecurityService {
     });
   }
 
-  // จัดชื่อเรือให้เป็นรูปแบบเดียวกัน
+
   private normalizeVesselName(vesselName: string): string {
     return vesselName ? vesselName.trim().toUpperCase() : '';
   }
 
-  // กันชื่อเรือซ้ำใน array
+
   private getUniqueVessels(vesselNames: string[]): string[] {
     if (!Array.isArray(vesselNames) || vesselNames.length === 0) {
       return [];
@@ -257,4 +257,4 @@ export class SecurityService {
 
     return result;
   }
-} 
+}

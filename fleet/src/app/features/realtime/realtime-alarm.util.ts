@@ -47,10 +47,10 @@ const ALARM_SUFFIX_TOKENS = new Set([
 
 const alarmIndexCache = new WeakMap<readonly AlertRecord[], AlarmIndex>();
 
-/**
- * Normalizes backend tag names so values using underscores, hyphens or spaces
- * can be compared safely without changing the original telemetry payload.
- */
+
+
+
+
 export function normalizeRealtimeAlarmTag(value: unknown): string {
   return String(value ?? '')
     .trim()
@@ -193,11 +193,11 @@ function tagsMatch(alarmTag: string, candidate: string): boolean {
   );
 }
 
-/**
- * Database alarm APIs are not always consistent about the property used for
- * the telemetry tag. Preserve alert.tagName as the primary source, then read
- * common nested/raw field names without using broad title/message matching.
- */
+
+
+
+
+
 function collectAlertTagNames(alert: AlertRecord): string[] {
   const tags = new Set<string>();
   addNormalizedTag(tags, alert.tagName);
@@ -229,11 +229,11 @@ function addNormalizedTag(target: Set<string>, value: unknown): void {
   }
 }
 
-/**
- * Some alarm tables append qualifiers such as HIGH, HH, WARNING or ACTIVE to
- * the actual telemetry tag. Generate a conservative variant with only trailing
- * alarm qualifiers removed, so DG1-FIN-TEMP-HIGH still maps to DG1-FIN-TEMP.
- */
+
+
+
+
+
 function buildTagVariants(tag: string): string[] {
   const variants = new Set<string>([tag]);
   const parts = tag.split('-').filter(Boolean);

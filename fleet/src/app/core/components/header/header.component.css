@@ -26,15 +26,15 @@
   user-select: none;
 }
 
-/* Desktop keeps the original header grid. On mobile this wrapper becomes
-   one unified navigation drawer. */
+
+
 .mobile-nav-shell {
   display: contents;
 }
 
-/* ================================
-   HEADER LAYOUT
-   ================================ */
+
+
+
 
 .fleet-header {
   width: 100%;
@@ -66,15 +66,15 @@
   overflow: hidden;
 }
 
-/* =========================================================
-   LOGO IMAGE
-   ---------------------------------------------------------
-   รูป Fleet Visual
-   - max-width = ความยาวโลโก้
-   - height = ความสูงโลโก้
-   - object-fit: contain = กันโลโก้บิด/แตก
-   - scaleX = ยืดแนวนอนนิด ๆ ให้ดูเต็มแบบพรีเมียม
-   ========================================================= */
+
+
+
+
+
+
+
+
+
 
 .main-logo {
   width: 100%;
@@ -91,9 +91,9 @@
   filter: drop-shadow(0 6px 12px rgba(37, 99, 235, 0.14));
 }
 
-/* ================================
-   CENTER MENU
-   ================================ */
+
+
+
 
 .main-menu {
   position: relative;
@@ -102,11 +102,11 @@
   display: flex;
   align-items: stretch;
 
-  /*
-    สำคัญ:
-    ใช้ flex-start เพื่อให้ OVERVIEW เริ่มตรงหลังเส้น Sidebar
-    ไม่ใช้ center เพราะจะทำให้เมนูลอยกลางและไม่ตรง Sidebar
-  */
+
+
+
+
+
   justify-content: flex-start;
 
   gap: 0;
@@ -218,9 +218,9 @@
   font-weight: 950;
 }
 
-/* ================================
-   ALERT
-   ================================ */
+
+
+
 
 .nav-item.is-alert:hover {
   background: #fff7f7;
@@ -268,9 +268,9 @@
     0 8px 18px rgba(239, 68, 68, 0.28);
 }
 
-/* ================================
-   LOG
-   ================================ */
+
+
+
 
 .nav-item.is-log:hover {
   background: #f8f7ff;
@@ -295,9 +295,9 @@
   color: #7c3aed !important;
 }
 
-/* ================================
-   RIGHT MENU
-   ================================ */
+
+
+
 
 .right-menu {
   position: relative;
@@ -314,9 +314,9 @@
   background: #ffffff;
 }
 
-/* ================================
-   SETTINGS
-   ================================ */
+
+
+
 
 .settings-action-wrap {
   position: relative;
@@ -381,9 +381,9 @@
   background: #eff6ff;
 }
 
-/* ================================
-   SETTINGS DROPDOWN
-   ================================ */
+
+
+
 
 .settings-dropdown {
   position: absolute;
@@ -530,9 +530,9 @@
   color: #f97316;
 }
 
-/* ================================
-   DARK MODE
-   ================================ */
+
+
+
 
 .dark-mode-pill {
   height: 48px;
@@ -618,9 +618,9 @@
   border-color: #ddd6fe;
 }
 
-/* ================================
-   USER
-   ================================ */
+
+
+
 
 .user-profile-pill {
   height: 46px;
@@ -699,9 +699,9 @@
   white-space: nowrap;
 }
 
-/* ================================
-   LOGOUT
-   ================================ */
+
+
+
 
 .logout-item {
   width: 72px;
@@ -741,9 +741,9 @@
   background: #fff7ed;
 }
 
-/* ================================
-   MOBILE
-   ================================ */
+
+
+
 
 .mobile-toggler {
   display: none;
@@ -789,9 +789,9 @@
   border-radius: 99px;
 }
 
-/* ================================
-   RESPONSIVE
-   ================================ */
+
+
+
 
 @media screen and (max-width: 1500px) {
   :host {
@@ -1146,9 +1146,9 @@
   }
 }
 
-/* =========================================================
-   DARK BLACK MODE - Header polish
-   ========================================================= */
+
+
+
 :host-context([data-theme='dark']) .fleet-header {
   background: linear-gradient(180deg, #080b11 0%, #05070b 100%);
   border-bottom-color: rgba(148, 163, 184, 0.16);
@@ -1202,9 +1202,9 @@
 }
 
 
-/* =========================================================
-   BLACK PRO POLISH - Header readability
-   ========================================================= */
+
+
+
 :host-context([data-theme='dark']) .fleet-header,
 :host-context([data-theme='dark']) .brand-box,
 :host-context([data-theme='dark']) .main-menu,
@@ -1236,7 +1236,7 @@
   color: #ffffff !important;
 }
 
-/* Realtime alarm badge */
+
 .alert-count {
   animation: alarm-badge-pulse 1.9s ease-out infinite;
   transform-origin: center;
@@ -1285,11 +1285,11 @@
   }
 }
 
-/* =========================================================
-   DARK MOBILE NAVIGATION V2 — Premium / high-contrast
-   Keeps the existing drawer behaviour and changes only the
-   mobile dark-theme visual treatment.
-   ========================================================= */
+
+
+
+
+
 @media screen and (max-width: 991px) {
   :host-context([data-theme='dark']) .mobile-menu-backdrop {
     background:
@@ -1564,13 +1564,13 @@
   }
 }
 
-/* =========================================================
-   MOBILE CONTROL DOCK V3 — Settings emphasis and clear labels
-   ---------------------------------------------------------
-   Keeps desktop controls unchanged. On mobile, the four footer
-   actions become a compact, readable dock. Settings is visually
-   prioritised so it is no longer an ambiguous gear-only tile.
-   ========================================================= */
+
+
+
+
+
+
+
 .mobile-action-label {
   display: none;
 }
@@ -1886,11 +1886,11 @@
   }
 }
 
-/* ================================================================
-   MOBILE SETTINGS DOCK — CLEAN / CONSISTENT STATE FIX
-   Keep the Settings tile visually neutral while closed and show the
-   blue accent only when its menu is actually open.
-   ================================================================ */
+
+
+
+
+
 @media screen and (max-width: 991px) {
   .settings-action-wrap {
     overflow: visible !important;
@@ -2045,12 +2045,12 @@
   }
 }
 
-/* ================================================================
-   MOBILE SETTINGS BUTTON — ICON ALIGNMENT / SIZE FIX
-   Keep the Settings tile identical in size to the other dock actions
-   and reset the desktop icon dimensions that previously overflowed the
-   32px mobile icon container.
-   ================================================================ */
+
+
+
+
+
+
 @media screen and (max-width: 991px) {
   .settings-action-wrap {
     display: flex !important;
@@ -2145,7 +2145,7 @@
 }
 
 
-/* SETTINGS FIRST-LOAD RELIABILITY */
+
 .dropdown-title {
   display: flex;
   align-items: center;

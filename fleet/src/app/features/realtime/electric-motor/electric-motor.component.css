@@ -270,7 +270,7 @@
 .motor-shaft__energy {
   position: absolute;
   inset: 0;
-  /* Background-position animation prevents the energy strip spilling outside. */
+
   background: linear-gradient(
     90deg,
     transparent 0%,
@@ -404,14 +404,14 @@
 :host-context([data-theme='dark']) .motor-note { background: rgba(37, 99, 235, 0.1); }
 
 
-/* Mobile keeps the desktop health row instead of stacking every metric. */
+
 @media (max-width: 720px) {
   .motor-console { min-height: 346px; padding: 10px; gap: 8px; }
   .motor-health { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .health-card { padding-inline: 6px; }
 }
 
-/* Compact premium strip: the motor name and icon are now owned by the card header. */
+
 .motor-telemetry-bar {
   min-width: 0;
   min-height: 48px;

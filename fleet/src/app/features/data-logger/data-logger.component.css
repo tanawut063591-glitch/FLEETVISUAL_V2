@@ -844,10 +844,10 @@
     }
 }
 
-/* =========================================================
-   BLACK PRO THEME - Data Logger
-   Matches the Realtime / Diagram dark visual language.
-   ========================================================= */
+
+
+
+
 :host-context([data-theme='dark']) .data-logger-page {
     background:
         radial-gradient(circle at 18% -8%, rgba(37, 99, 235, 0.13), transparent 29%),
@@ -1038,9 +1038,9 @@
     background: #101c2b !important;
 }
 
-/* Keep semantic value colors visible in Dark Theme.
-   These selectors intentionally follow the generic dark table-cell rule so
-   Normal / Warning / Alarm / No Data remain consistent with Light Theme. */
+
+
+
 :host-context([data-theme='dark']) .premium-table tbody td.cell-normal {
     color: #059669 !important;
 }
@@ -1078,9 +1078,9 @@
 }
 
 
-/* =========================================================
-   DATA LOGGER TABLE — full horizontal pan + taller viewport
-   ========================================================= */
+
+
+
 .table-scroll {
     height: clamp(620px, calc(100dvh - 285px), 920px) !important;
     min-height: 620px;
@@ -1097,7 +1097,7 @@
     height: 12px;
 }
 
-/* The time/date column now travels with the rest of the table. */
+
 .premium-table thead .time-col {
     left: auto !important;
     z-index: 10 !important;
@@ -1151,9 +1151,9 @@
     }
 }
 
-/* =========================================================
-   2026-08-04 WHITE REALTIME FRAME ALIGNMENT
-   ========================================================= */
+
+
+
 .data-logger-page {
     background:
         radial-gradient(circle at 82% 0%, rgba(37, 99, 235, 0.035), transparent 28%),
@@ -1189,10 +1189,10 @@
         inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
 }
 
-/* =========================================================
-   2026-08-04 DATA LOGGER — REALTIME DARK PALETTE
-   Keeps the page neutral black/graphite instead of navy blue.
-   ========================================================= */
+
+
+
+
 :host-context([data-theme='dark']) .data-logger-page {
   background:
     radial-gradient(circle at 18% -8%, rgba(37, 99, 235, 0.15), transparent 28%),

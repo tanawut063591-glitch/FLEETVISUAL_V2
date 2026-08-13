@@ -19,15 +19,6 @@ export interface ClientPdfExportResult {
   sizeBytes: number;
 }
 
-/**
- * Creates a multi-page A4 PDF entirely in the browser.
- *
- * The Report page deliberately uses client-side rendering for the live export:
- * - no report-generation request is sent to SCReportingService;
- * - pages are captured sequentially to keep peak memory predictable;
- * - a hard page limit prevents an accidental oversized browser job;
- * - the temporary canvases are released immediately after each page.
- */
 @Injectable({ providedIn: 'root' })
 export class ClientPdfExportService {
   private exportInProgress = false;
@@ -49,7 +40,6 @@ export class ClientPdfExportService {
     this.exportInProgress = true;
 
     try {
-      // Dynamic loading keeps html2canvas out of the initial Report route chunk.
       const html2canvasModule = await import('html2canvas');
       const html2canvas = html2canvasModule.default;
       const scale = this.clampNumber(options.scale ?? 1.5, 1, 2);
@@ -78,7 +68,6 @@ export class ClientPdfExportService {
           height: canvas.height,
         });
 
-        // Release backing-store memory before capturing the next page.
         canvas.width = 1;
         canvas.height = 1;
       }
@@ -101,8 +90,8 @@ export class ClientPdfExportService {
   }
 
   private buildImagePdf(images: CapturedPdfImage[]): Uint8Array {
-    const pageWidth = 595.276; // A4 width in PDF points
-    const pageHeight = 841.89; // A4 height in PDF points
+    const pageWidth = 595.276;
+    const pageHeight = 841.89;
     const objectCount = 2 + images.length * 3;
     const offsets = new Array<number>(objectCount + 1).fill(0);
     const chunks: Uint8Array[] = [];
@@ -126,8 +115,8 @@ export class ClientPdfExportService {
 
     appendBytes(
       new Uint8Array([
-        0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x0a, // %PDF-1.4
-        0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a, // binary marker
+        0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x0a,
+        0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a,
       ])
     );
 

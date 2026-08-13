@@ -94,11 +94,11 @@
     max-width: 100%;
   }
 
-  /*
-    The sidebar component becomes an overlay drawer on mobile.  The grid cell
-    itself must collapse to zero; otherwise its old 310px width remains in the
-    layout and covers half of a phone screen with a blank panel.
-  */
+
+
+
+
+
   .grid-sidenav {
     position: fixed;
     inset: 0 auto auto 0;
@@ -135,7 +135,7 @@
   }
 }
 
-/* DARK BLACK MODE */
+
 :host-context([data-theme='dark']) {
   background: #020305;
 }
