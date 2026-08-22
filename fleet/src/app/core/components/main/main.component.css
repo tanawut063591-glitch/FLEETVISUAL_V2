@@ -113,7 +113,7 @@
     pointer-events: none;
   }
 
-  .grid-sidenav > * {
+  .grid-sidenav>* {
     pointer-events: auto;
   }
 

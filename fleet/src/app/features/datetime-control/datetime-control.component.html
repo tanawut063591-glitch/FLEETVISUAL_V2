@@ -5,35 +5,27 @@
         <div class="dl-top">
 
             <div class="dl-title">
-                <div class="dl-badge">
-                    <i class="fa fa-database"></i>
-                    <span>{{ badgeLabel }}</span>
-                </div>
-
                 <h1>{{ pageTitle }}</h1>
                 <p>{{ pageSubtitle }}</p>
             </div>
 
             <div class="dl-toolbar">
 
+                <div class="dl-period">
+                    <button type="button" *ngFor="let item of quickPeriods"
+                        [ngClass]="{ 'active': period == item.value }" (click)="selectPeriod(item.value)">
+                        {{ item.label }}
+                    </button>
+                </div>
+
                 <div class="dl-date-field">
                     <label>START</label>
 
                     <div class="dl-calendar">
-                        <p-datepicker
-                            appendTo="body"
-                            [showIcon]="true"
-                            iconDisplay="input"
-                            readonlyInput="true"
-                            [(ngModel)]="start"
-                            [showTime]="true"
-                            hourFormat="24"
-                            dateFormat="dd M yy"
-                            inputStyleClass="dl-calendar-input"
-                            styleClass="dl-prime-calendar"
-                            panelStyleClass="fleet-datetime-panel"
-                            [baseZIndex]="12000"
-                            (onSelect)="onInput()">
+                        <p-datepicker appendTo="body" [showIcon]="true" iconDisplay="input" readonlyInput="true"
+                            [(ngModel)]="start" [showTime]="true" hourFormat="24" dateFormat="dd M yy"
+                            inputStyleClass="dl-calendar-input" styleClass="dl-prime-calendar"
+                            panelStyleClass="fleet-datetime-panel" [baseZIndex]="12000" (onSelect)="onInput()">
                         </p-datepicker>
                     </div>
                 </div>
@@ -44,47 +36,20 @@
                     <label>END</label>
 
                     <div class="dl-calendar">
-                        <p-datepicker
-                            appendTo="body"
-                            [showIcon]="true"
-                            iconDisplay="input"
-                            readonlyInput="true"
-                            [(ngModel)]="end"
-                            [showTime]="true"
-                            hourFormat="24"
-                            dateFormat="dd M yy"
-                            inputStyleClass="dl-calendar-input"
-                            styleClass="dl-prime-calendar"
-                            panelStyleClass="fleet-datetime-panel"
-                            [baseZIndex]="12000"
-                            (onSelect)="onInput()">
+                        <p-datepicker appendTo="body" [showIcon]="true" iconDisplay="input" readonlyInput="true"
+                            [(ngModel)]="end" [showTime]="true" hourFormat="24" dateFormat="dd M yy"
+                            inputStyleClass="dl-calendar-input" styleClass="dl-prime-calendar"
+                            panelStyleClass="fleet-datetime-panel" [baseZIndex]="12000" (onSelect)="onInput()">
                         </p-datepicker>
                     </div>
                 </div>
 
-                <div class="dl-period">
-                    <button
-                        type="button"
-                        *ngFor="let item of quickPeriods"
-                        [ngClass]="{ 'active': period == item.value }"
-                        (click)="selectPeriod(item.value)">
-                        {{ item.label }}
-                    </button>
-                </div>
-
-                <button
-                    type="button"
-                    class="dl-apply"
-                    (click)="showLogger()"
-                    *ngIf="!loading">
+                <button type="button" class="dl-apply" (click)="showLogger()" *ngIf="!loading">
                     <i class="fa fa-check"></i>
                     <span>Apply</span>
                 </button>
 
-                <button
-                    type="button"
-                    class="dl-apply loading"
-                    *ngIf="loading">
+                <button type="button" class="dl-apply loading" *ngIf="loading">
                     <i class="fa fa-circle-o-notch fa-spin"></i>
                     <span>Loading</span>
                 </button>
@@ -111,10 +76,7 @@
 
             <div class="dl-card-actions">
 
-                <button
-                    type="button"
-                    class="dl-tags"
-                    (click)="openDialog()">
+                <button type="button" class="dl-tags" (click)="openDialog()">
 
                     <span>{{ tagCount }}</span>
 
@@ -125,11 +87,7 @@
 
                 </button>
 
-                <button
-                    type="button"
-                    class="dl-export"
-                    *ngIf="display"
-                    (click)="serch()">
+                <button type="button" class="dl-export" *ngIf="display" (click)="serch()">
                     <i class="fa fa-download"></i>
                     <span>{{ searchTitle}}</span>
                 </button>
@@ -142,20 +100,10 @@
 
 </div>
 
-<p-dialog
-    [(visible)]="displayDialog"
-    styleClass="manage-tags-dialog pro-tags-dialog"
-    maskStyleClass="manage-tags-mask"
-    [draggable]="false"
-    [resizable]="false"
-    [modal]="true"
-    [closable]="false"
-    [closeOnEscape]="true"
-    [blockScroll]="true"
-    [baseZIndex]="10000"
-    [style]="{ width: 'calc(100vw - 28px)', maxWidth: '1544px' }"
-    [contentStyle]="{ padding: '0', overflow: 'hidden' }"
-    appendTo="body">
+<p-dialog [(visible)]="displayDialog" styleClass="manage-tags-dialog pro-tags-dialog" maskStyleClass="manage-tags-mask"
+    [draggable]="false" [resizable]="false" [modal]="true" [closable]="false" [closeOnEscape]="true"
+    [blockScroll]="true" [baseZIndex]="10000" [style]="{ width: 'calc(100vw - 64px)', maxWidth: '1480px' }"
+    [contentStyle]="{ padding: '0', overflow: 'hidden' }" appendTo="body">
 
     <ng-template #header>
         <div class="manage-tags-header">
@@ -175,26 +123,17 @@
 
             <div class="manage-tags-actions">
 
-                <button
-                    type="button"
-                    class="tag-action-btn ok"
-                    (click)="confirmTag()">
+                <button type="button" class="tag-action-btn ok" (click)="confirmTag()">
                     <i class="fa fa-check"></i>
                     <span>OK</span>
                 </button>
 
-                <button
-                    type="button"
-                    class="tag-action-btn clear"
-                    (click)="clearListActive()">
+                <button type="button" class="tag-action-btn clear" (click)="clearListActive()">
                     <i class="fa fa-refresh"></i>
                     <span>Clear</span>
                 </button>
 
-                <button
-                    type="button"
-                    class="tag-action-btn cancel"
-                    (click)="closeDialog()">
+                <button type="button" class="tag-action-btn cancel" (click)="closeDialog()">
                     <i class="fa fa-times"></i>
                     <span>Cancel</span>
                 </button>
@@ -211,29 +150,18 @@
             <div class="tag-search">
                 <i class="fa fa-search"></i>
 
-                <input
-                    type="text"
-                    placeholder="Search tags, unit or sensor name..."
-                    [(ngModel)]="searchKeyword">
+                <input type="text" placeholder="Search tags, unit or sensor name..." [(ngModel)]="searchKeyword">
 
-                <button
-                    type="button"
-                    class="tag-search-clear"
-                    *ngIf="searchKeyword"
-                    (click)="clearSearch()">
+                <button type="button" class="tag-search-clear" *ngIf="searchKeyword" (click)="clearSearch()">
                     <i class="fa fa-times"></i>
                 </button>
             </div>
 
             <div class="tag-preset">
                 <i class="fa fa-sliders"></i>
-                <select
-                    [(ngModel)]="selectedPresetKey"
-                    (change)="applyPreset(selectedPresetKey)">
+                <select [(ngModel)]="selectedPresetKey" (change)="applyPreset(selectedPresetKey)">
                     <option value="">Preset</option>
-                    <option
-                        *ngFor="let preset of tagPresets; trackBy: trackByPresetKey"
-                        [value]="preset.key">
+                    <option *ngFor="let preset of tagPresets; trackBy: trackByPresetKey" [value]="preset.key">
                         {{ preset.label }}
                     </option>
                 </select>
@@ -244,27 +172,13 @@
                 <strong>{{ tagCountNumber }}<small *ngIf="maxSelection > 0"> / {{ maxSelection }}</small></strong>
             </div>
 
-            <button
-                type="button"
-                class="tag-filter-btn"
-                [ngClass]="{ 'active': showSelectedOnly }"
+            <button type="button" class="tag-filter-btn" [ngClass]="{ 'active': showSelectedOnly }"
                 (click)="toggleSelectedOnly()">
                 <i class="fa fa-check-circle"></i>
                 Selected Only
             </button>
 
-            <button
-                type="button"
-                class="tag-filter-btn"
-                (click)="selectVisibleAll()">
-                <i class="fa fa-list-check"></i>
-                Select Visible
-            </button>
-
-            <button
-                type="button"
-                class="tag-filter-btn danger"
-                (click)="clearListActive()">
+            <button type="button" class="tag-filter-btn danger" (click)="clearListActive()">
                 <i class="fa fa-trash"></i>
                 Clear All
             </button>
@@ -306,17 +220,12 @@
             <aside class="tag-side-panel">
 
                 <div class="tag-side-tabs">
-                    <button
-                        type="button"
-                        [ngClass]="{ 'active': sideTab == 'favorite' }"
+                    <button type="button" [ngClass]="{ 'active': sideTab == 'favorite' }"
                         (click)="setSideTab('favorite')">
                         Favorite
                     </button>
 
-                    <button
-                        type="button"
-                        [ngClass]="{ 'active': sideTab == 'recent' }"
-                        (click)="setSideTab('recent')">
+                    <button type="button" [ngClass]="{ 'active': sideTab == 'recent' }" (click)="setSideTab('recent')">
                         Recent
                     </button>
                 </div>
@@ -327,12 +236,8 @@
                         <span>{{ favoriteTags.length }}</span>
                     </div>
 
-                    <button
-                        type="button"
-                        class="side-tag-item"
-                        *ngFor="let t of favoriteTags; trackBy: trackByTagName"
-                        [ngClass]="{ 'active': t.check }"
-                        (click)="selectSideTag(t)">
+                    <button type="button" class="side-tag-item" *ngFor="let t of favoriteTags; trackBy: trackByTagName"
+                        [ngClass]="{ 'active': t.check }" (click)="selectSideTag(t)">
                         <span>{{ t.tagName }}</span>
                         <i class="fa" [ngClass]="t.check ? 'fa-check' : 'fa-plus'"></i>
                     </button>
@@ -349,11 +254,8 @@
                         <span>{{ recentlyUsedTags.length }}</span>
                     </div>
 
-                    <button
-                        type="button"
-                        class="side-tag-item"
-                        *ngFor="let t of recentlyUsedTags; trackBy: trackByTagName"
-                        [ngClass]="{ 'active': t.check }"
+                    <button type="button" class="side-tag-item"
+                        *ngFor="let t of recentlyUsedTags; trackBy: trackByTagName" [ngClass]="{ 'active': t.check }"
                         (click)="selectSideTag(t)">
                         <span>{{ t.tagName }}</span>
                         <i class="fa" [ngClass]="t.check ? 'fa-check' : 'fa-plus'"></i>
@@ -371,20 +273,17 @@
 
                 <div class="tags-layout">
 
-                    <div
-                        class="tag-column"
-                        *ngFor="let col of tagColumns; trackBy: trackByColumnKey"
+                    <div class="tag-column" *ngFor="let col of tagColumns; trackBy: trackByColumnKey"
                         [hidden]="!hasVisibleTags(col.key)">
 
                         <div class="tag-column-head">
-                            <button
-                                type="button"
-                                class="tag-column-title"
+                            <button type="button" class="tag-column-title"
                                 [ngClass]="{ 'selected-header': isColumnAllSelected(col.key) }"
                                 (click)="selectHaederAll(col.key, tagGroup[col.key].tags, tagGroup[col.key])">
                                 <i class="fa" [ngClass]="col.icon"></i>
                                 <span>{{ col.title }}</span>
-                                <small>{{ getColumnSelectedCount(col.key) }}/{{ getColumnVisibleCount(col.key) }}</small>
+                                <small>{{ getColumnSelectedCount(col.key) }}/{{ getColumnVisibleCount(col.key)
+                                    }}</small>
                             </button>
 
                             <p>{{ col.subtitle }}</p>
@@ -392,20 +291,15 @@
 
                         <div class="tag-list">
 
-                            <button
-                                type="button"
-                                class="tag-row"
+                            <button type="button" class="tag-row"
                                 *ngFor="let t of filteredTags(col.key); trackBy: trackByTagName"
-                                [ngClass]="{ 'active': t.check }"
-                                (click)="selectedTag(t, tagGroup[col.key])">
+                                [ngClass]="{ 'active': t.check }" (click)="selectedTag(t, tagGroup[col.key])">
 
                                 <i class="fa fa-check check-icon"></i>
 
                                 <span>{{ t.tagName }}</span>
 
-                                <i
-                                    class="fa star-icon"
-                                    [ngClass]="isFavorite(t) ? 'fa-star active' : 'fa-star-o'"
+                                <i class="fa star-icon" [ngClass]="isFavorite(t) ? 'fa-star active' : 'fa-star-o'"
                                     (click)="toggleFavorite(t, $event)">
                                 </i>
 
@@ -419,60 +313,6 @@
 
             </div>
 
-            <div class="selected-panel">
-
-                <div class="selected-panel-head">
-                    <div>
-                        <h4>Selected Tags</h4>
-                        <p>{{ vesselName }}</p>
-                    </div>
-
-                    <div class="selected-count">
-                        {{ tagCountNumber }}
-                        <small *ngIf="maxSelection > 0">/ {{ maxSelection }}</small>
-                    </div>
-                </div>
-
-                <div class="selected-panel-range">
-                    <label>Current Range</label>
-                    <span>{{ displayStartText }}</span>
-                    <small>to</small>
-                    <span>{{ displayEndText }}</span>
-                </div>
-
-                <div class="selected-summary" *ngIf="selectedGroupSummary.length > 0">
-                    <div
-                        class="selected-summary-chip"
-                        *ngFor="let item of selectedGroupSummary; trackBy: trackBySummaryKey">
-                        <strong>{{ item.title }}</strong>
-                        <span>{{ item.count }}</span>
-                    </div>
-                </div>
-
-                <div
-                    class="selected-list"
-                    *ngIf="selectedTags.length > 0">
-
-                    <button
-                        type="button"
-                        class="selected-item"
-                        *ngFor="let t of selectedTags; trackBy: trackByTagName"
-                        (click)="removeSelectedTag(t)">
-                        <span>{{ t.tagName }}</span>
-                        <i class="fa fa-times"></i>
-                    </button>
-
-                </div>
-
-                <div
-                    class="selected-empty"
-                    *ngIf="selectedTags.length === 0">
-                    <i class="fa fa-tags"></i>
-                    <strong>No tags selected</strong>
-                    <span>Please select sensor tags from the columns.</span>
-                </div>
-
-            </div>
 
         </div>
 

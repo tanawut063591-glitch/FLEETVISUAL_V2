@@ -83,8 +83,8 @@
     inset: 0;
     overflow: hidden;
     background:
-        linear-gradient(90deg, rgba(255,255,255,0.26) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(255,255,255,0.26) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.26) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255, 255, 255, 0.26) 1px, transparent 1px),
         #dff3ff;
     background-size: 52px 52px;
 }
@@ -366,5 +366,74 @@
 
     .map-wrap {
         height: 300px;
+    }
+}
+
+/* Professional square map treatment */
+.map-panel {
+    border-color: var(--border-color, #dbe7f5);
+    border-radius: var(--pt-radius, 6px);
+    background: var(--card-bg, #ffffff);
+    box-shadow: var(--pt-shadow, 0 2px 8px rgba(15, 23, 42, 0.07));
+}
+
+.panel-header {
+    height: 54px;
+    padding: 10px 12px;
+    align-items: center;
+}
+
+.legend {
+    height: 28px;
+    padding: 0 9px;
+    gap: 10px;
+    border-radius: var(--pt-control-radius, 4px);
+    background: var(--card-bg, #ffffff);
+    font-size: 11px;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+}
+
+.map-wrap {
+    margin: 0 10px 10px;
+    border-radius: var(--pt-control-radius, 4px);
+}
+
+.map-type-switch,
+.coordinate-box {
+    border-radius: var(--pt-control-radius, 4px);
+}
+
+.map-type-switch {
+    box-shadow: 0 2px 7px rgba(15, 23, 42, 0.11);
+}
+
+.map-type-switch button {
+    height: 34px;
+}
+
+.coordinate-box {
+    padding: 8px 11px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.10);
+}
+
+.map-point {
+    transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.map-point:hover {
+    transform: translate(-50%, -50%) scale(1.12);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.22);
+}
+
+@media (max-width: 760px) {
+    .map-panel,
+    .legend,
+    .map-wrap,
+    .coordinate-box {
+        border-radius: var(--pt-radius, 6px);
     }
 }

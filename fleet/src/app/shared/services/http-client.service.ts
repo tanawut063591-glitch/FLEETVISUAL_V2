@@ -23,11 +23,9 @@ export class HttpClientService {
     private authService: AuthService,
   ) {}
 
-
   getJsonFile(path: string): Observable<any> {
     return this.http.get(path).pipe(catchError((err) => this.handleError<any>(err)));
   }
-
 
   getVesselInfo(isRetry = false): Observable<any[]> {
     return this.http
@@ -46,7 +44,7 @@ export class HttpClientService {
                 x?.name &&
                 !this.securityService.isExcludedVessel(x.name) &&
                 !this.securityService.isExcludedVessel(x?.prefix || x?.id || '') &&
-                this.securityService.hasAccess(x.name)
+                this.securityService.hasAccess(x.name),
             )
             .sort(this.compare);
         }),
@@ -56,14 +54,12 @@ export class HttpClientService {
       );
   }
 
-
   compare(a: any, b: any): number {
     const nameA = String(a?.name || '').toUpperCase();
     const nameB = String(b?.name || '').toUpperCase();
 
     return nameA.localeCompare(nameB);
   }
-
 
   getAddress(lat: string, long: string, apiKey: string): Observable<any> {
     if (!lat || !long || !apiKey) {
@@ -77,7 +73,6 @@ export class HttpClientService {
 
     return this.http.get(url).pipe(catchError((err) => this.handleError<any>(err)));
   }
-
 
   getPoints(prefix: string, isRetry = false): Observable<any> {
     if (!prefix) {
@@ -99,7 +94,6 @@ export class HttpClientService {
         ),
       );
   }
-
 
   getLoggerKey(start: string, end: string, tags: string[], isRetry = false): Observable<any> {
     if (!start || !end || !Array.isArray(tags) || tags.length === 0) {
@@ -124,7 +118,6 @@ export class HttpClientService {
       );
   }
 
-
   loadFile(key: string, name: string): void {
     if (!key || !name) {
       return;
@@ -135,7 +128,6 @@ export class HttpClientService {
 
     window.open(`${URL}/api/vessels/GetLoggerFile/${safeKey}/${safeName}`, '_self');
   }
-
 
   getRawData(start: string, end: string, tags: any[], isRetry = false): Observable<any> {
     if (!start || !end || !Array.isArray(tags) || tags.length === 0) {
@@ -159,7 +151,6 @@ export class HttpClientService {
         ),
       );
   }
-
 
   getChartRawData(start: string, end: string, tags: any[], isRetry = false): Observable<any> {
     if (!start || !end || !Array.isArray(tags) || tags.length === 0) {
@@ -187,7 +178,6 @@ export class HttpClientService {
         ),
       );
   }
-
 
   getReport(
     reportType: string,
@@ -224,7 +214,6 @@ export class HttpClientService {
       );
   }
 
-
   getCurrentValues(tagNames: any[], isRetry = false): Observable<any> {
     if (!Array.isArray(tagNames) || tagNames.length === 0) {
       return of([]);
@@ -241,7 +230,6 @@ export class HttpClientService {
         ),
       );
   }
-
 
   getOverviewCurrentsValues(tagNames: any[], isRetry = false): Observable<any> {
     const tags = this.flattenOverviewTags(tagNames);
@@ -266,7 +254,6 @@ export class HttpClientService {
       );
   }
 
-
   private flattenOverviewTags(tagNames: any[]): any[] {
     if (!Array.isArray(tagNames)) {
       return [];
@@ -283,7 +270,6 @@ export class HttpClientService {
     return tags;
   }
 
-
   private getAuthHeaders(): HttpHeaders {
     const token = this.authService.getToken();
 
@@ -292,11 +278,9 @@ export class HttpClientService {
     });
   }
 
-
   private handleError<T>(err: any): Observable<T> {
     return throwError(() => err);
   }
-
 
   private handleAuthError<T>(
     err: any,
@@ -327,7 +311,6 @@ export class HttpClientService {
     return throwError(() => err);
   }
 
-
   private isLoginSuccess(result: any): boolean {
     if (result === true) {
       return true;
@@ -347,7 +330,6 @@ export class HttpClientService {
 
     return false;
   }
-
 
   private forceLogout(): void {
     this.authService.logout();

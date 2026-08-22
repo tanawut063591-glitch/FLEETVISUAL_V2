@@ -5,23 +5,11 @@
     <app-header></app-header>
   </div>
 
-  <div
-    class="grid-sidenav"
-    id="sidebar"
-    role="navigation"
-    *ngIf="showSidebar"
-    app-sidebar
-    [vessels]="vessels"
-    [activeVessel]="selectedVessel"
-    (selectedVessel)="onSelectVessel($event)"
-  ></div>
+  <div class="grid-sidenav" id="sidebar" role="navigation" *ngIf="showSidebar" app-sidebar [vessels]="vessels"
+    [activeVessel]="selectedVessel" (selectedVessel)="onSelectVessel($event)"></div>
 
-  <div
-    #contentViewport
-    class="grid-content"
-    [class.is-overview]="isOverviewRoute"
-    [@routeAnimation]="getDepth(myOutlet)"
-  >
+  <div #contentViewport class="grid-content" [class.is-overview]="isOverviewRoute"
+    [@routeAnimation]="getDepth(myOutlet)">
     <router-outlet #myOutlet="outlet"></router-outlet>
   </div>
 </div>

@@ -65,7 +65,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly route: ActivatedRoute,
-    private readonly pastTrackService: PastTrackService
+    private readonly pastTrackService: PastTrackService,
   ) {}
 
   ngOnInit(): void {
@@ -98,12 +98,12 @@ export class PastTrackComponent implements OnInit, OnDestroy {
   }
 
   toggleCustomRange(): void {
-    this.customRangeOpen = !this.customRangeOpen;
-
-    if (this.customRangeOpen) {
-      this.syncCustomInputsFromRange();
-      this.refreshMaxDateTime();
-    }
+    // Custom is an inline editor in the History Range toolbar.
+    // Keep it open until the user chooses a preset so the controls never
+    // create a second row or unexpectedly disappear while editing.
+    this.customRangeOpen = true;
+    this.syncCustomInputsFromRange();
+    this.refreshMaxDateTime();
   }
 
   applyCustomRange(): void {
@@ -171,12 +171,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     this.loadSub?.unsubscribe();
 
     this.loadSub = this.pastTrackService
-      .getPastTrack(
-        this.vesselId,
-        this.startDate,
-        this.endDate,
-        this.samplingIntervalMinutes
-      )
+      .getPastTrack(this.vesselId, this.startDate, this.endDate, this.samplingIntervalMinutes)
       .subscribe({
         next: (response: PastTrackResponse) => {
           const points = this.normalizeTrackPoints(response?.points || []);
@@ -290,9 +285,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       return 'Custom Range';
     }
 
-    return this.activeRangeMode === 1
-      ? 'Last 24 Hours'
-      : `Last ${this.activeRangeMode} Days`;
+    return this.activeRangeMode === 1 ? 'Last 24 Hours' : `Last ${this.activeRangeMode} Days`;
   }
 
   getRangeDurationLabel(): string {
@@ -357,7 +350,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     const link = document.createElement('a');
     link.href = url;
     link.download = `past-track-${this.getExportRangeName()}-${this.toSafeFileName(
-      this.vesselId || 'vessel'
+      this.vesselId || 'vessel',
     )}.csv`;
     link.style.display = 'none';
 
@@ -375,16 +368,14 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     this.exportingMap = true;
 
     try {
-
-
-
-
-
       const staticMap = await this.loadStaticMapImage();
       const canvas = this.buildVectorMapCanvas(staticMap);
       await this.downloadCanvas(canvas, this.getMapExportFileName());
     } catch (error) {
-      console.warn('[PastTrackComponent] Static map export unavailable. Using coordinate fallback.', error);
+      console.warn(
+        '[PastTrackComponent] Static map export unavailable. Using coordinate fallback.',
+        error,
+      );
       const fallback = this.buildVectorMapCanvas(null);
       await this.downloadCanvas(fallback, this.getMapExportFileName());
     } finally {
@@ -419,9 +410,6 @@ export class PastTrackComponent implements OnInit, OnDestroy {
         img.src = url;
       });
 
-
-
-
       const probe = document.createElement('canvas');
       probe.width = 2;
       probe.height = 2;
@@ -431,7 +419,10 @@ export class PastTrackComponent implements OnInit, OnDestroy {
 
       return image;
     } catch (error) {
-      console.info('[PastTrackComponent] Google Static Maps is not available for this export.', error);
+      console.info(
+        '[PastTrackComponent] Google Static Maps is not available for this export.',
+        error,
+      );
       return null;
     }
   }
@@ -462,8 +453,6 @@ export class PastTrackComponent implements OnInit, OnDestroy {
         continue;
       }
 
-
-
       url.searchParams.append('path', `color:0xffffffff|weight:8|enc:${encoded}`);
       url.searchParams.append('path', `color:${segment.color}|weight:4|enc:${encoded}`);
     }
@@ -473,10 +462,14 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     url.searchParams.append('markers', `color:0x10b981|label:S|${first.lat},${first.lng}`);
     url.searchParams.append('markers', `color:0xef4444|label:E|${last.lat},${last.lng}`);
 
-    if (this.selectedPoint && Number.isFinite(this.selectedPoint.lat) && Number.isFinite(this.selectedPoint.lng)) {
+    if (
+      this.selectedPoint &&
+      Number.isFinite(this.selectedPoint.lat) &&
+      Number.isFinite(this.selectedPoint.lng)
+    ) {
       url.searchParams.append(
         'markers',
-        `color:0x2563eb|label:P|${this.selectedPoint.lat},${this.selectedPoint.lng}`
+        `color:0x2563eb|label:P|${this.selectedPoint.lat},${this.selectedPoint.lng}`,
       );
     }
 
@@ -485,7 +478,9 @@ export class PastTrackComponent implements OnInit, OnDestroy {
 
   private getGoogleMapsApiKey(): string {
     const scripts = Array.from(
-      document.querySelectorAll<HTMLScriptElement>('script[src*="maps.googleapis.com/maps/api/js"]')
+      document.querySelectorAll<HTMLScriptElement>(
+        'script[src*="maps.googleapis.com/maps/api/js"]',
+      ),
     );
 
     for (const script of scripts) {
@@ -515,9 +510,12 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     }
 
     const valid = this.getValidExportPoints();
-    const selected = this.selectedPoint && Number.isFinite(this.selectedPoint.lat) && Number.isFinite(this.selectedPoint.lng)
-      ? this.selectedPoint
-      : valid[0] || null;
+    const selected =
+      this.selectedPoint &&
+      Number.isFinite(this.selectedPoint.lat) &&
+      Number.isFinite(this.selectedPoint.lng)
+        ? this.selectedPoint
+        : valid[0] || null;
 
     ctx.fillStyle = '#eef5fb';
     ctx.fillRect(0, 0, width, height);
@@ -527,7 +525,6 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     pageGradient.addColorStop(1, '#edf5fb');
     ctx.fillStyle = pageGradient;
     ctx.fillRect(0, 0, width, height);
-
 
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, 132);
@@ -546,7 +543,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     ctx.fillText(
       `${this.getRangeStartLabel()}  →  ${this.getRangeEndLabel()}   ·   Every ${this.samplingIntervalMinutes} minutes`,
       48,
-      84
+      84,
     );
     ctx.fillStyle = '#94a3b8';
     ctx.font = '600 14px Segoe UI, Arial, sans-serif';
@@ -613,7 +610,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     x: number,
     y: number,
     width: number,
-    height: number
+    height: number,
   ): void {
     const seaGradient = ctx.createLinearGradient(x, y, x, y + height);
     seaGradient.addColorStop(0, '#d9f2fb');
@@ -722,11 +719,13 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     this.drawExportMarker(ctx, project(valid[0]), 'S', '#10b981');
     this.drawExportMarker(ctx, project(valid[valid.length - 1]), 'E', '#ef4444');
 
-    if (this.selectedPoint && Number.isFinite(this.selectedPoint.lat) && Number.isFinite(this.selectedPoint.lng)) {
+    if (
+      this.selectedPoint &&
+      Number.isFinite(this.selectedPoint.lat) &&
+      Number.isFinite(this.selectedPoint.lng)
+    ) {
       this.drawExportMarker(ctx, project(this.selectedPoint), 'P', '#2563eb');
     }
-
-
 
     ctx.fillStyle = 'rgba(255,255,255,0.88)';
     this.roundedRectPath(ctx, x + width - 92, y + 22, 58, 76, 15);
@@ -777,7 +776,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     ctx: CanvasRenderingContext2D,
     position: { x: number; y: number },
     label: string,
-    color: string
+    color: string,
   ): void {
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
@@ -797,8 +796,8 @@ export class PastTrackComponent implements OnInit, OnDestroy {
   }
 
   private getValidExportPoints(): PastTrackPoint[] {
-    return (this.trackPoints || []).filter((point) =>
-      Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lng))
+    return (this.trackPoints || []).filter(
+      (point) => Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lng)),
     );
   }
 
@@ -820,7 +819,8 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       const current = points[index];
       const previousTime = this.parseInputDate(previous.time)?.getTime() ?? null;
       const currentTime = this.parseInputDate(current.time)?.getTime() ?? null;
-      const hasGap = previousTime !== null && currentTime !== null && currentTime - previousTime > maxGapMs;
+      const hasGap =
+        previousTime !== null && currentTime !== null && currentTime - previousTime > maxGapMs;
       const nextColor = this.getExportStatusColor(current);
 
       if (hasGap || nextColor !== currentColor) {
@@ -909,7 +909,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     y: number,
     width: number,
     height: number,
-    radius: number
+    radius: number,
   ): void {
     const safeRadius = Math.min(radius, width / 2, height / 2);
     ctx.beginPath();
@@ -924,23 +924,27 @@ export class PastTrackComponent implements OnInit, OnDestroy {
   private downloadCanvas(canvas: HTMLCanvasElement, filename: string): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       try {
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            reject(new Error('Unable to create the PNG file'));
-            return;
-          }
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Unable to create the PNG file'));
+              return;
+            }
 
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = filename;
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.setTimeout(() => URL.revokeObjectURL(url), 0);
-          resolve();
-        }, 'image/png', 1);
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 0);
+            resolve();
+          },
+          'image/png',
+          1,
+        );
       } catch (error) {
         reject(error);
       }
@@ -1117,7 +1121,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     const end = this.parseInputDate(this.endDate)?.getTime() ?? start;
     const expectedSlots = Math.max(
       0,
-      Math.floor((end - start) / (this.samplingIntervalMinutes * 60_000)) + 1
+      Math.floor((end - start) / (this.samplingIntervalMinutes * 60_000)) + 1,
     );
 
     return {
@@ -1219,7 +1223,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
         vessel?.fv?.id ||
         vessel?.fvInfo?.id ||
         vessel?.name ||
-        ''
+        '',
     ).trim();
   }
 
@@ -1254,7 +1258,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     }
 
     const match = String(value || '').match(
-      /^(\d{1,2})-([A-Za-z]{3})-(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+      /^(\d{1,2})-([A-Za-z]{3})-(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/,
     );
 
     if (!match) {
@@ -1287,7 +1291,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
       Number(match[1]),
       Number(match[4]),
       Number(match[5]),
-      Number(match[6] || 0)
+      Number(match[6] || 0),
     ).getTime();
   }
 
@@ -1321,15 +1325,13 @@ export class PastTrackComponent implements OnInit, OnDestroy {
 
   private toRequestDateTime(date: Date): string {
     return `${date.getFullYear()}-${this.pad(date.getMonth() + 1)}-${this.pad(
-      date.getDate()
-    )} ${this.pad(date.getHours())}:${this.pad(date.getMinutes())}:${this.pad(
-      date.getSeconds()
-    )}`;
+      date.getDate(),
+    )} ${this.pad(date.getHours())}:${this.pad(date.getMinutes())}:${this.pad(date.getSeconds())}`;
   }
 
   private toDateTimeLocal(date: Date): string {
     return `${date.getFullYear()}-${this.pad(date.getMonth() + 1)}-${this.pad(
-      date.getDate()
+      date.getDate(),
     )}T${this.pad(date.getHours())}:${this.pad(date.getMinutes())}`;
   }
 

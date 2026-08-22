@@ -1,85 +1,45 @@
 <header class="fleet-header noselect">
 
-  <a
-    class="brand-box"
-    [routerLink]="['/main/overview']"
-    (click)="closeSettingsMenu(); closeMobileMenu()"
-  >
-    <img
-      class="main-logo"
-      [src]="logoSrc"
-      alt="Fleet Visual Logo"
-      (error)="onLogoError($event)"
-    />
+  <a class="brand-box" [routerLink]="['/main/overview']" (click)="closeSettingsMenu(); closeMobileMenu()">
+    <img class="main-logo" [src]="logoSrc" alt="Fleet Visual Logo" (error)="onLogoError($event)" />
   </a>
 
 
-  <button
-    type="button"
-    class="mobile-toggler"
-    [class.active]="mobileMenuOpen"
-    aria-label="Toggle navigation"
-    aria-controls="mobile-main-navigation"
-    [attr.aria-expanded]="mobileMenuOpen"
-    (click)="toggleMobileMenu($event)"
-  >
+  <button type="button" class="mobile-toggler" [class.active]="mobileMenuOpen" aria-label="Toggle navigation"
+    aria-controls="mobile-main-navigation" [attr.aria-expanded]="mobileMenuOpen" (click)="toggleMobileMenu($event)">
     <span></span>
     <span></span>
     <span></span>
   </button>
 
-  <div
-    class="mobile-menu-backdrop"
-    *ngIf="mobileMenuOpen"
-    (click)="closeMobileMenu()"
-    aria-hidden="true"
-  ></div>
+  <div class="mobile-menu-backdrop" *ngIf="mobileMenuOpen" (click)="closeMobileMenu()" aria-hidden="true"></div>
 
 
 
 
 
 
-  <div
-    class="mobile-nav-shell"
-    [class.open]="mobileMenuOpen"
-    [attr.aria-hidden]="mobileMenuOpen ? null : true"
-  >
+  <div class="mobile-nav-shell" [class.open]="mobileMenuOpen" [attr.aria-hidden]="mobileMenuOpen ? null : true">
 
-    <nav
-      id="mobile-main-navigation"
-      class="main-menu"
-      aria-label="Main navigation"
-    >
+    <nav id="mobile-main-navigation" class="main-menu" aria-label="Main navigation">
       <ng-container *ngFor="let item of menuItems">
-      <a
-        *ngIf="canAccessModule(item.module)"
-        class="nav-item"
-        [class.is-alert]="item.isAlert"
-        [class.is-log]="item.isLog"
-        [routerLink]="item.route"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: false }"
-        (click)="closeSettingsMenu(); closeMobileMenu()"
-        [hidden]="item.show === false"
-      >
-        <div class="nav-icon">
-          <i [class]="item.icon" aria-hidden="true"></i>
+        <a *ngIf="canAccessModule(item.module)" class="nav-item" [class.is-alert]="item.isAlert"
+          [class.is-log]="item.isLog" [routerLink]="item.route" routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: false }" (click)="closeSettingsMenu(); closeMobileMenu()"
+          [hidden]="item.show === false">
+          <div class="nav-icon">
+            <i [class]="item.icon" aria-hidden="true"></i>
 
-          <span
-            class="alert-count"
-            *ngIf="item.isAlert && alertCount > 0"
-            aria-live="polite"
-            [attr.aria-label]="alertCount + ' active alarms'"
-          >
-            {{ alertCount > 99 ? '99+' : alertCount }}
-          </span>
-        </div>
+            <span class="alert-count" *ngIf="item.isAlert && alertCount > 0" aria-live="polite"
+              [attr.aria-label]="alertCount + ' active alarms'">
+              {{ alertCount > 99 ? '99+' : alertCount }}
+            </span>
+          </div>
 
-        <div class="nav-text">
-          {{ item.label }}
-        </div>
-      </a>
+          <div class="nav-text">
+            {{ item.label }}
+          </div>
+        </a>
       </ng-container>
     </nav>
 
@@ -87,21 +47,16 @@
     <section class="right-menu" aria-label="Account and display actions">
 
       <div class="settings-action-wrap" *ngIf="canAccessSettingsRoute()" [class.open]="settingsMenuOpen">
-        <button
-          type="button"
-          class="settings-action-btn"
-          title="Settings"
-          aria-label="Open system settings"
-          [attr.aria-expanded]="settingsMenuOpen"
-          (click)="toggleSettingsMenu($event)"
-        >
+        <button type="button" class="settings-action-btn" title="Settings" aria-label="Open system settings"
+          [attr.aria-expanded]="settingsMenuOpen" (click)="toggleSettingsMenu($event)">
           <span class="mobile-action-icon settings-mobile-icon" aria-hidden="true">
             <i class="fa fa-cog"></i>
           </span>
           <span class="mobile-action-label">SETTINGS</span>
         </button>
 
-        <div class="settings-dropdown" [class.is-loading]="settingsNavigationPending" [attr.aria-busy]="settingsNavigationPending">
+        <div class="settings-dropdown" [class.is-loading]="settingsNavigationPending"
+          [attr.aria-busy]="settingsNavigationPending">
           <div class="dropdown-title">
             <span>System Settings</span>
             <span class="settings-loading-label" *ngIf="settingsNavigationPending">
@@ -109,13 +64,8 @@
             </span>
           </div>
 
-          <button
-            type="button"
-            class="dropdown-item"
-            *ngFor="let item of settingsItems"
-            (click)="goTo(item.route)"
-            [disabled]="settingsNavigationPending"
-          >
+          <button type="button" class="dropdown-item" *ngFor="let item of settingsItems" (click)="goTo(item.route)"
+            [disabled]="settingsNavigationPending">
             <span class="dropdown-icon" [class]="item.color">
               <i [class]="item.icon" aria-hidden="true"></i>
             </span>
@@ -129,20 +79,11 @@
       </div>
 
 
-      <button
-        type="button"
-        class="dark-mode-pill"
-        [class.active]="isDarkMode"
+      <button type="button" class="dark-mode-pill" [class.active]="isDarkMode"
         [attr.aria-label]="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
-        (click)="toggleDarkMode($event)"
-      >
+        (click)="toggleDarkMode($event)">
         <span class="dark-icon">
-          <i
-            class="fa"
-            [class.fa-moon-o]="!isDarkMode"
-            [class.fa-sun-o]="isDarkMode"
-            aria-hidden="true"
-          ></i>
+          <i class="fa" [class.fa-moon-o]="!isDarkMode" [class.fa-sun-o]="isDarkMode" aria-hidden="true"></i>
         </span>
 
         <span class="dark-copy">
@@ -155,12 +96,7 @@
 
       <div class="user-profile-pill">
         <div class="user-avatar">
-          <img
-            *ngIf="!avatarError && userImage"
-            [src]="userImage"
-            alt="User"
-            (error)="onUserImageError()"
-          />
+          <img *ngIf="!avatarError && userImage" [src]="userImage" alt="User" (error)="onUserImageError()" />
 
           <span *ngIf="avatarError || !userImage" class="user-initial">
             {{ userInitial }}

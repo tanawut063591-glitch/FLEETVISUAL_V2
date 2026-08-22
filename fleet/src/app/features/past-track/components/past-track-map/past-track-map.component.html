@@ -17,16 +17,10 @@
         <div #pastTrackMap class="google-map" [class.hide-map]="useFallbackMap"></div>
 
         <div class="map-type-switch" *ngIf="!useFallbackMap" role="group" aria-label="Map type">
-            <button
-                type="button"
-                [class.active]="mapType === 'roadmap'"
-                (click)="setMapType('roadmap')">
+            <button type="button" [class.active]="mapType === 'roadmap'" (click)="setMapType('roadmap')">
                 Map
             </button>
-            <button
-                type="button"
-                [class.active]="mapType === 'satellite'"
-                (click)="setMapType('satellite')">
+            <button type="button" [class.active]="mapType === 'satellite'" (click)="setMapType('satellite')">
                 Satellite
             </button>
         </div>
@@ -37,25 +31,14 @@
             <div class="map-label gulf">Gulf of Thailand</div>
 
             <svg class="route-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <polyline
-                    [attr.points]="uiRoutePoints"
-                    fill="none"
-                    stroke="#1769ff"
-                    stroke-width="1.4"
-                    stroke-linecap="round"
-                    stroke-linejoin="round">
+                <polyline [attr.points]="uiRoutePoints" fill="none" stroke="#1769ff" stroke-width="1.4"
+                    stroke-linecap="round" stroke-linejoin="round">
                 </polyline>
             </svg>
 
-            <button
-                *ngFor="let item of uiMapPoints"
-                type="button"
-                class="map-point"
-                [ngClass]="getFallbackPointClass(item.point)"
-                [style.left.%]="item.x"
-                [style.top.%]="item.y"
-                [attr.aria-label]="'Route position ' + item.point.time"
-                (click)="selectFallbackPoint(item.point)">
+            <button *ngFor="let item of uiMapPoints" type="button" class="map-point"
+                [ngClass]="getFallbackPointClass(item.point)" [style.left.%]="item.x" [style.top.%]="item.y"
+                [attr.aria-label]="'Route position ' + item.point.time" (click)="selectFallbackPoint(item.point)">
                 {{ getFallbackPointLabel(item.point) }}
             </button>
 

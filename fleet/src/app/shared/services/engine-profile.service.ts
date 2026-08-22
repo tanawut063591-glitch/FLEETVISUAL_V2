@@ -1,16 +1,6 @@
 import { HttpClient, HttpContext, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import {
-  Observable,
-  catchError,
-  map,
-  of,
-  shareReplay,
-  switchMap,
-  take,
-  tap,
-  timeout,
-} from 'rxjs';
+import { Observable, catchError, map, of, shareReplay, switchMap, take, tap, timeout } from 'rxjs';
 
 import { SKIP_AUTH_REDIRECT } from '../../core/interceptors/http-context.tokens';
 import {
@@ -44,7 +34,9 @@ export class EngineProfileService {
 
     if (!this.profiles$) {
       const seed$ = this.http.get<unknown>('/engine-profiles.json').pipe(
-        map((response) => this.extractArray(response).map((row, index) => this.normalize(row, index, 'seed'))),
+        map((response) =>
+          this.extractArray(response).map((row, index) => this.normalize(row, index, 'seed')),
+        ),
         catchError((error) => {
           console.warn('[EngineProfileService] seed profile file unavailable:', error);
           return of([] as EngineProfileRecord[]);
@@ -57,13 +49,20 @@ export class EngineProfileService {
             return seed$.pipe(map((seed) => this.mergeLocal(seed)));
           }
 
-          return this.loadBackend(config.engineProfiles.url, config.engineProfiles.method, config.engineProfiles.timeoutMs).pipe(
+          return this.loadBackend(
+            config.engineProfiles.url,
+            config.engineProfiles.method,
+            config.engineProfiles.timeoutMs,
+          ).pipe(
             switchMap((backendRows) => {
               if (backendRows.length) return of(this.mergeLocal(backendRows));
               return seed$.pipe(map((seed) => this.mergeLocal(seed)));
             }),
             catchError((error) => {
-              console.warn('[EngineProfileService] backend unavailable; using local profile library:', error);
+              console.warn(
+                '[EngineProfileService] backend unavailable; using local profile library:',
+                error,
+              );
               return seed$.pipe(map((seed) => this.mergeLocal(seed)));
             }),
           );
@@ -158,30 +157,44 @@ export class EngineProfileService {
   }
 
   createProfileId(name: string): string {
-    const slug = name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'engine-profile';
+    const slug =
+      name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'engine-profile';
     return `${slug}-${Date.now().toString(36)}`;
   }
 
-  private loadBackend(url: string, method: 'GET' | 'POST', timeoutMs: number): Observable<EngineProfileRecord[]> {
+  private loadBackend(
+    url: string,
+    method: 'GET' | 'POST',
+    timeoutMs: number,
+  ): Observable<EngineProfileRecord[]> {
     const context = new HttpContext().set(SKIP_AUTH_REDIRECT, true);
     const headers = this.getAuthHeaders();
-    const request$ = method === 'GET'
-      ? this.http.get(url, { context, headers })
-      : this.http.post(url, { page: 1, pageSize: 1000 }, { context, headers });
+    const request$ =
+      method === 'GET'
+        ? this.http.get(url, { context, headers })
+        : this.http.post(url, { page: 1, pageSize: 1000 }, { context, headers });
 
     return request$.pipe(
       timeout(timeoutMs),
-      map((response) => this.extractArray(response).map((row, index) => this.normalize(row, index, 'backend'))),
+      map((response) =>
+        this.extractArray(response).map((row, index) => this.normalize(row, index, 'backend')),
+      ),
     );
   }
 
-  private normalize(row: any, index: number, source: EngineProfileRecord['source']): EngineProfileRecord {
+  private normalize(
+    row: any,
+    index: number,
+    source: EngineProfileRecord['source'],
+  ): EngineProfileRecord {
     const name = String(row?.name ?? row?.Name ?? `Engine Profile ${index + 1}`).trim();
-    const category = this.normalizeCategory(row?.category ?? row?.Category ?? row?.type ?? row?.Type);
+    const category = this.normalizeCategory(
+      row?.category ?? row?.Category ?? row?.type ?? row?.Type,
+    );
     const formulaPresetId = this.normalizeFormulaPreset(
       row?.formulaPresetId ?? row?.FormulaPresetId ?? row?.formula ?? row?.Formula,
       category,
@@ -192,11 +205,15 @@ export class EngineProfileService {
     return {
       id: String(row?.id ?? row?.Id ?? row?._id ?? this.slug(name) ?? `engine-${index + 1}`).trim(),
       name,
-      manufacturer: String(row?.manufacturer ?? row?.Manufacturer ?? row?.brand ?? row?.Brand ?? '').trim(),
+      manufacturer: String(
+        row?.manufacturer ?? row?.Manufacturer ?? row?.brand ?? row?.Brand ?? '',
+      ).trim(),
       model: String(row?.model ?? row?.Model ?? '').trim(),
       category,
       fuelType: String(row?.fuelType ?? row?.FuelType ?? row?.fuel ?? row?.Fuel ?? '').trim(),
-      ratedPowerKw: this.toNullablePositiveNumber(row?.ratedPowerKw ?? row?.RatedPowerKw ?? row?.ratedPower),
+      ratedPowerKw: this.toNullablePositiveNumber(
+        row?.ratedPowerKw ?? row?.RatedPowerKw ?? row?.ratedPower,
+      ),
       ratedRpm: this.toNullablePositiveNumber(row?.ratedRpm ?? row?.RatedRpm ?? row?.rpm),
       cylinders: this.toNullablePositiveInteger(row?.cylinders ?? row?.Cylinders),
       formulaPresetId,
@@ -245,7 +262,11 @@ export class EngineProfileService {
 
   private deleteLocal(id: string): void {
     const store = this.readStore();
-    const seedIds = new Set(['generic-main-diesel', 'generic-generator-engine', 'telemetry-only-engine']);
+    const seedIds = new Set([
+      'generic-main-diesel',
+      'generic-generator-engine',
+      'telemetry-only-engine',
+    ]);
     this.writeStore({
       records: store.records.filter((item) => item.id !== id),
       deletedSeedIds: seedIds.has(id)
@@ -281,20 +302,33 @@ export class EngineProfileService {
 
   private extractArray(response: any): any[] {
     if (Array.isArray(response)) return response;
-    const candidates = [response?.data, response?.items, response?.rows, response?.result, response?.records];
+    const candidates = [
+      response?.data,
+      response?.items,
+      response?.rows,
+      response?.result,
+      response?.records,
+    ];
     return candidates.find(Array.isArray) || [];
   }
 
   private normalizeCategory(value: unknown): EngineProfileCategory {
-    const category = String(value ?? '').trim().toLowerCase();
+    const category = String(value ?? '')
+      .trim()
+      .toLowerCase();
     if (category.includes('aux')) return 'auxiliary';
     if (category.includes('gen')) return 'generator';
     if (category.includes('main') || category.includes('propulsion')) return 'main';
     return 'other';
   }
 
-  private normalizeFormulaPreset(value: unknown, category: EngineProfileCategory): EngineFormulaPresetId {
-    const preset = String(value ?? '').trim().toLowerCase();
+  private normalizeFormulaPreset(
+    value: unknown,
+    category: EngineProfileCategory,
+  ): EngineFormulaPresetId {
+    const preset = String(value ?? '')
+      .trim()
+      .toLowerCase();
     if (preset === 'main-diesel-standard-v1') return preset;
     if (preset === 'generator-standard-v1') return preset;
     if (preset === 'telemetry-only-v1') return preset;

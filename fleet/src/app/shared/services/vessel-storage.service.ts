@@ -19,9 +19,7 @@ export class VesselStorageService {
 
     try {
       localStorage.setItem(key, JSON.stringify(vessel));
-    } catch {
-
-    }
+    } catch {}
   }
 
   getStoredVessel(): any | null {
@@ -56,7 +54,7 @@ export class VesselStorageService {
         vessel?.ShipName ||
         vessel?.id ||
         vessel?.Id ||
-        ''
+        '',
     ).trim();
   }
 

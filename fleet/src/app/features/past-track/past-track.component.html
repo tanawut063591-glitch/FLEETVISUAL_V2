@@ -8,11 +8,7 @@
     </div>
 
     <div class="header-actions">
-      <button
-        type="button"
-        class="btn back-overview"
-        [routerLink]="['/main/overview']"
-        aria-label="Back to Overview">
+      <button type="button" class="btn back-overview" [routerLink]="['/main/overview']" aria-label="Back to Overview">
         <span aria-hidden="true">←</span> Back to Overview
       </button>
 
@@ -37,27 +33,19 @@
     </div>
 
     <div class="range-presets" role="group" aria-label="Select historical range">
-      <button
-        *ngFor="let preset of historyPresets"
-        type="button"
-        class="range-preset"
-        [class.active]="activeRangeMode === preset.days && !customRangeOpen"
-        [disabled]="loading"
+      <button *ngFor="let preset of historyPresets" type="button" class="range-preset"
+        [class.active]="activeRangeMode === preset.days && !customRangeOpen" [disabled]="loading"
         (click)="selectHistoryDays(preset.days)">
         {{ preset.label }}
       </button>
 
-      <button
-        type="button"
-        class="range-preset custom"
-        [class.active]="activeRangeMode === 'custom' || customRangeOpen"
-        [disabled]="loading"
-        (click)="toggleCustomRange()">
+      <button type="button" class="range-preset custom" [class.active]="activeRangeMode === 'custom' || customRangeOpen"
+        [disabled]="loading" (click)="toggleCustomRange()">
         <span>▦</span> Custom
       </button>
     </div>
 
-    <div class="range-display">
+    <div class="range-display" *ngIf="activeRangeMode !== 'custom' && !customRangeOpen">
       <span class="calendar-icon">▦</span>
       <div>
         <small>{{ getRangeDurationLabel() }}</small>
@@ -69,35 +57,25 @@
         <strong>{{ getRangeEndLabel() }}</strong>
       </div>
     </div>
-  </section>
 
-  <section class="custom-range-panel" *ngIf="customRangeOpen">
-    <div class="custom-range-copy">
-      <strong>Custom Date and Time</strong>
-      <span>Select up to seven days. Data resolution is selected automatically.</span>
+    <div class="inline-custom-range" *ngIf="activeRangeMode === 'custom' || customRangeOpen"
+      aria-label="Custom Past Track date and time range">
+      <label class="inline-custom-field">
+        <span>START</span>
+        <input type="datetime-local" [(ngModel)]="customStartDate" [max]="maxDateTime" aria-label="Custom start date and time">
+      </label>
+
+      <span class="inline-custom-arrow" aria-hidden="true">→</span>
+
+      <label class="inline-custom-field">
+        <span>END</span>
+        <input type="datetime-local" [(ngModel)]="customEndDate" [max]="maxDateTime" aria-label="Custom end date and time">
+      </label>
+
+      <button type="button" class="btn primary inline-apply-range" (click)="applyCustomRange()" [disabled]="loading">
+        Load
+      </button>
     </div>
-
-    <label class="custom-field">
-      <span>START DATE AND TIME</span>
-      <input
-        type="datetime-local"
-        [(ngModel)]="customStartDate"
-        [max]="maxDateTime">
-    </label>
-
-    <span class="custom-arrow">→</span>
-
-    <label class="custom-field">
-      <span>END DATE AND TIME</span>
-      <input
-        type="datetime-local"
-        [(ngModel)]="customEndDate"
-        [max]="maxDateTime">
-    </label>
-
-    <button type="button" class="btn primary apply-range" (click)="applyCustomRange()">
-      Load Route
-    </button>
   </section>
 
   <div *ngIf="loading" class="state-box loading-state">
@@ -115,56 +93,19 @@
   <ng-container *ngIf="!loading && !errorMessage && summary">
     <app-past-track-summary [summary]="summary"></app-past-track-summary>
 
-    <div class="route-info-bar">
-      <div class="route-info-item">
-        <small>SELECTED TIME</small>
-        <strong>{{ getSelectedTimeLabel() }}</strong>
-      </div>
-
-      <div class="route-info-item">
-        <small>DATA INTERVAL</small>
-        <strong>Every {{ samplingIntervalMinutes }} minutes</strong>
-      </div>
-
-      <div class="route-info-item">
-        <small>DISPLAY / RAW POINTS</small>
-        <strong>{{ summary.trackPoints }} / {{ summary.rawTrackPoints || summary.trackPoints }}</strong>
-      </div>
-
-      <div class="route-info-item coverage-item">
-        <small>DATA COVERAGE</small>
-        <div class="coverage-value">
-          <strong>{{ summary.coveragePercent || 0 }}%</strong>
-          <span class="coverage-track" aria-hidden="true">
-            <i [style.width.%]="summary.coveragePercent || 0"></i>
-          </span>
-        </div>
-      </div>
-    </div>
-
     <div #routeWorkspace class="main-grid">
       <div class="left-area">
         <div #routeMapExport class="route-map-export-frame">
-          <app-past-track-map
-            [trackPoints]="trackPoints"
-            [selectedPoint]="selectedPoint"
+          <app-past-track-map [trackPoints]="trackPoints" [selectedPoint]="selectedPoint"
             (pointSelected)="selectPoint($event)">
           </app-past-track-map>
         </div>
 
         <div class="mobile-playback" aria-label="Mobile route playback controls">
-          <app-past-track-playback
-            [trackPoints]="trackPoints"
-            [selectedPoint]="selectedPoint"
-            [isPlaying]="isPlaying"
-            [playbackSpeed]="playbackSpeed"
-            [rangeStart]="startDate"
-            [rangeEnd]="endDate"
-            [samplingIntervalMinutes]="samplingIntervalMinutes"
-            (previousClicked)="previousPoint()"
-            (nextClicked)="nextPoint()"
-            (playClicked)="togglePlayback()"
-            (speedChanged)="changePlaybackSpeed($event)"
+          <app-past-track-playback [trackPoints]="trackPoints" [selectedPoint]="selectedPoint" [isPlaying]="isPlaying"
+            [playbackSpeed]="playbackSpeed" [rangeStart]="startDate" [rangeEnd]="endDate"
+            [samplingIntervalMinutes]="samplingIntervalMinutes" (previousClicked)="previousPoint()"
+            (nextClicked)="nextPoint()" (playClicked)="togglePlayback()" (speedChanged)="changePlaybackSpeed($event)"
             (pointScrubbed)="scrubToPoint($event)">
           </app-past-track-playback>
         </div>
@@ -173,11 +114,8 @@
           <app-past-track-detail [point]="selectedPoint"></app-past-track-detail>
         </div>
 
-        <app-past-track-timeline
-          [trackPoints]="trackPoints"
-          [selectedPoint]="selectedPoint"
-          [samplingIntervalMinutes]="samplingIntervalMinutes"
-          (pointSelected)="selectPoint($event)"
+        <app-past-track-timeline [trackPoints]="trackPoints" [selectedPoint]="selectedPoint"
+          [samplingIntervalMinutes]="samplingIntervalMinutes" (pointSelected)="selectPoint($event)"
           (focusRequested)="focusPointOnMap($event)">
         </app-past-track-timeline>
       </div>
@@ -188,18 +126,10 @@
         </div>
 
         <div class="desktop-playback">
-          <app-past-track-playback
-            [trackPoints]="trackPoints"
-            [selectedPoint]="selectedPoint"
-            [isPlaying]="isPlaying"
-            [playbackSpeed]="playbackSpeed"
-            [rangeStart]="startDate"
-            [rangeEnd]="endDate"
-            [samplingIntervalMinutes]="samplingIntervalMinutes"
-            (previousClicked)="previousPoint()"
-            (nextClicked)="nextPoint()"
-            (playClicked)="togglePlayback()"
-            (speedChanged)="changePlaybackSpeed($event)"
+          <app-past-track-playback [trackPoints]="trackPoints" [selectedPoint]="selectedPoint" [isPlaying]="isPlaying"
+            [playbackSpeed]="playbackSpeed" [rangeStart]="startDate" [rangeEnd]="endDate"
+            [samplingIntervalMinutes]="samplingIntervalMinutes" (previousClicked)="previousPoint()"
+            (nextClicked)="nextPoint()" (playClicked)="togglePlayback()" (speedChanged)="changePlaybackSpeed($event)"
             (pointScrubbed)="scrubToPoint($event)">
           </app-past-track-playback>
         </div>

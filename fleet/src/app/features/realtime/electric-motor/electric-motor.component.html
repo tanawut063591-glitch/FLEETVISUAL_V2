@@ -3,81 +3,56 @@
   [class.motor-console--running]="isRunning"
   [class.motor-console--stopped]="!isRunning"
 >
-  <div class="motor-telemetry-bar">
-    <div class="motor-telemetry-bar__identity">
-      <span class="motor-telemetry-bar__icon" aria-hidden="true">
-        <i class="fa fa-bolt"></i>
-      </span>
-      <span class="motor-telemetry-bar__copy">
-        <strong>Electric drive telemetry</strong>
-        <small>Motor · shaft · propulsion</small>
-      </span>
-    </div>
+  <div class="motor-visual" aria-label="Electric propulsion motor">
+    <div class="motor-halo" aria-hidden="true"></div>
 
-    <span class="motor-telemetry-bar__signal" [class.is-running]="isRunning">
-      <i aria-hidden="true"></i>
-      Live signal
-    </span>
+    <svg
+      class="motor-art"
+      viewBox="0 0 340 180"
+      role="img"
+      aria-label="Electric motor"
+      focusable="false"
+    >
+      <g class="motor-art__shadow">
+        <ellipse cx="151" cy="151" rx="105" ry="12"></ellipse>
+      </g>
+
+      <g class="motor-art__machine">
+        <rect class="motor-art__rear" x="30" y="65" width="34" height="72" rx="15"></rect>
+        <path class="motor-art__rear-line" d="M48 78v46"></path>
+
+        <rect class="motor-art__body" x="57" y="54" width="146" height="92" rx="10"></rect>
+        <path class="motor-art__fin" d="M73 61v78M89 61v78M105 61v78M121 61v78M137 61v78M153 61v78M169 61v78M185 61v78"></path>
+
+        <path class="motor-art__front" d="M203 66h21c13 0 24 11 24 24v20c0 13-11 24-24 24h-21z"></path>
+        <rect class="motor-art__shaft" x="247" y="91" width="64" height="17" rx="8"></rect>
+        <circle class="motor-art__shaft-end" cx="311" cy="99.5" r="8"></circle>
+
+        <rect class="motor-art__terminal" x="103" y="29" width="58" height="30" rx="6"></rect>
+        <path class="motor-art__bolt" d="M134 34l-9 13h8l-4 9 12-14h-8z"></path>
+
+        <path class="motor-art__foot" d="M83 145h38v13H72v-7c0-3 2-6 6-6h5z"></path>
+        <path class="motor-art__foot" d="M164 145h32c4 0 6 3 6 6v7h-49v-13z"></path>
+      </g>
+
+      <g class="motor-art__rotor" aria-hidden="true">
+        <circle cx="224" cy="100" r="11"></circle>
+        <path d="M224 91v18M215 100h18"></path>
+      </g>
+
+      <path class="motor-art__shine" d="M64 64h130"></path>
+    </svg>
   </div>
 
   <div
-      class="motor-speed"
-      [class.realtime-alert-field]="hasAlarm(speed)"
-      [attr.title]="getTooltip(speed)"
-    >
-    <span>SHAFT SPEED</span>
+    class="motor-speed"
+    [class.realtime-alert-field]="hasAlarm(speed)"
+    [attr.title]="getTooltip(speed)"
+  >
+    <span class="motor-speed__label">SHAFT SPEED</span>
     <div class="motor-speed__value">
       <strong>{{ displayNumber(speed, 2) }}</strong>
       <small>RPM</small>
     </div>
-    <div class="motor-speed__signal" aria-hidden="true">
-      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-    </div>
-  </div>
-
-  <div class="motor-drive" aria-label="Electric motor shaft diagram">
-    <div class="motor-node">
-      <span class="motor-node__glow"></span>
-      <i class="fa fa-bolt"></i>
-      <strong>MOTOR</strong>
-      <small>ELECTRIC DRIVE</small>
-    </div>
-
-    <div class="motor-shaft" aria-hidden="true">
-      <span class="motor-shaft__energy"></span>
-      <small>MOTOR SHAFT</small>
-    </div>
-
-    <div class="motor-output">
-      <i class="fa fa-circle-o-notch"></i>
-      <strong>OUTPUT</strong>
-      <small>{{ statusText }}</small>
-    </div>
-  </div>
-
-  <div class="motor-health">
-    <div class="health-card">
-      <span>DRIVE STATUS</span>
-      <strong [class.is-running]="isRunning">{{ statusText }}</strong>
-    </div>
-
-    <div
-      class="health-card"
-      [class.realtime-alert-field]="hasAlarm(speed)"
-      [attr.title]="getTooltip(speed)"
-    >
-      <span>LIVE SPEED</span>
-      <strong>{{ displayNumber(speed, 2) }} <small>RPM</small></strong>
-    </div>
-
-    <div class="health-card health-card--link">
-      <span>TELEMETRY</span>
-      <strong><i></i> Live</strong>
-    </div>
-  </div>
-
-  <div class="motor-note">
-    <i class="fa fa-info-circle"></i>
-    <span>Realtime shaft telemetry updates without additional backend requests.</span>
   </div>
 </section>

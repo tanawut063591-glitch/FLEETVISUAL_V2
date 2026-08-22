@@ -1,11 +1,4 @@
-import {
-  Directive,
-  ElementRef,
-  Input,
-  OnChanges,
-  Renderer2,
-  SimpleChanges,
-} from '@angular/core';
+import { Directive, ElementRef, Input, OnChanges, Renderer2, SimpleChanges } from '@angular/core';
 
 import { RealtimeInput } from '../models/realtime-value.model';
 
@@ -20,7 +13,7 @@ export class RealtimeValueDirective implements OnChanges {
 
   constructor(
     private elementRef: ElementRef<HTMLElement>,
-    private renderer: Renderer2
+    private renderer: Renderer2,
   ) {}
 
   ngOnChanges(changes: SimpleChanges): void {

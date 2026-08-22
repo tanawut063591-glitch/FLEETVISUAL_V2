@@ -49,18 +49,11 @@ export class PastTrackService {
 
   constructor(private readonly newHttp: NewHttpClientService) {}
 
-
-
-
-
-
-
-
   getPastTrack(
     vesselId: string,
     startDate: string,
     endDate: string,
-    samplingIntervalMinutes = this.defaultSamplingIntervalMinutes
+    samplingIntervalMinutes = this.defaultSamplingIntervalMinutes,
   ): Observable<PastTrackResponse> {
     const prefix = this.normalizePrefix(vesselId);
     const intervalMinutes = this.normalizeSamplingInterval(samplingIntervalMinutes);
@@ -74,7 +67,6 @@ export class PastTrackService {
     return this.newHttp.getPoints(prefix).pipe(
       timeout(this.pointTimeoutMs),
       catchError((error: any) => {
-
         console.warn('[PastTrack] getPoints failed; using standard GPS tags', error);
         return of([]);
       }),
@@ -83,7 +75,7 @@ export class PastTrackService {
           getPointsResponse,
           prefix,
           startDate,
-          endDate
+          endDate,
         );
 
         if (directPoints.length > 0) {
@@ -91,7 +83,7 @@ export class PastTrackService {
             directPoints,
             startDate,
             endDate,
-            intervalMinutes
+            intervalMinutes,
           );
 
           console.info('[PastTrack] direct route points:', {
@@ -107,8 +99,8 @@ export class PastTrackService {
               directPoints,
               startDate,
               endDate,
-              intervalMinutes
-            )
+              intervalMinutes,
+            ),
           );
         }
 
@@ -120,53 +112,49 @@ export class PastTrackService {
         console.info('[PastTrack] route tags:', routeTags);
         console.info('[PastTrack] historian range:', range);
 
-        return this.newHttp
-          .getHistorianValues(range.start, range.end, tagRequest)
-          .pipe(
-            timeout(this.historianTimeoutMs),
-            map((historyResponse: any) => {
-              const points = this.normalizeHistorianPoints(
-                historyResponse,
-                prefix,
-                routeTags,
-                startDate,
-                endDate
-              );
+        return this.newHttp.getHistorianValues(range.start, range.end, tagRequest).pipe(
+          timeout(this.historianTimeoutMs),
+          map((historyResponse: any) => {
+            const points = this.normalizeHistorianPoints(
+              historyResponse,
+              prefix,
+              routeTags,
+              startDate,
+              endDate,
+            );
 
-              const sampledPoints = this.resampleToFixedSlots(
-                points,
-                startDate,
-                endDate,
-                intervalMinutes
-              );
+            const sampledPoints = this.resampleToFixedSlots(
+              points,
+              startDate,
+              endDate,
+              intervalMinutes,
+            );
 
-              console.info('[PastTrack] normalized route points:', {
-                raw: points.length,
-                sampled: sampledPoints.length,
-                intervalMinutes,
-              });
+            console.info('[PastTrack] normalized route points:', {
+              raw: points.length,
+              sampled: sampledPoints.length,
+              intervalMinutes,
+            });
 
-              return this.buildResponse(
-                prefix,
-                sampledPoints,
-                points,
-                startDate,
-                endDate,
-                intervalMinutes
-              );
-            }),
-            catchError((error: any) => {
-              console.error('[PastTrack] historian request failed:', error);
-              return of(
-                this.buildResponse(prefix, [], [], startDate, endDate, intervalMinutes)
-              );
-            })
-          );
+            return this.buildResponse(
+              prefix,
+              sampledPoints,
+              points,
+              startDate,
+              endDate,
+              intervalMinutes,
+            );
+          }),
+          catchError((error: any) => {
+            console.error('[PastTrack] historian request failed:', error);
+            return of(this.buildResponse(prefix, [], [], startDate, endDate, intervalMinutes));
+          }),
+        );
       }),
       catchError((error: any) => {
         console.error('[PastTrack] load failed:', error);
         return of(this.buildResponse(prefix, [], [], startDate, endDate, intervalMinutes));
-      })
+      }),
     );
   }
 
@@ -213,23 +201,15 @@ export class PastTrackService {
     vesselId: string,
     routeTags: RouteTags,
     startDate: string,
-    endDate: string
+    endDate: string,
   ): PastTrackPoint[] {
     const source = this.parseJsonValue(response);
 
-
-    const tablePoints = this.normalizeHeaderTables(
-      source,
-      vesselId,
-      routeTags,
-      startDate,
-      endDate
-    );
+    const tablePoints = this.normalizeHeaderTables(source, vesselId, routeTags, startDate, endDate);
 
     if (tablePoints.length > 0) {
       return this.sanitizeTrack(tablePoints);
     }
-
 
     const samples: HistorianSamples = {
       lat: [],
@@ -252,24 +232,10 @@ export class PastTrackService {
     if (series.length > 0) {
       series.forEach((item: any, index: number) => {
         const fallbackTag = this.getTagName(item) || requestedTags[index] || '';
-        this.collectHistorianSamples(
-          item,
-          fallbackTag,
-          routeTags,
-          samples,
-          visited,
-          0
-        );
+        this.collectHistorianSamples(item, fallbackTag, routeTags, samples, visited, 0);
       });
     } else {
-      this.collectHistorianSamples(
-        source,
-        '',
-        routeTags,
-        samples,
-        visited,
-        0
-      );
+      this.collectHistorianSamples(source, '', routeTags, samples, visited, 0);
     }
 
     const latSamples = this.normalizeSamples(samples.lat);
@@ -281,11 +247,7 @@ export class PastTrackService {
     const points: PastTrackPoint[] = [];
 
     for (const latSample of latSamples) {
-      const lngSample = this.findNearestSample(
-        lngSamples,
-        latSample.time,
-        this.pairToleranceMs
-      );
+      const lngSample = this.findNearestSample(lngSamples, latSample.time, this.pairToleranceMs);
 
       if (!lngSample) {
         continue;
@@ -304,21 +266,9 @@ export class PastTrackService {
         continue;
       }
 
-      const speed = this.findNearestSample(
-        speedSamples,
-        pointTime,
-        this.pairToleranceMs
-      )?.value;
-      const course = this.findNearestSample(
-        courseSamples,
-        pointTime,
-        this.pairToleranceMs
-      )?.value;
-      const fuelRate = this.findNearestSample(
-        fuelSamples,
-        pointTime,
-        this.pairToleranceMs
-      )?.value;
+      const speed = this.findNearestSample(speedSamples, pointTime, this.pairToleranceMs)?.value;
+      const course = this.findNearestSample(courseSamples, pointTime, this.pairToleranceMs)?.value;
+      const fuelRate = this.findNearestSample(fuelSamples, pointTime, this.pairToleranceMs)?.value;
 
       points.push(
         this.createPoint(
@@ -329,8 +279,8 @@ export class PastTrackService {
           lng,
           speed ?? 0,
           course ?? 0,
-          fuelRate ?? 0
-        )
+          fuelRate ?? 0,
+        ),
       );
     }
 
@@ -342,7 +292,7 @@ export class PastTrackService {
     vesselId: string,
     routeTags: RouteTags,
     startDate: string,
-    endDate: string
+    endDate: string,
   ): PastTrackPoint[] {
     const tables: HeaderTable[] = [];
     this.findHeaderTables(source, tables, new WeakSet<object>(), 0);
@@ -396,10 +346,10 @@ export class PastTrackService {
         const rawTime = this.readRecordTime(record, table.headers, timeIndex);
         const timestamp = this.parseTimestamp(rawTime);
         const lat = this.toNumber(
-          this.readRecordValue(record, table.headers, latIndex, routeTags.lat)
+          this.readRecordValue(record, table.headers, latIndex, routeTags.lat),
         );
         const lng = this.toNumber(
-          this.readRecordValue(record, table.headers, lngIndex, routeTags.lng)
+          this.readRecordValue(record, table.headers, lngIndex, routeTags.lng),
         );
 
         if (
@@ -411,13 +361,13 @@ export class PastTrackService {
         }
 
         const speed = this.toNumber(
-          this.readRecordValue(record, table.headers, speedIndex, routeTags.speed)
+          this.readRecordValue(record, table.headers, speedIndex, routeTags.speed),
         );
         const course = this.toNumber(
-          this.readRecordValue(record, table.headers, courseIndex, routeTags.course)
+          this.readRecordValue(record, table.headers, courseIndex, routeTags.course),
         );
         const fuelRate = this.toNumber(
-          this.readRecordValue(record, table.headers, fuelIndex, routeTags.fuelRate)
+          this.readRecordValue(record, table.headers, fuelIndex, routeTags.fuelRate),
         );
 
         points.push(
@@ -429,8 +379,8 @@ export class PastTrackService {
             lng,
             Number.isFinite(speed) ? speed : 0,
             Number.isFinite(course) ? course : 0,
-            Number.isFinite(fuelRate) ? fuelRate : 0
-          )
+            Number.isFinite(fuelRate) ? fuelRate : 0,
+          ),
         );
       }
     }
@@ -444,7 +394,7 @@ export class PastTrackService {
     routeTags: RouteTags,
     samples: HistorianSamples,
     visited: WeakSet<object>,
-    depth: number
+    depth: number,
   ): void {
     if (rawValue === null || rawValue === undefined || depth > 12) {
       return;
@@ -454,14 +404,7 @@ export class PastTrackService {
 
     if (Array.isArray(value)) {
       for (const item of value) {
-        this.collectHistorianSamples(
-          item,
-          parentTagName,
-          routeTags,
-          samples,
-          visited,
-          depth + 1
-        );
+        this.collectHistorianSamples(item, parentTagName, routeTags, samples, visited, depth + 1);
       }
       return;
     }
@@ -504,18 +447,9 @@ export class PastTrackService {
         continue;
       }
 
-      const nextParentTag = this.looksLikeRouteTag(key)
-        ? key
-        : ownTagName;
+      const nextParentTag = this.looksLikeRouteTag(key) ? key : ownTagName;
 
-      this.collectHistorianSamples(
-        child,
-        nextParentTag,
-        routeTags,
-        samples,
-        visited,
-        depth + 1
-      );
+      this.collectHistorianSamples(child, nextParentTag, routeTags, samples, visited, depth + 1);
     }
   }
 
@@ -523,7 +457,7 @@ export class PastTrackService {
     response: any,
     vesselId: string,
     startDate: string,
-    endDate: string
+    endDate: string,
   ): PastTrackPoint[] {
     const rows = this.extractTagRows(response);
     const points: PastTrackPoint[] = [];
@@ -554,8 +488,8 @@ export class PastTrackService {
           lng,
           Number.isFinite(speed) ? speed : 0,
           Number.isFinite(course) ? course : 0,
-          Number.isFinite(fuelRate) ? fuelRate : 0
-        )
+          Number.isFinite(fuelRate) ? fuelRate : 0,
+        ),
       );
     }
 
@@ -570,7 +504,7 @@ export class PastTrackService {
     lng: number,
     speed: number,
     course: number,
-    fuelRate: number
+    fuelRate: number,
   ): PastTrackPoint {
     const safeSpeed = Number.isFinite(speed) ? speed : 0;
 
@@ -628,12 +562,7 @@ export class PastTrackService {
       return false;
     }
 
-    const distance = this.distanceNm(
-      previous.lat,
-      previous.lng,
-      current.lat,
-      current.lng
-    );
+    const distance = this.distanceNm(previous.lat, previous.lng, current.lat, current.lng);
     const impliedSpeed = distance / hours;
 
     return impliedSpeed > 120;
@@ -642,28 +571,26 @@ export class PastTrackService {
   private normalizeSamples(input: HistorianSample[]): HistorianSample[] {
     const sorted = input
       .filter(
-        (sample: HistorianSample) =>
-          Number.isFinite(sample.time) && Number.isFinite(sample.value)
+        (sample: HistorianSample) => Number.isFinite(sample.time) && Number.isFinite(sample.value),
       )
       .sort((a: HistorianSample, b: HistorianSample) => a.time - b.time);
 
     const map = new Map<number, HistorianSample>();
 
     for (const sample of sorted) {
-
       const bucket = Math.floor(sample.time / 60_000) * 60_000;
       map.set(bucket, { time: sample.time, value: sample.value });
     }
 
     return Array.from(map.values()).sort(
-      (a: HistorianSample, b: HistorianSample) => a.time - b.time
+      (a: HistorianSample, b: HistorianSample) => a.time - b.time,
     );
   }
 
   private findNearestSample(
     samples: HistorianSample[],
     targetTime: number,
-    toleranceMs: number
+    toleranceMs: number,
   ): HistorianSample | null {
     if (samples.length === 0) {
       return null;
@@ -713,7 +640,7 @@ export class PastTrackService {
     rawValue: any,
     result: HeaderTable[],
     visited: WeakSet<object>,
-    depth: number
+    depth: number,
   ): void {
     if (rawValue === null || rawValue === undefined || depth > 10) {
       return;
@@ -752,11 +679,7 @@ export class PastTrackService {
     }
   }
 
-  private findHeaderIndex(
-    headers: any[],
-    selectedTag: string,
-    keywords: string[]
-  ): number {
+  private findHeaderIndex(headers: any[], selectedTag: string, keywords: string[]): number {
     const selectedAliases = this.getTagAliases(selectedTag);
 
     for (let index = 0; index < headers.length; index += 1) {
@@ -810,12 +733,7 @@ export class PastTrackService {
     return undefined;
   }
 
-  private readRecordValue(
-    record: any,
-    headers: any[],
-    index: number,
-    selectedTag: string
-  ): any {
+  private readRecordValue(record: any, headers: any[], index: number, selectedTag: string): any {
     if (index < 0 || !record) {
       return undefined;
     }
@@ -844,10 +762,7 @@ export class PastTrackService {
     return undefined;
   }
 
-  private getTypeFromSelectedTag(
-    tagName: string,
-    routeTags: RouteTags
-  ): RouteValueType | '' {
+  private getTypeFromSelectedTag(tagName: string, routeTags: RouteTags): RouteValueType | '' {
     if (!tagName) {
       return '';
     }
@@ -863,7 +778,7 @@ export class PastTrackService {
           (alias: string) =>
             normalizedName === alias ||
             normalizedName.endsWith(alias) ||
-            alias.endsWith(normalizedName)
+            alias.endsWith(normalizedName),
         )
       ) {
         return type;
@@ -895,12 +810,8 @@ export class PastTrackService {
         continue;
       }
 
-      const description =
-        this.readFirst(row, ['Description', 'description', 'Desc', 'desc']) || '';
-      const score = this.scoreTag(
-        `${String(tagName)} ${String(description)}`.toUpperCase(),
-        type
-      );
+      const description = this.readFirst(row, ['Description', 'description', 'Desc', 'desc']) || '';
+      const score = this.scoreTag(`${String(tagName)} ${String(description)}`.toUpperCase(), type);
 
       if (score > bestScore) {
         bestScore = score;
@@ -1038,24 +949,19 @@ export class PastTrackService {
     return [];
   }
 
-
-
-
-
-
   private resampleToFixedSlots(
     points: PastTrackPoint[],
     startDate: string,
     endDate: string,
-    intervalMinutes: number
+    intervalMinutes: number,
   ): PastTrackPoint[] {
     const sorted = this.sanitizeTrack(points)
       .map((point: PastTrackPoint) => ({
         point,
         timestamp: this.parseTimestamp(point.time),
       }))
-      .filter((item): item is { point: PastTrackPoint; timestamp: number } =>
-        item.timestamp !== null
+      .filter(
+        (item): item is { point: PastTrackPoint; timestamp: number } => item.timestamp !== null,
       )
       .sort((a, b) => a.timestamp - b.timestamp);
 
@@ -1069,10 +975,7 @@ export class PastTrackService {
     const configuredStart = this.parseRangeBoundary(startDate, false);
     const configuredEnd = this.parseRangeBoundary(endDate, true);
     const rangeStart = configuredStart ?? sorted[0].timestamp;
-    const rangeEnd = Math.min(
-      configuredEnd ?? sorted[sorted.length - 1].timestamp,
-      Date.now()
-    );
+    const rangeEnd = Math.min(configuredEnd ?? sorted[sorted.length - 1].timestamp, Date.now());
     const firstSlot = Math.ceil(rangeStart / intervalMs) * intervalMs;
     const lastSlot = Math.floor(rangeEnd / intervalMs) * intervalMs;
     const result: PastTrackPoint[] = [];
@@ -1093,9 +996,7 @@ export class PastTrackService {
       }
 
       const nearest = candidates.reduce((best, candidate) =>
-        Math.abs(candidate.timestamp - slot) < Math.abs(best.timestamp - slot)
-          ? candidate
-          : best
+        Math.abs(candidate.timestamp - slot) < Math.abs(best.timestamp - slot) ? candidate : best,
       );
       const difference = Math.abs(nearest.timestamp - slot);
 
@@ -1119,7 +1020,7 @@ export class PastTrackService {
   private calculateExpectedSlots(
     startDate: string,
     endDate: string,
-    intervalMinutes: number
+    intervalMinutes: number,
   ): number {
     const intervalMs = this.normalizeSamplingInterval(intervalMinutes) * 60_000;
     const start = this.parseRangeBoundary(startDate, false);
@@ -1136,7 +1037,10 @@ export class PastTrackService {
     return lastSlot >= firstSlot ? Math.floor((lastSlot - firstSlot) / intervalMs) + 1 : 0;
   }
 
-  private buildHistoryRange(startDate: string, endDate: string): {
+  private buildHistoryRange(
+    startDate: string,
+    endDate: string,
+  ): {
     start: string;
     end: string;
   } {
@@ -1165,7 +1069,7 @@ export class PastTrackService {
     rawPoints: PastTrackPoint[] = displayPoints,
     startDate = '',
     endDate = '',
-    intervalMinutes = this.defaultSamplingIntervalMinutes
+    intervalMinutes = this.defaultSamplingIntervalMinutes,
   ): PastTrackResponse {
     return {
       summary: this.buildSummary(
@@ -1174,7 +1078,7 @@ export class PastTrackService {
         rawPoints,
         startDate,
         endDate,
-        intervalMinutes
+        intervalMinutes,
       ),
       points: displayPoints,
     };
@@ -1186,18 +1090,15 @@ export class PastTrackService {
     rawPoints: PastTrackPoint[],
     startDate: string,
     endDate: string,
-    intervalMinutes: number
+    intervalMinutes: number,
   ): PastTrackSummary {
     const normalizedInterval = this.normalizeSamplingInterval(intervalMinutes);
     const vessel = this.getSavedVessel(prefix);
-    const expectedSlots = this.calculateExpectedSlots(
-      startDate,
-      endDate,
-      normalizedInterval
-    );
-    const coveragePercent = expectedSlots > 0
-      ? Math.min(100, Number(((displayPoints.length / expectedSlots) * 100).toFixed(1)))
-      : 0;
+    const expectedSlots = this.calculateExpectedSlots(startDate, endDate, normalizedInterval);
+    const coveragePercent =
+      expectedSlots > 0
+        ? Math.min(100, Number(((displayPoints.length / expectedSlots) * 100).toFixed(1)))
+        : 0;
     const metricPoints = rawPoints.length > 0 ? rawPoints : displayPoints;
 
     return {
@@ -1240,9 +1141,7 @@ export class PastTrackService {
 
     const normalized = String(value).trim().replace('T', ' ');
     const hasTime = /\d{1,2}:\d{2}/.test(normalized);
-    const candidate = hasTime
-      ? normalized
-      : `${normalized} ${endOfDay ? '23:59:59' : '00:00:00'}`;
+    const candidate = hasTime ? normalized : `${normalized} ${endOfDay ? '23:59:59' : '00:00:00'}`;
 
     return this.parseTimestamp(candidate);
   }
@@ -1260,7 +1159,11 @@ export class PastTrackService {
         const vessel = JSON.parse(raw);
         const vesselPrefix = this.readVesselPrefix(vessel);
 
-        if (!prefix || !vesselPrefix || this.normalizeText(vesselPrefix) === this.normalizeText(prefix)) {
+        if (
+          !prefix ||
+          !vesselPrefix ||
+          this.normalizeText(vesselPrefix) === this.normalizeText(prefix)
+        ) {
           return vessel;
         }
       } catch {
@@ -1279,7 +1182,7 @@ export class PastTrackService {
         vessel?.id ||
         vessel?.fv?.id ||
         vessel?.fvInfo?.id ||
-        ''
+        '',
     ).trim();
   }
 
@@ -1289,13 +1192,13 @@ export class PastTrackService {
         vessel?.fv?.name ||
         vessel?.fvInfo?.name ||
         prefix.replace(/_/g, ' ') ||
-        'VESSEL'
+        'VESSEL',
     );
   }
 
   private getVesselType(vessel: any): string {
     return String(
-      vessel?.desc || vessel?.type || vessel?.fv?.desc || vessel?.fvInfo?.desc || 'AHTS'
+      vessel?.desc || vessel?.type || vessel?.fv?.desc || vessel?.fvInfo?.desc || 'AHTS',
     );
   }
 
@@ -1313,7 +1216,7 @@ export class PastTrackService {
         vessel?.image ||
         vessel?.fv?.img ||
         vessel?.fvInfo?.img ||
-        'assets/images/vessel/notfound.png'
+        'assets/images/vessel/notfound.png',
     );
   }
 
@@ -1338,7 +1241,7 @@ export class PastTrackService {
         points[index - 1].lat,
         points[index - 1].lng,
         points[index].lat,
-        points[index].lng
+        points[index].lng,
       );
     }
 
@@ -1362,9 +1265,7 @@ export class PastTrackService {
     const hours = Math.floor((totalMinutes % 1_440) / 60);
     const minutes = totalMinutes % 60;
 
-    return days > 0
-      ? `${days}d ${hours}h ${minutes}m`
-      : `${hours}h ${minutes}m`;
+    return days > 0 ? `${days}d ${hours}h ${minutes}m` : `${hours}h ${minutes}m`;
   }
 
   private sortAndRemoveDuplicate(points: PastTrackPoint[]): PastTrackPoint[] {
@@ -1393,11 +1294,7 @@ export class PastTrackService {
     return result;
   }
 
-  private isTimestampInRange(
-    timestamp: number,
-    startDate: string,
-    endDate: string
-  ): boolean {
+  private isTimestampInRange(timestamp: number, startDate: string, endDate: string): boolean {
     if (!startDate || !endDate) {
       return true;
     }
@@ -1440,7 +1337,7 @@ export class PastTrackService {
     }
 
     const isoLocal = text.match(
-      /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/
+      /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/,
     );
 
     if (isoLocal) {
@@ -1451,12 +1348,12 @@ export class PastTrackService {
         Number(isoLocal[4]),
         Number(isoLocal[5]),
         Number(isoLocal[6] || 0),
-        Number(String(isoLocal[7] || '0').padEnd(3, '0'))
+        Number(String(isoLocal[7] || '0').padEnd(3, '0')),
       ).getTime();
     }
 
     const displayDate = text.match(
-      /^(\d{1,2})-([A-Za-z]{3})-(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+      /^(\d{1,2})-([A-Za-z]{3})-(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/,
     );
 
     if (displayDate) {
@@ -1486,7 +1383,7 @@ export class PastTrackService {
         Number(displayDate[1]),
         Number(displayDate[4]),
         Number(displayDate[5]),
-        Number(displayDate[6] || 0)
+        Number(displayDate[6] || 0),
       ).getTime();
     }
 
@@ -1610,8 +1507,7 @@ export class PastTrackService {
     const haversine =
       Math.sin(deltaLat / 2) ** 2 +
       Math.cos(firstLat) * Math.cos(secondLat) * Math.sin(deltaLng / 2) ** 2;
-    const angularDistance =
-      2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+    const angularDistance = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 
     return earthRadiusKm * angularDistance * 0.539956803;
   }
@@ -1626,7 +1522,10 @@ export class PastTrackService {
     }
 
     if (typeof value === 'string') {
-      const cleaned = value.trim().replace(/,/g, '.').replace(/[^0-9+\-.eE]/g, '');
+      const cleaned = value
+        .trim()
+        .replace(/,/g, '.')
+        .replace(/[^0-9+\-.eE]/g, '');
       return Number(cleaned);
     }
 
@@ -1647,7 +1546,7 @@ export class PastTrackService {
         'name',
         'Tag',
         'tag',
-      ]) || ''
+      ]) || '',
     );
   }
 
@@ -1731,14 +1630,7 @@ export class PastTrackService {
   }
 
   private getSpeedValue(row: any): any {
-    return this.readFirstDeep(row, [
-      'speed',
-      'Speed',
-      'SPEED',
-      'sog',
-      'SOG',
-      'VES_GPS_SPEED',
-    ]);
+    return this.readFirstDeep(row, ['speed', 'Speed', 'SPEED', 'sog', 'SOG', 'VES_GPS_SPEED']);
   }
 
   private getCourseValue(row: any): any {
@@ -1832,7 +1724,7 @@ export class PastTrackService {
         'key',
         'Description',
         'description',
-      ]) || JSON.stringify(header)
+      ]) || JSON.stringify(header),
     );
   }
 

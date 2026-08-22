@@ -496,9 +496,17 @@
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
 }
 
-.tag-action-btn.ok { background: #16a34a; }
-.tag-action-btn.clear { background: #f59e0b; }
-.tag-action-btn.cancel { background: #ef2b2d; }
+.tag-action-btn.ok {
+  background: #16a34a;
+}
+
+.tag-action-btn.clear {
+  background: #f59e0b;
+}
+
+.tag-action-btn.cancel {
+  background: #ef2b2d;
+}
 
 .manage-tags-body {
   width: 100%;
@@ -537,7 +545,9 @@
   padding: 0 12px;
 }
 
-.tag-search i { color: #94a3b8; }
+.tag-search i {
+  color: #94a3b8;
+}
 
 .tag-search input {
   width: 100%;
@@ -646,7 +656,7 @@
 .manage-tags-grid {
   width: 100%;
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr) 300px;
+  grid-template-columns: 250px minmax(0, 1fr);
   gap: 18px;
   align-items: flex-start;
 }
@@ -1160,7 +1170,7 @@ select:focus {
   }
 
   .manage-tags-grid {
-    grid-template-columns: 220px minmax(0, 1fr) 280px;
+    grid-template-columns: 220px minmax(0, 1fr);
   }
 
   .tag-side-panel {
@@ -1173,6 +1183,7 @@ select:focus {
 }
 
 @media screen and (max-width: 992px) {
+
   .dl-toolbar,
   .dl-period,
   .dl-apply {
@@ -1428,13 +1439,13 @@ select:focus {
   text-align: left;
 }
 
-.tag-load-state > i {
+.tag-load-state>i {
   flex: 0 0 auto;
   color: #2563eb;
   font-size: 26px;
 }
 
-.tag-load-state > div {
+.tag-load-state>div {
   min-width: 0;
   flex: 1;
 }
@@ -1473,11 +1484,11 @@ select:focus {
   cursor: not-allowed;
 }
 
-.tag-load-state.error > i {
+.tag-load-state.error>i {
   color: #ef4444;
 }
 
-.tag-load-state.empty > i {
+.tag-load-state.empty>i {
   color: #64748b;
 }
 
@@ -1516,6 +1527,7 @@ select:focus {
 }
 
 @media screen and (max-width: 992px) {
+
   :host ::ng-deep .manage-tags-dialog.p-dialog,
   :host ::ng-deep .pro-tags-dialog.p-dialog,
   :host ::ng-deep .manage-tags-dialog.ui-dialog,
@@ -1867,6 +1879,14 @@ select:focus {
 @media screen and (max-width: 992px) {
   .dl-calendar {
     width: 100%;
+  }
+
+  :host ::ng-deep .dl-prime-calendar.p-datepicker,
+  :host ::ng-deep .dl-calendar .p-datepicker,
+  :host ::ng-deep .dl-prime-calendar.ui-calendar,
+  :host ::ng-deep .dl-calendar .ui-calendar {
+    width: 100% !important;
+    max-width: none !important;
   }
 }
 
@@ -2231,11 +2251,9 @@ select:focus {
 
 
 :host-context([data-theme='dark']) .dl-panel {
-  background: linear-gradient(
-    180deg,
-    rgba(18, 25, 37, 0.98) 0%,
-    rgba(8, 12, 18, 0.98) 100%
-  ) !important;
+  background: linear-gradient(180deg,
+      rgba(18, 25, 37, 0.98) 0%,
+      rgba(8, 12, 18, 0.98) 100%) !important;
   border: 1px solid rgba(148, 163, 184, 0.22) !important;
   box-shadow:
     0 18px 42px rgba(0, 0, 0, 0.46),
@@ -2292,3 +2310,464 @@ select:focus {
   color: #cbd5e1 !important;
 }
 
+/* 2026-08 compact historical filter layout (Data Logger + Chart). */
+.dl-title {
+  transform: none;
+}
+
+.dl-toolbar {
+  gap: 7px;
+}
+
+.dl-date-field {
+  gap: 4px;
+}
+
+.dl-date-field label {
+  font-size: 9.5px;
+  letter-spacing: 0.3px;
+}
+
+.dl-calendar {
+  width: 180px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+:host ::ng-deep .dl-prime-calendar.p-datepicker,
+:host ::ng-deep .dl-calendar .p-datepicker,
+:host ::ng-deep .dl-prime-calendar.ui-calendar,
+:host ::ng-deep .dl-calendar .ui-calendar {
+  width: 180px !important;
+  max-width: 180px !important;
+  height: 38px !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input,
+:host ::ng-deep .dl-calendar .p-datepicker-input,
+:host ::ng-deep .dl-prime-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar-input {
+  height: 38px !important;
+  padding: 0 42px 0 12px !important;
+  border-radius: 9px !important;
+  font-size: 11.5px !important;
+  font-weight: 820 !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon-container,
+:host ::ng-deep .dl-calendar .p-datepicker-input-icon-container {
+  width: 36px !important;
+  height: 38px !important;
+  border-radius: 0 9px 9px 0 !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon,
+:host ::ng-deep .dl-calendar .p-datepicker-input-icon {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.dl-separator {
+  height: 40px;
+  font-size: 13px;
+}
+
+.dl-period {
+  height: 40px;
+  flex: 0 0 auto;
+}
+
+.dl-period button {
+  height: 40px;
+  min-width: 36px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.dl-apply {
+  height: 40px;
+  min-width: 100px;
+  padding: 0 14px;
+  gap: 6px;
+  font-size: 12.5px;
+}
+
+@media screen and (min-width: 1361px) {
+  .dl-top {
+    grid-template-columns: minmax(230px, 270px) minmax(0, 1fr);
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .dl-toolbar {
+    flex-wrap: nowrap;
+  }
+
+  .dl-title h1 {
+    font-size: 27px;
+  }
+
+  .dl-title p {
+    max-width: 270px;
+    font-size: 12.5px;
+    line-height: 1.35;
+  }
+}
+
+@media screen and (max-width: 1360px) {
+  .dl-title {
+    transform: none;
+  }
+}
+
+@media screen and (max-width: 1180px) {
+  .dl-calendar {
+    width: 170px;
+  }
+
+  :host ::ng-deep .dl-prime-calendar.p-datepicker,
+  :host ::ng-deep .dl-calendar .p-datepicker,
+  :host ::ng-deep .dl-prime-calendar.ui-calendar,
+  :host ::ng-deep .dl-calendar .ui-calendar {
+    width: 170px !important;
+    max-width: 170px !important;
+  }
+}
+
+@media screen and (max-width: 992px) {
+  .dl-calendar {
+    width: 100%;
+  }
+
+  :host ::ng-deep .dl-prime-calendar.p-datepicker,
+  :host ::ng-deep .dl-calendar .p-datepicker,
+  :host ::ng-deep .dl-prime-calendar.ui-calendar,
+  :host ::ng-deep .dl-calendar .ui-calendar {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .dl-period {
+    order: 0;
+  }
+
+  .dl-date-field {
+    order: 1;
+  }
+
+  .dl-separator {
+    order: 1;
+  }
+
+  .dl-apply {
+    order: 2;
+  }
+}
+
+/* 2026-08 keep page subtitle on one line on desktop/tablet layouts. */
+@media screen and (min-width: 993px) {
+  .dl-title p {
+    max-width: none;
+    white-space: nowrap;
+  }
+}
+
+@media screen and (min-width: 1361px) {
+  .dl-top {
+    grid-template-columns: minmax(360px, 400px) minmax(0, 1fr);
+  }
+}
+
+/* =========================================================
+   Professional square refinement — Data Logger / Chart tags
+   Balanced enterprise styling: 9px surfaces, 7px controls, light shadow.
+   ========================================================= */
+:host {
+  --mt-radius: 9px;
+  --mt-control-radius: 7px;
+  --mt-shadow: 0 2px 8px rgba(15, 23, 42, 0.07);
+  --mt-shadow-strong: 0 4px 12px rgba(15, 23, 42, 0.09);
+}
+
+/* Main Data Logger / Chart date-control surfaces */
+.dl-panel,
+.dl-card {
+  border-radius: var(--mt-radius);
+  box-shadow: var(--mt-shadow);
+}
+
+.dl-calendar,
+.dl-period,
+.dl-tags,
+.dl-export,
+.dl-apply {
+  border-radius: var(--mt-control-radius);
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input,
+:host ::ng-deep .dl-calendar .p-datepicker-input,
+:host ::ng-deep .dl-prime-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar-input {
+  border-radius: var(--mt-control-radius) !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon-container,
+:host ::ng-deep .dl-calendar .p-datepicker-input-icon-container {
+  border-radius: 0 var(--mt-control-radius) var(--mt-control-radius) 0 !important;
+}
+
+/* PrimeNG dialog shell */
+:host ::ng-deep .manage-tags-dialog.p-dialog,
+:host ::ng-deep .pro-tags-dialog.p-dialog,
+:host ::ng-deep .manage-tags-dialog.ui-dialog,
+:host ::ng-deep .pro-tags-dialog.ui-dialog {
+  border: 1px solid rgba(148, 163, 184, 0.30) !important;
+  border-radius: var(--mt-radius) !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18) !important;
+}
+
+.manage-tags-header {
+  min-height: 72px;
+  padding: 13px 16px;
+  position: relative;
+  z-index: 2;
+  border-bottom: 2px solid rgba(96, 165, 250, 0.72);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
+}
+
+.manage-tags-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--mt-control-radius);
+}
+
+.tag-action-btn {
+  height: 38px;
+  min-width: 82px;
+  padding: 0 14px;
+  border-radius: var(--mt-control-radius);
+  box-shadow: none;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.tag-action-btn:hover {
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.16);
+}
+
+.manage-tags-body {
+  padding: 20px 22px 24px;
+  background: #eef3f8;
+}
+
+/* Filter / search toolbar */
+.tag-control-bar {
+  margin-bottom: 14px;
+  padding: 10px;
+  gap: 10px;
+  border-radius: var(--mt-radius);
+  border-color: #d5dfeb;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
+}
+
+.tag-search,
+.tag-preset,
+.tag-summary-chip,
+.tag-filter-btn {
+  height: 40px;
+  min-height: 40px;
+  border-radius: var(--mt-control-radius);
+}
+
+.tag-search,
+.tag-preset {
+  background: #ffffff;
+}
+
+.tag-search-clear {
+  border-radius: var(--mt-control-radius);
+}
+
+.tag-summary-chip {
+  padding-inline: 12px;
+}
+
+.tag-filter-btn {
+  padding-inline: 13px;
+}
+
+.tag-filter-btn:hover,
+.tag-filter-btn.active {
+  box-shadow: none;
+}
+
+/* Favorite / Recent panel */
+.manage-tags-grid {
+  gap: 12px;
+}
+
+.tag-side-panel {
+  border-radius: var(--mt-radius);
+  border: 1px solid #dbe4ef;
+  box-shadow: var(--mt-shadow);
+}
+
+.tag-side-tabs {
+  height: 46px;
+  padding: 5px;
+  gap: 4px;
+}
+
+.tag-side-tabs button {
+  border-radius: var(--mt-control-radius);
+}
+
+.tag-side-tabs button.active {
+  border: 1px solid #dbe4ef;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
+}
+
+.side-section-title span,
+.tag-column-title small {
+  border-radius: var(--mt-control-radius);
+}
+
+.side-tag-item {
+  margin-bottom: 6px;
+  border-radius: var(--mt-control-radius);
+}
+
+/* Sensor group columns */
+.tags-layout {
+  gap: 10px;
+}
+
+.tag-column {
+  border: 1px solid #dbe4ef;
+  border-radius: var(--mt-radius);
+  box-shadow: var(--mt-shadow);
+}
+
+.tag-column-title {
+  box-shadow: none;
+}
+
+.tag-row {
+  transition: background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+.tag-row:hover {
+  box-shadow: inset 3px 0 0 #60a5fa;
+}
+
+.tag-row.active {
+  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.58);
+}
+
+/* Empty / loading states use the same enterprise radius. */
+.tag-load-state,
+.tag-load-state button {
+  border-radius: var(--mt-control-radius);
+}
+
+/* Keep semantic status/check controls circular; they are indicators, not cards. */
+.check-icon,
+.star-icon {
+  border-radius: 50%;
+}
+
+/* Dark mode keeps the same square hierarchy. */
+:host-context([data-theme='dark']) .tag-control-bar,
+:host-context([data-theme='dark']) .tag-side-panel,
+:host-context([data-theme='dark']) .tag-column {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+}
+
+@media screen and (max-width: 992px) {
+  :host ::ng-deep .manage-tags-dialog.p-dialog,
+  :host ::ng-deep .pro-tags-dialog.p-dialog,
+  :host ::ng-deep .manage-tags-dialog.ui-dialog,
+  :host ::ng-deep .pro-tags-dialog.ui-dialog {
+    border-radius: var(--mt-radius) !important;
+  }
+
+  .tag-search,
+  .tag-preset,
+  .tag-summary-chip,
+  .tag-filter-btn {
+    border-radius: var(--mt-control-radius);
+  }
+
+  .tag-column,
+  .tag-side-panel {
+    border-radius: var(--mt-radius);
+  }
+}
+
+@media screen and (max-width: 620px) {
+  .dl-panel,
+  .dl-card,
+  .tag-control-bar,
+  .tag-side-panel,
+  .tag-column {
+    border-radius: var(--mt-radius);
+  }
+
+  .manage-tags-icon,
+  .tag-action-btn {
+    border-radius: var(--mt-control-radius);
+  }
+}
+
+/* =========================================================
+   2026-08 frame consistency pass
+   Keep the top filter block aligned exactly with Chart/Data Logger content.
+   One border weight, one surface radius, one shadow language.
+   ========================================================= */
+:host {
+  padding: 0;
+  --ui-frame-radius: 10px;
+  --ui-control-radius: 8px;
+  --ui-frame-border: rgba(148, 163, 184, 0.28);
+  --ui-frame-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+}
+
+.dl-panel,
+.dl-card {
+  border: 1px solid var(--ui-frame-border);
+  border-radius: var(--ui-frame-radius);
+  box-shadow: var(--ui-frame-shadow);
+}
+
+/* Remove the extra decorative top rule so every edge reads equally. */
+.dl-panel::before {
+  display: none;
+}
+
+.dl-calendar,
+.dl-period,
+.dl-tags,
+.dl-export,
+.dl-apply {
+  border-radius: var(--ui-control-radius);
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input,
+:host ::ng-deep .dl-calendar .p-datepicker-input,
+:host ::ng-deep .dl-prime-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar-input {
+  border-radius: var(--ui-control-radius) !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon-container,
+:host ::ng-deep .dl-calendar .p-datepicker-input-icon-container {
+  border-radius: 0 var(--ui-control-radius) var(--ui-control-radius) 0 !important;
+}
+
+:host-context([data-theme='dark']) .dl-panel,
+:host-context([data-theme='dark']) .dl-card {
+  border-color: rgba(148, 163, 184, 0.28) !important;
+}

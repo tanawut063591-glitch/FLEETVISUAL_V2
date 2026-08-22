@@ -34,14 +34,23 @@ export class DatabaseApiConfigService {
     );
   }
 
-  private resolve(config: DatabaseApiConfig, publicConfig: PublicConfig): ResolvedDatabaseApiConfig {
+  private resolve(
+    config: DatabaseApiConfig,
+    publicConfig: PublicConfig,
+  ): ResolvedDatabaseApiConfig {
     const defaultTimeout = this.clamp(Number(config.timeoutMs) || 6000, 1500, 30000);
     const defaultCache = this.clamp(Number(config.cacheSeconds) || 15, 0, 300);
     const globallyEnabled = config.enabled === true;
 
     return {
       enabled: globallyEnabled,
-      alerts: this.resolveEndpoint(config.alerts, globallyEnabled, defaultTimeout, defaultCache, publicConfig),
+      alerts: this.resolveEndpoint(
+        config.alerts,
+        globallyEnabled,
+        defaultTimeout,
+        defaultCache,
+        publicConfig,
+      ),
       activityLogs: this.resolveEndpoint(
         config.activityLogs,
         globallyEnabled,
@@ -49,7 +58,13 @@ export class DatabaseApiConfigService {
         defaultCache,
         publicConfig,
       ),
-      vessels: this.resolveEndpoint(config.vessels, globallyEnabled, defaultTimeout, 60, publicConfig),
+      vessels: this.resolveEndpoint(
+        config.vessels,
+        globallyEnabled,
+        defaultTimeout,
+        60,
+        publicConfig,
+      ),
       vesselGroups: this.resolveEndpoint(
         config.vesselGroups,
         globallyEnabled,

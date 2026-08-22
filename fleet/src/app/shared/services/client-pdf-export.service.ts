@@ -25,7 +25,7 @@ export class ClientPdfExportService {
 
   async exportElements(
     elements: readonly HTMLElement[],
-    options: ClientPdfExportOptions
+    options: ClientPdfExportOptions,
   ): Promise<ClientPdfExportResult> {
     if (this.exportInProgress) {
       throw new Error('EXPORT_ALREADY_RUNNING');
@@ -75,7 +75,7 @@ export class ClientPdfExportService {
       const pdfBytes = this.buildImagePdf(images);
       const pdfBuffer = pdfBytes.buffer.slice(
         pdfBytes.byteOffset,
-        pdfBytes.byteOffset + pdfBytes.byteLength
+        pdfBytes.byteOffset + pdfBytes.byteLength,
       ) as ArrayBuffer;
       const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
       this.downloadBlob(blob, options.fileName);
@@ -115,9 +115,8 @@ export class ClientPdfExportService {
 
     appendBytes(
       new Uint8Array([
-        0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x0a,
-        0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a,
-      ])
+        0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x0a, 0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a,
+      ]),
     );
 
     appendObject(1, ['<< /Type /Catalog /Pages 2 0 R >>']);
@@ -138,7 +137,7 @@ export class ClientPdfExportService {
       const content = [
         'q',
         `${this.pdfNumber(placement.width)} 0 0 ${this.pdfNumber(placement.height)} ${this.pdfNumber(
-          placement.x
+          placement.x,
         )} ${this.pdfNumber(placement.y)} cm`,
         `/${imageName} Do`,
         'Q',
@@ -148,7 +147,7 @@ export class ClientPdfExportService {
 
       appendObject(pageId, [
         `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${this.pdfNumber(
-          pageWidth
+          pageWidth,
         )} ${this.pdfNumber(pageHeight)}] `,
         `/Resources << /ProcSet [/PDF /ImageC] /XObject << /${imageName} ${imageId} 0 R >> >> `,
         `/Contents ${contentId} 0 R >>`,
@@ -176,7 +175,7 @@ export class ClientPdfExportService {
       appendText(`${String(offsets[id]).padStart(10, '0')} 00000 n \n`);
     }
     appendText(
-      `trailer\n<< /Size ${objectCount + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`
+      `trailer\n<< /Size ${objectCount + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`,
     );
 
     const output = new Uint8Array(byteLength);
@@ -192,7 +191,7 @@ export class ClientPdfExportService {
     imageWidth: number,
     imageHeight: number,
     pageWidth: number,
-    pageHeight: number
+    pageHeight: number,
   ): { x: number; y: number; width: number; height: number } {
     const safeWidth = Math.max(1, imageWidth);
     const safeHeight = Math.max(1, imageHeight);

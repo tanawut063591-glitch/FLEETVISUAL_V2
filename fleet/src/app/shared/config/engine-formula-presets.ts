@@ -29,7 +29,8 @@ export const ENGINE_FORMULA_PRESETS: readonly EngineFormulaPresetDefinition[] = 
     id: 'main-diesel-standard-v1',
     name: 'Main Diesel Engine — Standard',
     shortName: 'Main engine',
-    description: 'Shared calculation profile for propulsion engines. Uses rated values from the engine profile.',
+    description:
+      'Shared calculation profile for propulsion engines. Uses rated values from the engine profile.',
     formulas: [
       'Load (%) = Actual Power (kW) ÷ Rated Power (kW) × 100',
       'RPM (%) = Actual RPM ÷ Rated RPM × 100',
@@ -55,7 +56,9 @@ export const ENGINE_FORMULA_PRESETS: readonly EngineFormulaPresetDefinition[] = 
     name: 'Telemetry Only — No Derived Formula',
     shortName: 'Telemetry only',
     description: 'Displays incoming telemetry without calculating load or fuel-efficiency values.',
-    formulas: ['No derived calculation. Values are displayed exactly as received from the backend.'],
+    formulas: [
+      'No derived calculation. Values are displayed exactly as received from the backend.',
+    ],
     requiredInputs: ['Mapped telemetry tags'],
     outputs: ['Raw telemetry values'],
   },
@@ -63,23 +66,17 @@ export const ENGINE_FORMULA_PRESETS: readonly EngineFormulaPresetDefinition[] = 
     id: 'custom-v1',
     name: 'Custom / Backend Formula',
     shortName: 'Custom',
-    description: 'Reserved for a formula calculated by the backend or a future custom formula engine.',
+    description:
+      'Reserved for a formula calculated by the backend or a future custom formula engine.',
     formulas: ['Calculation is supplied by the backend. The frontend does not infer a formula.'],
     requiredInputs: ['Backend-defined inputs'],
     outputs: ['Backend-defined outputs'],
   },
 ] as const;
 
-export function getEngineFormulaPreset(
-  id: EngineFormulaPresetId,
-): EngineFormulaPresetDefinition {
+export function getEngineFormulaPreset(id: EngineFormulaPresetId): EngineFormulaPresetDefinition {
   return ENGINE_FORMULA_PRESETS.find((preset) => preset.id === id) ?? ENGINE_FORMULA_PRESETS[2];
 }
-
-
-
-
-
 
 export function calculateEngineMetrics(
   presetId: EngineFormulaPresetId,
@@ -129,7 +126,6 @@ export interface EngineTelemetryTemplateContext {
   index: number;
 }
 
-
 export function resolveEngineTelemetryMapping(
   mapping: EngineTelemetryMapping,
   context: EngineTelemetryTemplateContext,
@@ -153,4 +149,3 @@ export function resolveEngineTelemetryTag(
     .replaceAll('{position}', context.position)
     .replaceAll('{index}', String(context.index));
 }
-

@@ -102,3 +102,43 @@
     white-space: nowrap;
     color: #1769ff;
 }
+
+/* Professional square detail treatment */
+.detail-panel {
+    padding: 13px;
+    border-color: var(--border-color, #dbe7f5);
+    border-radius: var(--pt-radius, 6px);
+    background: var(--card-bg, #ffffff);
+    box-shadow: var(--pt-shadow, 0 2px 8px rgba(15, 23, 42, 0.07));
+}
+
+.detail-panel p {
+    margin: 4px 0 10px;
+}
+
+.detail-card {
+    border-radius: var(--pt-control-radius, 4px);
+}
+
+.detail-head {
+    padding: 10px 11px;
+}
+
+.detail-head label {
+    border-radius: var(--pt-control-radius, 4px);
+}
+
+.detail-row {
+    min-height: 34px;
+    padding: 0 11px;
+}
+
+.detail-row span {
+    flex: 0 0 44%;
+}
+
+.detail-row b {
+    flex: 1;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}

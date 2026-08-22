@@ -1,7 +1,4 @@
-import {
-  calculateEngineMetrics,
-  resolveEngineTelemetryMapping,
-} from './engine-formula-presets';
+import { calculateEngineMetrics, resolveEngineTelemetryMapping } from './engine-formula-presets';
 
 describe('engine formula presets', () => {
   it('calculates shared main-engine metrics without clamping overload values', () => {

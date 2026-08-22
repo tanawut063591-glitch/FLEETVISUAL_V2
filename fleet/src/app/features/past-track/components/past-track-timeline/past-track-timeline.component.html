@@ -1,7 +1,6 @@
 <section class="timeline-panel" aria-label="Track timeline">
   <div class="timeline-heading">
     <div class="title-block">
-      <div class="eyebrow">HISTORICAL DATA</div>
       <div class="title-row">
         <h3>TRACK TIMELINE</h3>
         <span class="point-count">{{ trackPoints.length }} points</span>
@@ -18,16 +17,14 @@
       <button type="button" class="tool-button" (click)="scrollToStart()" [disabled]="!trackPoints.length">
         First
       </button>
-      <button type="button" class="tool-button" (click)="scrollToSelected()" [disabled]="!selectedPoint">
+      <button type="button" class="tool-button selected-tool" [class.active]="!!selectedPoint"
+        (click)="scrollToSelected()" [disabled]="!selectedPoint">
         Selected
       </button>
       <button type="button" class="tool-button" (click)="scrollToEnd()" [disabled]="!trackPoints.length">
         Last
       </button>
-      <button
-        type="button"
-        class="tool-button primary"
-        (click)="selectedPoint && viewOnMap(selectedPoint)"
+      <button type="button" class="tool-button primary" (click)="selectedPoint && viewOnMap(selectedPoint)"
         [disabled]="!selectedPoint">
         View on Map
       </button>
@@ -55,18 +52,11 @@
         <div role="columnheader">Map</div>
       </div>
 
-      <cdk-virtual-scroll-viewport
-        class="timeline-viewport"
-        [itemSize]="rowHeight"
-        [minBufferPx]="324"
+      <cdk-virtual-scroll-viewport class="timeline-viewport" [itemSize]="rowHeight" [minBufferPx]="324"
         [maxBufferPx]="648">
-        <div
-          *cdkVirtualFor="let point of trackPoints; let index = index; trackBy: trackPoint"
-          class="timeline-grid timeline-row"
-          role="row"
-          [class.selected]="isSelected(point)"
-          [attr.aria-selected]="isSelected(point)"
-          (click)="selectPoint(point)">
+        <div *cdkVirtualFor="let point of trackPoints; let index = index; trackBy: trackPoint"
+          class="timeline-grid timeline-row" role="row" [class.selected]="isSelected(point)"
+          [attr.aria-selected]="isSelected(point)" (click)="selectPoint(point)">
 
           <div class="number-cell" role="cell">
             <span class="point-no" [ngClass]="getStatusClass(point)">{{ point.no }}</span>
@@ -94,12 +84,8 @@
           <div role="cell"><b>{{ formatNumber(point.fuelRate) }}</b> L/h</div>
 
           <div class="map-action-cell" role="cell">
-            <button
-              type="button"
-              class="map-action"
-              title="Select this point and scroll to the route map"
-              [attr.aria-label]="'View point ' + point.no + ' on map'"
-              (click)="viewOnMap(point, $event)">
+            <button type="button" class="map-action" title="Select this point and scroll to the route map"
+              [attr.aria-label]="'View point ' + point.no + ' on map'" (click)="viewOnMap(point, $event)">
               ↗
             </button>
           </div>

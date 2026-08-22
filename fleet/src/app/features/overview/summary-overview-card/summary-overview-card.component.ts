@@ -1,4 +1,11 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  Input,
+  OnChanges,
+  OnInit,
+  SimpleChanges,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FvTimeService } from '../../../shared/services/fv-time.service';
 import { CoordinatesService } from '../../../shared/services/coordinate.service';
 
@@ -14,7 +21,7 @@ export class SummaryOverviewCardComponent implements OnInit, OnChanges {
 
   constructor(
     public fvTimeService: FvTimeService,
-    public coordinatesService: CoordinatesService
+    public coordinatesService: CoordinatesService,
   ) {}
 
   ngOnChanges(_changes: SimpleChanges): void {}

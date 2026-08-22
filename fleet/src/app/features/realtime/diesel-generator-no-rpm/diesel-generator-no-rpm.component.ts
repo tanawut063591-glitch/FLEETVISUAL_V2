@@ -146,7 +146,7 @@ export class DieselGeneratorNoRpmComponent {
   }
 
   get statusText(): string {
-    return this.isRunning ? 'Operational' : 'Stopped';
+    return this.isRunning ? 'Running' : 'Stopped';
   }
 
   private toFiniteNumber(input: GeneratorInput): number | null {

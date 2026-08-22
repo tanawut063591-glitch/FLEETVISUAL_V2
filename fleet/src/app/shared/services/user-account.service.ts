@@ -1,6 +1,16 @@
 import { HttpClient, HttpContext, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, forkJoin, map, of, shareReplay, switchMap, throwError, timeout } from 'rxjs';
+import {
+  Observable,
+  catchError,
+  forkJoin,
+  map,
+  of,
+  shareReplay,
+  switchMap,
+  throwError,
+  timeout,
+} from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { SKIP_AUTH_REDIRECT } from '../../core/interceptors/http-context.tokens';
@@ -102,14 +112,18 @@ export class UserAccountService {
           pageAccess: [],
           siteAccess: [],
         };
-        return this.http.post(config.createUrl, payload, {
-          context: this.context(),
-          headers: this.authService.getAuthHeaders(),
-        }).pipe(
-          timeout(config.timeoutMs),
-          map((response) => this.normalizeResult(response, request.username)),
-          catchError((error) => this.operationError('Unable to create the login account.', error)),
-        );
+        return this.http
+          .post(config.createUrl, payload, {
+            context: this.context(),
+            headers: this.authService.getAuthHeaders(),
+          })
+          .pipe(
+            timeout(config.timeoutMs),
+            map((response) => this.normalizeResult(response, request.username)),
+            catchError((error) =>
+              this.operationError('Unable to create the login account.', error),
+            ),
+          );
       }),
     );
   }
@@ -131,20 +145,28 @@ export class UserAccountService {
           Group: this.legacyGroup(request.role),
           status: request.status,
         };
-        return this.http.request(config.updateMethod, url, {
-          body: payload,
-          context: this.context(),
-          headers: this.authService.getAuthHeaders(),
-        }).pipe(
-          timeout(config.timeoutMs),
-          map((response) => this.normalizeResult(response, request.username, accountId)),
-          catchError((error) => this.operationError('Unable to update the login account.', error)),
-        );
+        return this.http
+          .request(config.updateMethod, url, {
+            body: payload,
+            context: this.context(),
+            headers: this.authService.getAuthHeaders(),
+          })
+          .pipe(
+            timeout(config.timeoutMs),
+            map((response) => this.normalizeResult(response, request.username, accountId)),
+            catchError((error) =>
+              this.operationError('Unable to update the login account.', error),
+            ),
+          );
       }),
     );
   }
 
-  resetPassword(accountId: string, username: string, newPassword: string): Observable<UserAccountOperationResult> {
+  resetPassword(
+    accountId: string,
+    username: string,
+    newPassword: string,
+  ): Observable<UserAccountOperationResult> {
     return this.config$.pipe(
       switchMap((config) => {
         const url = this.resolveActionUrl(config.resetPasswordUrl, accountId, username);
@@ -155,15 +177,17 @@ export class UserAccountService {
           newpassword: newPassword,
           forceChangeOnNextLogin: false,
         };
-        return this.http.request(config.resetPasswordMethod, url, {
-          body: payload,
-          context: this.context(),
-          headers: this.authService.getAuthHeaders(),
-        }).pipe(
-          timeout(config.timeoutMs),
-          map((response) => this.normalizeResult(response, username, accountId)),
-          catchError((error) => this.operationError('Unable to reset the password.', error)),
-        );
+        return this.http
+          .request(config.resetPasswordMethod, url, {
+            body: payload,
+            context: this.context(),
+            headers: this.authService.getAuthHeaders(),
+          })
+          .pipe(
+            timeout(config.timeoutMs),
+            map((response) => this.normalizeResult(response, username, accountId)),
+            catchError((error) => this.operationError('Unable to reset the password.', error)),
+          );
       }),
     );
   }
@@ -173,14 +197,18 @@ export class UserAccountService {
       switchMap((config) => {
         const url = this.resolveActionUrl(config.deleteUrl, accountId, username);
         this.assertOperation(config, url, 'Delete user account');
-        return this.http.delete(url, {
-          context: this.context(),
-          headers: this.authService.getAuthHeaders(),
-        }).pipe(
-          timeout(config.timeoutMs),
-          map((response) => this.normalizeResult(response, username, accountId)),
-          catchError((error) => this.operationError('Unable to delete the login account.', error)),
-        );
+        return this.http
+          .delete(url, {
+            context: this.context(),
+            headers: this.authService.getAuthHeaders(),
+          })
+          .pipe(
+            timeout(config.timeoutMs),
+            map((response) => this.normalizeResult(response, username, accountId)),
+            catchError((error) =>
+              this.operationError('Unable to delete the login account.', error),
+            ),
+          );
       }),
     );
   }
@@ -206,9 +234,10 @@ export class UserAccountService {
       resetPasswordUrl,
       deleteUrl,
       updateMethod: value.updateMethod === 'PATCH' ? 'PATCH' : 'PUT',
-      resetPasswordMethod: value.resetPasswordMethod === 'PUT' || value.resetPasswordMethod === 'PATCH'
-        ? value.resetPasswordMethod
-        : 'POST',
+      resetPasswordMethod:
+        value.resetPasswordMethod === 'PUT' || value.resetPasswordMethod === 'PATCH'
+          ? value.resetPasswordMethod
+          : 'POST',
       requireHttps: value.requireHttps !== false,
       secureTransport,
     };
@@ -220,7 +249,9 @@ export class UserAccountService {
     operation: string,
   ): ResolvedUserAccountApiConfig {
     if (!config.enabled) {
-      throw new Error('User Account API is disabled. Enable it in public/user-account-api.config.json.');
+      throw new Error(
+        'User Account API is disabled. Enable it in public/user-account-api.config.json.',
+      );
     }
     if (!url) {
       throw new Error(`${operation} endpoint is not configured.`);
@@ -257,9 +288,15 @@ export class UserAccountService {
     const value = (response || {}) as Record<string, unknown>;
     const success = value['success'] ?? value['Success'];
     if (success === false) {
-      throw new Error(String(value['message'] ?? value['Message'] ?? 'The user account operation was rejected.'));
+      throw new Error(
+        String(value['message'] ?? value['Message'] ?? 'The user account operation was rejected.'),
+      );
     }
-    const data = (value['data'] ?? value['Data'] ?? value['user'] ?? value['User'] ?? value) as Record<string, unknown>;
+    const data = (value['data'] ??
+      value['Data'] ??
+      value['user'] ??
+      value['User'] ??
+      value) as Record<string, unknown>;
     return {
       id: String(data?.['_id'] ?? data?.['id'] ?? data?.['Id'] ?? (fallbackId || username)),
       username: String(data?.['username'] ?? data?.['Username'] ?? username),
@@ -272,10 +309,10 @@ export class UserAccountService {
     const httpError = error as HttpErrorResponse;
     const backendMessage = String(
       httpError?.error?.message ??
-      httpError?.error?.Message ??
-      httpError?.error?.error ??
-      httpError?.message ??
-      '',
+        httpError?.error?.Message ??
+        httpError?.error?.error ??
+        httpError?.message ??
+        '',
     ).trim();
     const status = Number(httpError?.status || 0);
     const suffix = status ? ` (HTTP ${status})` : '';

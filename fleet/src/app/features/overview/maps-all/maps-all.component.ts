@@ -41,8 +41,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
   _data: any[] = [];
 
-
-
   centerPosition = { lat: 10.25, lng: 102.25 };
   defaultZoom = 7;
 
@@ -61,10 +59,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   private popupPositionRaf: number | null = null;
   private mapViewportListeners: any[] = [];
   private readonly popupDesktopBreakpointPx = 900;
-
-
-
-
 
   private readonly selectedLabelRightOffsetPx = 146;
   private readonly selectedLabelCenterYOffsetPx = -25.5;
@@ -92,9 +86,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   private mapInitRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly realtimeRefreshMs = 60_000;
 
-
-
-
   @Input('data')
   set data(value: any[]) {
     const selectedKey = this.getVesselKey(this.selectedVessel);
@@ -118,7 +109,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     private vesselPopup: VesselPopupService,
     private fvRealtimeService: FvRealtimeService,
     private newHttp: NewHttpClientService,
-    private liveReportService: LiveReportService
+    private liveReportService: LiveReportService,
   ) {}
 
   ngOnInit(): void {
@@ -237,7 +228,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-
   private setupMapResizeObserver(mapElement: HTMLElement): void {
     this.resizeObserver?.disconnect();
 
@@ -277,8 +267,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     overlay.setMap(this.map);
     this.popupProjectionOverlay = overlay;
 
-
-
     this.mapViewportListeners = [
       this.map.addListener('bounds_changed', () => this.schedulePopupPositionUpdate()),
       this.map.addListener('idle', () => this.schedulePopupPositionUpdate()),
@@ -313,8 +301,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-
-
     if (mapElement.clientWidth <= this.popupDesktopBreakpointPx) {
       popup.style.removeProperty('left');
       popup.style.removeProperty('right');
@@ -342,15 +328,9 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     const popupHeight = popup.offsetHeight || 500;
     const edgePadding = 18;
 
-
-
-
     const targetX = point.x + this.selectedLabelRightOffsetPx;
     const targetY = point.y + this.selectedLabelCenterYOffsetPx;
     const left = targetX + this.popupArrowReachPx;
-
-
-
 
     const overflowRight = left + popupWidth + edgePadding - mapWidth;
     if (overflowRight > 0 && !this.popupAutoPanPending && this.map?.panBy) {
@@ -367,13 +347,13 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     top = this.clampNumber(
       top,
       edgePadding,
-      Math.max(edgePadding, mapHeight - popupHeight - edgePadding)
+      Math.max(edgePadding, mapHeight - popupHeight - edgePadding),
     );
 
     const arrowTop = this.clampNumber(
       targetY - top - this.popupArrowHeightPx / 2,
       22,
-      Math.max(22, popupHeight - this.popupArrowHeightPx - 22)
+      Math.max(22, popupHeight - this.popupArrowHeightPx - 22),
     );
     const arrow = popup.querySelector<HTMLElement>('.popup-arrow');
 
@@ -437,9 +417,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       this.calculateStatusCount(this._data);
       this.renderMap(this._data);
       this.syncSelectedPopup(selectedKey);
-
-
-
 
       if (this.selectedVessel) {
         this.loadPopupSummary(this.selectedVessel);
@@ -516,7 +493,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     this.zone.run(() => {
       this.restoreSelectedMarkerVisual();
 
-
       const normalizedVessel = this.normalizePopupVessel(vessel);
 
       if (this.selectedMarker && this.selectedMarker !== marker) {
@@ -539,14 +515,9 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         localStorage.setItem('pastTrackVessel', JSON.stringify(normalizedVessel));
       } catch {}
 
-
-
       this.fvRealtimeService.setActiveVessel(normalizedVessel);
 
       this.loadPopupSummary(normalizedVessel);
-
-
-
 
       if (ensureVisible && this.map && marker) {
         this.map.panTo(marker.getPosition());
@@ -556,8 +527,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
           this.map.setZoom(8);
         }
       }
-
-
 
       setTimeout(() => this.schedulePopupPositionUpdate(), 0);
     });
@@ -725,7 +694,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     try {
       const status = this.getVesselStatus(this.selectedVessel);
       this.selectedMarker.setIcon?.(
-        this.getPremiumShipIcon(status, this.getVesselName(this.selectedVessel), false)
+        this.getPremiumShipIcon(status, this.getVesselName(this.selectedVessel), false),
       );
       this.selectedMarker.setZIndex?.(this.getMarkerZIndex(status));
     } catch {}
@@ -747,7 +716,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
       if (!Number.isNaN(date.getTime())) {
         const timestampStatus = getVesselStatusFromTimestamp(timestamp);
-
 
         if (timestampStatus === 'offline' || timestampStatus === 'idle') {
           return timestampStatus;
@@ -772,8 +740,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getTextStatus(vessel: any): MapStatus | '' {
-
-
     const value =
       this.getFirstTagValue(vessel, [
         'VES_STATUS_TEXT',
@@ -797,7 +763,14 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
     if (text.includes('offline') || text === 'false' || text === '0') return 'offline';
     if (text.includes('idle') || text.includes('standby') || text.includes('stop')) return 'idle';
-    if (text.includes('online') || text.includes('running') || text.includes('active') || text === 'true' || text === '1') return 'online';
+    if (
+      text.includes('online') ||
+      text.includes('running') ||
+      text.includes('active') ||
+      text === 'true' ||
+      text === '1'
+    )
+      return 'online';
 
     return '';
   }
@@ -806,9 +779,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     const color = this.getStatusColor(status);
 
     if (selected) {
-
-
-
       const text = this.escapeSvgText(this.truncateText(name, 18));
       const selectedSvg =
         '<svg width="190" height="54" viewBox="0 0 190 54" xmlns="http://www.w3.org/2000/svg">' +
@@ -816,16 +786,26 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         '<feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.25"/>' +
         '</filter>' +
         '<circle cx="24" cy="21" r="20" fill="#2563eb" fill-opacity="0.12" stroke="#2563eb" stroke-width="2.5" stroke-opacity="0.96"/>' +
-        '<path filter="url(#shadow)" d="M24 2C13.8 2 5.5 10.1 5.5 20C5.5 33.6 24 52 24 52C24 52 42.5 33.6 42.5 20C42.5 10.1 34.2 2 24 2Z" fill="' + color + '"/>' +
+        '<path filter="url(#shadow)" d="M24 2C13.8 2 5.5 10.1 5.5 20C5.5 33.6 24 52 24 52C24 52 42.5 33.6 42.5 20C42.5 10.1 34.2 2 24 2Z" fill="' +
+        color +
+        '"/>' +
         '<circle cx="24" cy="21" r="12" fill="white" fill-opacity="0.98"/>' +
-        '<path d="M15.5 24.5L19 17.5H29L32.5 24.5H15.5Z" fill="' + color + '"/>' +
-        '<path d="M19.5 17.5L21.5 13.5H26.5L28.5 17.5H19.5Z" fill="' + color + '"/>' +
-        '<path d="M17.5 26.2C21 28.3 27 28.3 30.5 26.2" stroke="' + color + '" stroke-width="2.2" stroke-linecap="round"/>' +
+        '<path d="M15.5 24.5L19 17.5H29L32.5 24.5H15.5Z" fill="' +
+        color +
+        '"/>' +
+        '<path d="M19.5 17.5L21.5 13.5H26.5L28.5 17.5H19.5Z" fill="' +
+        color +
+        '"/>' +
+        '<path d="M17.5 26.2C21 28.3 27 28.3 30.5 26.2" stroke="' +
+        color +
+        '" stroke-width="2.2" stroke-linecap="round"/>' +
         '<circle cx="21" cy="21" r="1.2" fill="white"/>' +
         '<circle cx="24" cy="21" r="1.2" fill="white"/>' +
         '<circle cx="27" cy="21" r="1.2" fill="white"/>' +
-        '<rect x="45" y="14" width="125" height="25" rx="6" fill="white" fill-opacity="0.98" stroke="#60a5fa" stroke-width="1.4"/>' +
-        '<text x="53" y="31" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">' + text + '</text>' +
+        '<rect x="45" y="14" width="125" height="25" rx="3" fill="white" fill-opacity="0.98" stroke="#60a5fa" stroke-width="1.4"/>' +
+        '<text x="53" y="31" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">' +
+        text +
+        '</text>' +
         '</svg>';
 
       return {
@@ -841,16 +821,26 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       '<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">' +
       '<feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.25"/>' +
       '</filter>' +
-      '<path filter="url(#shadow)" d="M24 2C13.8 2 5.5 10.1 5.5 20C5.5 33.6 24 52 24 52C24 52 42.5 33.6 42.5 20C42.5 10.1 34.2 2 24 2Z" fill="' + color + '"/>' +
+      '<path filter="url(#shadow)" d="M24 2C13.8 2 5.5 10.1 5.5 20C5.5 33.6 24 52 24 52C24 52 42.5 33.6 42.5 20C42.5 10.1 34.2 2 24 2Z" fill="' +
+      color +
+      '"/>' +
       '<circle cx="24" cy="21" r="12" fill="white" fill-opacity="0.96"/>' +
-      '<path d="M15.5 24.5L19 17.5H29L32.5 24.5H15.5Z" fill="' + color + '"/>' +
-      '<path d="M19.5 17.5L21.5 13.5H26.5L28.5 17.5H19.5Z" fill="' + color + '"/>' +
-      '<path d="M17.5 26.2C21 28.3 27 28.3 30.5 26.2" stroke="' + color + '" stroke-width="2.2" stroke-linecap="round"/>' +
+      '<path d="M15.5 24.5L19 17.5H29L32.5 24.5H15.5Z" fill="' +
+      color +
+      '"/>' +
+      '<path d="M19.5 17.5L21.5 13.5H26.5L28.5 17.5H19.5Z" fill="' +
+      color +
+      '"/>' +
+      '<path d="M17.5 26.2C21 28.3 27 28.3 30.5 26.2" stroke="' +
+      color +
+      '" stroke-width="2.2" stroke-linecap="round"/>' +
       '<circle cx="21" cy="21" r="1.2" fill="white"/>' +
       '<circle cx="24" cy="21" r="1.2" fill="white"/>' +
       '<circle cx="27" cy="21" r="1.2" fill="white"/>' +
-      '<rect x="45" y="14" width="125" height="25" rx="6" fill="white" fill-opacity="0.95"/>' +
-      '<text x="53" y="31" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">' + text + '</text>' +
+      '<rect x="45" y="14" width="125" height="25" rx="3" fill="white" fill-opacity="0.95"/>' +
+      '<text x="53" y="31" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">' +
+      text +
+      '</text>' +
       '</svg>';
 
     return {
@@ -873,7 +863,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getMarkerZIndex(status: string): number {
-
     if (status === 'offline') return 40;
     if (status === 'idle') return 30;
     return 20;
@@ -895,7 +884,13 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getVesselPrefix(vessel: any): string {
-    return vessel?.fv?.prefix || vessel?.fvInfo?.prefix || vessel?.prefix || vessel?.id || this.getVesselName(vessel);
+    return (
+      vessel?.fv?.prefix ||
+      vessel?.fvInfo?.prefix ||
+      vessel?.prefix ||
+      vessel?.id ||
+      this.getVesselName(vessel)
+    );
   }
 
   getVesselKey(vessel: any): string {
@@ -905,16 +900,16 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
     return String(
       vessel?.fv?.id ||
-      vessel?.fvInfo?.id ||
-      vessel?.id ||
-      vessel?._id ||
-      vessel?.fv?.prefix ||
-      vessel?.fvInfo?.prefix ||
-      vessel?.prefix ||
-      vessel?.fv?.name ||
-      vessel?.fvInfo?.name ||
-      vessel?.name ||
-      ''
+        vessel?.fvInfo?.id ||
+        vessel?.id ||
+        vessel?._id ||
+        vessel?.fv?.prefix ||
+        vessel?.fvInfo?.prefix ||
+        vessel?.prefix ||
+        vessel?.fv?.name ||
+        vessel?.fvInfo?.name ||
+        vessel?.name ||
+        '',
     );
   }
 
@@ -976,7 +971,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         'SPEED',
         'SOG',
       ]) ?? this.getDirectValue(vessel, ['speed', 'sog']),
-      1
+      1,
     );
   }
 
@@ -996,15 +991,14 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         'MAIN_ENGINE_LOAD',
         'LOAD',
       ],
-      ['engineLoad', 'engine_load', 'load']
+      ['engineLoad', 'engine_load', 'load'],
     );
 
-
-
     const activeLoads = values.filter((value) => value > 0);
-    const value = activeLoads.length > 0
-      ? activeLoads.reduce((sum, current) => sum + current, 0) / activeLoads.length
-      : values[0];
+    const value =
+      activeLoads.length > 0
+        ? activeLoads.reduce((sum, current) => sum + current, 0) / activeLoads.length
+        : values[0];
 
     return this.formatNumber(value, 0);
   }
@@ -1022,7 +1016,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         'CME_CONS_TODAY',
         'SME_CONS_TODAY',
       ]) ?? this.getDirectValue(vessel, ['fuelConsumption', 'fuel_consumption']),
-      0
+      0,
     );
   }
 
@@ -1036,7 +1030,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         'COURSE',
         'HEADING',
       ]) ?? this.getDirectValue(vessel, ['course', 'heading']),
-      0
+      0,
     );
   }
 
@@ -1054,9 +1048,8 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         'TODAY_DISTANCE',
         'DISTANCE',
       ],
-      ['distance', 'distanceToday', 'todayDistance', 'tripDistance']
+      ['distance', 'distanceToday', 'todayDistance', 'tripDistance'],
     );
-
 
     const value = values.find((item) => item > 0) ?? values[0];
 
@@ -1081,7 +1074,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   goRealtime(vessel: any, event?: Event): void {
-
     event?.preventDefault();
     event?.stopPropagation();
 
@@ -1092,12 +1084,9 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       localStorage.setItem('selectedVessel', JSON.stringify(selected));
     }
 
-
-
     this.zone.run(() => {
       this.router.navigate(['/main/realtime']).then(() => {
         if (selected) {
-
           setTimeout(() => this.fvRealtimeService.setActiveVessel(selected), 50);
         }
       });
@@ -1115,8 +1104,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     const cached = this.popupSummaryCache[cacheKey];
     const cacheAge = cached ? Date.now() - cached.fetchedAt : Number.POSITIVE_INFINITY;
 
-
-
     if (cached?.snapshot) {
       this.popupSnapshot = cached.snapshot;
     }
@@ -1127,14 +1114,11 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-
-
     if ((this.popupSummaryRetryAfter[cacheKey] || 0) > Date.now()) {
       this.popupSummaryLoading = false;
       this.popupSummaryError = true;
       return;
     }
-
 
     if (this.popupSummaryLoading && this.popupSummaryRequestKey === cacheKey) {
       return;
@@ -1158,7 +1142,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
           return this.newHttp.getCurrentValues(tags, prefix).pipe(
             timeout(15_000),
-            map((response: any) => ({ document, response }))
+            map((response: any) => ({ document, response })),
           );
         }),
         finalize(() => {
@@ -1166,7 +1150,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
             this.popupSummaryLoading = false;
             this.popupSummaryRequestKey = '';
           }
-        })
+        }),
       )
       .subscribe({
         next: ({ document, response }) => {
@@ -1187,7 +1171,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
             vessel,
             mergedData,
             updatedAt,
-            document
+            document,
           );
 
           this.popupSummaryCache[cacheKey] = {
@@ -1227,7 +1211,11 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     const seen = new Set<string>();
 
     return (suffixes || [])
-      .map((suffix) => String(suffix || '').trim().replace(/_/g, '-'))
+      .map((suffix) =>
+        String(suffix || '')
+          .trim()
+          .replace(/_/g, '-'),
+      )
       .filter((suffix) => suffix.length > 0)
       .map((suffix) => `${prefix}-${suffix}`)
       .filter((tagName) => {
@@ -1269,8 +1257,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       return metric.value;
     }
 
-
-
     const vessel = this.selectedVessel;
     if (!vessel) {
       return '—';
@@ -1279,37 +1265,45 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     switch (key) {
       case 'fuel': {
         const direct = this.toCleanNumber(
-          this.getFirstTagValue(vessel, ['VES_CONS_TODAY', 'VES_FUEL_CONS_TODAY'])
+          this.getFirstTagValue(vessel, ['VES_CONS_TODAY', 'VES_FUEL_CONS_TODAY']),
         );
-        return direct === null ? '—' : direct.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return direct === null
+          ? '—'
+          : direct.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       }
       case 'distance': {
         const value = this.toCleanNumber(
-          this.getFirstTagValue(vessel, ['VES_GPS_DIS_TODAY', 'VES_DISTANCE_TODAY', 'VES_DISTANCE']) ??
-            this.getDirectValue(vessel, ['distance', 'distanceToday'])
+          this.getFirstTagValue(vessel, [
+            'VES_GPS_DIS_TODAY',
+            'VES_DISTANCE_TODAY',
+            'VES_DISTANCE',
+          ]) ?? this.getDirectValue(vessel, ['distance', 'distanceToday']),
         );
         return value === null ? '—' : value.toFixed(2);
       }
       case 'speed': {
         const value = this.toCleanNumber(
           this.getFirstTagValue(vessel, ['VES_GPS_SPEED', 'GPS_SPEED']) ??
-            this.getDirectValue(vessel, ['speed'])
+            this.getDirectValue(vessel, ['speed']),
         );
         return value === null ? '—' : value.toFixed(2);
       }
       case 'average': {
-        const value = this.toCleanNumber(this.getFirstTagValue(vessel, ['VES_GPS_SPEED_AVG', 'GPS_SPEED_AVG']));
+        const value = this.toCleanNumber(
+          this.getFirstTagValue(vessel, ['VES_GPS_SPEED_AVG', 'GPS_SPEED_AVG']),
+        );
         return value === null ? '—' : value.toFixed(2);
       }
       case 'maximum': {
-        const value = this.toCleanNumber(this.getFirstTagValue(vessel, ['VES_GPS_SPEED_MAX', 'GPS_SPEED_MAX']));
+        const value = this.toCleanNumber(
+          this.getFirstTagValue(vessel, ['VES_GPS_SPEED_MAX', 'GPS_SPEED_MAX']),
+        );
         return value === null ? '—' : value.toFixed(2);
       }
       default:
         return '—';
     }
   }
-
 
   private buildTagMapFromCurrentResponse(response: any, prefix: string): Record<string, any> {
     const map: Record<string, any> = {};
@@ -1408,31 +1402,31 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   private getCurrentResponseTagName(item: any): string {
     return String(
       item?.Name ||
-      item?.name ||
-      item?.TagName ||
-      item?.tagName ||
-      item?.tagname ||
-      item?.Tag ||
-      item?.tag ||
-      item?.FullName ||
-      item?.fullName ||
-      item?.fulltagname ||
-      item?.FullTagName ||
-      item?.Key ||
-      item?.key ||
-      ''
+        item?.name ||
+        item?.TagName ||
+        item?.tagName ||
+        item?.tagname ||
+        item?.Tag ||
+        item?.tag ||
+        item?.FullName ||
+        item?.fullName ||
+        item?.fulltagname ||
+        item?.FullTagName ||
+        item?.Key ||
+        item?.key ||
+        '',
     );
   }
 
   private getBackendPrefix(vessel: any): string {
     const prefix = String(
       vessel?.prefix ||
-      vessel?.fv?.prefix ||
-      vessel?.fvInfo?.prefix ||
-      vessel?.id ||
-      vessel?.fv?.id ||
-      vessel?.fvInfo?.id ||
-      ''
+        vessel?.fv?.prefix ||
+        vessel?.fvInfo?.prefix ||
+        vessel?.id ||
+        vessel?.fv?.id ||
+        vessel?.fvInfo?.id ||
+        '',
     ).trim();
 
     if (prefix) {
@@ -1444,9 +1438,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private getSummaryCacheKey(vessel: any): string {
     return this.normalizeKey(
-      this.getBackendPrefix(vessel) ||
-      this.getVesselKey(vessel) ||
-      this.getVesselName(vessel)
+      this.getBackendPrefix(vessel) || this.getVesselKey(vessel) || this.getVesselName(vessel),
     );
   }
 
@@ -1459,15 +1451,19 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
   getLngValue(vessel: any): any {
     return (
-      this.getFirstTagValue(vessel, ['VES_GPS_LONG', 'VES_GPS_LNG', 'GPS_LONG', 'GPS_LNG', 'LNG', 'LONG', 'LONGITUDE']) ??
-      this.getDirectValue(vessel, ['lng', 'long', 'longitude', 'longtitude'])
+      this.getFirstTagValue(vessel, [
+        'VES_GPS_LONG',
+        'VES_GPS_LNG',
+        'GPS_LONG',
+        'GPS_LNG',
+        'LNG',
+        'LONG',
+        'LONGITUDE',
+      ]) ?? this.getDirectValue(vessel, ['lng', 'long', 'longitude', 'longtitude'])
     );
   }
 
   getLatestTimestamp(vessel: any): any {
-
-
-
     return (
       this.getFirstTagTimestamp(vessel, [
         'VES_GPS_LAT',
@@ -1529,7 +1525,13 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
 
     for (const name of names) {
       const tag = this.findTag(newData, name);
-      const value = tag?.timestamp || tag?.dateTime || tag?.DateTime || tag?.TimeStamp || tag?.timeStamp || tag?.time;
+      const value =
+        tag?.timestamp ||
+        tag?.dateTime ||
+        tag?.DateTime ||
+        tag?.TimeStamp ||
+        tag?.timeStamp ||
+        tag?.time;
 
       if (this.hasValue(value)) {
         return value;
@@ -1579,7 +1581,13 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
           data.CurrentValue ??
           data.val ??
           data.Val,
-        timestamp: data.dateTime || data.timestamp || data.DateTime || data.TimeStamp || data.timeStamp || data.time,
+        timestamp:
+          data.dateTime ||
+          data.timestamp ||
+          data.DateTime ||
+          data.TimeStamp ||
+          data.timeStamp ||
+          data.time,
         tagName,
       };
 
@@ -1668,7 +1676,11 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     return parts.join('-').replace(/-/g, '_');
   }
 
-  private getAllNumericValues(vessel: any, tagNames: string[], directKeys: string[] = []): number[] {
+  private getAllNumericValues(
+    vessel: any,
+    tagNames: string[],
+    directKeys: string[] = [],
+  ): number[] {
     const values: number[] = [];
     const used = new Set<string>();
     const tagMap = this.getTagMap(vessel);
@@ -1711,7 +1723,14 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private getDirectValue(vessel: any, keys: string[]): any {
-    const sources = [vessel, vessel?.fv, vessel?.fvInfo, vessel?.raw, vessel?.raw?.fv, vessel?.raw?.fvInfo];
+    const sources = [
+      vessel,
+      vessel?.fv,
+      vessel?.fvInfo,
+      vessel?.raw,
+      vessel?.raw?.fv,
+      vessel?.raw?.fvInfo,
+    ];
 
     for (const source of sources) {
       if (!source) {
@@ -1739,9 +1758,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     const cacheKey = this.getSummaryCacheKey(vessel);
     const cached = this.popupSummaryCache[cacheKey]?.newData || {};
 
-
-
-
     const mergedNewData = {
       ...this.getTagMap(vessel),
       ...cached,
@@ -1768,7 +1784,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       course: this.getCourseText(mergedVessel),
       distance: this.getDistanceText(mergedVessel),
 
-
       timestamp: this.getLatestTimestamp(vessel),
       newData: mergedNewData,
     };
@@ -1777,12 +1792,12 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   private getVesselRouteId(vessel: any): string {
     return String(
       vessel?.prefix ||
-      vessel?.id ||
-      vessel?.fv?.prefix ||
-      vessel?.fvInfo?.prefix ||
-      vessel?.fv?.id ||
-      vessel?.fvInfo?.id ||
-      this.getVesselName(vessel)
+        vessel?.id ||
+        vessel?.fv?.prefix ||
+        vessel?.fvInfo?.prefix ||
+        vessel?.fv?.id ||
+        vessel?.fvInfo?.id ||
+        this.getVesselName(vessel),
     ).trim();
   }
 
@@ -1811,9 +1826,16 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       return null;
     }
 
-    const rawValue = typeof value === 'object'
-      ? value?.value ?? value?.Value ?? value?.ivalue ?? value?.IValue ?? value?.iValue ?? value?.val ?? value?.Val
-      : value;
+    const rawValue =
+      typeof value === 'object'
+        ? (value?.value ??
+          value?.Value ??
+          value?.ivalue ??
+          value?.IValue ??
+          value?.iValue ??
+          value?.val ??
+          value?.Val)
+        : value;
 
     if (rawValue === undefined || rawValue === null || rawValue === '') {
       return null;
@@ -1824,7 +1846,6 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!Number.isFinite(num)) {
       return null;
     }
-
 
     if (num === 999999 || num === -999999) {
       return 0;

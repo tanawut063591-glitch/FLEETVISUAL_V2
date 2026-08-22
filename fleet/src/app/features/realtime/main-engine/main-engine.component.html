@@ -3,25 +3,29 @@
   [class.engine-console--running]="isRunning"
   [class.engine-console--stopped]="!isRunning"
 >
-  <div
-    class="engine-telemetry-bar"
-    [class.realtime-alert-field]="hasAlarm(cons)"
-    [attr.title]="getTooltip(cons)"
-    aria-label="Live fuel rate"
-  >
-    <div class="engine-telemetry-bar__identity">
-      <span class="engine-telemetry-bar__icon" aria-hidden="true">
-        <i class="fa fa-tint"></i>
-      </span>
-      <span class="engine-telemetry-bar__copy">
-        <strong>LIVE FUEL RATE</strong>
-        <small>Current propulsion consumption</small>
+  <div class="engine-telemetry-bar engine-telemetry-bar--dual" aria-label="Fuel performance">
+    <div
+      class="engine-top-metric engine-top-metric--rate"
+      [class.realtime-alert-field]="hasAlarm(cons)"
+      [attr.title]="getTooltip(cons)"
+    >
+      <span class="engine-top-metric__icon" aria-hidden="true"><i class="fa fa-tint"></i></span>
+      <span class="engine-top-metric__copy">
+        <small>FUEL RATE</small>
+        <strong>{{ displayAbsNumber(cons, 2) }} <b>L/h</b></strong>
       </span>
     </div>
 
-    <div class="engine-live">
-      <strong>{{ displayAbsNumber(cons, 2) }}</strong>
-      <small>L/h</small>
+    <div
+      class="engine-top-metric engine-top-metric--today"
+      [class.realtime-alert-field]="hasAlarm(consL)"
+      [attr.title]="getTooltip(consL)"
+    >
+      <span class="engine-top-metric__icon" aria-hidden="true"><i class="fa fa-bar-chart"></i></span>
+      <span class="engine-top-metric__copy">
+        <small>TODAY CONSUMPTION</small>
+        <strong>{{ displayNumber(consL, 2) }} <b>L</b></strong>
+      </span>
     </div>
   </div>
 
@@ -144,14 +148,6 @@
   </div>
 
   <div class="engine-footer">
-    <div
-      class="footer-stat"
-      [class.realtime-alert-field]="hasAlarm(consL)"
-      [attr.title]="getTooltip(consL)"
-    >
-      <span>TODAY CONSUMPTION</span>
-      <strong>{{ displayNumber(consL, 2) }} <small>L</small></strong>
-    </div>
 
     <div
       class="load-panel"
@@ -175,9 +171,5 @@
       </div>
     </div>
 
-    <div class="footer-stat footer-stat--status" *ngIf="!hasLoad">
-      <span>OPERATING STATE</span>
-      <strong>{{ statusText }}</strong>
-    </div>
   </div>
 </section>

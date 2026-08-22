@@ -29,12 +29,6 @@ export class FleetVesselDataService {
     private userAccess: UserAccessControlService,
   ) {}
 
-
-
-
-
-
-
   getSidebarVessels(refreshMs = 60_000): Observable<OverviewPayloadRow[]> {
     const safeRefreshMs = Math.max(30_000, Number(refreshMs) || 60_000);
 
@@ -46,7 +40,7 @@ export class FleetVesselDataService {
           }
           return this.loadSidebarRowsSafe();
         }),
-        shareReplay({ bufferSize: 1, refCount: true })
+        shareReplay({ bufferSize: 1, refCount: true }),
       );
     }
 
@@ -58,11 +52,8 @@ export class FleetVesselDataService {
 
     if (!this.overviewStream$) {
       this.overviewStream$ = timer(0, safeRefreshMs).pipe(
-
-
-
         exhaustMap(() => this.loadOverviewRowsSafe()),
-        shareReplay({ bufferSize: 1, refCount: true })
+        shareReplay({ bufferSize: 1, refCount: true }),
       );
     }
 
@@ -85,9 +76,7 @@ export class FleetVesselDataService {
       return rows;
     } catch (error) {
       console.warn('[FleetVesselDataService] sidebar stream fallback:', error);
-      const fallback = this.buildSidebarRows(
-        this.getSafeFallbackVessels()
-      );
+      const fallback = this.buildSidebarRows(this.getSafeFallbackVessels());
       this.lastRows = fallback;
       return fallback;
     }
@@ -124,9 +113,10 @@ export class FleetVesselDataService {
   }
 
   async loadOverviewRows(vessels?: any[]): Promise<OverviewPayloadRow[]> {
-    const sourceVessels = Array.isArray(vessels) && vessels.length > 0
-      ? vessels.map((item: any) => this.normalizeVessel(item)).filter((item: any) => !!item.name)
-      : await this.loadVessels();
+    const sourceVessels =
+      Array.isArray(vessels) && vessels.length > 0
+        ? vessels.map((item: any) => this.normalizeVessel(item)).filter((item: any) => !!item.name)
+        : await this.loadVessels();
     const fvInfos = this.userAccess.filterVessels(sourceVessels);
 
     const tags = await this.loadOverviewTags();
@@ -138,7 +128,6 @@ export class FleetVesselDataService {
 
     await this.attachCurrentValues(payloadRows);
 
-
     payloadRows.forEach((row) => this.seedDirectValues(row, row.fv));
 
     this.lastRows = payloadRows;
@@ -149,9 +138,10 @@ export class FleetVesselDataService {
     return new Observable<OverviewPayloadRow[]>((observer) => {
       this.loadOverviewRows()
         .then((rows) => {
-          const safeRows = rows && rows.length > 0
-            ? rows
-            : this.buildPayloadRows(this.getSafeFallbackVessels(), this.getDefaultOverviewTags());
+          const safeRows =
+            rows && rows.length > 0
+              ? rows
+              : this.buildPayloadRows(this.getSafeFallbackVessels(), this.getDefaultOverviewTags());
 
           this.lastRows = safeRows;
           observer.next(safeRows);
@@ -159,7 +149,10 @@ export class FleetVesselDataService {
         })
         .catch((error) => {
           console.warn('[FleetVesselDataService] overview stream fallback:', error);
-          const fallback = this.buildPayloadRows(this.getSafeFallbackVessels(), this.getDefaultOverviewTags());
+          const fallback = this.buildPayloadRows(
+            this.getSafeFallbackVessels(),
+            this.getDefaultOverviewTags(),
+          );
           this.lastRows = fallback;
           observer.next(fallback);
           observer.complete();
@@ -167,10 +160,13 @@ export class FleetVesselDataService {
     }).pipe(
       catchError((error) => {
         console.warn('[FleetVesselDataService] overview observable fallback:', error);
-        const fallback = this.buildPayloadRows(this.getSafeFallbackVessels(), this.getDefaultOverviewTags());
+        const fallback = this.buildPayloadRows(
+          this.getSafeFallbackVessels(),
+          this.getDefaultOverviewTags(),
+        );
         this.lastRows = fallback;
         return of(fallback);
-      })
+      }),
     );
   }
 
@@ -241,7 +237,7 @@ export class FleetVesselDataService {
     const tagNames = rows.flatMap((row) =>
       (row.tags || [])
         .map((tag: any) => tag?.tagName || '')
-        .filter((tagName: string) => tagName.length > 0)
+        .filter((tagName: string) => tagName.length > 0),
     );
 
     if (tagNames.length === 0) {
@@ -250,7 +246,7 @@ export class FleetVesselDataService {
 
     try {
       const response: any = await firstValueFrom(
-        this.newHttp.getOverviewCurrentsValues({ Name: tagNames })
+        this.newHttp.getOverviewCurrentsValues({ Name: tagNames }),
       );
 
       const values = this.flattenCurrentValues(response);
@@ -263,7 +259,7 @@ export class FleetVesselDataService {
         }
 
         const row = rows.find((payload) =>
-          (payload.tags || []).some((tag: any) => tag.tagName === fullName)
+          (payload.tags || []).some((tag: any) => tag.tagName === fullName),
         );
 
         if (!row) {
@@ -286,7 +282,13 @@ export class FleetVesselDataService {
           item?.Data ??
           item?.data ??
           '';
-        const dateTime = item?.TimeStamp || item?.timestamp || item?.dateTime || item?.DateTime || item?.time || '';
+        const dateTime =
+          item?.TimeStamp ||
+          item?.timestamp ||
+          item?.dateTime ||
+          item?.DateTime ||
+          item?.time ||
+          '';
 
         this.upsertRowValue(row, shortName, value, dateTime, fullName);
       });
@@ -326,19 +328,19 @@ export class FleetVesselDataService {
 
     return String(
       item.Name ||
-      item.name ||
-      item.TagName ||
-      item.tagName ||
-      item.tagname ||
-      item.Tag ||
-      item.tag ||
-      item.FullName ||
-      item.fullName ||
-      item.FullTagName ||
-      item.fulltagname ||
-      item.Key ||
-      item.key ||
-      ''
+        item.name ||
+        item.TagName ||
+        item.tagName ||
+        item.tagname ||
+        item.Tag ||
+        item.tag ||
+        item.FullName ||
+        item.fullName ||
+        item.FullTagName ||
+        item.fulltagname ||
+        item.Key ||
+        item.key ||
+        '',
     );
   }
 
@@ -405,8 +407,6 @@ export class FleetVesselDataService {
         return;
       }
 
-
-
       const existing = row.newData[key];
       const existingValue = existing?.value;
 
@@ -419,7 +419,7 @@ export class FleetVesselDataService {
         key,
         value,
         timestamp,
-        `${fv?.prefix || fv?.name || 'VESSEL'}-${key.replace(/_/g, '-')}`
+        `${fv?.prefix || fv?.name || 'VESSEL'}-${key.replace(/_/g, '-')}`,
       );
     });
   }
@@ -429,7 +429,7 @@ export class FleetVesselDataService {
     name: string,
     value: any,
     dateTime: string,
-    tagName: string
+    tagName: string,
   ): void {
     row.newData[name] = {
       value,
@@ -457,24 +457,71 @@ export class FleetVesselDataService {
 
   private normalizeVessel(item: any): any {
     const fv = item?.fvInfo || item?.fv || item?.vessel || item || {};
-    const name = fv.name || item?.name || fv.vesselName || item?.vesselName || fv.FvName || item?.FvName || '';
-    const prefix = fv.prefix || item?.prefix || fv.Prefix || item?.Prefix || this.nameToPrefix(name);
+    const name =
+      fv.name || item?.name || fv.vesselName || item?.vesselName || fv.FvName || item?.FvName || '';
+    const prefix =
+      fv.prefix || item?.prefix || fv.Prefix || item?.Prefix || this.nameToPrefix(name);
 
     return {
       ...fv,
       id: fv.id || fv._id || item?.id || item?._id || prefix || name,
       name,
-      desc: fv.desc || fv.description || item?.desc || item?.description || fv.type || item?.type || 'AHTS',
+      desc:
+        fv.desc ||
+        fv.description ||
+        item?.desc ||
+        item?.description ||
+        fv.type ||
+        item?.type ||
+        'AHTS',
       prefix,
       img: fv.img || fv.image || item?.img || item?.image || this.resolveFallbackImage(name),
-      lat: this.pickNumber(fv.lat, fv.latitude, fv.lattitude, fv.Lat, item?.lat, item?.latitude, item?.lattitude),
-      long: this.pickNumber(fv.long, fv.lng, fv.longitude, fv.longtitude, fv.Long, item?.long, item?.lng, item?.longitude, item?.longtitude),
+      lat: this.pickNumber(
+        fv.lat,
+        fv.latitude,
+        fv.lattitude,
+        fv.Lat,
+        item?.lat,
+        item?.latitude,
+        item?.lattitude,
+      ),
+      long: this.pickNumber(
+        fv.long,
+        fv.lng,
+        fv.longitude,
+        fv.longtitude,
+        fv.Long,
+        item?.long,
+        item?.lng,
+        item?.longitude,
+        item?.longtitude,
+      ),
       speed: this.pickNumber(fv.speed, fv.sog, item?.speed, item?.sog, 0),
       course: this.pickNumber(fv.course, fv.heading, item?.course, item?.heading, 0),
-      engineLoad: this.pickNumber(fv.engineLoad, fv.engine_load, fv.load, item?.engineLoad, item?.engine_load, item?.load),
+      engineLoad: this.pickNumber(
+        fv.engineLoad,
+        fv.engine_load,
+        fv.load,
+        item?.engineLoad,
+        item?.engine_load,
+        item?.load,
+      ),
       fuelRate: this.pickNumber(fv.fuelRate, fv.fuel_rate, item?.fuelRate, item?.fuel_rate, 0),
-      fuelConsumption: this.pickNumber(fv.fuelConsumption, fv.fuel_consumption, item?.fuelConsumption, item?.fuel_consumption, 0),
-      distance: this.pickNumber(fv.distance, fv.distanceToday, fv.todayDistance, item?.distance, item?.distanceToday, item?.todayDistance),
+      fuelConsumption: this.pickNumber(
+        fv.fuelConsumption,
+        fv.fuel_consumption,
+        item?.fuelConsumption,
+        item?.fuel_consumption,
+        0,
+      ),
+      distance: this.pickNumber(
+        fv.distance,
+        fv.distanceToday,
+        fv.todayDistance,
+        item?.distance,
+        item?.distanceToday,
+        item?.todayDistance,
+      ),
       status: fv.status || item?.status || '',
       timestamp:
         fv.timestamp ||
@@ -576,7 +623,10 @@ export class FleetVesselDataService {
   }
 
   private getSafeFallbackVessels(): any[] {
-    if (environment.production) {
+    // HOME and production must never replace an unavailable real server with
+    // embedded/demo vessel data. The fallback is explicitly opt-in and is
+    // kept only for the office development environment.
+    if (environment.allowDemoFallback !== true) {
       return [];
     }
     return this.userAccess.filterVessels(this.getFallbackVessels());
@@ -588,25 +638,272 @@ export class FleetVesselDataService {
     const daysAgo = (day: number) => new Date(now - day * 86400000).toISOString();
 
     return [
-      this.demo('BB_INTAN', 'BAHTERA INTAN', 'assets/images/vessel/bb_intan.jpg', 8.7075, 101.11338, 6.59, 193.54, 151.65, 2391, 26.25, 'online', minutesAgo(1)),
-      this.demo('BB_LAZURIT', 'BAHTERA LAZURIT', 'assets/images/vessel/bb_mulia.jpg', 9.98095, 101.36226, 5.87, 118.2, 121.2, 1804, 22.1, 'online', minutesAgo(2)),
-      this.demo('BB_ZAMRUD', 'BAHTERA ZAMRUD', 'assets/images/vessel/bb_zamrud.jpg', 7.23465, 100.56837, 5.22, 182.0, 110.0, 1642, 31.8, 'online', minutesAgo(2)),
-      this.demo('BB_LIBERTY233', 'BB LIBERTY 233', 'assets/images/vessel/bb_liberty209.jpg', 7.28742, 100.63028, 4.18, 196.0, 95.0, 1408, 29.4, 'online', minutesAgo(1)),
-      this.demo('BB_TONGKAM', 'BB TONGKAM', 'assets/images/vessel/bb_tongkam.jpg', 7.20297, 100.58679, 0, 90, 0, 0, 0, 'offline', daysAgo(60)),
-      this.demo('MV_GEMIA', 'MV GEMIA', 'assets/images/vessel/mv_gemia.jpg', 7.20317, 100.58662, 5.1, 170, 102, 1530, 34.2, 'online', minutesAgo(2)),
-      this.demo('SC_BONGKOT', 'SC BONGKOT', 'assets/images/vessel/sc_bongkot.jpg', 13.53562, 100.25025, 0, 0, 0, 0, 0, 'offline', daysAgo(6)),
-      this.demo('SC_BRAVE', 'SC BRAVE', 'assets/images/vessel/sc_brave.jpg', 9.39071, 101.40125, 3.8, 145, 84, 1110, 18.5, 'online', minutesAgo(2)),
-      this.demo('SC_CHOLUEDEE', 'SC CHOLUEDEE', 'assets/images/vessel/sc_choluedee.jpg', 7.23453, 100.56398, 4.0, 142, 77, 940, 16.8, 'online', minutesAgo(1)),
-      this.demo('SC_EMERALD', 'SC EMERALD', 'assets/images/vessel/sc_emerald.jpg', 9.15599, 101.23312, 5.4, 163, 130, 1760, 38.4, 'online', minutesAgo(3)),
-      this.demo('SC_GLORY1', 'SC GLORY 1', 'assets/images/vessel/glory1.jpg', 8.25224, 102.53717, 5.8, 188, 125, 1690, 36.4, 'online', minutesAgo(2)),
-      this.demo('SC_GLORY2', 'SC GLORY 2', 'assets/images/vessel/glory2.jpg', 8.21554, 102.41233, 5.2, 184, 116, 1570, 31.6, 'online', minutesAgo(3)),
-      this.demo('SC_GLORY3', 'SC GLORY 3', 'assets/images/vessel/glory3.jpg', 8.31542, 102.50121, 4.8, 180, 100, 1390, 25.3, 'online', minutesAgo(2)),
-      this.demo('SC_GLORY6', 'SC GLORY 6', 'assets/images/vessel/glory6.jpg', 8.30045, 102.43017, 4.2, 176, 98, 1200, 22.9, 'online', minutesAgo(2)),
-      this.demo('SC_GLORY7', 'SC GLORY 7', 'assets/images/vessel/glory7.jpg', 8.20744, 102.53188, 4.5, 171, 93, 1184, 21.7, 'online', minutesAgo(2)),
-      this.demo('SC_PAILIN', 'SC PAILIN', 'assets/images/vessel/sc_pailin.jpg', 8.86, 100.42, 2.8, 127, 68, 760, 15.3, 'online', minutesAgo(4)),
-      this.demo('SC_RAJA', 'SC RAJA', 'assets/images/vessel/sc_raja.jpg', 12.64, 100.88, 1.1, 215, 25, 390, 7.5, 'idle', minutesAgo(55)),
-      this.demo('SC_SULTAN', 'SC SULTAN', 'assets/images/vessel/sc_sultan.jpg', 9.60578, 101.21802, 0.81, 39, 0, 2343, 7.5, 'online', minutesAgo(3)),
-      this.demo('SC_WINTER', 'SC WINTER', 'assets/images/vessel/sc_winter.jpg', 8.92, 100.17, 4.1, 143, 51, 910, 24.2, 'online', minutesAgo(4)),
+      this.demo(
+        'BB_INTAN',
+        'BAHTERA INTAN',
+        'assets/images/vessel/bb_intan.jpg',
+        8.7075,
+        101.11338,
+        6.59,
+        193.54,
+        151.65,
+        2391,
+        26.25,
+        'online',
+        minutesAgo(1),
+      ),
+      this.demo(
+        'BB_LAZURIT',
+        'BAHTERA LAZURIT',
+        'assets/images/vessel/bb_mulia.jpg',
+        9.98095,
+        101.36226,
+        5.87,
+        118.2,
+        121.2,
+        1804,
+        22.1,
+        'online',
+        minutesAgo(2),
+      ),
+      this.demo(
+        'BB_ZAMRUD',
+        'BAHTERA ZAMRUD',
+        'assets/images/vessel/bb_zamrud.jpg',
+        7.23465,
+        100.56837,
+        5.22,
+        182.0,
+        110.0,
+        1642,
+        31.8,
+        'online',
+        minutesAgo(2),
+      ),
+      this.demo(
+        'BB_LIBERTY233',
+        'BB LIBERTY 233',
+        'assets/images/vessel/bb_liberty209.jpg',
+        7.28742,
+        100.63028,
+        4.18,
+        196.0,
+        95.0,
+        1408,
+        29.4,
+        'online',
+        minutesAgo(1),
+      ),
+      this.demo(
+        'BB_TONGKAM',
+        'BB TONGKAM',
+        'assets/images/vessel/bb_tongkam.jpg',
+        7.20297,
+        100.58679,
+        0,
+        90,
+        0,
+        0,
+        0,
+        'offline',
+        daysAgo(60),
+      ),
+      this.demo(
+        'MV_GEMIA',
+        'MV GEMIA',
+        'assets/images/vessel/mv_gemia.jpg',
+        7.20317,
+        100.58662,
+        5.1,
+        170,
+        102,
+        1530,
+        34.2,
+        'online',
+        minutesAgo(2),
+      ),
+      this.demo(
+        'SC_BONGKOT',
+        'SC BONGKOT',
+        'assets/images/vessel/sc_bongkot.jpg',
+        13.53562,
+        100.25025,
+        0,
+        0,
+        0,
+        0,
+        0,
+        'offline',
+        daysAgo(6),
+      ),
+      this.demo(
+        'SC_BRAVE',
+        'SC BRAVE',
+        'assets/images/vessel/sc_brave.jpg',
+        9.39071,
+        101.40125,
+        3.8,
+        145,
+        84,
+        1110,
+        18.5,
+        'online',
+        minutesAgo(2),
+      ),
+      this.demo(
+        'SC_CHOLUEDEE',
+        'SC CHOLUEDEE',
+        'assets/images/vessel/sc_choluedee.jpg',
+        7.23453,
+        100.56398,
+        4.0,
+        142,
+        77,
+        940,
+        16.8,
+        'online',
+        minutesAgo(1),
+      ),
+      this.demo(
+        'SC_EMERALD',
+        'SC EMERALD',
+        'assets/images/vessel/sc_emerald.jpg',
+        9.15599,
+        101.23312,
+        5.4,
+        163,
+        130,
+        1760,
+        38.4,
+        'online',
+        minutesAgo(3),
+      ),
+      this.demo(
+        'SC_GLORY1',
+        'SC GLORY 1',
+        'assets/images/vessel/glory1.jpg',
+        8.25224,
+        102.53717,
+        5.8,
+        188,
+        125,
+        1690,
+        36.4,
+        'online',
+        minutesAgo(2),
+      ),
+      this.demo(
+        'SC_GLORY2',
+        'SC GLORY 2',
+        'assets/images/vessel/glory2.jpg',
+        8.21554,
+        102.41233,
+        5.2,
+        184,
+        116,
+        1570,
+        31.6,
+        'online',
+        minutesAgo(3),
+      ),
+      this.demo(
+        'SC_GLORY3',
+        'SC GLORY 3',
+        'assets/images/vessel/glory3.jpg',
+        8.31542,
+        102.50121,
+        4.8,
+        180,
+        100,
+        1390,
+        25.3,
+        'online',
+        minutesAgo(2),
+      ),
+      this.demo(
+        'SC_GLORY6',
+        'SC GLORY 6',
+        'assets/images/vessel/glory6.jpg',
+        8.30045,
+        102.43017,
+        4.2,
+        176,
+        98,
+        1200,
+        22.9,
+        'online',
+        minutesAgo(2),
+      ),
+      this.demo(
+        'SC_GLORY7',
+        'SC GLORY 7',
+        'assets/images/vessel/glory7.jpg',
+        8.20744,
+        102.53188,
+        4.5,
+        171,
+        93,
+        1184,
+        21.7,
+        'online',
+        minutesAgo(2),
+      ),
+      this.demo(
+        'SC_PAILIN',
+        'SC PAILIN',
+        'assets/images/vessel/sc_pailin.jpg',
+        8.86,
+        100.42,
+        2.8,
+        127,
+        68,
+        760,
+        15.3,
+        'online',
+        minutesAgo(4),
+      ),
+      this.demo(
+        'SC_RAJA',
+        'SC RAJA',
+        'assets/images/vessel/sc_raja.jpg',
+        12.64,
+        100.88,
+        1.1,
+        215,
+        25,
+        390,
+        7.5,
+        'idle',
+        minutesAgo(55),
+      ),
+      this.demo(
+        'SC_SULTAN',
+        'SC SULTAN',
+        'assets/images/vessel/sc_sultan.jpg',
+        9.60578,
+        101.21802,
+        0.81,
+        39,
+        0,
+        2343,
+        7.5,
+        'online',
+        minutesAgo(3),
+      ),
+      this.demo(
+        'SC_WINTER',
+        'SC WINTER',
+        'assets/images/vessel/sc_winter.jpg',
+        8.92,
+        100.17,
+        4.1,
+        143,
+        51,
+        910,
+        24.2,
+        'online',
+        minutesAgo(4),
+      ),
     ];
   }
 
@@ -622,7 +919,7 @@ export class FleetVesselDataService {
     fuelConsumption: number,
     distance: number,
     status: string,
-    timestamp: string
+    timestamp: string,
   ): any {
     return {
       id: prefix,

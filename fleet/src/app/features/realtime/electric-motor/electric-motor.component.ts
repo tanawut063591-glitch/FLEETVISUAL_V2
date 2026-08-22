@@ -1,7 +1,7 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
-import { TooltipFormatService } from '../../../shared/services/tooltip-format.service';
 import { AlertRecord } from '../../../shared/models/alert.model';
+import { TooltipFormatService } from '../../../shared/services/tooltip-format.service';
 import { hasRealtimeTagAlarm } from '../realtime-alarm.util';
 
 interface RealtimeValue {
@@ -23,7 +23,6 @@ type MotorInput = RealtimeValue | number | string | null | undefined;
 })
 export class ElectricMotorComponent {
   @Input() activeAlerts: readonly AlertRecord[] = [];
-
   @Input() speed: MotorInput = null;
 
   constructor(public tooltipFormatService: TooltipFormatService) {}
@@ -31,10 +30,6 @@ export class ElectricMotorComponent {
   get isRunning(): boolean {
     const currentSpeed = Number(this.getValue(this.speed));
     return Number.isFinite(currentSpeed) && currentSpeed > 0;
-  }
-
-  get statusText(): string {
-    return this.isRunning ? 'Running' : 'Stopped';
   }
 
   getValue(input: MotorInput): string {
@@ -81,22 +76,10 @@ export class ElectricMotorComponent {
 
   displayNumber(input: MotorInput, digits = 2, fallback = '0.00'): string {
     const value = Number(this.getValue(input));
-
-    if (!Number.isFinite(value)) {
-      return fallback;
-    }
-
-    return value.toFixed(digits);
+    return Number.isFinite(value) ? value.toFixed(digits) : fallback;
   }
-
 
   hasAlarm(input: MotorInput, ...fallbackTags: string[]): boolean {
     return hasRealtimeTagAlarm(this.activeAlerts, input, ...fallbackTags);
-  }
-
-  hasAnyAlarm(): boolean {
-    return [
-      this.speed,
-    ].some((input) => hasRealtimeTagAlarm(this.activeAlerts, input));
   }
 }

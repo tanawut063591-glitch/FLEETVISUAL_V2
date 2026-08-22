@@ -6,33 +6,15 @@
     </div>
 
     <div class="toolbar-actions">
-      <app-date-range-toolbar
-        #dateRange
-        initialPreset="24h"
-        storageKey="activity-logs"
-        [showThreeDays]="false"
-        [showThirtyDays]="true"
-        [disabled]="loading || refreshing"
-        [busy]="loading || refreshing"
-        (rangeChange)="onRangeChange($event)"
-        (applied)="onRangeApplied($event)"
-        (validationError)="onRangeError($event)"
-      ></app-date-range-toolbar>
+      <app-date-range-toolbar #dateRange initialPreset="24h" storageKey="activity-logs" [showThreeDays]="false"
+        [showThirtyDays]="true" [disabled]="loading || refreshing" [busy]="loading || refreshing"
+        (rangeChange)="onRangeChange($event)" (applied)="onRangeApplied($event)"
+        (validationError)="onRangeError($event)"></app-date-range-toolbar>
       <label class="toolbar-search">
         <i class="fa fa-search"></i>
-        <input
-          type="search"
-          placeholder="Search logs..."
-          [(ngModel)]="searchTerm"
-          (ngModelChange)="onFilterChange()"
-        />
+        <input type="search" placeholder="Search logs..." [(ngModel)]="searchTerm" (ngModelChange)="onFilterChange()" />
       </label>
-      <button
-        class="export-btn"
-        type="button"
-        (click)="exportCsv()"
-        [disabled]="!filteredLogs.length"
-      >
+      <button class="export-btn" type="button" (click)="exportCsv()" [disabled]="!filteredLogs.length">
         <i class="fa fa-plus"></i> Export
       </button>
     </div>
@@ -50,12 +32,7 @@
         <i class="fa" [class.fa-toggle-on]="autoRefresh" [class.fa-toggle-off]="!autoRefresh"></i>
         Auto 20s
       </button>
-      <button
-        type="button"
-        (click)="loadLogs(true)"
-        [disabled]="loading || refreshing"
-        title="Refresh"
-      >
+      <button type="button" (click)="loadLogs(true)" [disabled]="loading || refreshing" title="Refresh">
         <i class="fa fa-refresh" [class.fa-spin]="refreshing"></i>
       </button>
     </div>
@@ -124,12 +101,8 @@
       <div class="feed-filters">
         <label>
           <i class="fa fa-search"></i>
-          <input
-            type="search"
-            placeholder="Search event, vessel, module..."
-            [(ngModel)]="searchTerm"
-            (ngModelChange)="onFilterChange()"
-          />
+          <input type="search" placeholder="Search event, vessel, module..." [(ngModel)]="searchTerm"
+            (ngModelChange)="onFilterChange()" />
         </label>
         <select [(ngModel)]="severityFilter" (ngModelChange)="onFilterChange()">
           <option value="all">All Severity</option>
@@ -167,13 +140,8 @@
       <p>No live server events matched this date range and filter.</p>
     </div>
 
-    <div
-      class="activity-table-scroll"
-      *ngIf="!loading && !errorMessage && filteredLogs.length"
-      tabindex="0"
-      role="region"
-      aria-label="Activity log table. Swipe or scroll horizontally to see all columns."
-    >
+    <div class="activity-table-scroll" *ngIf="!loading && !errorMessage && filteredLogs.length" tabindex="0"
+      role="region" aria-label="Activity log table. Swipe or scroll horizontally to see all columns.">
       <div class="activity-table">
         <div class="table-head">
           <span>Timestamp</span>
@@ -182,11 +150,8 @@
           <span>Module / Source</span>
         </div>
 
-        <article
-          class="activity-row"
-          *ngFor="let row of pagedLogs; trackBy: trackByLog"
-          [attr.data-severity]="row.severity"
-        >
+        <article class="activity-row" *ngFor="let row of pagedLogs; trackBy: trackByLog"
+          [attr.data-severity]="row.severity">
           <div class="timestamp-cell">
             <i class="event-dot"></i>
             <strong>{{ formatTime(row.timestamp) }}</strong>
@@ -195,14 +160,12 @@
           <div>
             <span class="severity-badge" [attr.data-severity]="row.severity">{{
               severityLabel(row.severity)
-            }}</span>
+              }}</span>
           </div>
           <div class="message-cell">
             <strong>{{ row.message }}</strong>
-            <small
-              >{{ row.detail
-              }}<ng-container *ngIf="row.vesselName"> · {{ row.vesselName }}</ng-container></small
-            >
+            <small>{{ row.detail
+              }}<ng-container *ngIf="row.vesselName"> · {{ row.vesselName }}</ng-container></small>
           </div>
           <div class="module-cell">
             <strong>{{ row.module }}</strong>
@@ -218,12 +181,8 @@
         <button type="button" (click)="goToPage(page - 1)" [disabled]="page === 1">
           <i class="fa fa-angle-left"></i>
         </button>
-        <button
-          type="button"
-          *ngFor="let pageNumber of pageNumbers"
-          [class.active]="page === pageNumber"
-          (click)="goToPage(pageNumber)"
-        >
+        <button type="button" *ngFor="let pageNumber of pageNumbers" [class.active]="page === pageNumber"
+          (click)="goToPage(pageNumber)">
           {{ pageNumber }}
         </button>
         <button type="button" (click)="goToPage(page + 1)" [disabled]="page === totalPages">

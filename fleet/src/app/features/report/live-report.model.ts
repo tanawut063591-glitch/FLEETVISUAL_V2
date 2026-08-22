@@ -1,7 +1,11 @@
 export type LiveReportTab = 'live' | 'files';
 export type LiveReportMetricTone = 'blue' | 'green' | 'orange' | 'violet' | 'cyan' | 'slate';
 export type LiveReportEquipmentState = 'running' | 'stopped' | 'no-data';
-export type LiveReportModeSource = 'verified-tag' | 'vessel-record' | 'estimated-telemetry' | 'unavailable';
+export type LiveReportModeSource =
+  | 'verified-tag'
+  | 'vessel-record'
+  | 'estimated-telemetry'
+  | 'unavailable';
 export type LiveReportModeConfidence = 'high' | 'medium' | 'low' | null;
 export type LiveReportValueQuality = 'valid' | 'invalid' | 'no-data';
 export type LiveReportTelemetryState = 'live' | 'delayed' | 'stale' | 'offline';

@@ -25,6 +25,17 @@ interface DiagramDevice {
   mode: 'alive' | 'alive-any' | 'gateway';
 }
 
+type DiagramProfileKey = 'default' | 'intan' | 'lazurit' | 'zamrud' | 'liberty233' | 'tongkam';
+
+interface DiagramProfile {
+  key: DiagramProfileKey;
+  height: number;
+  deviceIds: string[];
+  groupPaths: string[];
+  bluePaths: string[];
+  greenPaths: string[];
+}
+
 interface VesselInfoLike {
   id?: string;
   desc?: string;
@@ -56,14 +67,15 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
   private diagramViewport?: ElementRef<HTMLDivElement>;
 
   readonly diagramNaturalWidth = 750;
-  readonly diagramNaturalHeight = 755;
+  diagramNaturalHeight = 755;
   readonly diagramBottomGutter = 28;
   diagramScale = 1;
   diagramStageWidth = this.diagramNaturalWidth;
   diagramStageHeight = this.diagramNaturalHeight + this.diagramBottomGutter;
   diagramZoomMode: 'fit' | 'full' = 'full';
+  diagramProfile: DiagramProfileKey = 'default';
 
-  devices: DiagramDevice[] = [
+  private readonly allDevices: DiagramDevice[] = [
     {
       id: 'rut',
       title: 'RUT',
@@ -113,6 +125,14 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
       mode: 'alive',
     },
     {
+      id: 'dcp-gateway',
+      title: 'DCP GATEWAY',
+      subtitle: 'Gateway',
+      icon: 'gateway',
+      tags: ['DCP_GATEWAY_ALIVE'],
+      mode: 'alive',
+    },
+    {
       id: 'mtr-switch',
       title: 'MTR SWITCH',
       subtitle: 'Monitoring Switch',
@@ -149,11 +169,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
       title: 'GEN1 GATEWAY',
       subtitle: 'Generator 1',
       icon: 'generator',
-      tags: [
-        'GATEWAY_GEN1_KW_ALIVE',
-        'TGW_ECM_DG1_ALIVE',
-        'ANYBUS_ECM1_ALIVE',
-      ],
+      tags: ['GATEWAY_GEN1_KW_ALIVE', 'TGW_ECM_DG1_ALIVE', 'ANYBUS_ECM1_ALIVE'],
       mode: 'gateway',
     },
     {
@@ -161,11 +177,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
       title: 'GEN2 GATEWAY',
       subtitle: 'Generator 2',
       icon: 'generator',
-      tags: [
-        'GATEWAY_GEN2_KW_ALIVE',
-        'TGW_ECM_DG2_ALIVE',
-        'ANYBUS_ECM2_ALIVE',
-      ],
+      tags: ['GATEWAY_GEN2_KW_ALIVE', 'TGW_ECM_DG2_ALIVE', 'ANYBUS_ECM2_ALIVE'],
       mode: 'gateway',
     },
     {
@@ -173,11 +185,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
       title: 'GEN3 GATEWAY',
       subtitle: 'Generator 3',
       icon: 'generator',
-      tags: [
-        'GATEWAY_GEN3_KW_ALIVE',
-        'TGW_ECM_DG3_ALIVE',
-        'ANYBUS_ECM3_ALIVE',
-      ],
+      tags: ['GATEWAY_GEN3_KW_ALIVE', 'TGW_ECM_DG3_ALIVE', 'ANYBUS_ECM3_ALIVE'],
       mode: 'gateway',
     },
     {
@@ -185,14 +193,128 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
       title: 'GEN4 GATEWAY',
       subtitle: 'Generator 4',
       icon: 'generator',
-      tags: [
-        'GATEWAY_GEN4_KW_ALIVE',
-        'TGW_ECM_DG4_ALIVE',
-        'ANYBUS_ECM4_ALIVE',
-      ],
+      tags: ['GATEWAY_GEN4_KW_ALIVE', 'TGW_ECM_DG4_ALIVE', 'ANYBUS_ECM4_ALIVE'],
       mode: 'gateway',
     },
   ];
+
+  private readonly commonTopGroup =
+    'M567.018 0.6H191.524C188.197 0.6 185.5 3.326 185.5 6.688V219.773C185.5 223.135 188.197 225.861 191.524 225.861H567.018C570.345 225.861 573.042 223.135 573.042 219.773V6.688C573.042 3.326 570.345 0.6 567.018 0.6Z';
+
+  private readonly commonLowerGroup =
+    'M559.089 318.6H165.524C162.197 318.6 159.5 321.326 159.5 324.688V564.155C159.5 567.517 162.197 570.243 165.524 570.243H559.089C562.416 570.243 565.113 567.517 565.113 564.155V324.688C565.113 321.326 562.416 318.6 559.089 318.6Z';
+
+  private readonly commonTopPaths = [
+    'M114.5 53.6H257.067V134.775',
+    'M114.5 178.407H202.851',
+    'M315.301 174.347H393.612',
+    'M257.062 262.292H697.062V144.292',
+    'M257.066 212.906V347.859',
+  ];
+
+  private readonly commonLowerPaths = [
+    'M114.5 382.359H202.851',
+    'M315.301 382.359H409.676',
+    'M369.516 382.359V484.842H409.675',
+    'M257.066 418.887V470.636',
+  ];
+
+  private readonly fullGeneratorPaths = [
+    'M228.979 553.6V614.481H108.5V651.01',
+    'M257.09 553.6V614.481H303.274V651.01',
+    'M289.219 553.6V587.085H486.002V651.01',
+    'M289.219 587.084H662.704V651.01',
+  ];
+
+  private readonly diagramProfiles: Record<DiagramProfileKey, DiagramProfile> = {
+    default: {
+      key: 'default',
+      height: 755,
+      deviceIds: [
+        'rut', 'hmi', 'hub', 'mini-pc', 'gps', 'plc', 'mtr-switch', 'atop1', 'atop2',
+        'et2251', 'gen1', 'gen2', 'gen3', 'gen4',
+      ],
+      groupPaths: [this.commonTopGroup, this.commonLowerGroup],
+      bluePaths: [...this.commonTopPaths, ...this.commonLowerPaths],
+      greenPaths: [...this.fullGeneratorPaths],
+    },
+    intan: {
+      key: 'intan',
+      height: 755,
+      deviceIds: [
+        'rut', 'hmi', 'hub', 'mini-pc', 'gps', 'plc', 'mtr-switch', 'atop1', 'atop2',
+        'et2251', 'gen1', 'gen2', 'gen3', 'gen4',
+      ],
+      groupPaths: [this.commonTopGroup, this.commonLowerGroup],
+      bluePaths: [...this.commonTopPaths, ...this.commonLowerPaths],
+      greenPaths: [...this.fullGeneratorPaths],
+    },
+    lazurit: {
+      key: 'lazurit',
+      height: 585,
+      deviceIds: [
+        'rut', 'hmi', 'hub', 'mini-pc', 'gps', 'plc', 'mtr-switch', 'atop1', 'atop2',
+        'et2251',
+      ],
+      groupPaths: [this.commonTopGroup, this.commonLowerGroup],
+      bluePaths: [...this.commonTopPaths, ...this.commonLowerPaths],
+      greenPaths: [],
+    },
+    zamrud: {
+      key: 'zamrud',
+      height: 585,
+      deviceIds: [
+        'rut', 'hmi', 'hub', 'mini-pc', 'gps', 'plc', 'dcp-gateway', 'mtr-switch',
+        'atop1', 'atop2', 'et2251',
+      ],
+      groupPaths: [this.commonTopGroup, this.commonLowerGroup],
+      bluePaths: [
+        ...this.commonTopPaths,
+        ...this.commonLowerPaths,
+        'M114.5 502H159.5V382.359',
+      ],
+      greenPaths: [],
+    },
+    liberty233: {
+      key: 'liberty233',
+      height: 650,
+      deviceIds: [
+        'rut', 'hmi', 'hub', 'mini-pc', 'gps', 'plc', 'mtr-switch',
+        'gen1', 'gen2', 'gen3', 'gen4',
+      ],
+      groupPaths: [
+        this.commonTopGroup,
+        'M559.089 318.6H165.524C162.197 318.6 159.5 321.326 159.5 324.688V445.155C159.5 448.517 162.197 451.243 165.524 451.243H559.089C562.416 451.243 565.113 448.517 565.113 445.155V324.688C565.113 321.326 562.416 318.6 559.089 318.6Z',
+      ],
+      bluePaths: [...this.commonTopPaths, 'M114.5 382.359H202.851'],
+      greenPaths: [
+        'M228.979 442V500H130V535',
+        'M257.09 442V500H319V535',
+        'M289.219 442V478H498V535',
+        'M289.219 478H671V535',
+      ],
+    },
+    tongkam: {
+      key: 'tongkam',
+      height: 755,
+      deviceIds: [
+        'rut', 'hmi', 'hub', 'mini-pc', 'gps', 'plc', 'dcp-gateway', 'mtr-switch',
+        'atop1', 'atop2', 'et2251', 'gen1', 'gen2', 'gen3',
+      ],
+      groupPaths: [this.commonTopGroup, this.commonLowerGroup],
+      bluePaths: [
+        ...this.commonTopPaths,
+        ...this.commonLowerPaths,
+        'M114.5 502H159.5V382.359',
+      ],
+      greenPaths: this.fullGeneratorPaths.slice(0, 3),
+    },
+  };
+
+  devices: DiagramDevice[] = this.filterDevices(this.diagramProfiles.default.deviceIds);
+  groupPaths: string[] = [...this.diagramProfiles.default.groupPaths];
+  bluePaths: string[] = [...this.diagramProfiles.default.bluePaths];
+  greenPaths: string[] = [...this.diagramProfiles.default.greenPaths];
 
   private subscription = new Subscription();
   private activeVesselIdentity = '';
@@ -202,7 +324,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private store: Store<any>,
     private route: ActivatedRoute,
-    private fvRealtimeService: FvRealtimeService
+    private fvRealtimeService: FvRealtimeService,
   ) {}
 
   ngOnInit(): void {
@@ -299,34 +421,28 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const styles = window.getComputedStyle(viewport);
     const horizontalPadding =
-      (Number.parseFloat(styles.paddingLeft) || 0) +
-      (Number.parseFloat(styles.paddingRight) || 0);
+      (Number.parseFloat(styles.paddingLeft) || 0) + (Number.parseFloat(styles.paddingRight) || 0);
     const availableWidth = Math.max(220, viewport.clientWidth - horizontalPadding);
     const isMobile = window.matchMedia('(max-width: 560px)').matches;
-
-
-
 
     const fitScale = Math.min(1, availableWidth / this.diagramNaturalWidth);
     const minimumFitScale = isMobile ? 0.24 : 0.28;
     const nextScale = this.diagramZoomMode === 'full' ? 1 : fitScale;
     const roundedScale = Math.max(
       this.diagramZoomMode === 'full' ? 1 : minimumFitScale,
-      Math.round(nextScale * 1000) / 1000
+      Math.round(nextScale * 1000) / 1000,
     );
 
     this.diagramScale = roundedScale;
     this.diagramStageWidth = Math.ceil(this.diagramNaturalWidth * roundedScale);
     this.diagramStageHeight = Math.ceil(
-      (this.diagramNaturalHeight + this.diagramBottomGutter) * roundedScale
+      (this.diagramNaturalHeight + this.diagramBottomGutter) * roundedScale,
     );
 
     requestAnimationFrame(() => {
       const maxScrollLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
       viewport.scrollLeft =
-        this.diagramZoomMode === 'fit'
-          ? 0
-          : Math.min(viewport.scrollLeft, maxScrollLeft);
+        this.diagramZoomMode === 'fit' ? 0 : Math.min(viewport.scrollLeft, maxScrollLeft);
     });
   }
 
@@ -334,7 +450,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
     const routeSubscription = combineLatest([
       this.route.paramMap.pipe(
         map((params) => (params.get('id') || '').trim()),
-        distinctUntilChanged()
+        distinctUntilChanged(),
       ),
       this.store.select(fvInfoReducer.getFvInfos),
     ]).subscribe(([id, vessels]) => {
@@ -374,9 +490,9 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
       this.fvRealtimeService.activeVessel$,
     ]).pipe(
       map(([storeActive, serviceActive]) => serviceActive || storeActive),
-      distinctUntilChanged((prev, curr) =>
-        this.getVesselIdentity(prev) === this.getVesselIdentity(curr)
-      )
+      distinctUntilChanged(
+        (prev, curr) => this.getVesselIdentity(prev) === this.getVesselIdentity(curr),
+      ),
     );
 
     const vesselSubscription = this.vessel$.subscribe((data) => {
@@ -385,11 +501,13 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
       if (!info) {
         this.vesselName = 'SELECTED VESSEL';
         this.vesselPrefix = '';
+        this.applyDiagramProfile('default');
         return;
       }
 
       this.vesselName = info.name || info.prefix || 'SELECTED VESSEL';
       this.vesselPrefix = info.prefix || '';
+      this.applyDiagramProfile(this.resolveDiagramProfile(info));
 
       const identity = this.getVesselIdentity(data);
 
@@ -414,7 +532,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
         return Object.keys(normalizedLiveData).length > 0
           ? normalizedLiveData
           : normalizedStoreData;
-      })
+      }),
     );
 
     const dataSubscription = this.data$.subscribe((data) => {
@@ -468,12 +586,56 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
   private getVesselIdentity(vessel: any): string {
     const info = this.getVesselInfo(vessel);
 
-    return String(
-      info?.prefix ||
-        info?.id ||
-        info?.name ||
-        ''
-    ).toLowerCase();
+    return String(info?.prefix || info?.id || info?.name || '').toLowerCase();
+  }
+
+  private resolveDiagramProfile(info: VesselInfoLike): DiagramProfileKey {
+    const identity = [info.prefix, info.name, info.id]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (identity.includes('liberty 233') || identity.includes('liberty233')) {
+      return 'liberty233';
+    }
+
+    if (identity.includes('tongkam')) {
+      return 'tongkam';
+    }
+
+    if (identity.includes('lazurit')) {
+      return 'lazurit';
+    }
+
+    if (identity.includes('zamrud')) {
+      return 'zamrud';
+    }
+
+    if (identity.includes('intan')) {
+      return 'intan';
+    }
+
+    return 'default';
+  }
+
+  private applyDiagramProfile(key: DiagramProfileKey): void {
+    const profile = this.diagramProfiles[key] || this.diagramProfiles.default;
+
+    this.diagramProfile = profile.key;
+    this.diagramNaturalHeight = profile.height;
+    this.devices = this.filterDevices(profile.deviceIds);
+    this.groupPaths = [...profile.groupPaths];
+    this.bluePaths = [...profile.bluePaths];
+    this.greenPaths = [...profile.greenPaths];
+    this.scheduleDiagramFit();
+  }
+
+  private filterDevices(ids: string[]): DiagramDevice[] {
+    const allowed = new Set(ids);
+    return this.allDevices.filter((device) => allowed.has(device.id));
   }
 
   private normalizeRealtimeData(data: any): { [key: string]: any } {
@@ -599,10 +761,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
     if (firstDashIndex >= 0) {
       const maybePrefix = normalizedKey.substring(0, firstDashIndex);
 
-      if (
-        this.vesselPrefix &&
-        maybePrefix.toLowerCase() === this.vesselPrefix.toLowerCase()
-      ) {
+      if (this.vesselPrefix && maybePrefix.toLowerCase() === this.vesselPrefix.toLowerCase()) {
         normalizedKey = normalizedKey.substring(firstDashIndex + 1);
       }
     }
@@ -625,11 +784,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
       }
 
       const timestamp =
-        tag.timestamp ||
-        tag.dateTime ||
-        tag.TimeStamp ||
-        tag.timeStamp ||
-        tag.datetime;
+        tag.timestamp || tag.dateTime || tag.TimeStamp || tag.timeStamp || tag.datetime;
 
       if (timestamp) {
         return this.formatDate(timestamp);

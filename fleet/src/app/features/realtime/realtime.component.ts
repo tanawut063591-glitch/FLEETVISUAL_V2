@@ -2,12 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Observable, Subject, combineLatest } from 'rxjs';
-import {
-  distinctUntilChanged,
-  map,
-  shareReplay,
-  takeUntil,
-} from 'rxjs/operators';
+import { distinctUntilChanged, map, shareReplay, takeUntil } from 'rxjs/operators';
 
 import * as fvInfoReducer from '../../store/reducers/fv-info.reducer';
 import * as fvInfoActions from '../../store/actions/fv-info.action';
@@ -22,10 +17,7 @@ import {
 
 import { CardInfo, CardDetail } from './models/card-info.model';
 import { CardConfiguration } from './card-config';
-import {
-  hasRealtimeEquipmentAlarm,
-  hasRealtimeTagAlarm,
-} from './realtime-alarm.util';
+import { hasRealtimeEquipmentAlarm, hasRealtimeTagAlarm } from './realtime-alarm.util';
 
 interface RealtimeAlertContext {
   readonly alerts: readonly AlertRecord[];
@@ -54,7 +46,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     private store: Store<any>,
     private route: ActivatedRoute,
     private fvRealtimeService: FvRealtimeService,
-    private alertState: AlertStateService
+    private alertState: AlertStateService,
   ) {
     this.cardInfos = new CardConfiguration().getConfig();
   }
@@ -68,50 +60,45 @@ export class RealtimeComponent implements OnInit, OnDestroy {
         const normalizedLiveData = this.normalizeRealtimeData(liveData);
         const normalizedStoreData = this.normalizeRealtimeData(storeData);
 
-
         return Object.keys(normalizedLiveData).length > 0
           ? normalizedLiveData
           : normalizedStoreData;
       }),
-      shareReplay({ bufferSize: 1, refCount: true })
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.activeVessel$ = combineLatest([
       this.store.select(fvInfoReducer.getFvInfosActive),
       this.fvRealtimeService.activeVessel$,
     ]).pipe(
-      map(([storeActive, clickedActive]) =>
-        clickedActive || storeActive || this.getStoredRealtimeVessel()
+      map(
+        ([storeActive, clickedActive]) =>
+          clickedActive || storeActive || this.getStoredRealtimeVessel(),
       ),
-      distinctUntilChanged((prev, curr) =>
-        this.getVesselIdentity(prev) === this.getVesselIdentity(curr)
+      distinctUntilChanged(
+        (prev, curr) => this.getVesselIdentity(prev) === this.getVesselIdentity(curr),
       ),
-      shareReplay({ bufferSize: 1, refCount: true })
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
-
-
-
-
+    
     this.selectedVesselAlerts$ = combineLatest([
       this.activeVessel$,
       this.alertState.activeAlerts$,
     ]).pipe(
       map(([vessel, alerts]) => this.getActiveAlertsForVessel(alerts, vessel)),
-      distinctUntilChanged((previous, current) =>
-        this.isSameAlertSnapshot(previous, current)
-      ),
-      shareReplay({ bufferSize: 1, refCount: true })
+      distinctUntilChanged((previous, current) => this.isSameAlertSnapshot(previous, current)),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.selectedVesselAlarmCount$ = this.selectedVesselAlerts$.pipe(
       map((alerts) => alerts.length),
       distinctUntilChanged(),
-      shareReplay({ bufferSize: 1, refCount: true })
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.selectedVesselAlertContext$ = this.selectedVesselAlerts$.pipe(
       map((alerts) => ({ alerts, count: alerts.length })),
-      shareReplay({ bufferSize: 1, refCount: true })
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.syncActiveVesselFromRoute();
@@ -120,14 +107,9 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     this.watchRealtimePrefix();
   }
 
-
-
-
-
-
   private getActiveAlertsForVessel(
     alerts: readonly AlertRecord[] | null | undefined,
-    activeVessel: any
+    activeVessel: any,
   ): readonly AlertRecord[] {
     if (!Array.isArray(alerts) || alerts.length === 0 || !activeVessel) {
       return [];
@@ -150,7 +132,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
 
   private isSameAlertSnapshot(
     previous: readonly AlertRecord[],
-    current: readonly AlertRecord[]
+    current: readonly AlertRecord[],
   ): boolean {
     if (previous === current) {
       return true;
@@ -172,10 +154,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     });
   }
 
-  hasRealtimeAlarm(
-    alerts: readonly AlertRecord[],
-    ...tagNames: string[]
-  ): boolean {
+  hasRealtimeAlarm(alerts: readonly AlertRecord[], ...tagNames: string[]): boolean {
     return hasRealtimeTagAlarm(alerts, ...tagNames);
   }
 
@@ -183,19 +162,12 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     alerts: readonly AlertRecord[],
     row: number,
     col: number,
-    cardType: string
+    cardType: string,
   ): boolean {
-    return hasRealtimeEquipmentAlarm(
-      alerts,
-      ...this.getCardAlarmEquipmentKeys(row, col, cardType)
-    );
+    return hasRealtimeEquipmentAlarm(alerts, ...this.getCardAlarmEquipmentKeys(row, col, cardType));
   }
 
-  private getCardAlarmEquipmentKeys(
-    row: number,
-    col: number,
-    cardType: string
-  ): string[] {
+  private getCardAlarmEquipmentKeys(row: number, col: number, cardType: string): string[] {
     const type = String(cardType || '').toUpperCase();
 
     if (type === 'DG_NO_RPM' || type === 'DG_NO_RPM_VTOTAL') {
@@ -238,7 +210,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
         source.vesselName,
         source.VesselName,
         source.shipName,
-        source.ShipName
+        source.ShipName,
       );
     }
 
@@ -246,9 +218,8 @@ export class RealtimeComponent implements OnInit, OnDestroy {
   }
 
   private collectAlertVesselKeys(alert: AlertRecord): Set<string> {
-    const raw = alert.raw && typeof alert.raw === 'object'
-      ? (alert.raw as Record<string, any>)
-      : {};
+    const raw =
+      alert.raw && typeof alert.raw === 'object' ? (alert.raw as Record<string, any>) : {};
     const tagPrefix = String(alert.tagName || '').split('-')[0];
 
     return this.toNormalizedAlarmKeys([
@@ -274,7 +245,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     return new Set(
       values
         .map((value) => this.normalizeAlarmVesselKey(value))
-        .filter((value) => value.length > 0)
+        .filter((value) => value.length > 0),
     );
   }
 
@@ -290,11 +261,6 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-
-
-
-
-
   private activateStoredVessel(): void {
     const stored = this.getStoredRealtimeVessel();
 
@@ -307,17 +273,13 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     }, 80);
   }
 
-
-
-
-
   private watchSelectedVesselForLiveUpdate(): void {
     this.activeVessel$
       .pipe(
-        distinctUntilChanged((prev, curr) =>
-          this.getVesselIdentity(prev) === this.getVesselIdentity(curr)
+        distinctUntilChanged(
+          (prev, curr) => this.getVesselIdentity(prev) === this.getVesselIdentity(curr),
         ),
-        takeUntil(this.destroy$)
+        takeUntil(this.destroy$),
       )
       .subscribe((vessel) => {
         if (!vessel) {
@@ -328,14 +290,10 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       });
   }
 
-
-
-
-
   private syncActiveVesselFromRoute(): void {
     const routeId$ = this.route.paramMap.pipe(
       map((params) => (params.get('id') || '').trim()),
-      distinctUntilChanged()
+      distinctUntilChanged(),
     );
 
     const vessels$ = this.store.select(fvInfoReducer.getFvInfos);
@@ -363,46 +321,162 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       });
   }
 
-
-
-
   private watchRealtimePrefix(): void {
-    this.data$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((data) => {
-        if (!data) {
-          return;
-        }
+    this.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
+      if (!data) {
+        return;
+      }
 
-        const tag = this.getTag(data, 'VES_GPS_SPEED');
+      const tag = this.getTag(data, 'VES_GPS_SPEED');
 
-        if (tag && tag.tagName) {
-          this.prefixName = String(tag.tagName).split('-')[0] || '';
-        }
-      });
+      if (tag && tag.tagName) {
+        this.prefixName = String(tag.tagName).split('-')[0] || '';
+      }
+    });
   }
-
-
-
 
   getCardDetail(tag: any, row: number, col: number): CardDetail | null {
     if (!tag || !tag.tagName) {
       return null;
     }
 
-    const matchInfo = this.cardInfos.find((item) =>
-      String(tag.tagName).startsWith(item.prefix)
-    );
+    const matchInfo = this.cardInfos.find((item) => String(tag.tagName).startsWith(item.prefix));
 
     if (!matchInfo || !matchInfo.details) {
       return null;
     }
 
-    const matchCard = matchInfo.details.find(
-      (item) => item.row === row && item.col === col
-    );
+    const matchCard = matchInfo.details.find((item) => item.row === row && item.col === col);
 
     return matchCard || null;
+  }
+
+  getCardOperatingState(
+    cardType: string,
+    row: number,
+    col: number,
+    rtData: Record<string, any> | null | undefined,
+  ): 'running' | 'stopped' | null {
+    const type = String(cardType || '').toUpperCase();
+    const data = this.normalizeRealtimeData(rtData);
+
+    if (!type || Object.keys(data).length === 0) {
+      return null;
+    }
+
+    if (type === 'MOTOR') {
+      const motorPrefix = row === 1 && col === 2 ? 'PPS' : row === 2 && col === 2 ? 'SPS' : '';
+      return motorPrefix
+        ? this.resolveRuntimeState(data, [`${motorPrefix}_SPD_CALC`, `${motorPrefix}_SPD`])
+        : null;
+    }
+
+    if (type === 'DG_NO_RPM' || type === 'DG_NO_RPM_VTOTAL') {
+      const dgIndex = row === 1 ? col : row === 2 && col === 1 ? 4 : 0;
+
+      if (dgIndex === 0) {
+        return null;
+      }
+
+      const statusState = this.resolveBinaryStatusState(data, [
+        `DG${dgIndex}_GEN_STATUS`,
+        `DG${dgIndex}_ECM_STATUS`,
+      ]);
+
+      if (statusState) {
+        return statusState;
+      }
+
+      return this.resolveRuntimeState(data, [
+        `DG${dgIndex}_GEN_LOAD_KW`,
+        `DG${dgIndex}_GEN_LOAD`,
+        `DG${dgIndex}_CONS_RATE`,
+        `DG${dgIndex}_FIN_RATE`,
+      ]);
+    }
+
+    const machineryPrefixByPosition: Record<string, string> = {
+      '1:1': 'PME',
+      '1:2': 'CME',
+      '1:3': 'SME',
+      '2:1': 'PAE',
+      '2:2': 'CAE',
+      '2:3': 'SAE',
+    };
+
+    const machineryPrefix = machineryPrefixByPosition[`${row}:${col}`];
+    if (!machineryPrefix) {
+      return null;
+    }
+
+    if (type === 'ME1') {
+      const propellerPrefixByMachinery: Record<string, string> = {
+        PME: 'PPS',
+        CME: 'CPS',
+        SME: 'SPS',
+      };
+      const propellerPrefix = propellerPrefixByMachinery[machineryPrefix];
+      const speedKeys = [
+        `${machineryPrefix}_SPD_CALC`,
+        `${machineryPrefix}_SPD`,
+      ];
+
+      if (propellerPrefix) {
+        speedKeys.push(`${propellerPrefix}_SPD_CALC`, `${propellerPrefix}_SPD`);
+      }
+
+      return this.resolveRuntimeState(data, speedKeys);
+    }
+
+    if (type === 'AE1' || type === 'DG_RPM') {
+      return this.resolveRuntimeState(data, [
+        `${machineryPrefix}_SPD_CALC`,
+        `${machineryPrefix}_SPD`,
+      ]);
+    }
+
+    return null;
+  }
+
+  private resolveRuntimeState(
+    data: Record<string, any>,
+    tagNames: readonly string[],
+  ): 'running' | 'stopped' | null {
+    const values = tagNames
+      .map((tagName) => this.getFiniteRealtimeTagValue(data, tagName))
+      .filter((value): value is number => value !== null);
+
+    if (values.length === 0) {
+      return null;
+    }
+
+    return values.some((value) => Math.abs(value) > 0.0001) ? 'running' : 'stopped';
+  }
+
+  private resolveBinaryStatusState(
+    data: Record<string, any>,
+    tagNames: readonly string[],
+  ): 'running' | 'stopped' | null {
+    const values = tagNames
+      .map((tagName) => this.getFiniteRealtimeTagValue(data, tagName))
+      .filter((value): value is number => value !== null);
+
+    if (values.length === 0) {
+      return null;
+    }
+
+    return values.some((value) => value === 1) ? 'running' : 'stopped';
+  }
+
+  private getFiniteRealtimeTagValue(data: Record<string, any>, tagName: string): number | null {
+    const raw = this.getTagValue(data, tagName);
+
+    if (raw === null || raw === undefined || raw === '') {
+      return null;
+    }
+
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
   }
 
   getActiveVesselInfo(active: any): any {
@@ -583,9 +657,6 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     return this.formatDate(timestamp);
   }
 
-
-
-
   getRealtimeValue(rtData: any, key: string, fallback: any = '0'): any {
     const data = this.normalizeRealtimeData(rtData);
     const value = this.getTagValue(data, key);
@@ -597,9 +668,6 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     return value;
   }
 
-
-
-
   getRealtimeNumber(rtData: any, key: string, fallback = 0): string {
     const value = Number(this.getRealtimeValue(rtData, key, fallback));
 
@@ -610,42 +678,23 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     return value.toFixed(2);
   }
 
-
-
-
-
-  getRealtimeDirection(
-    rtData: any,
-    key: string,
-    fallback: string = '0.00'
-  ): string {
+  getRealtimeDirection(rtData: any, key: string, fallback: string = '0.00'): string {
     const value = Number(this.getRealtimeValue(rtData, key, fallback));
 
     if (!Number.isFinite(value)) {
       const fallbackValue = Number(fallback);
-      return Number.isFinite(fallbackValue)
-        ? fallbackValue.toFixed(2)
-        : '0.00';
+      return Number.isFinite(fallbackValue) ? fallbackValue.toFixed(2) : '0.00';
     }
 
     return value.toFixed(2);
   }
 
-
-
-
-  getRealtimeCoordinateNumber(
-    rtData: any,
-    key: string,
-    fallback: string = '0.000000'
-  ): string {
+  getRealtimeCoordinateNumber(rtData: any, key: string, fallback: string = '0.000000'): string {
     const value = Number(this.getRealtimeValue(rtData, key, fallback));
 
     if (!Number.isFinite(value)) {
       const fallbackValue = Number(fallback);
-      return Number.isFinite(fallbackValue)
-        ? fallbackValue.toFixed(6)
-        : '0.000000';
+      return Number.isFinite(fallbackValue) ? fallbackValue.toFixed(6) : '0.000000';
     }
 
     return value.toFixed(6);
@@ -732,10 +781,6 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     };
   }
 
-
-
-
-
   getSummarySpeedProgress(rtData: any): number {
     const current = Number(this.getRealtimeValue(rtData, 'VES_GPS_SPEED', 0));
     const maximum = Number(this.getRealtimeValue(rtData, 'VES_GPS_SPEED_MAX', 0));
@@ -746,9 +791,6 @@ export class RealtimeComponent implements OnInit, OnDestroy {
 
     return Math.round(Math.min(100, Math.max(0, (current / maximum) * 100)));
   }
-
-
-
 
   getSummaryCourseCardinal(rtData: any): string {
     const heading = Number(this.getRealtimeValue(rtData, 'VES_GPS_HEAD', 0));
@@ -761,10 +803,6 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     const normalized = ((heading % 360) + 360) % 360;
     return directions[Math.round(normalized / 45) % directions.length];
   }
-
-
-
-
 
   getSummaryCurrentFuelRate(rtData: any): number {
     const keys = [
@@ -785,9 +823,6 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       return Number.isFinite(value) && value > 0 ? total + value : total;
     }, 0);
   }
-
-
-
 
   getSummaryAverageFuelRate(rtData: any): number {
     const data = this.normalizeRealtimeData(rtData);
@@ -856,9 +891,6 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       : `${amount}% above the daily average`;
   }
 
-
-
-
   private normalizeRealtimeData(data: any): Record<string, any> {
     if (!data) {
       return {};
@@ -889,11 +921,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     const result: Record<string, any> = {};
 
     items.forEach((item) => {
-      const name =
-        item?.name ||
-        item?.tagName ||
-        item?.TagName ||
-        item?.Name;
+      const name = item?.name || item?.tagName || item?.TagName || item?.Name;
 
       if (!name) {
         return;
@@ -905,17 +933,9 @@ export class RealtimeComponent implements OnInit, OnDestroy {
         ...item,
         name: key,
         tagName: item?.tagName || item?.Name || name,
-        value:
-          item?.value ??
-          item?.Value ??
-          item?.ivalue ??
-          item?.IValue,
+        value: item?.value ?? item?.Value ?? item?.ivalue ?? item?.IValue,
         timestamp:
-          item?.timestamp ||
-          item?.dateTime ||
-          item?.DateTime ||
-          item?.TimeStamp ||
-          item?.timeStamp,
+          item?.timestamp || item?.dateTime || item?.DateTime || item?.TimeStamp || item?.timeStamp,
       };
     });
 
@@ -953,7 +973,6 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     }
   }
 
-
   getCardHeaderIconClass(type: string): string {
     switch (String(type || '').toUpperCase()) {
       case 'ME1':
@@ -989,9 +1008,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     const foundKey = Object.keys(data).find((dataKey) => {
       const normalizedDataKey = this.normalizeKey(dataKey);
       const tag = data[dataKey];
-      const normalizedTagName = this.normalizeKey(
-        tag?.tagName || tag?.Name || ''
-      );
+      const normalizedTagName = this.normalizeKey(tag?.tagName || tag?.Name || '');
 
       return (
         normalizedDataKey === target ||
@@ -1015,14 +1032,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       return tag;
     }
 
-    return (
-      tag.value ??
-      tag.Value ??
-      tag.ivalue ??
-      tag.IValue ??
-      tag.val ??
-      null
-    );
+    return tag.value ?? tag.Value ?? tag.ivalue ?? tag.IValue ?? tag.val ?? null;
   }
 
   private getTagTimestamp(data: Record<string, any>, key: string): any {
@@ -1032,14 +1042,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       return null;
     }
 
-    return (
-      tag.timestamp ||
-      tag.dateTime ||
-      tag.DateTime ||
-      tag.TimeStamp ||
-      tag.timeStamp ||
-      null
-    );
+    return tag.timestamp || tag.dateTime || tag.DateTime || tag.TimeStamp || tag.timeStamp || null;
   }
 
   private formatDate(value: any): string {
@@ -1072,9 +1075,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
 
   private getStoredRealtimeVessel(): any {
     try {
-      const raw =
-        localStorage.getItem('realtimeVessel') ||
-        localStorage.getItem('selectedVessel');
+      const raw = localStorage.getItem('realtimeVessel') || localStorage.getItem('selectedVessel');
 
       return raw ? JSON.parse(raw) : null;
     } catch {
@@ -1085,12 +1086,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
   private getVesselIdentity(vessel: any): string {
     const fv = this.getActiveVesselInfo(vessel);
 
-    return String(
-      fv?.prefix ||
-        fv?.id ||
-        fv?.name ||
-        ''
-    ).toLowerCase();
+    return String(fv?.prefix || fv?.id || fv?.name || '').toLowerCase();
   }
 
   private resolveFallbackImage(name: string): string {

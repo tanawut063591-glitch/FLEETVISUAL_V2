@@ -78,7 +78,7 @@
     width: 34px;
     height: 34px;
     border: 1px solid #dfe7f2;
-    border-radius: 11px;
+    border-radius: 8px;
     background: #ffffff;
     color: #334155;
     cursor: pointer;
@@ -96,16 +96,16 @@
     height: 44px;
     margin-bottom: 16px;
     background: #ffffff;
-    border-radius: 16px;
+    border-radius: 8px;
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.045);
 }
 
 .search-box input {
     width: 100%;
     height: 44px;
-    padding: 0 38px 0 42px;
+    padding: 0 16px 0 42px;
     border: 1px solid #dbe4f0;
-    border-radius: 16px;
+    border-radius: 8px;
     background: #ffffff;
     outline: none;
     box-sizing: border-box;
@@ -140,15 +140,6 @@
     color: #64748b;
 }
 
-.search-arrow {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    z-index: 2;
-    transform: translateY(-50%);
-    font-size: 15px;
-    color: #64748b;
-}
 
 
 
@@ -174,7 +165,7 @@
     width: 100%;
     min-height: 76px;
     padding: 8px 8px;
-    border-radius: 18px;
+    border-radius: 8px;
 
 
     border: 1px solid #e4ebf5;
@@ -220,7 +211,7 @@
     top: 15px;
     bottom: 15px;
     width: 4px;
-    border-radius: 0 999px 999px 0;
+    border-radius: 0;
     background: transparent;
     transition: 0.2s ease;
 }
@@ -237,7 +228,7 @@
 .vessel-image {
     width: 62px;
     height: 52px;
-    border-radius: 12px;
+    border-radius: 6px;
     overflow: hidden;
     background: #eef3f9;
     flex-shrink: 0;
@@ -335,7 +326,7 @@
     min-width: 50px;
     height: 22px;
     padding: 0 9px;
-    border-radius: 999px;
+    border-radius: 6px;
 
     display: inline-flex;
     align-items: center;
@@ -382,7 +373,7 @@
     text-align: center;
     color: #64748b;
     border: 1px dashed #d2ddec;
-    border-radius: 18px;
+    border-radius: 8px;
     background: rgba(255, 255, 255, 0.82);
 }
 
@@ -390,7 +381,7 @@
     width: 44px;
     height: 44px;
     margin: 0 auto 12px;
-    border-radius: 15px;
+    border-radius: 8px;
     background: #eef6ff;
     color: #0052ff;
 
@@ -426,7 +417,7 @@
     width: 42px;
     height: 42px;
     border: 1px solid #dfe7f2;
-    border-radius: 13px;
+    border-radius: 8px;
     background: #ffffff;
     color: #0f172a;
     cursor: pointer;
@@ -452,7 +443,7 @@
 
 .vessel-list::-webkit-scrollbar-thumb {
     background: #c9d4e5;
-    border-radius: 20px;
+    border-radius: 4px;
 }
 
 .vessel-list::-webkit-scrollbar-thumb:hover {
@@ -492,7 +483,7 @@
         height: 48px;
         padding: 0 14px;
         border: 1px solid rgba(37, 99, 235, 0.24);
-        border-radius: 16px;
+        border-radius: 8px;
         background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%);
         color: #ffffff;
         cursor: pointer;
@@ -510,7 +501,7 @@
         min-width: 23px;
         height: 23px;
         padding: 0 6px;
-        border-radius: 999px;
+        border-radius: 6px;
         display: inline-flex;
         align-items: center;
         justify-content: center;

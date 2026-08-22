@@ -6,34 +6,18 @@
     </div>
 
     <div class="toolbar-actions">
-      <app-date-range-toolbar
-        #dateRange
-        initialPreset="24h"
-        storageKey="alarm"
-        [showThreeDays]="true"
-        [disabled]="loading || refreshing"
-        [busy]="loading || refreshing"
-        (rangeChange)="onRangeChange($event)"
-        (applied)="onRangeApplied($event)"
-        (validationError)="onRangeError($event)"
-      ></app-date-range-toolbar>
+      <app-date-range-toolbar #dateRange initialPreset="24h" storageKey="alarm" [showThreeDays]="true"
+        [disabled]="loading || refreshing" [busy]="loading || refreshing" (rangeChange)="onRangeChange($event)"
+        (applied)="onRangeApplied($event)" (validationError)="onRangeError($event)"></app-date-range-toolbar>
 
       <label class="top-search">
         <i class="fa fa-search"></i>
-        <input
-          type="search"
-          placeholder="Search alarms..."
-          [(ngModel)]="searchTerm"
-          (ngModelChange)="onFilterChanged()"
-        />
+        <input type="search" placeholder="Search alarms..." [(ngModel)]="searchTerm"
+          (ngModelChange)="onFilterChanged()" />
       </label>
 
-      <button
-        type="button"
-        class="toolbar-btn export-btn"
-        [disabled]="filteredAlerts.length === 0"
-        (click)="exportCsv()"
-      >
+      <button type="button" class="toolbar-btn export-btn" [disabled]="filteredAlerts.length === 0"
+        (click)="exportCsv()">
         <i class="fa fa-plus"></i>
         Export
       </button>
@@ -55,33 +39,19 @@
       <span class="updated-label" *ngIf="lastUpdatedAt">
         Updated {{ relativeTime(lastUpdatedAt) }}
       </span>
-      <button
-        type="button"
-        class="auto-refresh-toggle"
-        [class.active]="autoRefresh"
-        (click)="toggleAutoRefresh()"
-      >
+      <button type="button" class="auto-refresh-toggle" [class.active]="autoRefresh" (click)="toggleAutoRefresh()">
         <i class="fa" [class.fa-toggle-on]="autoRefresh" [class.fa-toggle-off]="!autoRefresh"></i>
         Auto {{ autoRefreshLabel }}
       </button>
-      <button
-        type="button"
-        class="refresh-btn"
-        [disabled]="loading || refreshing"
-        (click)="loadAlerts(true, true)"
-        title="Refresh alarms"
-      >
+      <button type="button" class="refresh-btn" [disabled]="loading || refreshing" (click)="loadAlerts(true, true)"
+        title="Refresh alarms">
         <i class="fa fa-refresh" [class.fa-spin]="refreshing"></i>
       </button>
     </div>
   </div>
 
   <section class="summary-grid" aria-label="Alert summary">
-    <article
-      class="summary-card"
-      *ngFor="let card of summaryCards"
-      [attr.data-tone]="card.tone"
-    >
+    <article class="summary-card" *ngFor="let card of summaryCards" [attr.data-tone]="card.tone">
       <div class="summary-icon"><i [class]="card.icon"></i></div>
       <div class="summary-content">
         <span>{{ card.label }}</span>
@@ -94,12 +64,8 @@
   <section class="filter-panel">
     <label class="feed-search">
       <i class="fa fa-search"></i>
-      <input
-        type="search"
-        placeholder="Search alert, vessel, module or system..."
-        [(ngModel)]="searchTerm"
-        (ngModelChange)="onFilterChanged()"
-      />
+      <input type="search" placeholder="Search alert, vessel, module or system..." [(ngModel)]="searchTerm"
+        (ngModelChange)="onFilterChanged()" />
     </label>
 
     <label class="filter-control">
@@ -177,19 +143,13 @@
       </button>
     </div>
 
-    <div
-      class="empty-state"
-      *ngIf="!loading && !errorMessage && filteredAlerts.length === 0"
-    >
+    <div class="empty-state" *ngIf="!loading && !errorMessage && filteredAlerts.length === 0">
       <div class="state-icon success"><i class="fa fa-check"></i></div>
       <strong>No alarms found</strong>
       <p>No live server condition exceeded an alert rule for the selected range and filters.</p>
     </div>
 
-    <div
-      class="alert-table-wrap"
-      *ngIf="!loading && !errorMessage && filteredAlerts.length > 0"
-    >
+    <div class="alert-table-wrap" *ngIf="!loading && !errorMessage && filteredAlerts.length > 0">
       <table class="alert-table">
         <thead>
           <tr>
@@ -204,15 +164,11 @@
           </tr>
         </thead>
         <tbody>
-          <tr
-            *ngFor="let alert of pagedAlerts; trackBy: trackByAlert"
-            [attr.data-severity]="alert.severity"
+          <tr *ngFor="let alert of pagedAlerts; trackBy: trackByAlert" [attr.data-severity]="alert.severity"
             [class.critical-row]="
               (alert.severity === 'critical' || alert.severity === 'major') &&
               alert.state !== 'resolved'
-            "
-            (click)="openAlert(alert)"
-          >
+            " (click)="openAlert(alert)">
             <td class="timestamp-cell">
               <span class="row-dot"></span>
               <strong>{{ formatDateTime(alert.occurredAt) }}</strong>
@@ -248,11 +204,7 @@
             <td class="duration-cell">{{ durationLabel(alert) }}</td>
 
             <td class="actions-cell">
-              <button
-                type="button"
-                title="View alert details"
-                (click)="openAlert(alert, $event)"
-              >
+              <button type="button" title="View alert details" (click)="openAlert(alert, $event)">
                 <i class="fa fa-ellipsis-h"></i>
               </button>
             </td>
@@ -261,10 +213,7 @@
       </table>
     </div>
 
-    <footer
-      class="feed-footer"
-      *ngIf="!loading && !errorMessage && filteredAlerts.length > 0"
-    >
+    <footer class="feed-footer" *ngIf="!loading && !errorMessage && filteredAlerts.length > 0">
       <div class="footer-left">
         <strong>Showing {{ pageStart }} to {{ pageEnd }} of {{ filteredAlerts.length }} alarms</strong>
         <div class="mini-summary">
@@ -289,12 +238,8 @@
           <i class="fa fa-angle-left"></i>
         </button>
 
-        <button
-          type="button"
-          *ngFor="let pageNumber of pageNumbers"
-          [class.active]="page === pageNumber"
-          (click)="goToPage(pageNumber)"
-        >
+        <button type="button" *ngFor="let pageNumber of pageNumbers" [class.active]="page === pageNumber"
+          (click)="goToPage(pageNumber)">
           {{ pageNumber }}
         </button>
 
@@ -334,11 +279,7 @@
         <time>{{ formatDateTime(alert.occurredAt) }}</time>
       </div>
 
-      <button
-        type="button"
-        class="open-realtime-btn"
-        (click)="openAlertRealtime(alert)"
-      >
+      <button type="button" class="open-realtime-btn" (click)="openAlertRealtime(alert)">
         <span class="open-realtime-icon"><i class="fa fa-bolt"></i></span>
         <span class="open-realtime-copy">
           <strong>View Vessel Realtime</strong>
@@ -348,21 +289,41 @@
       </button>
 
       <dl class="detail-list">
-        <div><dt>Vessel</dt><dd>{{ alert.vesselName }}</dd></div>
-        <div><dt>Module / System</dt><dd>{{ alertModule(alert) }}</dd></div>
-        <div><dt>Tag</dt><dd class="mono">{{ alert.tagName || '—' }}</dd></div>
+        <div>
+          <dt>Vessel</dt>
+          <dd>{{ alert.vesselName }}</dd>
+        </div>
+        <div>
+          <dt>Module / System</dt>
+          <dd>{{ alertModule(alert) }}</dd>
+        </div>
+        <div>
+          <dt>Tag</dt>
+          <dd class="mono">{{ alert.tagName || '—' }}</dd>
+        </div>
         <div>
           <dt>Value</dt>
           <dd>{{ alert.value !== undefined ? alert.value : '—' }} {{ alert.unit || '' }}</dd>
         </div>
-        <div><dt>Duration</dt><dd>{{ durationLabel(alert) }}</dd></div>
-        <div><dt>Source</dt><dd>{{ alert.source || 'Backend alert service' }}</dd></div>
-        <div><dt>Alert ID</dt><dd class="mono">{{ alert.id }}</dd></div>
+        <div>
+          <dt>Duration</dt>
+          <dd>{{ durationLabel(alert) }}</dd>
+        </div>
+        <div>
+          <dt>Source</dt>
+          <dd>{{ alert.source || 'Backend alert service' }}</dd>
+        </div>
+        <div>
+          <dt>Alert ID</dt>
+          <dd class="mono">{{ alert.id }}</dd>
+        </div>
         <div *ngIf="alert.acknowledgedAt">
-          <dt>Acknowledged</dt><dd>{{ formatDateTime(alert.acknowledgedAt) }}</dd>
+          <dt>Acknowledged</dt>
+          <dd>{{ formatDateTime(alert.acknowledgedAt) }}</dd>
         </div>
         <div *ngIf="alert.resolvedAt">
-          <dt>Resolved</dt><dd>{{ formatDateTime(alert.resolvedAt) }}</dd>
+          <dt>Resolved</dt>
+          <dd>{{ formatDateTime(alert.resolvedAt) }}</dd>
         </div>
       </dl>
 

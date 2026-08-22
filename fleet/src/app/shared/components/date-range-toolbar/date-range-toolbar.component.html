@@ -1,35 +1,20 @@
 <div class="date-range-toolbar" [class.is-disabled]="disabled || busy" [attr.aria-busy]="busy">
   <label class="range-date" title="Start date and time">
     <i class="fa fa-calendar-o" aria-hidden="true"></i>
-    <input
-      type="datetime-local"
-      [(ngModel)]="startInput"
-      (ngModelChange)="markCustom()"
-      [disabled]="disabled || busy"
-      aria-label="Start date and time"
-    />
+    <input type="datetime-local" [(ngModel)]="startInput" (ngModelChange)="markCustom()" [disabled]="disabled || busy"
+      aria-label="Start date and time" />
   </label>
 
   <span class="range-separator" aria-hidden="true">–</span>
 
   <label class="range-date" title="End date and time">
     <i class="fa fa-calendar-o" aria-hidden="true"></i>
-    <input
-      type="datetime-local"
-      [(ngModel)]="endInput"
-      (ngModelChange)="markCustom()"
-      [disabled]="disabled || busy"
-      aria-label="End date and time"
-    />
+    <input type="datetime-local" [(ngModel)]="endInput" (ngModelChange)="markCustom()" [disabled]="disabled || busy"
+      aria-label="End date and time" />
   </label>
 
-  <select
-    class="range-preset"
-    [(ngModel)]="preset"
-    (ngModelChange)="setPreset($event)"
-    [disabled]="disabled || busy"
-    aria-label="Date range preset"
-  >
+  <select class="range-preset" [(ngModel)]="preset" (ngModelChange)="setPreset($event)" [disabled]="disabled || busy"
+    aria-label="Date range preset">
     <option value="today">Today</option>
     <option value="24h">Last 24 Hours</option>
     <option value="3d" *ngIf="showThreeDays">Last 3 Days</option>
@@ -38,13 +23,7 @@
     <option value="custom">Custom</option>
   </select>
 
-  <button
-    *ngIf="showApplyButton"
-    type="button"
-    class="range-apply"
-    (click)="apply()"
-    [disabled]="disabled || busy"
-  >
+  <button *ngIf="showApplyButton" type="button" class="range-apply" (click)="apply()" [disabled]="disabled || busy">
     <i class="fa" [ngClass]="busy ? 'fa-circle-o-notch fa-spin' : 'fa-check'" aria-hidden="true"></i>
     <span>{{ busy ? busyLabel : applyLabel }}</span>
   </button>

@@ -7,8 +7,7 @@ import { Observable, Subject } from 'rxjs';
 export class VesselPopupService {
   private readonly vesselPopupSource = new Subject<any | null>();
 
-  readonly vesselPopup$: Observable<any | null> =
-    this.vesselPopupSource.asObservable();
+  readonly vesselPopup$: Observable<any | null> = this.vesselPopupSource.asObservable();
 
   openPopup(vessel: any): void {
     if (!vessel) {

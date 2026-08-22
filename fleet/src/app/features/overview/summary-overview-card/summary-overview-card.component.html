@@ -1,19 +1,7 @@
 <div class="container-fulids" *ngIf="data.length > 0">
   <div class="row">
     <div class="col-sm-12 col-lg-6 col-md-6" *ngFor="let a of data">
-
-
-
-
-
-
-
-
-
-
-
-
-      <div class="container-fluid" >
+      <div class="container-fluid">
         <div class="row pd-bt-10">
           <div class="col-lg-12">
             <div class="row">
@@ -35,7 +23,7 @@
                   SPEED (knot)
                 </div>
                 <div class="fv-value text-al-center">
-                  {{a?.newData?.VES_GPS_SPEED?.value  | valueLength : 1}}
+                  {{a?.newData?.VES_GPS_SPEED?.value | valueLength : 1}}
                 </div>
               </div>
             </div>
@@ -53,7 +41,7 @@
                   DISTANCE (Mile)
                 </div>
                 <div class="fv-value text-al-center">
-                  {{a?.newData?.VES_GPS_DIS_TODAY?.value  | valueLength : 1}}
+                  {{a?.newData?.VES_GPS_DIS_TODAY?.value | valueLength : 1}}
                 </div>
               </div>
               <div class="col-4 dark-blue box-h-75">
@@ -61,7 +49,7 @@
                   FUEL CONS. (L)
                 </div>
                 <div class="fv-value text-al-center">
-                  {{a?.newData?.VES_CONS_TODAY?.value  | valueLength : 0}}
+                  {{a?.newData?.VES_CONS_TODAY?.value | valueLength : 0}}
                 </div>
               </div>
             </div>

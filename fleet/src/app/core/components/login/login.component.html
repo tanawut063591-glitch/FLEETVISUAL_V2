@@ -24,12 +24,7 @@
   </section>
 
   <main class="login-form-container">
-    <form
-      class="glass-panel"
-      [formGroup]="loginForm"
-      (ngSubmit)="onSubmit()"
-      autocomplete="off"
-    >
+    <form class="glass-panel" [formGroup]="loginForm" (ngSubmit)="onSubmit()" autocomplete="off">
       <div class="logo-circle">
         <img src="assets/images/login/logo.png" alt="Fleet Visual Logo" />
       </div>
@@ -39,90 +34,48 @@
       <div class="divider"></div>
 
       <div class="input-wrapper">
-        <div
-          class="input-group"
-          [class.input-error]="
+        <div class="input-group" [class.input-error]="
             loginForm.get('username')?.invalid && loginForm.get('username')?.touched
-          "
-        >
+          ">
           <i class="fa fa-user-o icon-left"></i>
-          <input
-            type="text"
-            formControlName="username"
-            class="input-field"
-            placeholder="Username"
-            autocomplete="username"
-            (input)="loginChange()"
-          />
+          <input type="text" formControlName="username" class="input-field" placeholder="Username"
+            autocomplete="username" (input)="loginChange()" />
         </div>
 
-        <div
-          class="field-error-text"
-          *ngIf="loginForm.get('username')?.invalid && loginForm.get('username')?.touched"
-        >
+        <div class="field-error-text" *ngIf="loginForm.get('username')?.invalid && loginForm.get('username')?.touched">
           <i class="fa fa-exclamation-circle"></i>
           Please enter your username.
         </div>
       </div>
 
       <div class="input-wrapper">
-        <div
-          class="input-group"
-          [class.input-error]="
+        <div class="input-group" [class.input-error]="
             loginForm.get('password')?.invalid && loginForm.get('password')?.touched
-          "
-        >
+          ">
           <i class="fa fa-lock icon-left"></i>
-          <input
-            [type]="showPassword ? 'text' : 'password'"
-            formControlName="password"
-            class="input-field"
-            placeholder="Password"
-            autocomplete="current-password"
-            (input)="loginChange()"
-          />
+          <input [type]="showPassword ? 'text' : 'password'" formControlName="password" class="input-field"
+            placeholder="Password" autocomplete="current-password" (input)="loginChange()" />
 
-          <button
-            type="button"
-            class="password-toggle"
-            aria-label="Toggle password visibility"
-            (click)="togglePasswordVisibility()"
-          >
-            <i
-              class="fa"
-              [class.fa-eye]="!showPassword"
-              [class.fa-eye-slash]="showPassword"
-            ></i>
+          <button type="button" class="password-toggle" aria-label="Toggle password visibility"
+            (click)="togglePasswordVisibility()">
+            <i class="fa" [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"></i>
           </button>
         </div>
 
-        <div
-          class="field-error-text"
-          *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
-        >
+        <div class="field-error-text" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
           <i class="fa fa-exclamation-circle"></i>
           Please enter your password.
         </div>
       </div>
 
-      <div
-        class="login_invalid"
-        [@loginState]="loginValid.toString()"
-        role="alert"
-        aria-live="assertive"
-      >
+      <div class="login_invalid" [@loginState]="loginValid.toString()" role="alert" aria-live="assertive">
         <span *ngIf="!loginValid">
           <i class="fa fa-times-circle"></i>
           {{ errorMessage || 'The username or password is incorrect.' }}
         </span>
       </div>
 
-      <button
-        type="submit"
-        class="login_submit"
-        [disabled]="isSubmitting"
-        [attr.aria-busy]="isSubmitting"
-      >
+      <button type="submit" class="login_submit" [disabled]="isSubmitting" [attr.aria-busy]="isSubmitting">
         <span *ngIf="!isSubmitting">
           Log in
           <i class="fa fa-arrow-right ml-1"></i>

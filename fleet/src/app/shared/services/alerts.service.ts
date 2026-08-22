@@ -50,12 +50,6 @@ export class AlertsService {
     );
   }
 
-
-
-
-
-
-
   fetchAlerts(query: AlertQuery, forceRefresh = false): Observable<AlertFetchResult> {
     const normalizedQuery = this.normalizeQuery(query);
     const key = this.queryKey(normalizedQuery);
@@ -75,15 +69,15 @@ export class AlertsService {
           ? this.requestDatabase(config.alerts, normalizedQuery).pipe(
               catchError((error) => {
                 if (!config.fallback.alertsToTelemetry) return throwError(() => error);
-                return this.telemetryAlerts.fetch(normalizedQuery, forceRefresh).pipe(
-                  map((result) => ({ ...result, sourceType: 'telemetry' as const })),
-                );
+                return this.telemetryAlerts
+                  .fetch(normalizedQuery, forceRefresh)
+                  .pipe(map((result) => ({ ...result, sourceType: 'telemetry' as const })));
               }),
             )
           : config.fallback.alertsToTelemetry
-            ? this.telemetryAlerts.fetch(normalizedQuery, forceRefresh).pipe(
-                map((result) => ({ ...result, sourceType: 'telemetry' as const })),
-              )
+            ? this.telemetryAlerts
+                .fetch(normalizedQuery, forceRefresh)
+                .pipe(map((result) => ({ ...result, sourceType: 'telemetry' as const })))
             : throwError(
                 () =>
                   new Error(
@@ -94,9 +88,10 @@ export class AlertsService {
         return source$.pipe(
           map((result) => ({
             result,
-            ttl: result.sourceType === 'database'
-              ? config.alerts.cacheSeconds
-              : Math.max(60, config.alerts.cacheSeconds || 60),
+            ttl:
+              result.sourceType === 'database'
+                ? config.alerts.cacheSeconds
+                : Math.max(60, config.alerts.cacheSeconds || 60),
           })),
         );
       }),
@@ -134,13 +129,14 @@ export class AlertsService {
   ): Observable<AlertFetchResult> {
     const context = new HttpContext().set(SKIP_AUTH_REDIRECT, true);
     const headers = this.getAuthHeaders();
-    const request$ = endpoint.method === 'GET'
-      ? this.http.get(endpoint.url, {
-          context,
-          headers,
-          params: this.buildQueryParams(query),
-        })
-      : this.http.post(endpoint.url, this.buildRequestBody(query), { context, headers });
+    const request$ =
+      endpoint.method === 'GET'
+        ? this.http.get(endpoint.url, {
+            context,
+            headers,
+            params: this.buildQueryParams(query),
+          })
+        : this.http.post(endpoint.url, this.buildRequestBody(query), { context, headers });
 
     return request$.pipe(
       timeout(endpoint.timeoutMs),
@@ -344,7 +340,7 @@ export class AlertsService {
     normalized.forEach((alert) => unique.set(alert.id, alert));
 
     return Array.from(unique.values()).sort(
-      (a, b) => this.toEpoch(b.occurredAt) - this.toEpoch(a.occurredAt)
+      (a, b) => this.toEpoch(b.occurredAt) - this.toEpoch(a.occurredAt),
     );
   }
 
@@ -373,35 +369,26 @@ export class AlertsService {
         'CreatedAt',
         'CreatedDate',
         'StartTime',
-        'Time'
-      )
+        'Time',
+      ),
     );
 
     const vesselName = String(
-      read(
-        'VesselName',
-        'Vessel',
-        'FVName',
-        'SiteName',
-        'ShipName',
-        'PointSource',
-        'Prefix'
-      ) || 'Unknown vessel'
+      read('VesselName', 'Vessel', 'FVName', 'SiteName', 'ShipName', 'PointSource', 'Prefix') ||
+        'Unknown vessel',
     );
 
     const tagName = String(
-      read('TagName', 'Tag', 'PointName', 'Address', 'SignalName', 'ParameterName') || ''
+      read('TagName', 'Tag', 'PointName', 'Address', 'SignalName', 'ParameterName') || '',
     );
     const title = String(
-      read('Title', 'AlarmName', 'AlertName', 'EventName', 'Name', 'Subject') ||
-        tagName ||
-        'Alert'
+      read('Title', 'AlarmName', 'AlertName', 'EventName', 'Name', 'Subject') || tagName || 'Alert',
     );
     const message = String(
-      read('Message', 'Description', 'Detail', 'Text', 'Remark', 'AlarmMessage') || title
+      read('Message', 'Description', 'Detail', 'Text', 'Remark', 'AlarmMessage') || title,
     );
     const severity = this.normalizeSeverity(
-      read('Severity', 'Priority', 'Level', 'AlarmLevel', 'AlertLevel', 'Class')
+      read('Severity', 'Priority', 'Level', 'AlarmLevel', 'AlertLevel', 'Class'),
     );
     const explicitState = read(
       'State',
@@ -409,16 +396,11 @@ export class AlertsService {
       'AlarmStatus',
       'AlertStatus',
       'EventStatus',
-      'IsActive'
+      'IsActive',
     );
-    const acknowledged = read(
-      'Acknowledged',
-      'IsAcknowledged',
-      'Ack',
-      'AckStatus'
-    );
+    const acknowledged = read('Acknowledged', 'IsAcknowledged', 'Ack', 'AckStatus');
     const clearedAt = this.toIsoString(
-      read('ResolvedAt', 'ClearTime', 'ClearedAt', 'EndTime', 'ClosedAt')
+      read('ResolvedAt', 'ClearTime', 'ClearedAt', 'EndTime', 'ClosedAt'),
     );
 
     let state = this.normalizeState(explicitState);
@@ -435,7 +417,7 @@ export class AlertsService {
       'RecordID',
       'ID',
       'Id',
-      '_id'
+      '_id',
     );
     const fallbackId = `${vesselName}|${tagName}|${occurredAt}|${title}|${index}`;
 
@@ -444,12 +426,10 @@ export class AlertsService {
       title,
       message,
       vesselName,
-      vesselId: String(
-        read('VesselID', 'ShipID', 'SiteID', 'Prefix') || vesselName
-      ),
+      vesselId: String(read('VesselID', 'ShipID', 'SiteID', 'Prefix') || vesselName),
       tagName,
       equipment: String(
-        read('Equipment', 'Module', 'System', 'Device', 'Group', 'Category', 'Subsystem') || ''
+        read('Equipment', 'Module', 'System', 'Device', 'Group', 'Category', 'Subsystem') || '',
       ),
       severity,
       state,
@@ -458,12 +438,11 @@ export class AlertsService {
         this.toIsoString(read('AcknowledgedAt', 'AckTime', 'AcceptedAt')) || undefined,
       resolvedAt: clearedAt || undefined,
       value: this.optionalValue(
-        read('Value', 'ActualValue', 'CurrentValue', 'TriggerValue', 'AlarmValue')
+        read('Value', 'ActualValue', 'CurrentValue', 'TriggerValue', 'AlarmValue'),
       ),
       unit: String(read('Unit', 'UOM', 'EngineeringUnit') || '') || undefined,
       source:
-        String(read('Source', 'PointSource', 'Service', 'Origin', 'SystemName') || '') ||
-        undefined,
+        String(read('Source', 'PointSource', 'Service', 'Origin', 'SystemName') || '') || undefined,
       raw: row,
     };
   }
@@ -510,7 +489,9 @@ export class AlertsService {
       if (numeric <= 1) return 'info';
     }
 
-    const text = String(value || '').trim().toLowerCase();
+    const text = String(value || '')
+      .trim()
+      .toLowerCase();
     if (/(critical|emergency|fatal|very high|danger|trip)/.test(text)) return 'critical';
     if (/(major|high|alarm)/.test(text)) return 'major';
     if (/(warning|warn|medium|minor)/.test(text)) return 'warning';
@@ -521,7 +502,9 @@ export class AlertsService {
   private normalizeState(value: unknown): AlertState {
     if (typeof value === 'boolean') return value ? 'active' : 'resolved';
 
-    const text = String(value || '').trim().toLowerCase();
+    const text = String(value || '')
+      .trim()
+      .toLowerCase();
     if (/(resolve|resolved|clear|cleared|close|closed|inactive|normal|ended|complete)/.test(text)) {
       return 'resolved';
     }
@@ -553,5 +536,4 @@ export class AlertsService {
     const epoch = new Date(value).getTime();
     return Number.isFinite(epoch) ? epoch : 0;
   }
-
 }

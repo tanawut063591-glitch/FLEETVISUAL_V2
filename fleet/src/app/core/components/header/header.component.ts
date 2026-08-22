@@ -1,4 +1,11 @@
-import { AfterViewInit, ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectorRef,
+  Component,
+  HostListener,
+  OnDestroy,
+  OnInit,
+} from '@angular/core';
 import { NavigationStart, Router } from '@angular/router';
 import { Subject, of, timer } from 'rxjs';
 import { catchError, exhaustMap, switchMap, takeUntil } from 'rxjs/operators';
@@ -9,10 +16,6 @@ import { UserPresenceService } from '../../../shared/services/user-presence.serv
 import { FleetModuleKey } from '../../../shared/models/settings.model';
 import { UserAccessControlService } from '../../../shared/services/user-access-control.service';
 
-
-
-
-
 interface HeaderMenuItem {
   label: string;
   icon: string;
@@ -22,9 +25,6 @@ interface HeaderMenuItem {
   isLog?: boolean;
   module: FleetModuleKey;
 }
-
-
-
 
 interface SettingsItem {
   title: string;
@@ -41,31 +41,20 @@ interface SettingsItem {
   styleUrls: ['./header.component.css'],
 })
 export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
-
   username = 'sat';
-
 
   alertCount = 0;
 
-
   settingsMenuOpen = false;
-
 
   mobileMenuOpen = false;
 
-
   isDarkMode = false;
-
 
   userImage = '';
   avatarError = false;
 
-
   logoSrc = 'assets/images/vessel/LocationEyeIcon.png';
-
-
-
-
 
   menuItems: HeaderMenuItem[] = [
     {
@@ -128,10 +117,6 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     },
   ];
 
-
-
-
-
   settingsItems: SettingsItem[] = [
     {
       title: 'General Settings',
@@ -177,17 +162,10 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     private alertsService: AlertsService,
     private userPresence: UserPresenceService,
     private userAccess: UserAccessControlService,
-    private changeDetectorRef: ChangeDetectorRef
+    private changeDetectorRef: ChangeDetectorRef,
   ) {}
 
-
-
-
-
   ngOnInit(): void {
-
-
-
     this.resetMobileNavigationState();
 
     this.loadUserData();
@@ -198,33 +176,22 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.startAlertMonitor();
 
-
-
-
     this.settingsWarmupTimer = setTimeout(() => {
       this.settingsWarmupTimer = null;
       void this.warmSettingsFeature();
     }, 1200);
 
-
-
-
-    this.router.events
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((event) => {
-        if (event instanceof NavigationStart) {
-          this.closeMobileMenu(false);
-        }
-      });
+    this.router.events.pipe(takeUntil(this.destroy$)).subscribe((event) => {
+      if (event instanceof NavigationStart) {
+        this.closeMobileMenu(false);
+      }
+    });
   }
 
   ngAfterViewInit(): void {
     if (typeof window === 'undefined') {
       return;
     }
-
-
-
 
     this.mobileStateFrame = window.requestAnimationFrame(() => {
       this.mobileStateFrame = window.requestAnimationFrame(() => {
@@ -243,11 +210,6 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.userAccess.canManageModule('settings');
   }
 
-
-
-
-
-
   private startAlertMonitor(): void {
     this.alertsService
       .getRefreshSeconds()
@@ -261,8 +223,6 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
             return of(null);
           }
 
-
-
           const end = new Date();
           const start = new Date(end.getTime() - this.alarmBadgeWindowMs);
 
@@ -275,17 +235,12 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
             })
             .pipe(catchError(() => of(null)));
         }),
-        takeUntil(this.destroy$)
+        takeUntil(this.destroy$),
       )
       .subscribe((result) => {
-
-
-
         if (!result || this.isAlarmPage()) return;
 
-        const activeAlerts = result.alerts.filter(
-          (alert) => alert.state !== 'resolved'
-        );
+        const activeAlerts = result.alerts.filter((alert) => alert.state !== 'resolved');
 
         this.alertState.setActiveAlerts(activeAlerts);
       });
@@ -309,17 +264,9 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.destroy$.complete();
   }
 
-
-
-
-
   get userInitial(): string {
     return this.username ? this.username.charAt(0).toUpperCase() : 'U';
   }
-
-
-
-
 
   private loadUserData(): void {
     const savedUsername =
@@ -332,19 +279,12 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
       this.username = savedUsername;
     }
 
-    const savedUserImage =
-      localStorage.getItem('userImage') ||
-      sessionStorage.getItem('userImage');
+    const savedUserImage = localStorage.getItem('userImage') || sessionStorage.getItem('userImage');
 
     if (savedUserImage) {
       this.userImage = savedUserImage;
     }
-
   }
-
-
-
-
 
   toggleMobileMenu(event: MouseEvent): void {
     event.preventDefault();
@@ -355,21 +295,13 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.settingsMenuOpen = false;
     this.syncMobileMenuDocumentState(nextOpenState);
 
-
-
-
     this.changeDetectorRef.detectChanges();
-
-
 
     if (event.detail > 0 && event.currentTarget instanceof HTMLButtonElement) {
       const button = event.currentTarget;
       requestAnimationFrame(() => button.blur());
     }
   }
-
-
-
 
   closeMobileMenu(refreshView = true): void {
     const wasOpen = this.mobileMenuOpen;
@@ -381,18 +313,11 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-
-
-
   private resetMobileNavigationState(): void {
     this.mobileMenuOpen = false;
     this.settingsMenuOpen = false;
     this.syncMobileMenuDocumentState(false);
   }
-
-
-
-
 
   private syncMobileMenuDocumentState(open: boolean): void {
     if (typeof document === 'undefined' || !document.body) {
@@ -403,43 +328,24 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     document.body.classList.toggle('fv-mobile-navigation-open', open);
   }
 
-
-
-
   toggleSettingsMenu(event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
 
-
-
     void this.warmSettingsFeature();
     this.settingsMenuOpen = !this.settingsMenuOpen;
 
-
-
-
     this.changeDetectorRef.detectChanges();
   }
-
-
-
 
   closeSettingsMenu(): void {
     this.settingsMenuOpen = false;
   }
 
-
-
-
-
   private initThemeMode(): void {
     const mode = this.themeModeService.init();
     this.isDarkMode = mode === 'dark';
   }
-
-
-
-
 
   toggleDarkMode(event: MouseEvent): void {
     event.stopPropagation();
@@ -447,9 +353,6 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     const nextMode = this.themeModeService.toggleMode();
     this.isDarkMode = nextMode === 'dark';
   }
-
-
-
 
   async goTo(route: string): Promise<void> {
     if (this.settingsNavigationPending) return;
@@ -466,8 +369,6 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
     try {
       let navigated = await this.router.navigateByUrl(route);
-
-
 
       if (!navigated && this.router.url !== route) {
         await new Promise<void>((resolve) => setTimeout(resolve, 120));
@@ -486,26 +387,19 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-
-
-
-
   private warmSettingsFeature(): Promise<unknown> {
     if (!this.settingsFeatureWarmup) {
-      this.settingsFeatureWarmup = import('../../../features/settings/settings.module')
-        .catch((error) => {
+      this.settingsFeatureWarmup = import('../../../features/settings/settings.module').catch(
+        (error) => {
           this.settingsFeatureWarmup = undefined;
           console.warn('[HeaderComponent] Settings warm-up skipped:', error);
           return undefined;
-        });
+        },
+      );
     }
 
     return this.settingsFeatureWarmup;
   }
-
-
-
-
 
   onLogoError(event: Event): void {
     const img = event.target as HTMLImageElement | null;
@@ -515,17 +409,9 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-
-
-
   onUserImageError(): void {
     this.avatarError = true;
   }
-
-
-
-
-
 
   logout(): void {
     const themeMode = this.themeModeService.getMode();
@@ -533,7 +419,6 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
     localStorage.clear();
     sessionStorage.clear();
-
 
     this.themeModeService.setMode(themeMode);
 
@@ -549,13 +434,9 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-
-
-
     if (window.innerWidth > 991) {
       this.closeMobileMenu();
     } else if (!this.mobileMenuOpen) {
-
       this.syncMobileMenuDocumentState(false);
     }
   }
@@ -567,8 +448,6 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @HostListener('window:pageshow')
   onPageShow(): void {
-
-
     this.closeMobileMenu();
   }
 
@@ -578,18 +457,11 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.closeMobileMenu();
   }
 
-
-
-
   @HostListener('document:click')
   onDocumentClick(): void {
     this.closeSettingsMenu();
     this.closeMobileMenu();
   }
-
-
-
-
 
   @HostListener('click', ['$event'])
   onHeaderClick(event: MouseEvent): void {

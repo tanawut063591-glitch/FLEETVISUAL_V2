@@ -15,21 +15,17 @@ import { AuthService } from '../../shared/services/auth.service';
 export class LoginGuard implements CanActivate {
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
   ) {}
 
   async canActivate(
     _route: ActivatedRouteSnapshot,
-    _state: RouterStateSnapshot
+    _state: RouterStateSnapshot,
   ): Promise<boolean | UrlTree> {
     return this.checkLogin();
   }
 
   private async checkLogin(): Promise<boolean | UrlTree> {
-
-
-
-
     if (!this.authService.isLoggedIn()) {
       return true;
     }

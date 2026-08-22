@@ -3,15 +3,8 @@
 
   <div class="field-control">
     <i [class]="icon" aria-hidden="true"></i>
-    <input
-      [type]="mode"
-      [ngModel]="value"
-      [disabled]="disabled"
-      [attr.min]="min || null"
-      [attr.max]="max || null"
-      [attr.aria-label]="label"
-      (ngModelChange)="onValueChange($event)"
-    />
+    <input [type]="mode" [ngModel]="value" [disabled]="disabled" [attr.min]="min || null" [attr.max]="max || null"
+      [attr.aria-label]="label" (ngModelChange)="onValueChange($event)" />
   </div>
 
   <em *ngIf="hint">{{ hint }}</em>

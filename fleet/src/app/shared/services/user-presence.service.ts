@@ -51,12 +51,11 @@ export class UserPresenceService implements OnDestroy {
     if (endpoint && sessionId) {
       const context = new HttpContext().set(SKIP_AUTH_REDIRECT, true);
       this.http
-        .post(
-          `${endpoint}/logout`,
-          { sessionId },
-          { context, headers: this.authHeaders() },
+        .post(`${endpoint}/logout`, { sessionId }, { context, headers: this.authHeaders() })
+        .pipe(
+          catchError(() => of(null)),
+          take(1),
         )
-        .pipe(catchError(() => of(null)), take(1))
         .subscribe();
     }
     sessionStorage.removeItem(this.sessionStorageKey);
@@ -77,7 +76,10 @@ export class UserPresenceService implements OnDestroy {
         context,
         headers: this.authHeaders(),
       })
-      .pipe(catchError(() => of(null)), take(1))
+      .pipe(
+        catchError(() => of(null)),
+        take(1),
+      )
       .subscribe();
   }
 
@@ -112,9 +114,10 @@ export class UserPresenceService implements OnDestroy {
   private getSessionId(create: boolean): string {
     let value = sessionStorage.getItem(this.sessionStorageKey) || '';
     if (!value && create) {
-      value = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
-        : `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      value =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       sessionStorage.setItem(this.sessionStorageKey, value);
     }
     return value;

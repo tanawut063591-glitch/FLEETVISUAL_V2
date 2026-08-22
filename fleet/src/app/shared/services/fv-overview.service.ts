@@ -26,7 +26,7 @@ export class FvOverviewService {
 
   constructor(
     private http: HttpClientService,
-    private store: Store<any>
+    private store: Store<any>,
   ) {}
 
   start(interval?: number): void {
@@ -85,20 +85,18 @@ export class FvOverviewService {
     }
 
     this.isLoadingTags = true;
-    this.tagFileSubscription = this.http
-      .getJsonFile('/assets/tags/overview.tag.json')
-      .subscribe({
-        next: (res: any) => {
-          this.isLoadingTags = false;
-          this.overviewTags = this.mapOverviewTags(res);
-          this.startTimer(interval);
-          this.applyPendingVessels();
-        },
-        error: (error) => {
-          this.isLoadingTags = false;
-          console.error('[FvOverviewService] load tags error:', error);
-        },
-      });
+    this.tagFileSubscription = this.http.getJsonFile('/assets/tags/overview.tag.json').subscribe({
+      next: (res: any) => {
+        this.isLoadingTags = false;
+        this.overviewTags = this.mapOverviewTags(res);
+        this.startTimer(interval);
+        this.applyPendingVessels();
+      },
+      error: (error) => {
+        this.isLoadingTags = false;
+        console.error('[FvOverviewService] load tags error:', error);
+      },
+    });
   }
 
   private mapOverviewTags(res: any): any[] {
@@ -158,9 +156,7 @@ export class FvOverviewService {
   }
 
   private buildOverviewDatas(fvInfos: any[]): any[] {
-    return fvInfos
-      .map((fv) => this.generateTags(fv))
-      .filter((payload) => payload !== null);
+    return fvInfos.map((fv) => this.generateTags(fv)).filter((payload) => payload !== null);
   }
 
   private generateTags(fv: any): any {

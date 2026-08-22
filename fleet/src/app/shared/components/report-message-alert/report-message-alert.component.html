@@ -1,4 +1,5 @@
-<div class="report-message-alert" [class.success]="type === 'success'" [class.error]="type === 'error'" [class.warning]="type === 'warning'" [class.info]="type === 'info'">
+<div class="report-message-alert" [class.success]="type === 'success'" [class.error]="type === 'error'"
+  [class.warning]="type === 'warning'" [class.info]="type === 'info'">
   <i [class]="iconClass" aria-hidden="true"></i>
   <span>{{ message }}</span>
   <strong *ngIf="meta">{{ meta }}</strong>

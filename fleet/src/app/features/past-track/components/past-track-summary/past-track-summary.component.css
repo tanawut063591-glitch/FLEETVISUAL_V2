@@ -121,7 +121,7 @@
         flex: 0 0 auto;
     }
 
-    .vessel-card > div:last-child {
+    .vessel-card>div:last-child {
         min-width: 0;
     }
 
@@ -199,4 +199,26 @@
         grid-column: 1 / -1;
         min-height: 82px;
     }
+}
+
+/* Professional square card treatment */
+.summary-grid {
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.vessel-card,
+.kpi-card {
+    border-color: var(--border-color, #dbe7f5);
+    border-radius: var(--pt-radius, 6px);
+    background: var(--card-bg, #ffffff);
+    box-shadow: var(--pt-shadow, 0 2px 8px rgba(15, 23, 42, 0.07));
+}
+
+.ship-box {
+    border-radius: var(--pt-control-radius, 4px);
+}
+
+.vessel-name span {
+    border-radius: var(--pt-control-radius, 4px);
 }

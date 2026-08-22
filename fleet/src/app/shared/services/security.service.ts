@@ -11,15 +11,9 @@ interface Security {
 export class SecurityService {
   repo: Security[] = [];
 
-
-  private readonly excludedVesselKeys = new Set<string>([
-    'BAHTERA MAKMUR',
-    'BB MAKMUR',
-  ]);
-
+  private readonly excludedVesselKeys = new Set<string>(['BAHTERA MAKMUR', 'BB MAKMUR']);
 
   test: string[] = [];
-
 
   bb_chevron: string[] = [];
 
@@ -30,7 +24,6 @@ export class SecurityService {
     'BAHTERA LAZURIT',
     'BB LIBERTY 233',
   ];
-
 
   sc_chevron: string[] = [
     'SC GLORY 2',
@@ -53,52 +46,24 @@ export class SecurityService {
     'SC BONGKOT',
   ];
 
-  sc_scena: string[] = [
-    'SC SULTAN',
-    'SC RAJA',
-  ];
+  sc_scena: string[] = ['SC SULTAN', 'SC RAJA'];
 
+  mv: string[] = ['MV GEMIA'];
 
-  mv: string[] = [
-    'MV GEMIA',
-  ];
+  obsolete: string[] = ['BB BUSSARAKHAM'];
 
+  chevron: string[] = this.getUniqueVessels([...this.sc_chevron, ...this.bb_chevron]);
 
-  obsolete: string[] = [
-    'BB BUSSARAKHAM',
-  ];
+  ptt: string[] = this.getUniqueVessels([...this.sc_ptt, ...this.bb_ptt]);
 
+  bb: string[] = this.getUniqueVessels([...this.bb_chevron, ...this.bb_ptt]);
 
-  chevron: string[] = this.getUniqueVessels([
-    ...this.sc_chevron,
-    ...this.bb_chevron,
-  ]);
+  sc: string[] = this.getUniqueVessels([...this.sc_chevron, ...this.sc_ptt]);
 
-  ptt: string[] = this.getUniqueVessels([
-    ...this.sc_ptt,
-    ...this.bb_ptt,
-  ]);
-
-  bb: string[] = this.getUniqueVessels([
-    ...this.bb_chevron,
-    ...this.bb_ptt,
-  ]);
-
-  sc: string[] = this.getUniqueVessels([
-    ...this.sc_chevron,
-    ...this.sc_ptt,
-  ]);
-
-  all: string[] = this.getUniqueVessels([
-    ...this.chevron,
-    ...this.ptt,
-    ...this.test,
-    ...this.mv,
-  ]);
+  all: string[] = this.getUniqueVessels([...this.chevron, ...this.ptt, ...this.test, ...this.mv]);
 
   constructor() {
     this.clearExcludedStoredSelections();
-
 
     this.addPermission('scbrave', ['SC BRAVE']);
     this.addPermission('scemerald', ['SC EMERALD']);
@@ -110,14 +75,11 @@ export class SecurityService {
 
     this.addPermission('bbkaimook', ['BB KAIMOOK']);
 
-
     this.addPermission('systemadmin', this.all);
     this.addPermission('sat', this.all);
     this.addPermission('chatri', this.all);
 
-
     this.addPermission('sc', this.sc_chevron);
-
 
     this.addPermission('bbuser', this.bb);
     this.addPermission('scuser', this.sc);
@@ -130,7 +92,6 @@ export class SecurityService {
     this.addPermission('mvuser', this.mv);
     this.addPermission('mvgemia', ['MV GEMIA']);
   }
-
 
   private clearExcludedStoredSelections(): void {
     const storageKeys = ['selectedVessel', 'realtimeVessel', 'pastTrackVessel'];
@@ -162,7 +123,6 @@ export class SecurityService {
     });
   }
 
-
   isExcludedVessel(vesselNameOrPrefix: string): boolean {
     const normalized = String(vesselNameOrPrefix || '')
       .trim()
@@ -172,7 +132,6 @@ export class SecurityService {
 
     return this.excludedVesselKeys.has(normalized);
   }
-
 
   hasAccess(vesselName: string): boolean {
     const username = localStorage.getItem('username');
@@ -190,18 +149,13 @@ export class SecurityService {
       }
 
       return (
-        item.username.toLowerCase() === safeUsername &&
-        item.vesselNames.includes(safeVesselName)
+        item.username.toLowerCase() === safeUsername && item.vesselNames.includes(safeVesselName)
       );
     });
   }
 
-
   getAccessibleVessels(username?: string | null): string[] {
-    const currentUsername =
-      username ||
-      localStorage.getItem('username') ||
-      '';
+    const currentUsername = username || localStorage.getItem('username') || '';
 
     if (!currentUsername) {
       return [];
@@ -209,15 +163,10 @@ export class SecurityService {
 
     const safeUsername = currentUsername.trim().toLowerCase();
 
-    const permission = this.repo.find(
-      (item) => item.username.toLowerCase() === safeUsername
-    );
+    const permission = this.repo.find((item) => item.username.toLowerCase() === safeUsername);
 
-    return (permission?.vesselNames ?? []).filter(
-      (name) => !this.isExcludedVessel(name)
-    );
+    return (permission?.vesselNames ?? []).filter((name) => !this.isExcludedVessel(name));
   }
-
 
   private addPermission(username: string, vesselNames: string[]): void {
     if (!username || !Array.isArray(vesselNames)) {
@@ -230,11 +179,9 @@ export class SecurityService {
     });
   }
 
-
   private normalizeVesselName(vesselName: string): string {
     return vesselName ? vesselName.trim().toUpperCase() : '';
   }
-
 
   private getUniqueVessels(vesselNames: string[]): string[] {
     if (!Array.isArray(vesselNames) || vesselNames.length === 0) {
@@ -246,11 +193,7 @@ export class SecurityService {
     vesselNames.forEach((name) => {
       const safeName = this.normalizeVesselName(name);
 
-      if (
-        safeName &&
-        !this.isExcludedVessel(safeName) &&
-        !result.includes(safeName)
-      ) {
+      if (safeName && !this.isExcludedVessel(safeName) && !result.includes(safeName)) {
         result.push(safeName);
       }
     });

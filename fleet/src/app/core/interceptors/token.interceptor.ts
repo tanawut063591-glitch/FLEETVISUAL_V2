@@ -49,7 +49,9 @@ function inspectPayload(
   if (isBinaryOrFormValue(value)) return [];
 
   if (Array.isArray(value)) {
-    return value.flatMap((item, index) => inspectPayload(item, `${path}[${index}]`, depth + 1, seen));
+    return value.flatMap((item, index) =>
+      inspectPayload(item, `${path}[${index}]`, depth + 1, seen),
+    );
   }
 
   if (typeof value === 'object') {
@@ -65,7 +67,9 @@ function inspectPayload(
 }
 
 function normalizeBase(value: string): string {
-  return String(value || '').trim().replace(/\/+$/, '');
+  return String(value || '')
+    .trim()
+    .replace(/\/+$/, '');
 }
 
 function isTrustedBackendUrl(url: string): boolean {

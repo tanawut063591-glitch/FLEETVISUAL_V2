@@ -1,123 +1,99 @@
 <div class="premium-dashboard" *ngIf="data$ | async as rtData">
   <ng-container *ngIf="activeVessel$ | async as activeVessel">
-    <ng-container
-      *ngIf="
+    <ng-container *ngIf="
         (rtData['VES_GPS_SPEED'] ||
           rtData['GPS_SPEED'] ||
           {
             tagName: getRealtimeVesselPrefix(activeVessel) + '-VES_GPS_SPEED',
             value: 0
           }) as tag
-      "
-    >
+      ">
       <ng-container *ngIf="selectedVesselAlertContext$ | async as alarmContext">
 
-      <div class="dash-header realtime-vessel-header">
-        <div class="header-left">
-          <div class="ship-avatar ship-photo">
-            <img
-              [src]="getRealtimeVesselImage(activeVessel)"
-              [alt]="getRealtimeVesselName(activeVessel)"
-              (error)="onShipImageError($event)"
-            />
+        <div class="dash-header realtime-vessel-header">
+          <div class="header-left">
+            <div class="ship-avatar ship-photo">
+              <img [src]="getRealtimeVesselImage(activeVessel)" [alt]="getRealtimeVesselName(activeVessel)"
+                (error)="onShipImageError($event)" />
+            </div>
+
+            <div class="ship-info">
+              <div class="ship-title-row">
+                <h1>{{ getRealtimeVesselName(activeVessel) }}</h1>
+              </div>
+
+              <p class="ship-meta">
+                {{ getRealtimeVesselType(activeVessel) }}
+                <span class="dot-separator">•</span>
+                {{ getRealtimeVesselPrefix(activeVessel) }}
+              </p>
+
+              <p class="ship-coords">
+                <i class="fa fa-map-marker"></i>
+                {{ getRealtimeCoordinate(activeVessel, rtData) }}
+              </p>
+            </div>
           </div>
 
-          <div class="ship-info">
-            <div class="ship-title-row">
-              <h1>{{ getRealtimeVesselName(activeVessel) }}</h1>
+          <div class="header-right realtime-header-right">
+            <div class="live-status-card">
+              <span class="live-label">LAST UPDATE</span>
+              <strong>{{ getRealtimeLastUpdate(activeVessel, rtData) }}</strong>
+            </div>
 
-              <span
-                class="badge-online"
-                [ngClass]="getRealtimeStatusClass(activeVessel)"
-              >
-                <i class="fa fa-circle"></i>
+            <div class="live-status-card small vessel-status-card" [ngClass]="getRealtimeStatusClass(activeVessel)">
+              <span class="live-label">STATUS</span>
+              <strong>
+                <i class="fa fa-circle" aria-hidden="true"></i>
                 {{ getRealtimeStatus(activeVessel) }}
-              </span>
-            </div>
-
-            <p class="ship-meta">
-              {{ getRealtimeVesselType(activeVessel) }}
-              <span class="dot-separator">•</span>
-              {{ getRealtimeVesselPrefix(activeVessel) }}
-            </p>
-
-            <p class="ship-coords">
-              <i class="fa fa-map-marker"></i>
-              {{ getRealtimeCoordinate(activeVessel, rtData) }}
-            </p>
-          </div>
-        </div>
-
-        <div class="header-right realtime-header-right">
-          <div class="live-status-card">
-            <span class="live-label">LAST UPDATE</span>
-            <strong>{{ getRealtimeLastUpdate(activeVessel, rtData) }}</strong>
-          </div>
-
-          <div class="live-status-card small">
-            <span class="live-label">LIVE DATA</span>
-            <strong>
-              <span class="pulse-dot"></span>
-              Running
-            </strong>
-          </div>
-        </div>
-      </div>
-
-
-      <div class="kpi-grid">
-        <div
-          class="kpi-card"
-          [class.realtime-alert-kpi]="hasRealtimeAlarm(alarmContext.alerts, 'VES_GPS_SPEED')"
-        >
-          <div class="kpi-icon blue">
-            <i class="fa fa-tachometer"></i>
-          </div>
-          <div class="kpi-data">
-            <span class="kpi-title">SPEED</span>
-            <div class="kpi-val">
-              {{ getRealtimeNumber(rtData, 'VES_GPS_SPEED', 0) }}
-              <small>knots</small>
+              </strong>
             </div>
           </div>
         </div>
 
-        <div
-          class="kpi-card"
-          [class.realtime-alert-kpi]="
+
+        <div class="kpi-grid">
+          <div class="kpi-card" [class.realtime-alert-kpi]="hasRealtimeAlarm(alarmContext.alerts, 'VES_GPS_SPEED')">
+            <div class="kpi-icon blue">
+              <i class="fa fa-tachometer"></i>
+            </div>
+            <div class="kpi-data">
+              <span class="kpi-title">SPEED</span>
+              <div class="kpi-val">
+                {{ getRealtimeNumber(rtData, 'VES_GPS_SPEED', 0) }}
+                <small>knots</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="kpi-card" [class.realtime-alert-kpi]="
             hasRealtimeAlarm(alarmContext.alerts, 'VES_GPS_HEAD', 'VES_GPS_COURSE')
-          "
-        >
-          <div class="kpi-icon green">
-            <i class="fa fa-location-arrow"></i>
-          </div>
-          <div class="kpi-data">
-            <span class="kpi-title">COURSE</span>
-            <div class="kpi-val">
-              {{ getRealtimeDirection(rtData, 'VES_GPS_HEAD', '0.00') }}°
+          ">
+            <div class="kpi-icon green">
+              <i class="fa fa-location-arrow"></i>
+            </div>
+            <div class="kpi-data">
+              <span class="kpi-title">COURSE</span>
+              <div class="kpi-val">
+                {{ getRealtimeDirection(rtData, 'VES_GPS_HEAD', '0.00') }}°
+              </div>
             </div>
           </div>
-        </div>
 
-        <div
-          class="kpi-card"
-          [class.realtime-alert-kpi]="hasRealtimeAlarm(alarmContext.alerts, 'VES_CONS_TODAY')"
-        >
-          <div class="kpi-icon orange">
-            <i class="fa fa-tint"></i>
-          </div>
-          <div class="kpi-data">
-            <span class="kpi-title">FUEL CONSUMPTION</span>
-            <div class="kpi-val">
-              {{ getRealtimeNumber(rtData, 'VES_CONS_TODAY', 0) }}
-              <small>L</small>
+          <div class="kpi-card kpi-card--fuel-consumption" [class.realtime-alert-kpi]="hasRealtimeAlarm(alarmContext.alerts, 'VES_CONS_TODAY')">
+            <div class="kpi-icon orange">
+              <i class="fa fa-tint"></i>
+            </div>
+            <div class="kpi-data">
+              <span class="kpi-title">FUEL CONSUMPTION</span>
+              <div class="kpi-val">
+                {{ getRealtimeNumber(rtData, 'VES_CONS_TODAY', 0) }}
+                <small>L</small>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div
-          class="kpi-card"
-          [class.realtime-alert-kpi]="
+          <div class="kpi-card" [class.realtime-alert-kpi]="
             hasRealtimeAlarm(
               alarmContext.alerts,
               'PME_CONS_RATE',
@@ -131,36 +107,33 @@
               'DG3_CONS_RATE',
               'DG4_CONS_RATE'
             )
-          "
-        >
-          <div class="kpi-icon purple">
-            <i class="fa fa-tint"></i>
-          </div>
-          <div class="kpi-data">
-            <span class="kpi-title">FUEL RATE</span>
-            <div class="kpi-val">
-              {{
+          ">
+            <div class="kpi-icon purple">
+              <i class="fa fa-tint"></i>
+            </div>
+            <div class="kpi-data">
+              <span class="kpi-title">FUEL RATE</span>
+              <div class="kpi-val">
+                {{
                 (getSum(
-                  rtData['PME_CONS_RATE'],
-                  rtData['CME_CONS_RATE'],
-                  rtData['SME_CONS_RATE'],
-                  rtData['PAE_CONS_RATE'],
-                  rtData['CAE_CONS_RATE'],
-                  rtData['SAE_CONS_RATE'],
-                  rtData['DG1_CONS_RATE'],
-                  rtData['DG2_CONS_RATE'],
-                  rtData['DG3_CONS_RATE'],
-                  rtData['DG4_CONS_RATE']
+                rtData['PME_CONS_RATE'],
+                rtData['CME_CONS_RATE'],
+                rtData['SME_CONS_RATE'],
+                rtData['PAE_CONS_RATE'],
+                rtData['CAE_CONS_RATE'],
+                rtData['SAE_CONS_RATE'],
+                rtData['DG1_CONS_RATE'],
+                rtData['DG2_CONS_RATE'],
+                rtData['DG3_CONS_RATE'],
+                rtData['DG4_CONS_RATE']
                 )?.value | number : '1.2-2') || '0.00'
-              }}
-              <small>L/h</small>
+                }}
+                <small>L/h</small>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div
-          class="kpi-card"
-          [class.realtime-alert-kpi]="
+          <div class="kpi-card" [class.realtime-alert-kpi]="
             hasRealtimeAlarm(
               alarmContext.alerts,
               'VESSEL_CONNECTION',
@@ -169,208 +142,181 @@
               'DCP_GATEWAY_ALIVE',
               'GPS_PANEL_ALIVE'
             )
-          "
-        >
-          <div class="kpi-icon teal">
-            <i class="fa fa-bolt"></i>
+          ">
+            <div class="kpi-icon teal">
+              <i class="fa fa-bolt"></i>
+            </div>
+            <div class="kpi-data">
+              <span class="kpi-title">SYSTEM STATUS</span>
+              <div class="kpi-val">{{ getRealtimeStatus(activeVessel) }}</div>
+            </div>
           </div>
-          <div class="kpi-data">
-            <span class="kpi-title">SYSTEM STATUS</span>
-            <div class="kpi-val">{{ getRealtimeStatus(activeVessel) }}</div>
-          </div>
-        </div>
 
-        <ng-container>
-          <div
-            class="kpi-card alarm-kpi-card"
-            [class.alarm-kpi-card--active]="alarmContext.count > 0"
-            [attr.aria-label]="
+          <ng-container>
+            <div class="kpi-card alarm-kpi-card" [class.alarm-kpi-card--active]="alarmContext.count > 0"
+              [attr.aria-label]="
               alarmContext.count +
               (alarmContext.count === 1
                 ? ' active alarm for selected vessel'
                 : ' active alarms for selected vessel')
-            "
-          >
-            <div class="kpi-icon red alarm-kpi-card__icon">
-              <i class="fa fa-bell-o"></i>
-              <span
-                *ngIf="alarmContext.count > 0"
-                class="alarm-kpi-card__pulse"
-                aria-hidden="true"
-              ></span>
-            </div>
-            <div class="kpi-data">
-              <span class="kpi-title">ALARMS</span>
-              <div class="kpi-val alarm-kpi-card__value">
-                {{ alarmContext.count > 99 ? '99+' : alarmContext.count }}
-                <small>Active</small>
+            ">
+              <div class="kpi-icon red alarm-kpi-card__icon">
+                <i class="fa fa-bell-o"></i>
+                <span *ngIf="alarmContext.count > 0" class="alarm-kpi-card__pulse" aria-hidden="true"></span>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-title">ALARMS</span>
+                <div class="kpi-val alarm-kpi-card__value">
+                  {{ alarmContext.count > 99 ? '99+' : alarmContext.count }}
+                  <small>Active</small>
+                </div>
               </div>
             </div>
-          </div>
-        </ng-container>
-      </div>
+          </ng-container>
+        </div>
 
 
-      <div class="main-split">
+        <div class="main-split">
 
-        <div class="col-left">
-          <div class="premium-card today-summary-card today-summary-card--pro">
-            <div class="today-summary-pro__header">
-              <div class="today-summary-pro__identity">
-                <span class="today-summary-pro__icon" aria-hidden="true">
-                  <i class="fa fa-line-chart"></i>
-                </span>
+          <div class="col-left">
+            <div class="premium-card today-summary-card today-summary-card--pro">
+              <div class="today-summary-pro__header">
+                <div class="today-summary-pro__identity">
+                  <span class="today-summary-pro__icon" aria-hidden="true">
+                    <i class="fa fa-line-chart"></i>
+                  </span>
 
-                <span class="today-summary-pro__heading">
-                  <small>DAILY OPERATIONS</small>
-                  <strong>TODAY SUMMARY</strong>
-                  <span>Navigation and fuel performance since 00:00</span>
-                </span>
+                  <span class="today-summary-pro__heading">
+                    <small>DAILY OPERATIONS</small>
+                    <strong>TODAY SUMMARY</strong>
+                    <span>Navigation and fuel performance since 00:00</span>
+                  </span>
+                </div>
+
               </div>
 
-              <span class="today-summary-pro__live">
-                <i aria-hidden="true"></i>
-                LIVE
-              </span>
-            </div>
+              <div class="today-summary-pro__body">
 
-            <div class="today-summary-pro__body">
-
-              <section
-                class="today-summary-pro__hero"
-                [class.realtime-alert-panel]="
+                <section class="today-summary-pro__hero" [class.realtime-alert-panel]="
                   hasRealtimeAlarm(alarmContext.alerts, 'VES_GPS_SPEED')
-                "
-                aria-label="Navigation performance"
-              >
-                <div
-                  class="today-summary-pro__speed-ring"
-                  [style.--speed-progress]="getSummarySpeedProgress(rtData) + '%'"
-                  [attr.aria-label]="
+                " aria-label="Navigation performance">
+                  <div class="today-summary-pro__speed-ring"
+                    [style.--speed-progress]="getSummarySpeedProgress(rtData) + '%'" [attr.aria-label]="
                     'Current speed ' +
                     getRealtimeNumber(rtData, 'VES_GPS_SPEED', 0) +
                     ' knots'
-                  "
-                >
-                  <div class="today-summary-pro__speed-core">
-                    <span>SPEED NOW</span>
-                    <strong>{{ getRealtimeNumber(rtData, 'VES_GPS_SPEED', 0) }}</strong>
-                    <small>knots</small>
-                  </div>
-                </div>
-
-                <div class="today-summary-pro__nav-performance">
-                  <div class="today-summary-pro__section-title">
-                    <span>
-                      <small>NAVIGATION</small>
-                      <strong>Performance</strong>
-                    </span>
-
-                    <span class="today-summary-pro__course-chip">
-                      {{ getSummaryCourseCardinal(rtData) }}
-                      <b>{{ getRealtimeDirection(rtData, 'VES_GPS_HEAD', '0.00') }}°</b>
-                    </span>
-                  </div>
-
-                  <div class="today-summary-pro__metric-pair">
-                    <div>
-                      <span>Daily average</span>
-                      <strong>{{ getRealtimeNumber(rtData, 'VES_GPS_SPEED_AVG', 0) }}</strong>
-                      <small>knots</small>
-                    </div>
-
-                    <div>
-                      <span>Daily maximum</span>
-                      <strong>{{ getRealtimeNumber(rtData, 'VES_GPS_SPEED_MAX', 0) }}</strong>
+                  ">
+                    <div class="today-summary-pro__speed-core">
+                      <span>SPEED NOW</span>
+                      <strong>{{ getRealtimeNumber(rtData, 'VES_GPS_SPEED', 0) }}</strong>
                       <small>knots</small>
                     </div>
                   </div>
 
-                  <div class="today-summary-pro__progress">
-                    <div class="today-summary-pro__progress-copy">
-                      <span>Current vs daily maximum</span>
-                      <strong>{{ getSummarySpeedProgress(rtData) }}%</strong>
+                  <div class="today-summary-pro__nav-performance">
+                    <div class="today-summary-pro__section-title">
+                      <span>
+                        <small>NAVIGATION</small>
+                        <strong>Performance</strong>
+                      </span>
+
+                      <span class="today-summary-pro__course-chip">
+                        {{ getSummaryCourseCardinal(rtData) }}
+                        <b>{{ getRealtimeDirection(rtData, 'VES_GPS_HEAD', '0.00') }}°</b>
+                      </span>
                     </div>
-                    <div class="today-summary-pro__progress-track" aria-hidden="true">
-                      <i [style.width.%]="getSummarySpeedProgress(rtData)"></i>
+
+                    <div class="today-summary-pro__metric-pair">
+                      <div>
+                        <span>Daily average</span>
+                        <strong>{{ getRealtimeNumber(rtData, 'VES_GPS_SPEED_AVG', 0) }}</strong>
+                        <small>knots</small>
+                      </div>
+
+                      <div>
+                        <span>Daily maximum</span>
+                        <strong>{{ getRealtimeNumber(rtData, 'VES_GPS_SPEED_MAX', 0) }}</strong>
+                        <small>knots</small>
+                      </div>
+                    </div>
+
+                    <div class="today-summary-pro__progress">
+                      <div class="today-summary-pro__progress-copy">
+                        <span>Current vs daily maximum</span>
+                        <strong>{{ getSummarySpeedProgress(rtData) }}%</strong>
+                      </div>
+                      <div class="today-summary-pro__progress-track" aria-hidden="true">
+                        <i [style.width.%]="getSummarySpeedProgress(rtData)"></i>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </section>
+                </section>
 
 
-              <section class="today-summary-pro__voyage" aria-label="Voyage snapshot">
-                <article
-                  class="today-summary-pro__mini-card today-summary-pro__mini-card--distance"
-                  [class.realtime-alert-field]="
+                <section class="today-summary-pro__voyage" aria-label="Voyage snapshot">
+                  <article class="today-summary-pro__mini-card today-summary-pro__mini-card--distance"
+                    [class.realtime-alert-field]="
                     hasRealtimeAlarm(alarmContext.alerts, 'VES_GPS_DIS_TODAY')
-                  "
-                >
-                  <span class="today-summary-pro__mini-icon" aria-hidden="true">
-                    <i class="fa fa-arrows-h"></i>
-                  </span>
-                  <span class="today-summary-pro__mini-copy">
-                    <small>DISTANCE TODAY</small>
-                    <strong>
-                      {{ getRealtimeNumber(rtData, 'VES_GPS_DIS_TODAY', 0) }}
-                      <em>NM</em>
-                    </strong>
-                  </span>
-                </article>
+                  ">
+                    <span class="today-summary-pro__mini-icon" aria-hidden="true">
+                      <i class="fa fa-arrows-h"></i>
+                    </span>
+                    <span class="today-summary-pro__mini-copy">
+                      <small>DISTANCE TODAY</small>
+                      <strong>
+                        {{ getRealtimeNumber(rtData, 'VES_GPS_DIS_TODAY', 0) }}
+                        <em>NM</em>
+                      </strong>
+                    </span>
+                  </article>
 
-                <article
-                  class="today-summary-pro__mini-card today-summary-pro__mini-card--course"
-                  [class.realtime-alert-field]="
+                  <article class="today-summary-pro__mini-card today-summary-pro__mini-card--course"
+                    [class.realtime-alert-field]="
                     hasRealtimeAlarm(alarmContext.alerts, 'VES_GPS_HEAD', 'VES_GPS_COURSE')
-                  "
-                >
-                  <span class="today-summary-pro__mini-icon" aria-hidden="true">
-                    <i class="fa fa-compass"></i>
-                  </span>
-                  <span class="today-summary-pro__mini-copy">
-                    <small>COURSE OVER GROUND</small>
-                    <strong>
-                      {{ getRealtimeDirection(rtData, 'VES_GPS_HEAD', '0.00') }}°
-                      <em>{{ getSummaryCourseCardinal(rtData) }}</em>
-                    </strong>
-                  </span>
-                </article>
+                  ">
+                    <span class="today-summary-pro__mini-icon" aria-hidden="true">
+                      <i class="fa fa-compass"></i>
+                    </span>
+                    <span class="today-summary-pro__mini-copy">
+                      <small>COURSE OVER GROUND</small>
+                      <strong>
+                        {{ getRealtimeDirection(rtData, 'VES_GPS_HEAD', '0.00') }}°
+                        <em>{{ getSummaryCourseCardinal(rtData) }}</em>
+                      </strong>
+                    </span>
+                  </article>
 
-                <article
-                  class="today-summary-pro__mini-card today-summary-pro__mini-card--position"
-                  [class.realtime-alert-field]="
+                  <article class="today-summary-pro__mini-card today-summary-pro__mini-card--position"
+                    [class.realtime-alert-field]="
                     hasRealtimeAlarm(
                       alarmContext.alerts,
                       'VES_GPS_LAT',
                       'VES_GPS_LONG',
                       'VES_GPS_LNG'
                     )
-                  "
-                >
-                  <span class="today-summary-pro__mini-icon" aria-hidden="true">
-                    <i class="fa fa-map-marker"></i>
-                  </span>
-                  <span class="today-summary-pro__mini-copy">
-                    <small>LIVE POSITION</small>
-                    <strong class="today-summary-pro__coordinates">
-                      <span>
-                        <b>LAT</b>
-                        {{ getRealtimeCoordinateNumber(rtData, 'VES_GPS_LAT', '0.000000') }}
-                      </span>
-                      <span>
-                        <b>LON</b>
-                        {{ getRealtimeCoordinateNumber(rtData, 'VES_GPS_LONG', '0.000000') }}
-                      </span>
-                    </strong>
-                  </span>
-                </article>
-              </section>
+                  ">
+                    <span class="today-summary-pro__mini-icon" aria-hidden="true">
+                      <i class="fa fa-map-marker"></i>
+                    </span>
+                    <span class="today-summary-pro__mini-copy">
+                      <small>LIVE POSITION</small>
+                      <strong class="today-summary-pro__coordinates">
+                        <span>
+                          <b>LAT</b>
+                          {{ getRealtimeCoordinateNumber(rtData, 'VES_GPS_LAT', '0.000000') }}
+                        </span>
+                        <span>
+                          <b>LON</b>
+                          {{ getRealtimeCoordinateNumber(rtData, 'VES_GPS_LONG', '0.000000') }}
+                        </span>
+                      </strong>
+                    </span>
+                  </article>
+                </section>
 
 
-              <section
-                class="today-summary-pro__fuel"
-                [ngClass]="'is-' + getSummaryFuelState(rtData)"
-                [class.realtime-alert-panel]="
+                <section class="today-summary-pro__fuel" [ngClass]="'is-' + getSummaryFuelState(rtData)"
+                  [class.realtime-alert-panel]="
                   hasRealtimeAlarm(
                     alarmContext.alerts,
                     'VES_CONS_TODAY',
@@ -385,542 +331,403 @@
                     'DG3_CONS_RATE',
                     'DG4_CONS_RATE'
                   )
-                "
-                aria-label="Fuel performance"
-              >
-                <div class="today-summary-pro__fuel-heading">
-                  <span class="today-summary-pro__fuel-icon" aria-hidden="true">
-                    <i class="fa fa-tint"></i>
-                  </span>
+                " aria-label="Fuel performance">
+                  <div class="today-summary-pro__fuel-heading">
+                    <span class="today-summary-pro__fuel-icon" aria-hidden="true">
+                      <i class="fa fa-tint"></i>
+                    </span>
 
-                  <span>
-                    <small>FUEL PERFORMANCE</small>
-                    <strong>Operational consumption</strong>
-                  </span>
+                    <span>
+                      <small>FUEL PERFORMANCE</small>
+                      <strong>Operational consumption</strong>
+                    </span>
 
-                  <span class="today-summary-pro__fuel-status">
-                    {{ getSummaryFuelStatusLabel(rtData) }}
-                  </span>
-                </div>
-
-                <div class="today-summary-pro__fuel-grid">
-                  <div class="today-summary-pro__fuel-primary">
-                    <small>CURRENT RATE</small>
-                    <strong>
-                      {{ getSummaryCurrentFuelRate(rtData) | number : '1.2-2' }}
-                      <em>L/h</em>
-                    </strong>
-                    <span>{{ getSummaryFuelVarianceText(rtData) }}</span>
+                    <span class="today-summary-pro__fuel-status">
+                      {{ getSummaryFuelStatusLabel(rtData) }}
+                    </span>
                   </div>
 
-                  <div class="today-summary-pro__fuel-metric">
-                    <small>DAILY AVERAGE</small>
-                    <strong>
-                      {{ getSummaryAverageFuelRate(rtData) | number : '1.2-2' }}
-                    </strong>
-                    <span>L/h</span>
-                  </div>
+                  <div class="today-summary-pro__fuel-grid">
+                    <div class="today-summary-pro__fuel-primary">
+                      <small>CURRENT RATE</small>
+                      <strong>
+                        {{ getSummaryCurrentFuelRate(rtData) | number : '1.2-2' }}
+                        <em>L/h</em>
+                      </strong>
+                      <span>{{ getSummaryFuelVarianceText(rtData) }}</span>
+                    </div>
 
-                  <div class="today-summary-pro__fuel-metric">
-                    <small>CONSUMED TODAY</small>
-                    <strong>{{ getRealtimeNumber(rtData, 'VES_CONS_TODAY', 0) }}</strong>
-                    <span>litres</span>
+                    <div class="today-summary-pro__fuel-metric">
+                      <small>DAILY AVERAGE</small>
+                      <strong>
+                        {{ getSummaryAverageFuelRate(rtData) | number : '1.2-2' }}
+                      </strong>
+                      <span>L/h</span>
+                    </div>
+
+                    <div class="today-summary-pro__fuel-metric">
+                      <small>CONSUMED TODAY</small>
+                      <strong>{{ getRealtimeNumber(rtData, 'VES_CONS_TODAY', 0) }}</strong>
+                      <span>litres</span>
+                    </div>
                   </div>
-                </div>
-              </section>
+                </section>
+              </div>
+            </div>
+
+            <div class="premium-card flex-1">
+              <div class="card-header">MAP</div>
+              <div class="map-wrapper">
+                <app-map class="map-component" [lat]="getRealtimeLat(activeVessel, rtData)"
+                  [lng]="getRealtimeLng(activeVessel, rtData)"></app-map>
+              </div>
             </div>
           </div>
 
-          <div class="premium-card flex-1">
-            <div class="card-header">MAP</div>
-            <div class="map-wrapper">
-              <app-map
-                class="map-component"
-                [lat]="getRealtimeLat(activeVessel, rtData)"
-                [lng]="getRealtimeLng(activeVessel, rtData)"
-              ></app-map>
-            </div>
+
+          <div class="col-right">
+
+            <ng-container *ngIf="getCardDetail(tag, 1, 1) as card11">
+              <div class="premium-card dg-card" *ngIf="card11.type && card11.type.length > 0">
+                <div class="card-header flex-between">
+                  <span class="dg-title">
+                    <span class="dg-header-icon" [ngClass]="getCardHeaderIconClass(card11.type)" aria-hidden="true">
+                      <i class="fa" [ngClass]="getCardIcon(card11.type)"></i>
+                    </span>
+                    <span class="dg-heading-copy">
+                      <strong>{{ card11.title }}</strong>
+                      <small>{{ getCardSubtitle(card11.type) }}</small>
+                    </span>
+                  </span>
+
+                  <ng-container *ngIf="getCardOperatingState(card11.type, 1, 1, rtData) as card11State">
+                    <span class="equipment-state-badge"
+                      [class.is-running]="card11State === 'running'"
+                      [class.is-stopped]="card11State === 'stopped'"
+                      [attr.aria-label]="card11.title + ' ' + (card11State === 'running' ? 'running' : 'stopped')">
+                      <i aria-hidden="true"></i>
+                      {{ card11State === 'running' ? 'RUNNING' : 'STOPPED' }}
+                    </span>
+                  </ng-container>
+                </div>
+
+                <div class="card-body pd-0">
+                  <ng-container *ngIf="card11.type === 'ME1'">
+                    <app-main-engine [activeAlerts]="alarmContext.alerts" [flow_supply]="rtData['PME_FIN_RATE']"
+                      [temp_supply]="rtData['PME_FIN_TEMP']" [dens_supply]="rtData['PME_FIN_DENS']"
+                      [flow_return]="rtData['PME_FOUT_RATE']" [temp_return]="rtData['PME_FOUT_TEMP']"
+                      [dens_return]="rtData['PME_FOUT_DENS']" [cons]="abs(rtData['PME_CONS_RATE'])"
+                      [consL]="rtData['PME_CONS_TODAY']" [speed_eng]="rtData['PME_SPD_CALC'] || rtData['PME_SPD']"
+                      [speed_gear]="rtData['PPS_SPD_CALC'] || rtData['PPS_SPD']" [load]="rtData['PME_ENGINE_LOAD']">
+                    </app-main-engine>
+                  </ng-container>
+
+                  <ng-container *ngIf="card11.type === 'AE1' || card11.type === 'DG_RPM'">
+                    <app-aux-engine [activeAlerts]="alarmContext.alerts" [flow_supply]="rtData['PME_FIN_RATE']"
+                      [temp_supply]="rtData['PME_FIN_TEMP']" [dens_supply]="rtData['PME_FIN_DENS']"
+                      [flow_return]="rtData['PME_FOUT_RATE']" [temp_return]="rtData['PME_FOUT_TEMP']"
+                      [dens_return]="rtData['PME_FOUT_DENS']" [cons]="abs(rtData['PME_CONS_RATE'])"
+                      [consL]="rtData['PME_CONS_TODAY']" [speed_eng]="rtData['PME_SPD_CALC'] || rtData['PME_SPD']">
+                    </app-aux-engine>
+                  </ng-container>
+
+                  <ng-container *ngIf="card11.type === 'DG_NO_RPM'">
+                    <app-diesel-generator-no-rpm [activeAlerts]="alarmContext.alerts"
+                      [flow_supply]="rtData['DG1_FIN_RATE']" [temp_supply]="rtData['DG1_FIN_TEMP']"
+                      [dens_supply]="rtData['DG1_FIN_DENS']" [flow_return]="rtData['DG1_FOUT_RATE']"
+                      [temp_return]="rtData['DG1_FOUT_TEMP']" [dens_return]="rtData['DG1_FOUT_DENS']"
+                      [cons]="abs(rtData['DG1_CONS_RATE'])" [consL]="rtData['DG1_CONS_TODAY']"
+                      [load]="rtData['DG1_GEN_LOAD']" [load_kw]="rtData['DG1_GEN_LOAD_KW']">
+                    </app-diesel-generator-no-rpm>
+                  </ng-container>
+
+                  <ng-container *ngIf="card11.type === 'DG_NO_RPM_VTOTAL'">
+                    <app-diesel-generator-no-rpm-vtotal [activeAlerts]="alarmContext.alerts"
+                      [flow_supply]="rtData['DG1_FIN_RATE']" [flow_return]="rtData['DG1_FOUT_RATE']"
+                      [load]="rtData['DG1_GEN_LOAD']" [load_kw]="rtData['DG1_GEN_LOAD_KW']"
+                      [cons]="abs(rtData['DG1_CONS_RATE'])" [consL]="rtData['DG1_CONS_TODAY']">
+                    </app-diesel-generator-no-rpm-vtotal>
+                  </ng-container>
+                </div>
+              </div>
+            </ng-container>
+
+
+            <ng-container *ngIf="getCardDetail(tag, 1, 2) as card12">
+              <div class="premium-card dg-card" *ngIf="card12.type && card12.type.length > 0">
+                <div class="card-header flex-between">
+                  <span class="dg-title">
+                    <span class="dg-header-icon" [ngClass]="getCardHeaderIconClass(card12.type)" aria-hidden="true">
+                      <i class="fa" [ngClass]="getCardIcon(card12.type)"></i>
+                    </span>
+                    <span class="dg-heading-copy">
+                      <strong>{{ card12.title }}</strong>
+                      <small>{{ getCardSubtitle(card12.type) }}</small>
+                    </span>
+                  </span>
+
+                  <ng-container *ngIf="getCardOperatingState(card12.type, 1, 2, rtData) as card12State">
+                    <span class="equipment-state-badge"
+                      [class.is-running]="card12State === 'running'"
+                      [class.is-stopped]="card12State === 'stopped'"
+                      [attr.aria-label]="card12.title + ' ' + (card12State === 'running' ? 'running' : 'stopped')">
+                      <i aria-hidden="true"></i>
+                      {{ card12State === 'running' ? 'RUNNING' : 'STOPPED' }}
+                    </span>
+                  </ng-container>
+                </div>
+
+                <div class="card-body pd-0">
+                  <ng-container *ngIf="card12.type === 'ME1'">
+                    <app-main-engine [activeAlerts]="alarmContext.alerts" [flow_supply]="rtData['CME_FIN_RATE']"
+                      [temp_supply]="rtData['CME_FIN_TEMP']" [dens_supply]="rtData['CME_FIN_DENS']"
+                      [flow_return]="rtData['CME_FOUT_RATE']" [temp_return]="rtData['CME_FOUT_TEMP']"
+                      [dens_return]="rtData['CME_FOUT_DENS']" [cons]="abs(rtData['CME_CONS_RATE'])"
+                      [consL]="rtData['CME_CONS_TODAY']" [speed_eng]="rtData['CME_SPD_CALC'] || rtData['CME_SPD']"
+                      [speed_gear]="rtData['CPS_SPD_CALC'] || rtData['CPS_SPD']">
+                    </app-main-engine>
+                  </ng-container>
+
+                  <ng-container *ngIf="card12.type === 'AE1'">
+                    <app-aux-engine [activeAlerts]="alarmContext.alerts" [flow_supply]="rtData['CME_FIN_RATE']"
+                      [temp_supply]="rtData['CME_FIN_TEMP']" [dens_supply]="rtData['CME_FIN_DENS']"
+                      [flow_return]="rtData['CME_FOUT_RATE']" [temp_return]="rtData['CME_FOUT_TEMP']"
+                      [dens_return]="rtData['CME_FOUT_DENS']" [cons]="abs(rtData['CME_CONS_RATE'])"
+                      [consL]="rtData['CME_CONS_TODAY']" [speed_eng]="rtData['CME_SPD_CALC'] || rtData['CME_SPD']">
+                    </app-aux-engine>
+                  </ng-container>
+
+                  <ng-container *ngIf="card12.type === 'MOTOR'">
+                    <app-electric-motor [activeAlerts]="alarmContext.alerts"
+                      [speed]="rtData['PPS_SPD_CALC'] || rtData['PPS_SPD']">
+                    </app-electric-motor>
+                  </ng-container>
+
+                  <ng-container *ngIf="card12.type === 'DG_NO_RPM'">
+                    <app-diesel-generator-no-rpm [activeAlerts]="alarmContext.alerts"
+                      [flow_supply]="rtData['DG2_FIN_RATE']" [temp_supply]="rtData['DG2_FIN_TEMP']"
+                      [dens_supply]="rtData['DG2_FIN_DENS']" [flow_return]="rtData['DG2_FOUT_RATE']"
+                      [temp_return]="rtData['DG2_FOUT_TEMP']" [dens_return]="rtData['DG2_FOUT_DENS']"
+                      [cons]="abs(rtData['DG2_CONS_RATE'])" [consL]="rtData['DG2_CONS_TODAY']"
+                      [load]="rtData['DG2_GEN_LOAD']" [load_kw]="rtData['DG2_GEN_LOAD_KW']">
+                    </app-diesel-generator-no-rpm>
+                  </ng-container>
+
+                  <ng-container *ngIf="card12.type === 'DG_NO_RPM_VTOTAL'">
+                    <app-diesel-generator-no-rpm-vtotal [activeAlerts]="alarmContext.alerts"
+                      [flow_supply]="rtData['DG2_FIN_RATE']" [flow_return]="rtData['DG2_FOUT_RATE']"
+                      [load]="rtData['DG2_GEN_LOAD']" [load_kw]="rtData['DG2_GEN_LOAD_KW']"
+                      [cons]="abs(rtData['DG2_CONS_RATE'])" [consL]="rtData['DG2_CONS_TODAY']">
+                    </app-diesel-generator-no-rpm-vtotal>
+                  </ng-container>
+                </div>
+              </div>
+            </ng-container>
+
+
+            <ng-container *ngIf="getCardDetail(tag, 1, 3) as card13">
+              <div class="premium-card dg-card" *ngIf="card13.type && card13.type.length > 0">
+                <div class="card-header flex-between">
+                  <span class="dg-title">
+                    <span class="dg-header-icon" [ngClass]="getCardHeaderIconClass(card13.type)" aria-hidden="true">
+                      <i class="fa" [ngClass]="getCardIcon(card13.type)"></i>
+                    </span>
+                    <span class="dg-heading-copy">
+                      <strong>{{ card13.title }}</strong>
+                      <small>{{ getCardSubtitle(card13.type) }}</small>
+                    </span>
+                  </span>
+
+                  <ng-container *ngIf="getCardOperatingState(card13.type, 1, 3, rtData) as card13State">
+                    <span class="equipment-state-badge"
+                      [class.is-running]="card13State === 'running'"
+                      [class.is-stopped]="card13State === 'stopped'"
+                      [attr.aria-label]="card13.title + ' ' + (card13State === 'running' ? 'running' : 'stopped')">
+                      <i aria-hidden="true"></i>
+                      {{ card13State === 'running' ? 'RUNNING' : 'STOPPED' }}
+                    </span>
+                  </ng-container>
+                </div>
+
+                <div class="card-body pd-0">
+                  <ng-container *ngIf="card13.type === 'ME1'">
+                    <app-main-engine [activeAlerts]="alarmContext.alerts" [flow_supply]="rtData['SME_FIN_RATE']"
+                      [temp_supply]="rtData['SME_FIN_TEMP']" [dens_supply]="rtData['SME_FIN_DENS']"
+                      [flow_return]="rtData['SME_FOUT_RATE']" [temp_return]="rtData['SME_FOUT_TEMP']"
+                      [dens_return]="rtData['SME_FOUT_DENS']" [cons]="abs(rtData['SME_CONS_RATE'])"
+                      [consL]="rtData['SME_CONS_TODAY']" [speed_eng]="rtData['SME_SPD_CALC'] || rtData['SME_SPD']"
+                      [speed_gear]="rtData['SPS_SPD_CALC'] || rtData['SPS_SPD']" [load]="rtData['SME_ENGINE_LOAD']">
+                    </app-main-engine>
+                  </ng-container>
+
+                  <ng-container *ngIf="card13.type === 'AE1' || card13.type === 'DG_RPM'">
+                    <app-aux-engine [activeAlerts]="alarmContext.alerts" [flow_supply]="rtData['SME_FIN_RATE']"
+                      [temp_supply]="rtData['SME_FIN_TEMP']" [dens_supply]="rtData['SME_FIN_DENS']"
+                      [flow_return]="rtData['SME_FOUT_RATE']" [temp_return]="rtData['SME_FOUT_TEMP']"
+                      [dens_return]="rtData['SME_FOUT_DENS']" [cons]="abs(rtData['SME_CONS_RATE'])"
+                      [consL]="rtData['SME_CONS_TODAY']" [speed_eng]="rtData['SME_SPD_CALC'] || rtData['SME_SPD']">
+                    </app-aux-engine>
+                  </ng-container>
+
+                  <ng-container *ngIf="card13.type === 'DG_NO_RPM'">
+                    <app-diesel-generator-no-rpm [activeAlerts]="alarmContext.alerts"
+                      [flow_supply]="rtData['DG3_FIN_RATE']" [temp_supply]="rtData['DG3_FIN_TEMP']"
+                      [dens_supply]="rtData['DG3_FIN_DENS']" [flow_return]="rtData['DG3_FOUT_RATE']"
+                      [temp_return]="rtData['DG3_FOUT_TEMP']" [dens_return]="rtData['DG3_FOUT_DENS']"
+                      [cons]="abs(rtData['DG3_CONS_RATE'])" [consL]="rtData['DG3_CONS_TODAY']"
+                      [load]="rtData['DG3_GEN_LOAD']" [load_kw]="rtData['DG3_GEN_LOAD_KW']">
+                    </app-diesel-generator-no-rpm>
+                  </ng-container>
+
+                  <ng-container *ngIf="card13.type === 'DG_NO_RPM_VTOTAL'">
+                    <app-diesel-generator-no-rpm-vtotal [activeAlerts]="alarmContext.alerts"
+                      [flow_supply]="rtData['DG3_FIN_RATE']" [flow_return]="rtData['DG3_FOUT_RATE']"
+                      [load]="rtData['DG3_GEN_LOAD']" [load_kw]="rtData['DG3_GEN_LOAD_KW']"
+                      [cons]="abs(rtData['DG3_CONS_RATE'])" [consL]="rtData['DG3_CONS_TODAY']">
+                    </app-diesel-generator-no-rpm-vtotal>
+                  </ng-container>
+                </div>
+              </div>
+            </ng-container>
+
+
+            <ng-container *ngIf="getCardDetail(tag, 2, 1) as card21">
+              <div class="premium-card dg-card" *ngIf="card21.type && card21.type.length > 0">
+                <div class="card-header flex-between">
+                  <span class="dg-title">
+                    <span class="dg-header-icon" [ngClass]="getCardHeaderIconClass(card21.type)" aria-hidden="true">
+                      <i class="fa" [ngClass]="getCardIcon(card21.type)"></i>
+                    </span>
+                    <span class="dg-heading-copy">
+                      <strong>{{ card21.title }}</strong>
+                      <small>{{ getCardSubtitle(card21.type) }}</small>
+                    </span>
+                  </span>
+
+                  <ng-container *ngIf="getCardOperatingState(card21.type, 2, 1, rtData) as card21State">
+                    <span class="equipment-state-badge"
+                      [class.is-running]="card21State === 'running'"
+                      [class.is-stopped]="card21State === 'stopped'"
+                      [attr.aria-label]="card21.title + ' ' + (card21State === 'running' ? 'running' : 'stopped')">
+                      <i aria-hidden="true"></i>
+                      {{ card21State === 'running' ? 'RUNNING' : 'STOPPED' }}
+                    </span>
+                  </ng-container>
+                </div>
+
+                <div class="card-body pd-0">
+                  <ng-container *ngIf="card21.type === 'AE1' || card21.type === 'DG_RPM'">
+                    <app-aux-engine [activeAlerts]="alarmContext.alerts" [flow_supply]="rtData['PAE_FIN_RATE']"
+                      [temp_supply]="rtData['PAE_FIN_TEMP']" [dens_supply]="rtData['PAE_FIN_DENS']"
+                      [flow_return]="rtData['PAE_FOUT_RATE']" [temp_return]="rtData['PAE_FOUT_TEMP']"
+                      [dens_return]="rtData['PAE_FOUT_DENS']" [cons]="abs(rtData['PAE_CONS_RATE'])"
+                      [consL]="rtData['PAE_CONS_TODAY']" [speed_eng]="rtData['PAE_SPD_CALC'] || rtData['PAE_SPD']">
+                    </app-aux-engine>
+                  </ng-container>
+
+                  <ng-container *ngIf="card21.type === 'DG_NO_RPM'">
+                    <app-diesel-generator-no-rpm [activeAlerts]="alarmContext.alerts"
+                      [flow_supply]="rtData['DG4_FIN_RATE']" [temp_supply]="rtData['DG4_FIN_TEMP']"
+                      [dens_supply]="rtData['DG4_FIN_DENS']" [flow_return]="rtData['DG4_FOUT_RATE']"
+                      [temp_return]="rtData['DG4_FOUT_TEMP']" [dens_return]="rtData['DG4_FOUT_DENS']"
+                      [cons]="abs(rtData['DG4_CONS_RATE'])" [consL]="rtData['DG4_CONS_TODAY']"
+                      [load]="rtData['DG4_GEN_LOAD']" [load_kw]="rtData['DG4_GEN_LOAD_KW']">
+                    </app-diesel-generator-no-rpm>
+                  </ng-container>
+
+                  <ng-container *ngIf="card21.type === 'DG_NO_RPM_VTOTAL'">
+                    <app-diesel-generator-no-rpm-vtotal [activeAlerts]="alarmContext.alerts"
+                      [flow_supply]="rtData['DG4_FIN_RATE']" [flow_return]="rtData['DG4_FOUT_RATE']"
+                      [load]="rtData['DG4_GEN_LOAD']" [load_kw]="rtData['DG4_GEN_LOAD_KW']"
+                      [cons]="abs(rtData['DG4_CONS_RATE'])" [consL]="rtData['DG4_CONS_TODAY']">
+                    </app-diesel-generator-no-rpm-vtotal>
+                  </ng-container>
+                </div>
+              </div>
+            </ng-container>
+
+
+            <ng-container *ngIf="getCardDetail(tag, 2, 2) as card22">
+              <div class="premium-card dg-card" *ngIf="card22.type && card22.type.length > 0">
+                <div class="card-header flex-between">
+                  <span class="dg-title">
+                    <span class="dg-header-icon" [ngClass]="getCardHeaderIconClass(card22.type)" aria-hidden="true">
+                      <i class="fa" [ngClass]="getCardIcon(card22.type)"></i>
+                    </span>
+                    <span class="dg-heading-copy">
+                      <strong>{{ card22.title }}</strong>
+                      <small>{{ getCardSubtitle(card22.type) }}</small>
+                    </span>
+                  </span>
+
+                  <ng-container *ngIf="getCardOperatingState(card22.type, 2, 2, rtData) as card22State">
+                    <span class="equipment-state-badge"
+                      [class.is-running]="card22State === 'running'"
+                      [class.is-stopped]="card22State === 'stopped'"
+                      [attr.aria-label]="card22.title + ' ' + (card22State === 'running' ? 'running' : 'stopped')">
+                      <i aria-hidden="true"></i>
+                      {{ card22State === 'running' ? 'RUNNING' : 'STOPPED' }}
+                    </span>
+                  </ng-container>
+                </div>
+
+                <div class="card-body pd-0">
+                  <ng-container *ngIf="card22.type === 'AE1' || card22.type === 'DG_RPM'">
+                    <app-aux-engine [activeAlerts]="alarmContext.alerts" [flow_supply]="rtData['CAE_FIN_RATE']"
+                      [temp_supply]="rtData['CAE_FIN_TEMP']" [dens_supply]="rtData['CAE_FIN_DENS']"
+                      [flow_return]="rtData['CAE_FOUT_RATE']" [temp_return]="rtData['CAE_FOUT_TEMP']"
+                      [dens_return]="rtData['CAE_FOUT_DENS']" [cons]="abs(rtData['CAE_CONS_RATE'])"
+                      [consL]="rtData['CAE_CONS_TODAY']" [speed_eng]="rtData['CAE_SPD_CALC'] || rtData['CAE_SPD']">
+                    </app-aux-engine>
+                  </ng-container>
+
+                  <ng-container *ngIf="card22.type === 'MOTOR'">
+                    <app-electric-motor [activeAlerts]="alarmContext.alerts" [speed]="rtData['SPS_SPD_CALC']">
+                    </app-electric-motor>
+                  </ng-container>
+                </div>
+              </div>
+            </ng-container>
+
+
+            <ng-container *ngIf="getCardDetail(tag, 2, 3) as card23">
+              <div class="premium-card dg-card" *ngIf="card23.type && card23.type.length > 0">
+                <div class="card-header flex-between">
+                  <span class="dg-title">
+                    <span class="dg-header-icon" [ngClass]="getCardHeaderIconClass(card23.type)" aria-hidden="true">
+                      <i class="fa" [ngClass]="getCardIcon(card23.type)"></i>
+                    </span>
+                    <span class="dg-heading-copy">
+                      <strong>{{ card23.title }}</strong>
+                      <small>{{ getCardSubtitle(card23.type) }}</small>
+                    </span>
+                  </span>
+
+                  <ng-container *ngIf="getCardOperatingState(card23.type, 2, 3, rtData) as card23State">
+                    <span class="equipment-state-badge"
+                      [class.is-running]="card23State === 'running'"
+                      [class.is-stopped]="card23State === 'stopped'"
+                      [attr.aria-label]="card23.title + ' ' + (card23State === 'running' ? 'running' : 'stopped')">
+                      <i aria-hidden="true"></i>
+                      {{ card23State === 'running' ? 'RUNNING' : 'STOPPED' }}
+                    </span>
+                  </ng-container>
+                </div>
+
+                <div class="card-body pd-0">
+                  <ng-container *ngIf="card23.type === 'AE1' || card23.type === 'DG_RPM'">
+                    <app-aux-engine [activeAlerts]="alarmContext.alerts" [flow_supply]="rtData['SAE_FIN_RATE']"
+                      [temp_supply]="rtData['SAE_FIN_TEMP']" [dens_supply]="rtData['SAE_FIN_DENS']"
+                      [flow_return]="rtData['SAE_FOUT_RATE']" [temp_return]="rtData['SAE_FOUT_TEMP']"
+                      [dens_return]="rtData['SAE_FOUT_DENS']" [cons]="abs(rtData['SAE_CONS_RATE'])"
+                      [consL]="rtData['SAE_CONS_TODAY']" [speed_eng]="rtData['SAE_SPD_CALC'] || rtData['SAE_SPD']">
+                    </app-aux-engine>
+                  </ng-container>
+                </div>
+              </div>
+            </ng-container>
           </div>
         </div>
-
-
-        <div class="col-right">
-
-          <ng-container *ngIf="getCardDetail(tag, 1, 1) as card11">
-            <div
-              class="premium-card dg-card"
-              *ngIf="card11.type && card11.type.length > 0"
-            >
-              <div class="card-header flex-between">
-                <span class="dg-title">
-                  <span
-                    class="dg-header-icon"
-                    [ngClass]="getCardHeaderIconClass(card11.type)"
-                    aria-hidden="true"
-                  >
-                    <i class="fa" [ngClass]="getCardIcon(card11.type)"></i>
-                  </span>
-                  <span class="dg-heading-copy">
-                    <strong>{{ card11.title }}</strong>
-                    <small>{{ getCardSubtitle(card11.type) }}</small>
-                  </span>
-                </span>
-                <span class="badge-run">
-                  <i class="badge-run__dot"></i>
-                  Running
-                </span>
-              </div>
-
-              <div class="card-body pd-0">
-                <ng-container *ngIf="card11.type === 'ME1'">
-                  <app-main-engine
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['PME_FIN_RATE']"
-                    [temp_supply]="rtData['PME_FIN_TEMP']"
-                    [dens_supply]="rtData['PME_FIN_DENS']"
-                    [flow_return]="rtData['PME_FOUT_RATE']"
-                    [temp_return]="rtData['PME_FOUT_TEMP']"
-                    [dens_return]="rtData['PME_FOUT_DENS']"
-                    [cons]="abs(rtData['PME_CONS_RATE'])"
-                    [consL]="rtData['PME_CONS_TODAY']"
-                    [speed_eng]="rtData['PME_SPD_CALC'] || rtData['PME_SPD']"
-                    [speed_gear]="rtData['PPS_SPD_CALC'] || rtData['PPS_SPD']"
-                    [load]="rtData['PME_ENGINE_LOAD']"
-                  >
-                  </app-main-engine>
-                </ng-container>
-
-                <ng-container
-                  *ngIf="card11.type === 'AE1' || card11.type === 'DG_RPM'"
-                >
-                  <app-aux-engine
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['PME_FIN_RATE']"
-                    [temp_supply]="rtData['PME_FIN_TEMP']"
-                    [dens_supply]="rtData['PME_FIN_DENS']"
-                    [flow_return]="rtData['PME_FOUT_RATE']"
-                    [temp_return]="rtData['PME_FOUT_TEMP']"
-                    [dens_return]="rtData['PME_FOUT_DENS']"
-                    [cons]="abs(rtData['PME_CONS_RATE'])"
-                    [consL]="rtData['PME_CONS_TODAY']"
-                    [speed_eng]="rtData['PME_SPD_CALC'] || rtData['PME_SPD']"
-                  >
-                  </app-aux-engine>
-                </ng-container>
-
-                <ng-container *ngIf="card11.type === 'DG_NO_RPM'">
-                  <app-diesel-generator-no-rpm
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['DG1_FIN_RATE']"
-                    [temp_supply]="rtData['DG1_FIN_TEMP']"
-                    [dens_supply]="rtData['DG1_FIN_DENS']"
-                    [flow_return]="rtData['DG1_FOUT_RATE']"
-                    [temp_return]="rtData['DG1_FOUT_TEMP']"
-                    [dens_return]="rtData['DG1_FOUT_DENS']"
-                    [cons]="abs(rtData['DG1_CONS_RATE'])"
-                    [consL]="rtData['DG1_CONS_TODAY']"
-                    [load]="rtData['DG1_GEN_LOAD']"
-                    [load_kw]="rtData['DG1_GEN_LOAD_KW']"
-                  >
-                  </app-diesel-generator-no-rpm>
-                </ng-container>
-
-                <ng-container *ngIf="card11.type === 'DG_NO_RPM_VTOTAL'">
-                  <app-diesel-generator-no-rpm-vtotal
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['DG1_FIN_RATE']"
-                    [flow_return]="rtData['DG1_FOUT_RATE']"
-                    [load]="rtData['DG1_GEN_LOAD']"
-                    [load_kw]="rtData['DG1_GEN_LOAD_KW']"
-                    [cons]="abs(rtData['DG1_CONS_RATE'])"
-                    [consL]="rtData['DG1_CONS_TODAY']"
-                  >
-                  </app-diesel-generator-no-rpm-vtotal>
-                </ng-container>
-              </div>
-            </div>
-          </ng-container>
-
-
-          <ng-container *ngIf="getCardDetail(tag, 1, 2) as card12">
-            <div
-              class="premium-card dg-card"
-              *ngIf="card12.type && card12.type.length > 0"
-            >
-              <div class="card-header flex-between">
-                <span class="dg-title">
-                  <span
-                    class="dg-header-icon"
-                    [ngClass]="getCardHeaderIconClass(card12.type)"
-                    aria-hidden="true"
-                  >
-                    <i class="fa" [ngClass]="getCardIcon(card12.type)"></i>
-                  </span>
-                  <span class="dg-heading-copy">
-                    <strong>{{ card12.title }}</strong>
-                    <small>{{ getCardSubtitle(card12.type) }}</small>
-                  </span>
-                </span>
-                <span class="badge-run">
-                  <i class="badge-run__dot"></i>
-                  Running
-                </span>
-              </div>
-
-              <div class="card-body pd-0">
-                <ng-container *ngIf="card12.type === 'ME1'">
-                  <app-main-engine
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['CME_FIN_RATE']"
-                    [temp_supply]="rtData['CME_FIN_TEMP']"
-                    [dens_supply]="rtData['CME_FIN_DENS']"
-                    [flow_return]="rtData['CME_FOUT_RATE']"
-                    [temp_return]="rtData['CME_FOUT_TEMP']"
-                    [dens_return]="rtData['CME_FOUT_DENS']"
-                    [cons]="abs(rtData['CME_CONS_RATE'])"
-                    [consL]="rtData['CME_CONS_TODAY']"
-                    [speed_eng]="rtData['CME_SPD_CALC'] || rtData['CME_SPD']"
-                    [speed_gear]="rtData['CPS_SPD_CALC'] || rtData['CPS_SPD']"
-                  >
-                  </app-main-engine>
-                </ng-container>
-
-                <ng-container *ngIf="card12.type === 'AE1'">
-                  <app-aux-engine
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['CME_FIN_RATE']"
-                    [temp_supply]="rtData['CME_FIN_TEMP']"
-                    [dens_supply]="rtData['CME_FIN_DENS']"
-                    [flow_return]="rtData['CME_FOUT_RATE']"
-                    [temp_return]="rtData['CME_FOUT_TEMP']"
-                    [dens_return]="rtData['CME_FOUT_DENS']"
-                    [cons]="abs(rtData['CME_CONS_RATE'])"
-                    [consL]="rtData['CME_CONS_TODAY']"
-                    [speed_eng]="rtData['CME_SPD_CALC'] || rtData['CME_SPD']"
-                  >
-                  </app-aux-engine>
-                </ng-container>
-
-                <ng-container *ngIf="card12.type === 'MOTOR'">
-                  <app-electric-motor
-                    [activeAlerts]="alarmContext.alerts"
-                    [speed]="rtData['PPS_SPD_CALC'] || rtData['PPS_SPD']"
-                  >
-                  </app-electric-motor>
-                </ng-container>
-
-                <ng-container *ngIf="card12.type === 'DG_NO_RPM'">
-                  <app-diesel-generator-no-rpm
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['DG2_FIN_RATE']"
-                    [temp_supply]="rtData['DG2_FIN_TEMP']"
-                    [dens_supply]="rtData['DG2_FIN_DENS']"
-                    [flow_return]="rtData['DG2_FOUT_RATE']"
-                    [temp_return]="rtData['DG2_FOUT_TEMP']"
-                    [dens_return]="rtData['DG2_FOUT_DENS']"
-                    [cons]="abs(rtData['DG2_CONS_RATE'])"
-                    [consL]="rtData['DG2_CONS_TODAY']"
-                    [load]="rtData['DG2_GEN_LOAD']"
-                    [load_kw]="rtData['DG2_GEN_LOAD_KW']"
-                  >
-                  </app-diesel-generator-no-rpm>
-                </ng-container>
-
-                <ng-container *ngIf="card12.type === 'DG_NO_RPM_VTOTAL'">
-                  <app-diesel-generator-no-rpm-vtotal
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['DG2_FIN_RATE']"
-                    [flow_return]="rtData['DG2_FOUT_RATE']"
-                    [load]="rtData['DG2_GEN_LOAD']"
-                    [load_kw]="rtData['DG2_GEN_LOAD_KW']"
-                    [cons]="abs(rtData['DG2_CONS_RATE'])"
-                    [consL]="rtData['DG2_CONS_TODAY']"
-                  >
-                  </app-diesel-generator-no-rpm-vtotal>
-                </ng-container>
-              </div>
-            </div>
-          </ng-container>
-
-
-          <ng-container *ngIf="getCardDetail(tag, 1, 3) as card13">
-            <div
-              class="premium-card dg-card"
-              *ngIf="card13.type && card13.type.length > 0"
-            >
-              <div class="card-header flex-between">
-                <span class="dg-title">
-                  <span
-                    class="dg-header-icon"
-                    [ngClass]="getCardHeaderIconClass(card13.type)"
-                    aria-hidden="true"
-                  >
-                    <i class="fa" [ngClass]="getCardIcon(card13.type)"></i>
-                  </span>
-                  <span class="dg-heading-copy">
-                    <strong>{{ card13.title }}</strong>
-                    <small>{{ getCardSubtitle(card13.type) }}</small>
-                  </span>
-                </span>
-                <span class="badge-run">
-                  <i class="badge-run__dot"></i>
-                  Running
-                </span>
-              </div>
-
-              <div class="card-body pd-0">
-                <ng-container *ngIf="card13.type === 'ME1'">
-                  <app-main-engine
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['SME_FIN_RATE']"
-                    [temp_supply]="rtData['SME_FIN_TEMP']"
-                    [dens_supply]="rtData['SME_FIN_DENS']"
-                    [flow_return]="rtData['SME_FOUT_RATE']"
-                    [temp_return]="rtData['SME_FOUT_TEMP']"
-                    [dens_return]="rtData['SME_FOUT_DENS']"
-                    [cons]="abs(rtData['SME_CONS_RATE'])"
-                    [consL]="rtData['SME_CONS_TODAY']"
-                    [speed_eng]="rtData['SME_SPD_CALC'] || rtData['SME_SPD']"
-                    [speed_gear]="rtData['SPS_SPD_CALC'] || rtData['SPS_SPD']"
-                    [load]="rtData['SME_ENGINE_LOAD']"
-                  >
-                  </app-main-engine>
-                </ng-container>
-
-                <ng-container
-                  *ngIf="card13.type === 'AE1' || card13.type === 'DG_RPM'"
-                >
-                  <app-aux-engine
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['SME_FIN_RATE']"
-                    [temp_supply]="rtData['SME_FIN_TEMP']"
-                    [dens_supply]="rtData['SME_FIN_DENS']"
-                    [flow_return]="rtData['SME_FOUT_RATE']"
-                    [temp_return]="rtData['SME_FOUT_TEMP']"
-                    [dens_return]="rtData['SME_FOUT_DENS']"
-                    [cons]="abs(rtData['SME_CONS_RATE'])"
-                    [consL]="rtData['SME_CONS_TODAY']"
-                    [speed_eng]="rtData['SME_SPD_CALC'] || rtData['SME_SPD']"
-                  >
-                  </app-aux-engine>
-                </ng-container>
-
-                <ng-container *ngIf="card13.type === 'DG_NO_RPM'">
-                  <app-diesel-generator-no-rpm
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['DG3_FIN_RATE']"
-                    [temp_supply]="rtData['DG3_FIN_TEMP']"
-                    [dens_supply]="rtData['DG3_FIN_DENS']"
-                    [flow_return]="rtData['DG3_FOUT_RATE']"
-                    [temp_return]="rtData['DG3_FOUT_TEMP']"
-                    [dens_return]="rtData['DG3_FOUT_DENS']"
-                    [cons]="abs(rtData['DG3_CONS_RATE'])"
-                    [consL]="rtData['DG3_CONS_TODAY']"
-                    [load]="rtData['DG3_GEN_LOAD']"
-                    [load_kw]="rtData['DG3_GEN_LOAD_KW']"
-                  >
-                  </app-diesel-generator-no-rpm>
-                </ng-container>
-
-                <ng-container *ngIf="card13.type === 'DG_NO_RPM_VTOTAL'">
-                  <app-diesel-generator-no-rpm-vtotal
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['DG3_FIN_RATE']"
-                    [flow_return]="rtData['DG3_FOUT_RATE']"
-                    [load]="rtData['DG3_GEN_LOAD']"
-                    [load_kw]="rtData['DG3_GEN_LOAD_KW']"
-                    [cons]="abs(rtData['DG3_CONS_RATE'])"
-                    [consL]="rtData['DG3_CONS_TODAY']"
-                  >
-                  </app-diesel-generator-no-rpm-vtotal>
-                </ng-container>
-              </div>
-            </div>
-          </ng-container>
-
-
-          <ng-container *ngIf="getCardDetail(tag, 2, 1) as card21">
-            <div
-              class="premium-card dg-card"
-              *ngIf="card21.type && card21.type.length > 0"
-            >
-              <div class="card-header flex-between">
-                <span class="dg-title">
-                  <span
-                    class="dg-header-icon"
-                    [ngClass]="getCardHeaderIconClass(card21.type)"
-                    aria-hidden="true"
-                  >
-                    <i class="fa" [ngClass]="getCardIcon(card21.type)"></i>
-                  </span>
-                  <span class="dg-heading-copy">
-                    <strong>{{ card21.title }}</strong>
-                    <small>{{ getCardSubtitle(card21.type) }}</small>
-                  </span>
-                </span>
-                <span class="badge-run">
-                  <i class="badge-run__dot"></i>
-                  Running
-                </span>
-              </div>
-
-              <div class="card-body pd-0">
-                <ng-container
-                  *ngIf="card21.type === 'AE1' || card21.type === 'DG_RPM'"
-                >
-                  <app-aux-engine
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['PAE_FIN_RATE']"
-                    [temp_supply]="rtData['PAE_FIN_TEMP']"
-                    [dens_supply]="rtData['PAE_FIN_DENS']"
-                    [flow_return]="rtData['PAE_FOUT_RATE']"
-                    [temp_return]="rtData['PAE_FOUT_TEMP']"
-                    [dens_return]="rtData['PAE_FOUT_DENS']"
-                    [cons]="abs(rtData['PAE_CONS_RATE'])"
-                    [consL]="rtData['PAE_CONS_TODAY']"
-                    [speed_eng]="rtData['PAE_SPD_CALC'] || rtData['PAE_SPD']"
-                  >
-                  </app-aux-engine>
-                </ng-container>
-
-                <ng-container *ngIf="card21.type === 'DG_NO_RPM'">
-                  <app-diesel-generator-no-rpm
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['DG4_FIN_RATE']"
-                    [temp_supply]="rtData['DG4_FIN_TEMP']"
-                    [dens_supply]="rtData['DG4_FIN_DENS']"
-                    [flow_return]="rtData['DG4_FOUT_RATE']"
-                    [temp_return]="rtData['DG4_FOUT_TEMP']"
-                    [dens_return]="rtData['DG4_FOUT_DENS']"
-                    [cons]="abs(rtData['DG4_CONS_RATE'])"
-                    [consL]="rtData['DG4_CONS_TODAY']"
-                    [load]="rtData['DG4_GEN_LOAD']"
-                    [load_kw]="rtData['DG4_GEN_LOAD_KW']"
-                  >
-                  </app-diesel-generator-no-rpm>
-                </ng-container>
-
-                <ng-container *ngIf="card21.type === 'DG_NO_RPM_VTOTAL'">
-                  <app-diesel-generator-no-rpm-vtotal
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['DG4_FIN_RATE']"
-                    [flow_return]="rtData['DG4_FOUT_RATE']"
-                    [load]="rtData['DG4_GEN_LOAD']"
-                    [load_kw]="rtData['DG4_GEN_LOAD_KW']"
-                    [cons]="abs(rtData['DG4_CONS_RATE'])"
-                    [consL]="rtData['DG4_CONS_TODAY']"
-                  >
-                  </app-diesel-generator-no-rpm-vtotal>
-                </ng-container>
-              </div>
-            </div>
-          </ng-container>
-
-
-          <ng-container *ngIf="getCardDetail(tag, 2, 2) as card22">
-            <div
-              class="premium-card dg-card"
-              *ngIf="card22.type && card22.type.length > 0"
-            >
-              <div class="card-header flex-between">
-                <span class="dg-title">
-                  <span
-                    class="dg-header-icon"
-                    [ngClass]="getCardHeaderIconClass(card22.type)"
-                    aria-hidden="true"
-                  >
-                    <i class="fa" [ngClass]="getCardIcon(card22.type)"></i>
-                  </span>
-                  <span class="dg-heading-copy">
-                    <strong>{{ card22.title }}</strong>
-                    <small>{{ getCardSubtitle(card22.type) }}</small>
-                  </span>
-                </span>
-                <span class="badge-run">
-                  <i class="badge-run__dot"></i>
-                  Running
-                </span>
-              </div>
-
-              <div class="card-body pd-0">
-                <ng-container
-                  *ngIf="card22.type === 'AE1' || card22.type === 'DG_RPM'"
-                >
-                  <app-aux-engine
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['CAE_FIN_RATE']"
-                    [temp_supply]="rtData['CAE_FIN_TEMP']"
-                    [dens_supply]="rtData['CAE_FIN_DENS']"
-                    [flow_return]="rtData['CAE_FOUT_RATE']"
-                    [temp_return]="rtData['CAE_FOUT_TEMP']"
-                    [dens_return]="rtData['CAE_FOUT_DENS']"
-                    [cons]="abs(rtData['CAE_CONS_RATE'])"
-                    [consL]="rtData['CAE_CONS_TODAY']"
-                    [speed_eng]="rtData['CAE_SPD_CALC'] || rtData['CAE_SPD']"
-                  >
-                  </app-aux-engine>
-                </ng-container>
-
-                <ng-container *ngIf="card22.type === 'MOTOR'">
-                  <app-electric-motor
-                    [activeAlerts]="alarmContext.alerts"
-                    [speed]="rtData['SPS_SPD_CALC']"
-                  >
-                  </app-electric-motor>
-                </ng-container>
-              </div>
-            </div>
-          </ng-container>
-
-
-          <ng-container *ngIf="getCardDetail(tag, 2, 3) as card23">
-            <div
-              class="premium-card dg-card"
-              *ngIf="card23.type && card23.type.length > 0"
-            >
-              <div class="card-header flex-between">
-                <span class="dg-title">
-                  <span
-                    class="dg-header-icon"
-                    [ngClass]="getCardHeaderIconClass(card23.type)"
-                    aria-hidden="true"
-                  >
-                    <i class="fa" [ngClass]="getCardIcon(card23.type)"></i>
-                  </span>
-                  <span class="dg-heading-copy">
-                    <strong>{{ card23.title }}</strong>
-                    <small>{{ getCardSubtitle(card23.type) }}</small>
-                  </span>
-                </span>
-                <span class="badge-run">
-                  <i class="badge-run__dot"></i>
-                  Running
-                </span>
-              </div>
-
-              <div class="card-body pd-0">
-                <ng-container
-                  *ngIf="card23.type === 'AE1' || card23.type === 'DG_RPM'"
-                >
-                  <app-aux-engine
-                    [activeAlerts]="alarmContext.alerts"
-                    [flow_supply]="rtData['SAE_FIN_RATE']"
-                    [temp_supply]="rtData['SAE_FIN_TEMP']"
-                    [dens_supply]="rtData['SAE_FIN_DENS']"
-                    [flow_return]="rtData['SAE_FOUT_RATE']"
-                    [temp_return]="rtData['SAE_FOUT_TEMP']"
-                    [dens_return]="rtData['SAE_FOUT_DENS']"
-                    [cons]="abs(rtData['SAE_CONS_RATE'])"
-                    [consL]="rtData['SAE_CONS_TODAY']"
-                    [speed_eng]="rtData['SAE_SPD_CALC'] || rtData['SAE_SPD']"
-                  >
-                  </app-aux-engine>
-                </ng-container>
-              </div>
-            </div>
-          </ng-container>
-        </div>
-      </div>
       </ng-container>
     </ng-container>
   </ng-container>

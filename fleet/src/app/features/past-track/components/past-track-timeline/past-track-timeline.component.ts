@@ -77,9 +77,7 @@ export class PastTrackTimelineComponent implements OnChanges {
     }
 
     const index = this.findSelectedIndex();
-    return index >= 0
-      ? `Point ${index + 1} of ${this.trackPoints.length}`
-      : 'No point selected';
+    return index >= 0 ? `Point ${index + 1} of ${this.trackPoints.length}` : 'No point selected';
   }
 
   trackPoint(index: number, point: PastTrackPoint): string {
@@ -113,7 +111,7 @@ export class PastTrackTimelineComponent implements OnChanges {
     }
 
     return this.trackPoints.findIndex(
-      (point) => point.no === this.selectedPoint?.no && point.time === this.selectedPoint?.time
+      (point) => point.no === this.selectedPoint?.no && point.time === this.selectedPoint?.time,
     );
   }
 
@@ -126,7 +124,10 @@ export class PastTrackTimelineComponent implements OnChanges {
     }
 
     const viewportHeight = viewport.getViewportSize() || 360;
-    const centeredOffset = Math.max(0, index * this.rowHeight - viewportHeight / 2 + this.rowHeight / 2);
+    const centeredOffset = Math.max(
+      0,
+      index * this.rowHeight - viewportHeight / 2 + this.rowHeight / 2,
+    );
     viewport.scrollToOffset(centeredOffset, behavior);
   }
 }

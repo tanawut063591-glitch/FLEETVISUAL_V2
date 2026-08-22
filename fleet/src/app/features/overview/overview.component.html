@@ -10,10 +10,7 @@
   </div>
 
   <main class="overview-map-area" *ngIf="!isLoading">
-    <app-maps-all
-      #fleetOverviewMap
-      [data]="mapData"
-      class="map-full">
+    <app-maps-all #fleetOverviewMap [data]="mapData" class="map-full">
     </app-maps-all>
   </main>
 </div>

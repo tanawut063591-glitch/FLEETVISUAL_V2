@@ -47,11 +47,6 @@ export class ActivityLogsService {
     private databaseConfig: DatabaseApiConfigService,
   ) {}
 
-
-
-
-
-
   fetch(query: ActivityLogQuery, forceRefresh = false): Observable<ActivityLogFetchResult> {
     const normalizedQuery = this.normalizeQuery(query);
     const key = JSON.stringify(normalizedQuery);
@@ -86,9 +81,10 @@ export class ActivityLogsService {
         return source$.pipe(
           map((result) => ({
             result,
-            ttl: result.sourceType === 'database'
-              ? config.activityLogs.cacheSeconds
-              : Math.min(15, config.activityLogs.cacheSeconds || 15),
+            ttl:
+              result.sourceType === 'database'
+                ? config.activityLogs.cacheSeconds
+                : Math.min(15, config.activityLogs.cacheSeconds || 15),
           })),
         );
       }),
@@ -115,13 +111,14 @@ export class ActivityLogsService {
   ): Observable<ActivityLogFetchResult> {
     const context = new HttpContext().set(SKIP_AUTH_REDIRECT, true);
     const headers = this.getAuthHeaders();
-    const request$ = endpoint.method === 'GET'
-      ? this.http.get(endpoint.url, {
-          context,
-          headers,
-          params: this.buildQueryParams(query),
-        })
-      : this.http.post(endpoint.url, this.buildRequestBody(query), { context, headers });
+    const request$ =
+      endpoint.method === 'GET'
+        ? this.http.get(endpoint.url, {
+            context,
+            headers,
+            params: this.buildQueryParams(query),
+          })
+        : this.http.post(endpoint.url, this.buildRequestBody(query), { context, headers });
 
     return request$.pipe(
       timeout(endpoint.timeoutMs),
@@ -268,9 +265,26 @@ export class ActivityLogsService {
 
     const record = response as Record<string, unknown>;
     for (const key of [
-      'logs', 'Logs', 'activityLogs', 'ActivityLogs', 'auditLogs', 'AuditLogs',
-      'events', 'Events', 'records', 'Records', 'items', 'Items', 'rows', 'Rows',
-      'data', 'Data', 'result', 'Result', 'payload', 'Payload',
+      'logs',
+      'Logs',
+      'activityLogs',
+      'ActivityLogs',
+      'auditLogs',
+      'AuditLogs',
+      'events',
+      'Events',
+      'records',
+      'Records',
+      'items',
+      'Items',
+      'rows',
+      'Rows',
+      'data',
+      'Data',
+      'result',
+      'Result',
+      'payload',
+      'Payload',
     ]) {
       if (key in record) {
         const rows = this.extractRows(record[key], depth + 1);
@@ -279,7 +293,9 @@ export class ActivityLogsService {
     }
 
     const keys = Object.keys(record).map((key) => key.toLowerCase());
-    return ['message', 'action', 'timestamp', 'createdat', 'eventtype'].some((key) => keys.includes(key))
+    return ['message', 'action', 'timestamp', 'createdat', 'eventtype'].some((key) =>
+      keys.includes(key),
+    )
       ? [record]
       : [];
   }
@@ -325,7 +341,9 @@ export class ActivityLogsService {
       read('Message', 'Action', 'EventName', 'Title', 'Description', 'Detail') || 'Activity event',
     );
     const rawId = read('LogID', 'AuditID', 'EventID', 'ID', 'Id', '_id');
-    const category = String(read('Category', 'EventType', 'Type', 'ActionType', 'Module') || 'System');
+    const category = String(
+      read('Category', 'EventType', 'Type', 'ActionType', 'Module') || 'System',
+    );
 
     return {
       id: String(rawId || `${timestamp}|${message}|${index}`),
@@ -343,7 +361,9 @@ export class ActivityLogsService {
   }
 
   private normalizeSeverity(value: unknown): ActivityLogSeverity {
-    const text = String(value || '').trim().toLowerCase();
+    const text = String(value || '')
+      .trim()
+      .toLowerCase();
     if (/(critical|fatal|error|failed|failure|danger)/.test(text)) return 'critical';
     if (/(warning|warn|partial)/.test(text)) return 'warning';
     if (/(success|successful|completed|resolved|ok)/.test(text)) return 'success';
@@ -373,8 +393,14 @@ export class ActivityLogsService {
     if (!response || typeof response !== 'object') return fallback;
     const value = response as Record<string, any>;
     for (const candidate of [
-      value['total'], value['Total'], value['totalCount'], value['TotalCount'],
-      value['count'], value['Count'], value['meta']?.total, value['pagination']?.total,
+      value['total'],
+      value['Total'],
+      value['totalCount'],
+      value['TotalCount'],
+      value['count'],
+      value['Count'],
+      value['meta']?.total,
+      value['pagination']?.total,
     ]) {
       const total = Number(candidate);
       if (Number.isFinite(total) && total >= 0) return total;
@@ -467,8 +493,16 @@ export class ActivityLogsService {
       },
       {
         label: 'Alerts Center',
-        state: !alertsOk ? 'offline' : critical > 0 ? 'critical' : warnings > 0 ? 'warning' : 'normal',
-        detail: !alertsOk ? 'Live alert source unavailable' : `${critical + warnings} active events`,
+        state: !alertsOk
+          ? 'offline'
+          : critical > 0
+            ? 'critical'
+            : warnings > 0
+              ? 'warning'
+              : 'normal',
+        detail: !alertsOk
+          ? 'Live alert source unavailable'
+          : `${critical + warnings} active events`,
         icon: 'fa fa-bell-o',
       },
       {
@@ -499,7 +533,9 @@ export class ActivityLogsService {
   }
 
   private isVesselOffline(vessel: any): boolean {
-    const status = String(vessel?.status ?? vessel?.Status ?? vessel?.state ?? vessel?.State ?? '').toLowerCase();
+    const status = String(
+      vessel?.status ?? vessel?.Status ?? vessel?.state ?? vessel?.State ?? '',
+    ).toLowerCase();
     const timestamp = this.readTimestamp(vessel);
     const stale = timestamp ? Date.now() - new Date(timestamp).getTime() >= 10 * 60_000 : false;
     return /(offline|disconnect|inactive|down|false|0)/i.test(status) || stale;
@@ -513,8 +549,16 @@ export class ActivityLogsService {
   }
 
   private readTimestamp(item: any): string {
-    const raw = item?.timestamp ?? item?.TimeStamp ?? item?.Timestamp ?? item?.lastUpdate
-      ?? item?.lastSeenAt ?? item?.updatedAt ?? item?.dateTime ?? item?.DateTime ?? '';
+    const raw =
+      item?.timestamp ??
+      item?.TimeStamp ??
+      item?.Timestamp ??
+      item?.lastUpdate ??
+      item?.lastSeenAt ??
+      item?.updatedAt ??
+      item?.dateTime ??
+      item?.DateTime ??
+      '';
     const date = raw ? new Date(raw) : null;
     return date && !Number.isNaN(date.getTime()) ? date.toISOString() : '';
   }

@@ -746,3 +746,59 @@
   .aux-telemetry-bar .aux-live { min-width: 0; padding-left: 7px; }
   .aux-telemetry-bar .aux-live strong { font-size: 17px; }
 }
+
+
+/* ===== Realtime Pro: dual fuel KPI + squared visual language ===== */
+.aux-telemetry-bar.aux-telemetry-bar--dual {
+  min-height: 58px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border-radius: 6px;
+}
+.aux-top-metric {
+  min-width: 0;
+  padding: 9px 11px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.aux-top-metric + .aux-top-metric { border-left: 1px solid rgba(148,163,184,.2); }
+.aux-top-metric__icon {
+  width: 28px; height: 28px; display: grid; place-items: center;
+  border: 1px solid rgba(6,182,212,.18); border-radius: 5px;
+  color: #0891b2; background: rgba(207,250,254,.72); font-size: 10px;
+}
+.aux-top-metric--today .aux-top-metric__icon { color: #7c3aed; border-color: rgba(124,58,237,.16); background: rgba(237,233,254,.72); }
+.aux-top-metric__copy { min-width:0; display:flex; flex-direction:column; gap:3px; }
+.aux-top-metric__copy small { overflow:hidden; color:var(--aux-muted); font-size:7px; line-height:1.1; font-weight:900; letter-spacing:.065em; text-overflow:ellipsis; white-space:nowrap; }
+.aux-top-metric__copy strong { overflow:hidden; color:#0891b2; font-size:17px; line-height:1; font-weight:900; letter-spacing:-.02em; font-variant-numeric:tabular-nums; text-overflow:ellipsis; white-space:nowrap; }
+.aux-top-metric--today .aux-top-metric__copy strong { color:#7c3aed; }
+.aux-top-metric__copy b { color:var(--aux-muted); font-size:8px; font-weight:850; }
+
+.aux-console,
+.fuel-panel,
+.aux-machine,
+.speed-card,
+.footer-stat,
+.footer-state { border-radius: 6px; }
+.fuel-panel__head > small { border-radius: 4px; }
+.aux-footer { grid-template-columns: minmax(0,1fr) auto; }
+
+:host-context([data-theme='dark']) .aux-top-metric + .aux-top-metric { border-left-color: rgba(148,163,184,.16); }
+:host-context([data-theme='dark']) .aux-top-metric__icon { color:#67e8f9; background:rgba(8,145,178,.2); }
+:host-context([data-theme='dark']) .aux-top-metric--today .aux-top-metric__icon { color:#c4b5fd; background:rgba(91,33,182,.22); }
+:host-context([data-theme='dark']) .aux-top-metric__copy strong { color:#67e8f9; }
+:host-context([data-theme='dark']) .aux-top-metric--today .aux-top-metric__copy strong { color:#a78bfa; }
+
+@media (max-width:420px) {
+  .aux-top-metric { grid-template-columns:24px minmax(0,1fr); padding:8px 7px; gap:6px; }
+  .aux-top-metric__icon { width:24px; height:24px; }
+  .aux-top-metric__copy strong { font-size:14px; }
+  .aux-top-metric__copy small { font-size:6px; }
+  .aux-footer { grid-template-columns:1fr auto; }
+}
+\n\n/* Status moved to the machinery card header. */\n.aux-footer { grid-template-columns: minmax(0, 1fr) !important; }\n

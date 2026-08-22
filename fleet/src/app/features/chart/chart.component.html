@@ -1,18 +1,10 @@
 <div class="chart-page">
 
-    <app-datetime-control
-        [loading]="loading"
-        [selectAll]="false"
-        [display]="true"
-        [maxSelection]="10"
-        [dialogSubtitle]="'Select sensor parameters for Chart'"
-        [searchTitle]="'Export'"
-        [pageTitle]="'CHART'"
+    <app-datetime-control [loading]="loading" [selectAll]="false" [display]="true" [maxSelection]="10"
+        [dialogSubtitle]="'Select sensor parameters for Chart'" [searchTitle]="'Export'" [pageTitle]="'CHART'"
         [pageSubtitle]="'Visualize and compare vessel sensor trends over time.'"
-        [badgeLabel]="'LIVE HISTORICAL CHART'"
         [parameterText]="'Choose the sensor tags you want to display on the chart.'"
-        (showLoggerEmit)="showLogger($event)"
-        (selectedTimer)="exportChartCsv($event)">
+        (showLoggerEmit)="showLogger($event)" (selectedTimer)="exportChartCsv($event)">
     </app-datetime-control>
 
     <div class="chart-workspace">
@@ -34,15 +26,18 @@
                 <span class="mode-label">GRAPH DISPLAY MODE</span>
 
                 <div class="mode-switch">
-                    <button type="button" [ngClass]="{ 'active': displayMode == 'all' }" (click)="setDisplayMode('all')">
+                    <button type="button" [ngClass]="{ 'active': displayMode == 'all' }"
+                        (click)="setDisplayMode('all')">
                         All Series
                     </button>
-                    <button type="button" [ngClass]="{ 'active': displayMode == 'groups' }" (click)="setDisplayMode('groups')">
+                    <button type="button" [ngClass]="{ 'active': displayMode == 'groups' }"
+                        (click)="setDisplayMode('groups')">
                         Separate Groups
                     </button>
                 </div>
 
-                <button type="button" class="auto-btn" [ngClass]="{ 'active': autoRefresh }" (click)="toggleAutoRefresh()">
+                <button type="button" class="auto-btn" [ngClass]="{ 'active': autoRefresh }"
+                    (click)="toggleAutoRefresh()">
                     <span>Auto Refresh</span>
                     <i class="toggle-dot"></i>
                 </button>
@@ -74,39 +69,23 @@
             <div class="chart-meta-controls" aria-label="Chart type controls">
                 <span class="chart-type-label">CHART TYPE</span>
                 <div class="chart-type-switch">
-                    <button
-                        type="button"
-                        title="Display as line chart"
-                        [attr.aria-pressed]="chartType == 'line'"
-                        [ngClass]="{ 'active': chartType == 'line' }"
-                        (click)="setChartType('line')">
+                    <button type="button" title="Display as line chart" [attr.aria-pressed]="chartType == 'line'"
+                        [ngClass]="{ 'active': chartType == 'line' }" (click)="setChartType('line')">
                         <i class="fa fa-line-chart"></i>
                         <span>Line</span>
                     </button>
-                    <button
-                        type="button"
-                        title="Display as area chart"
-                        [attr.aria-pressed]="chartType == 'area'"
-                        [ngClass]="{ 'active': chartType == 'area' }"
-                        (click)="setChartType('area')">
+                    <button type="button" title="Display as area chart" [attr.aria-pressed]="chartType == 'area'"
+                        [ngClass]="{ 'active': chartType == 'area' }" (click)="setChartType('area')">
                         <i class="fa fa-area-chart"></i>
                         <span>Area</span>
                     </button>
-                    <button
-                        type="button"
-                        title="Display as step chart"
-                        [attr.aria-pressed]="chartType == 'step'"
-                        [ngClass]="{ 'active': chartType == 'step' }"
-                        (click)="setChartType('step')">
+                    <button type="button" title="Display as step chart" [attr.aria-pressed]="chartType == 'step'"
+                        [ngClass]="{ 'active': chartType == 'step' }" (click)="setChartType('step')">
                         <i class="fa fa-signal"></i>
                         <span>Step</span>
                     </button>
-                    <button
-                        type="button"
-                        title="Display as column chart"
-                        [attr.aria-pressed]="chartType == 'column'"
-                        [ngClass]="{ 'active': chartType == 'column' }"
-                        (click)="setChartType('column')">
+                    <button type="button" title="Display as column chart" [attr.aria-pressed]="chartType == 'column'"
+                        [ngClass]="{ 'active': chartType == 'column' }" (click)="setChartType('column')">
                         <i class="fa fa-bar-chart"></i>
                         <span>Column</span>
                     </button>
@@ -133,12 +112,11 @@
                 <div class="state-card empty-state" *ngIf="!loading && !errorMessage && selectedSeries.length == 0">
                     <i class="fa fa-line-chart"></i>
                     <strong>Select tags and click Apply</strong>
-                    <span>Choose parameters, select a time range and visualize data as line, area, step or column charts.</span>
+                    <span>Choose parameters, select a time range and visualize data as line, area, step or column
+                        charts.</span>
                 </div>
 
-                <div
-                    class="chart-card"
-                    data-chart-target="main"
+                <div class="chart-card" data-chart-target="main"
                     *ngIf="!loading && selectedSeries.length > 0 && displayMode == 'all'">
                     <div class="chart-card-head">
                         <div>
@@ -146,17 +124,11 @@
                             <p>{{ getMainChartDescription() }}</p>
                         </div>
                         <div class="card-tools">
-                            <button
-                                type="button"
-                                class="card-tool-btn"
-                                title="Zoom in"
-                                aria-label="Zoom in chart"
+                            <button type="button" class="card-tool-btn" title="Zoom in" aria-label="Zoom in chart"
                                 (click)="zoomChart('main', $event)">
                                 <i class="fa fa-search-plus"></i>
                             </button>
-                            <button
-                                type="button"
-                                class="card-tool-btn"
+                            <button type="button" class="card-tool-btn"
                                 [title]="isChartFullscreen('main') ? 'Exit full screen' : 'Full screen'"
                                 [attr.aria-label]="isChartFullscreen('main') ? 'Exit chart full screen' : 'Open chart in full screen'"
                                 [attr.aria-pressed]="isChartFullscreen('main')"
@@ -164,16 +136,13 @@
                                 <i class="fa" [ngClass]="isChartFullscreen('main') ? 'fa-compress' : 'fa-expand'"></i>
                             </button>
                             <div class="chart-menu-wrap">
-                                <button
-                                    type="button"
-                                    class="card-tool-btn"
-                                    title="More chart actions"
-                                    aria-label="Open chart actions"
-                                    [ngClass]="{ 'active': activeChartMenu == 'main' }"
+                                <button type="button" class="card-tool-btn" title="More chart actions"
+                                    aria-label="Open chart actions" [ngClass]="{ 'active': activeChartMenu == 'main' }"
                                     (click)="toggleChartMenu('main', $event)">
                                     <i class="fa fa-ellipsis-h"></i>
                                 </button>
-                                <div class="chart-action-menu" *ngIf="activeChartMenu == 'main'" (click)="$event.stopPropagation()">
+                                <div class="chart-action-menu" *ngIf="activeChartMenu == 'main'"
+                                    (click)="$event.stopPropagation()">
                                     <button type="button" (click)="resetChartZoom('main', $event)">
                                         <i class="fa fa-arrows-h"></i><span>Reset zoom</span>
                                     </button>
@@ -187,18 +156,14 @@
                             </div>
                         </div>
                     </div>
-                    <highcharts-chart
-                        *ngIf="chartsVisible && mainChartOptions as options"
-                        [options]="options"
-                        (chartInstance)="onMainChartInstance($event)"
-                        class="chart-instance big-chart">
+                    <highcharts-chart *ngIf="chartsVisible && mainChartOptions as options" [options]="options"
+                        (chartInstance)="onMainChartInstance($event)" class="chart-instance big-chart">
                     </highcharts-chart>
                 </div>
 
-                <div class="group-stack" *ngIf="chartsVisible && !loading && selectedSeries.length > 0 && displayMode == 'groups'">
-                    <div
-                        class="chart-card group-card"
-                        [attr.data-chart-target]="'group:' + group.key"
+                <div class="group-stack"
+                    *ngIf="chartsVisible && !loading && selectedSeries.length > 0 && displayMode == 'groups'">
+                    <div class="chart-card group-card" [attr.data-chart-target]="'group:' + group.key"
                         *ngFor="let group of groupCharts; trackBy: trackByGroup">
                         <div class="chart-card-head compact">
                             <div>
@@ -206,36 +171,26 @@
                                 <p>{{ group.count }} parameters in this group</p>
                             </div>
                             <div class="card-tools">
-                                <button
-                                    type="button"
-                                    class="card-tool-btn"
-                                    title="Zoom in"
-                                    aria-label="Zoom in group chart"
-                                    (click)="zoomChart('group:' + group.key, $event)">
+                                <button type="button" class="card-tool-btn" title="Zoom in"
+                                    aria-label="Zoom in group chart" (click)="zoomChart('group:' + group.key, $event)">
                                     <i class="fa fa-search-plus"></i>
                                 </button>
-                                <button
-                                    type="button"
-                                    class="card-tool-btn"
+                                <button type="button" class="card-tool-btn"
                                     [title]="isChartFullscreen('group:' + group.key) ? 'Exit full screen' : 'Full screen'"
                                     [attr.aria-label]="isChartFullscreen('group:' + group.key) ? 'Exit group chart full screen' : 'Open group chart in full screen'"
                                     [attr.aria-pressed]="isChartFullscreen('group:' + group.key)"
                                     (click)="toggleChartFullscreen('group:' + group.key, $event)">
-                                    <i class="fa" [ngClass]="isChartFullscreen('group:' + group.key) ? 'fa-compress' : 'fa-expand'"></i>
+                                    <i class="fa"
+                                        [ngClass]="isChartFullscreen('group:' + group.key) ? 'fa-compress' : 'fa-expand'"></i>
                                 </button>
                                 <div class="chart-menu-wrap">
-                                    <button
-                                        type="button"
-                                        class="card-tool-btn"
-                                        title="More chart actions"
+                                    <button type="button" class="card-tool-btn" title="More chart actions"
                                         aria-label="Open group chart actions"
                                         [ngClass]="{ 'active': activeChartMenu == ('group:' + group.key) }"
                                         (click)="toggleChartMenu('group:' + group.key, $event)">
                                         <i class="fa fa-ellipsis-h"></i>
                                     </button>
-                                    <div
-                                        class="chart-action-menu"
-                                        *ngIf="activeChartMenu == ('group:' + group.key)"
+                                    <div class="chart-action-menu" *ngIf="activeChartMenu == ('group:' + group.key)"
                                         (click)="$event.stopPropagation()">
                                         <button type="button" (click)="resetChartZoom('group:' + group.key, $event)">
                                             <i class="fa fa-arrows-h"></i><span>Reset zoom</span>
@@ -247,8 +202,7 @@
                                 </div>
                             </div>
                         </div>
-                        <highcharts-chart
-                            [options]="group.chartOptions"
+                        <highcharts-chart [options]="group.chartOptions"
                             (chartInstance)="onGroupChartInstance(group.key, $event)"
                             class="chart-instance group-chart">
                         </highcharts-chart>

@@ -19,12 +19,12 @@ export class PermissionGuard implements CanActivate, CanActivateChild {
   constructor(
     private authService: AuthService,
     private userAccess: UserAccessControlService,
-    private router: Router
+    private router: Router,
   ) {}
 
   async canActivate(
     _route: ActivatedRouteSnapshot,
-    state: RouterStateSnapshot
+    state: RouterStateSnapshot,
   ): Promise<boolean | UrlTree> {
     if (this.authService.isLoggedIn()) {
       return true;
@@ -34,10 +34,7 @@ export class PermissionGuard implements CanActivate, CanActivateChild {
 
     return this.router.createUrlTree(['/login']);
   }
-  canActivateChild(
-    route: ActivatedRouteSnapshot,
-    state: RouterStateSnapshot,
-  ): boolean | UrlTree {
+  canActivateChild(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean | UrlTree {
     if (!this.authService.isLoggedIn()) {
       this.authService.redirectUrl = state.url;
       return this.router.createUrlTree(['/login']);
@@ -51,9 +48,10 @@ export class PermissionGuard implements CanActivate, CanActivateChild {
 
     const module = this.moduleFromRoute(route);
     if (!module) return true;
-    const allowed = module === 'settings'
-      ? this.userAccess.canManageModule('settings')
-      : this.userAccess.canAccessModule(module);
+    const allowed =
+      module === 'settings'
+        ? this.userAccess.canManageModule('settings')
+        : this.userAccess.canAccessModule(module);
     return allowed ? true : this.router.parseUrl(this.userAccess.firstAllowedRoute());
   }
 
@@ -62,13 +60,21 @@ export class PermissionGuard implements CanActivate, CanActivateChild {
     if (path === 'datalogger') return 'data-logger';
     if (path === 'alerts') return 'alarm';
     if (path === 'past-track') return 'overview';
-    if (path === 'overview' || path === 'realtime' || path === 'data-logger' || path === 'chart' ||
-        path === 'diagram' || path === 'report' || path === 'alarm' || path === 'log' || path === 'settings') {
+    if (
+      path === 'overview' ||
+      path === 'realtime' ||
+      path === 'data-logger' ||
+      path === 'chart' ||
+      path === 'diagram' ||
+      path === 'report' ||
+      path === 'alarm' ||
+      path === 'log' ||
+      path === 'settings'
+    ) {
       return path as FleetModuleKey;
     }
     return null;
   }
-
 }
 
 export { PermissionGuard as AuthGuard };

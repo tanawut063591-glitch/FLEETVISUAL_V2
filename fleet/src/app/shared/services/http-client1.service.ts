@@ -2,7 +2,16 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 
-import { Observable, concat, defaultIfEmpty, filter, firstValueFrom, of, take, throwError } from 'rxjs';
+import {
+  Observable,
+  concat,
+  defaultIfEmpty,
+  filter,
+  firstValueFrom,
+  of,
+  take,
+  throwError,
+} from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
@@ -27,13 +36,11 @@ export class NewHttpClientService {
     private http: HttpClient,
     private router: Router,
     private securityService: SecurityService,
-    private authService: AuthService
+    private authService: AuthService,
   ) {}
 
   getJsonFile(path: string): Observable<any> {
-    return this.http.get(path).pipe(
-      catchError((err) => this.handleError<any>(err))
-    );
+    return this.http.get(path).pipe(catchError((err) => this.handleError<any>(err)));
   }
 
   mergeUnique(arr1: any[], arr2: any[]): any[] {
@@ -77,22 +84,20 @@ export class NewHttpClientService {
                 (x: any) =>
                   x?.name &&
                   !this.securityService.isExcludedVessel(x.name) &&
-                  !this.securityService.isExcludedVessel(x?.prefix || x?.id || '')
+                  !this.securityService.isExcludedVessel(x?.prefix || x?.id || ''),
               );
 
               const accessible = activeVessels
                 .filter((x: any) => this.securityService.hasAccess(x.name))
                 .sort(this.compare);
 
-
-
               return (accessible.length > 0 ? accessible : activeVessels).sort(this.compare);
             }),
             catchError((err) => {
               this.handleLoginRedirect(err);
               return of([]);
-            })
-          )
+            }),
+          ),
       );
 
       return result;
@@ -122,9 +127,7 @@ export class NewHttpClientService {
       `?latlng=${encodeURIComponent(lat)},${encodeURIComponent(long)}` +
       `&key=${encodeURIComponent(apiKey)}`;
 
-    return this.http.get(url).pipe(
-      catchError((err) => this.handleError<any>(err))
-    );
+    return this.http.get(url).pipe(catchError((err) => this.handleError<any>(err)));
   }
 
   getPoints(prefix: string): Observable<any> {
@@ -143,19 +146,9 @@ export class NewHttpClientService {
       })
       .pipe(
         map((res: any) => res),
-        catchError((err) => this.handleError<any>(err))
+        catchError((err) => this.handleError<any>(err)),
       );
   }
-
-
-
-
-
-
-
-
-
-
 
   getHistorianValues(start: string, end: string, tags: any[]): Observable<any> {
     const tagNames = this.mapTagNames(tags);
@@ -165,9 +158,10 @@ export class NewHttpClientService {
     }
 
     const normalizedTags = tags.map((tag: any) => {
-      const tagName = typeof tag === 'string'
-        ? tag
-        : (tag?.tagName || tag?.TagName || tag?.name || tag?.Name || '');
+      const tagName =
+        typeof tag === 'string'
+          ? tag
+          : tag?.tagName || tag?.TagName || tag?.name || tag?.Name || '';
 
       return typeof tag === 'string'
         ? { name: tagName, tagName }
@@ -187,11 +181,7 @@ export class NewHttpClientService {
     };
 
     if (this.historianStrategy) {
-      return this.requestHistorianByStrategy(
-        this.historianStrategy,
-        directPayload,
-        gatewayPayload
-      );
+      return this.requestHistorianByStrategy(this.historianStrategy, directPayload, gatewayPayload);
     }
 
     const attempts: Observable<any>[] = [
@@ -202,21 +192,21 @@ export class NewHttpClientService {
     if (URL && this.normalizeBaseUrl(URL) !== this.normalizeBaseUrl(URL2)) {
       attempts.push(
         this.requestHistorianByStrategy('gateway-chart', directPayload, gatewayPayload),
-        this.requestHistorianByStrategy('gateway-logger', directPayload, gatewayPayload)
+        this.requestHistorianByStrategy('gateway-logger', directPayload, gatewayPayload),
       );
     }
 
     return concat(...attempts).pipe(
       filter((result: any) => this.hasHistorianData(result)),
       take(1),
-      defaultIfEmpty([])
+      defaultIfEmpty([]),
     );
   }
 
   private requestHistorianByStrategy(
     strategy: HistorianStrategy,
     directPayload: any,
-    gatewayPayload: any
+    gatewayPayload: any,
   ): Observable<any> {
     let url = '';
     let payload: any = directPayload;
@@ -265,7 +255,7 @@ export class NewHttpClientService {
         });
 
         return of(null);
-      })
+      }),
     );
   }
 
@@ -309,13 +299,29 @@ export class NewHttpClientService {
     }
 
     const hasTime = [
-      'TimeStamp', 'Timestamp', 'timeStamp', 'timestamp',
-      'Time', 'time', 'DateTime', 'datetime', 'Date', 'date', 'x'
+      'TimeStamp',
+      'Timestamp',
+      'timeStamp',
+      'timestamp',
+      'Time',
+      'time',
+      'DateTime',
+      'datetime',
+      'Date',
+      'date',
+      'x',
     ].some((key: string) => value[key] !== undefined && value[key] !== null && value[key] !== '');
 
     const hasValue = [
-      'Value', 'value', 'Data', 'data', 'Val', 'val',
-      'NumericValue', 'numericValue', 'y'
+      'Value',
+      'value',
+      'Data',
+      'data',
+      'Val',
+      'val',
+      'NumericValue',
+      'numericValue',
+      'y',
     ].some((key: string) => value[key] !== undefined && value[key] !== null && value[key] !== '');
 
     if (hasTime && hasValue) {
@@ -323,10 +329,27 @@ export class NewHttpClientService {
     }
 
     const preferredKeys = [
-      'records', 'Records', 'values', 'Values', 'Value',
-      'data', 'Data', 'result', 'Result', 'results', 'Results',
-      'items', 'Items', 'HistorianValues', 'historianValues',
-      'History', 'history', 'ValueList', 'valueList', 'Points', 'points'
+      'records',
+      'Records',
+      'values',
+      'Values',
+      'Value',
+      'data',
+      'Data',
+      'result',
+      'Result',
+      'results',
+      'Results',
+      'items',
+      'Items',
+      'HistorianValues',
+      'historianValues',
+      'History',
+      'history',
+      'ValueList',
+      'valueList',
+      'Points',
+      'points',
     ];
 
     for (const key of preferredKeys) {
@@ -335,13 +358,15 @@ export class NewHttpClientService {
       }
     }
 
-    return Object.keys(value).some((key: string) =>
-      !preferredKeys.includes(key) && this.hasHistorianData(value[key], depth + 1)
+    return Object.keys(value).some(
+      (key: string) => !preferredKeys.includes(key) && this.hasHistorianData(value[key], depth + 1),
     );
   }
 
   private normalizeBaseUrl(value: string): string {
-    return String(value || '').replace(/\/+$/, '').toLowerCase();
+    return String(value || '')
+      .replace(/\/+$/, '')
+      .toLowerCase();
   }
 
   getRawData(start: string, end: string, tags: any[]): Observable<any> {
@@ -370,7 +395,7 @@ export class NewHttpClientService {
       })
       .pipe(
         map((res: any) => res),
-        catchError((err) => this.handleError<any>(err))
+        catchError((err) => this.handleError<any>(err)),
       );
   }
 
@@ -393,15 +418,11 @@ export class NewHttpClientService {
       })
       .pipe(
         map((res: any) => res),
-        catchError((err) => this.handleError<any>(err))
+        catchError((err) => this.handleError<any>(err)),
       );
   }
 
-  getReport(
-    reportType: string,
-    timestamp: string,
-    fvName: string
-  ): Observable<Blob> {
+  getReport(reportType: string, timestamp: string, fvName: string): Observable<Blob> {
     if (!reportType || !timestamp || !fvName) {
       return of(new Blob([], { type: 'application/pdf' }));
     }
@@ -421,7 +442,7 @@ export class NewHttpClientService {
         map((res: ArrayBuffer) => {
           return new Blob([res], { type: 'application/pdf' });
         }),
-        catchError((err) => this.handleError<Blob>(err))
+        catchError((err) => this.handleError<Blob>(err)),
       );
   }
 
@@ -431,7 +452,6 @@ export class NewHttpClientService {
     if (names.length === 0) {
       return of([]);
     }
-
 
     const request = {
       Name: names,
@@ -450,7 +470,7 @@ export class NewHttpClientService {
       })
       .pipe(
         map((res: any) => res),
-        catchError((err) => this.handleError<any>(err))
+        catchError((err) => this.handleError<any>(err)),
       );
   }
 
@@ -469,10 +489,9 @@ export class NewHttpClientService {
       })
       .pipe(
         map((res: any) => res),
-        catchError((err) => this.handleError<any>(err))
+        catchError((err) => this.handleError<any>(err)),
       );
   }
-
 
   private extractArray(response: any): any[] {
     if (Array.isArray(response)) {
@@ -523,7 +542,6 @@ export class NewHttpClientService {
 
   private getAuthHeaders(): HttpHeaders {
     const token = this.authService.getToken();
-
 
     return new HttpHeaders({
       Authorization: token,

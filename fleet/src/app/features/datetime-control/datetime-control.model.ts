@@ -1,38 +1,38 @@
 export interface TimerPayload {
-    start: number;
-    end: number;
-    tags: any[];
-    fvInfo: any;
-    period?: string;
-    movingWindow?: boolean;
+  start: number;
+  end: number;
+  tags: any[];
+  fvInfo: any;
+  period?: string;
+  movingWindow?: boolean;
 }
 
 export interface QuickPeriodOption {
-    label: string;
-    value: string;
+  label: string;
+  value: string;
 }
 
 export interface TagColumnOption {
-    key: string;
-    title: string;
-    subtitle: string;
-    icon: string;
+  key: string;
+  title: string;
+  subtitle: string;
+  icon: string;
 }
 
 export interface TagPresetOption {
-    key: string;
-    label: string;
-    description: string;
-    keywords: string[];
+  key: string;
+  label: string;
+  description: string;
+  keywords: string[];
 }
 
 export interface TagGroupBucket {
-    group: string[];
-    tags: any[];
+  group: string[];
+  tags: any[];
 }
 
 export interface SelectedGroupSummary {
-    key: string;
-    title: string;
-    count: number;
+  key: string;
+  title: string;
+  count: number;
 }

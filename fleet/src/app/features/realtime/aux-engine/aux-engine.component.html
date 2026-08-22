@@ -3,25 +3,29 @@
   [class.aux-console--running]="isRunning"
   [class.aux-console--stopped]="!isRunning"
 >
-  <div
-    class="aux-telemetry-bar"
-    [class.realtime-alert-field]="hasAlarm(cons)"
-    [attr.title]="getTooltip(cons)"
-    aria-label="Live fuel rate"
-  >
-    <div class="aux-telemetry-bar__identity">
-      <span class="aux-telemetry-bar__icon" aria-hidden="true">
-        <i class="fa fa-tint"></i>
-      </span>
-      <span class="aux-telemetry-bar__copy">
-        <strong>LIVE FUEL RATE</strong>
-        <small>Current auxiliary consumption</small>
+  <div class="aux-telemetry-bar aux-telemetry-bar--dual" aria-label="Fuel performance">
+    <div
+      class="aux-top-metric aux-top-metric--rate"
+      [class.realtime-alert-field]="hasAlarm(cons)"
+      [attr.title]="getTooltip(cons)"
+    >
+      <span class="aux-top-metric__icon" aria-hidden="true"><i class="fa fa-tint"></i></span>
+      <span class="aux-top-metric__copy">
+        <small>FUEL RATE</small>
+        <strong>{{ displayAbsNumber(cons, 2) }} <b>L/h</b></strong>
       </span>
     </div>
 
-    <div class="aux-live">
-      <strong>{{ displayAbsNumber(cons, 2) }}</strong>
-      <small>L/h</small>
+    <div
+      class="aux-top-metric aux-top-metric--today"
+      [class.realtime-alert-field]="hasAlarm(consL)"
+      [attr.title]="getTooltip(consL)"
+    >
+      <span class="aux-top-metric__icon" aria-hidden="true"><i class="fa fa-bar-chart"></i></span>
+      <span class="aux-top-metric__copy">
+        <small>TODAY CONSUMPTION</small>
+        <strong>{{ displayNumber(consL, 2) }} <b>L</b></strong>
+      </span>
     </div>
   </div>
 
@@ -122,24 +126,12 @@
 
   <div class="aux-footer">
     <div
-      class="footer-stat"
-      [class.realtime-alert-field]="hasAlarm(consL)"
-      [attr.title]="getTooltip(consL)"
-    >
-      <span>TODAY CONSUMPTION</span>
-      <strong>{{ displayNumber(consL, 2) }} <small>L</small></strong>
-    </div>
-    <div
       class="footer-stat footer-stat--speed"
       [class.realtime-alert-field]="hasAlarm(speed_eng)"
       [attr.title]="getTooltip(speed_eng)"
     >
       <span>SHAFT SPEED</span>
       <strong>{{ displayNumber(speed_eng, 2) }} <small>RPM</small></strong>
-    </div>
-    <div class="footer-state" [class.is-running]="isRunning">
-      <i></i>
-      <span>{{ statusText }}</span>
     </div>
   </div>
 </section>

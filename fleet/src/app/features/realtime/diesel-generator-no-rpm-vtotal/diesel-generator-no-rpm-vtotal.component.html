@@ -1,26 +1,30 @@
 <section
   class="dg-monitor dg-monitor--running"
 >
-  <div
-    class="dg-live-strip"
-    [class.realtime-alert-field]="hasAlarm(cons)"
-    [attr.title]="getTooltip(cons)"
-    aria-label="Live fuel rate"
-  >
-    <span class="dg-live-strip__metric">
-      <span class="dg-live-strip__icon" aria-hidden="true">
-        <i class="fa fa-tint"></i>
+  <div class="dg-live-strip dg-live-strip--dual" aria-label="Fuel performance">
+    <div
+      class="dg-top-metric dg-top-metric--rate"
+      [class.realtime-alert-field]="hasAlarm(cons)"
+      [attr.title]="getTooltip(cons)"
+    >
+      <span class="dg-top-metric__icon" aria-hidden="true"><i class="fa fa-tint"></i></span>
+      <span class="dg-top-metric__copy">
+        <small>FUEL RATE</small>
+        <strong>{{ displayAbsNumber(cons, 2) }} <b>L/h</b></strong>
       </span>
-      <span class="dg-live-strip__copy">
-        <strong>LIVE FUEL RATE</strong>
-        <small>Current generator consumption</small>
-      </span>
-    </span>
+    </div>
 
-    <span class="dg-live-strip__value">
-      <strong>{{ displayAbsNumber(cons, 2) }}</strong>
-      <small>L/h</small>
-    </span>
+    <div
+      class="dg-top-metric dg-top-metric--today"
+      [class.realtime-alert-field]="hasAlarm(consL)"
+      [attr.title]="getTooltip(consL)"
+    >
+      <span class="dg-top-metric__icon" aria-hidden="true"><i class="fa fa-bar-chart"></i></span>
+      <span class="dg-top-metric__copy">
+        <small>TODAY CONSUMPTION</small>
+        <strong>{{ displayNumber(consL, 2) }} <b>L</b></strong>
+      </span>
+    </div>
   </div>
 
   <div class="fuel-block fuel-block--supply">
@@ -84,7 +88,7 @@
     </span>
   </div>
 
-  <div class="fuel-block fuel-block--return">
+  <div class="fuel-block fuel-block--return fuel-block--two-metrics">
     <div class="fuel-block__heading">
       <span class="fuel-block__label">
         <i class="fa fa-long-arrow-left"></i>
@@ -114,15 +118,6 @@
         <small>L/h</small>
       </div>
 
-      <div
-        class="fuel-metric"
-        [class.realtime-alert-field]="hasAlarm(consL)"
-        [attr.title]="getTooltip(consL)"
-      >
-        <span>TODAY</span>
-        <strong>{{ displayNumber(consL, 2) }}</strong>
-        <small>L</small>
-      </div>
     </div>
   </div>
 
@@ -164,16 +159,5 @@
       <ng-template #noLoadKw><strong>—</strong></ng-template>
     </div>
 
-    <div
-      class="dg-output dg-output--today"
-      [class.realtime-alert-field]="hasAlarm(consL)"
-      [attr.title]="getTooltip(consL)"
-    >
-      <span>TODAY CONSUMPTION</span>
-      <strong>
-        {{ displayNumber(consL, 2) }}
-        <small>L</small>
-      </strong>
-    </div>
   </div>
 </section>

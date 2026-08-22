@@ -51,12 +51,7 @@ export class ReportPdfCacheService {
     const normalizedKey = this.normalizeKey(key);
     const blob = value?.blob;
 
-    if (
-      !normalizedKey ||
-      !blob ||
-      blob.size <= 0 ||
-      blob.size > this.maxCacheBlobBytes
-    ) {
+    if (!normalizedKey || !blob || blob.size <= 0 || blob.size > this.maxCacheBlobBytes) {
       return;
     }
 
@@ -103,6 +98,8 @@ export class ReportPdfCacheService {
   }
 
   private normalizeKey(value: string): string {
-    return String(value || '').trim().toLowerCase();
+    return String(value || '')
+      .trim()
+      .toLowerCase();
   }
 }

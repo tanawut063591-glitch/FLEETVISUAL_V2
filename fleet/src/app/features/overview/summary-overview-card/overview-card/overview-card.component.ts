@@ -3,17 +3,13 @@ import { FvTimeService } from '../../../../shared/services/fv-time.service';
 
 @Component({
   selector: 'app-overview-card',
-    standalone: false,
+  standalone: false,
   templateUrl: './overview-card.component.html',
   styleUrls: ['./overview-card.component.css'],
 
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OverviewCardComponent {
-
-
-
-
   @Input() lastSeen?: any;
   @Input() speed?: number;
   @Input() vesselName?: string;
@@ -26,7 +22,5 @@ export class OverviewCardComponent {
   @Input() image?: string;
   @Input() prefix?: string;
 
-  constructor(public fvTimeService: FvTimeService) { }
-
-
+  constructor(public fvTimeService: FvTimeService) {}
 }

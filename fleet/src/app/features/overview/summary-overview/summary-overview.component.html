@@ -24,16 +24,17 @@
                 </td>
 
                 <td>
-                    <span class="fv-badge"
-                          [class.fv-badge-success]="a.status === 'Online'"
-                          [class.fv-badge-warning]="a.status !== 'Online'">
+                    <span class="fv-badge" [class.fv-badge-success]="a.status === 'Online'"
+                        [class.fv-badge-warning]="a.status !== 'Online'">
                         {{ a.status }}
                     </span>
                 </td>
 
                 <td class="fv-font-semibold">{{ a.speed }}</td>
                 <td>{{ a.fuel }}</td>
-                <td class="fv-loc-cell"><div>{{ a.location }}</div></td>
+                <td class="fv-loc-cell">
+                    <div>{{ a.location }}</div>
+                </td>
                 <td class="fv-text-muted">
                     <i class="fa fa-clock-o" style="margin-right: 4px;"></i>
                     {{ a.lastSeen }}
@@ -43,9 +44,16 @@
             <tr *ngFor="let b of blankData" class="fv-row-blank">
                 <td class="fv-vessel-cell">
                     <div class="fv-img-placeholder fv-opaque"><i class="fa fa-ship"></i></div>
-                    <div><div class="fv-v-name">&nbsp;</div><div class="fv-v-type">&nbsp;</div></div>
+                    <div>
+                        <div class="fv-v-name">&nbsp;</div>
+                        <div class="fv-v-type">&nbsp;</div>
+                    </div>
                 </td>
-                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
             </tr>
 
         </tbody>

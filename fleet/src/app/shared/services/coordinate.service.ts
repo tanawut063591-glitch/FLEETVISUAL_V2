@@ -1,9 +1,8 @@
-import { Injectable } from "@angular/core";
-import { DecimalPipe } from "@angular/common";
-import { HttpClientService } from "../services/http-client.service";
+import { Injectable } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+import { HttpClientService } from '../services/http-client.service';
 
-
-const API_KEY: string = "ใส่_API_KEY_เดิมของคุณตรงนี้";
+const API_KEY: string = 'ใส่_API_KEY_เดิมของคุณตรงนี้';
 
 @Injectable({
   providedIn: 'root',
@@ -14,7 +13,6 @@ export class CoordinatesService {
     private httpClientService: HttpClientService,
   ) {}
 
-
   getLatLong(lat: string, long: string): string {
     const latText = this.getLat(lat);
     const longText = this.getLong(long);
@@ -23,104 +21,86 @@ export class CoordinatesService {
       return `${latText}, ${longText}`;
     }
 
-    return "";
+    return '';
   }
-
 
   getLat(lat: string): string {
-    return this.formatCoordinate(lat, "N", "S");
+    return this.formatCoordinate(lat, 'N', 'S');
   }
-
 
   getLong(long: string): string {
-    return this.formatCoordinate(long, "E", "W");
+    return this.formatCoordinate(long, 'E', 'W');
   }
-
 
   getUnitLat(lat: string): string {
-    if (!lat || lat === "---") {
-      return "";
+    if (!lat || lat === '---') {
+      return '';
     }
 
-    return lat.indexOf("-") > -1 ? " S" : " N";
+    return lat.indexOf('-') > -1 ? ' S' : ' N';
   }
-
 
   getUnitLong(long: string): string {
-    if (!long || long === "---") {
-      return "";
+    if (!long || long === '---') {
+      return '';
     }
 
-    return long.indexOf("-") > -1 ? " W" : " E";
+    return long.indexOf('-') > -1 ? ' W' : ' E';
   }
 
-
-  private formatCoordinate(
-    value: string,
-    positiveUnit: string,
-    negativeUnit: string,
-  ): string {
-    if (!value || value === "---") {
-      return "";
+  private formatCoordinate(value: string, positiveUnit: string, negativeUnit: string): string {
+    if (!value || value === '---') {
+      return '';
     }
 
-
-    const isNegative = value.indexOf("-") > -1;
-
+    const isNegative = value.indexOf('-') > -1;
 
     const numberValue = Math.abs(Number(value));
 
     if (isNaN(numberValue)) {
-      return "";
+      return '';
     }
 
-
-    const formattedValue = this.decimalPipe.transform(numberValue, "0.0-5");
+    const formattedValue = this.decimalPipe.transform(numberValue, '0.0-5');
 
     if (!formattedValue) {
-      return "";
+      return '';
     }
 
     return `${formattedValue} ${isNegative ? negativeUnit : positiveUnit}`;
   }
 
-
   async getNearby(vessel: any): Promise<string> {
     try {
       if (!vessel || !vessel.lat || !vessel.long) {
-        return "";
+        return '';
       }
-
 
       const response: any = await this.httpClientService
         .getAddress(vessel.lat, vessel.long, API_KEY)
         .toPromise();
 
-
       if (
         response &&
-        response.status === "OK" &&
+        response.status === 'OK' &&
         response.results &&
         response.results.length > 0 &&
         response.results[0].address_components
       ) {
         const addressComponents = response.results[0].address_components;
 
-
         const routes = addressComponents.filter((component: any) => {
-          return component.types && component.types.indexOf("locality") > -1;
+          return component.types && component.types.indexOf('locality') > -1;
         });
-
 
         if (routes.length > 0 && routes[0].short_name) {
           return routes[0].short_name;
         }
       }
 
-      return "";
+      return '';
     } catch (ex) {
-
-      return "";
+      return '';
     }
   }
 }

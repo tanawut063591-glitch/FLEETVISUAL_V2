@@ -1,18 +1,11 @@
 <div class="data-logger-page">
 
     <div class="logger-filter">
-        <app-datetime-control
-            [loading]="loading"
-            [selectAll]="false"
-            [searchTitle]="'Export'"
-            [maxSelection]="12"
+        <app-datetime-control [loading]="loading" [selectAll]="false" [searchTitle]="'Export'" [maxSelection]="12"
             [dialogSubtitle]="'Select sensor parameters for Data Logger'"
-            [badgeLabel]="'HISTORICAL SENSOR DATA'"
-            [pageTitle]="'DATA LOGGER'"
-            [pageSubtitle]="'View and analyze historical data from your vessel sensors.'"
+            [pageTitle]="'DATA LOGGER'" [pageSubtitle]="'View and analyze historical data from your vessel sensors.'"
             [parameterText]="'Choose the sensor tags you want to display in the data logger table.'"
-            (showLoggerEmit)="showLogger($event)"
-            (selectedTimer)="downloadLogger($event)">
+            (showLoggerEmit)="showLogger($event)" (selectedTimer)="downloadLogger($event)">
         </app-datetime-control>
     </div>
 
@@ -31,12 +24,8 @@
         </div>
 
         <div class="quick-list">
-            <button
-                type="button"
-                class="quick-chip"
-                *ngFor="let tag of quickTags; trackBy: trackByQuickTag"
-                [ngClass]="{ 'active': selectedQuickTag == tag.key }"
-                (click)="setQuickTag(tag.key)">
+            <button type="button" class="quick-chip" *ngFor="let tag of quickTags; trackBy: trackByQuickTag"
+                [ngClass]="{ 'active': selectedQuickTag == tag.key }" (click)="setQuickTag(tag.key)">
                 {{ tag.label }}
             </button>
         </div>
@@ -58,49 +47,31 @@
                     {{ getFilteredCountLabel() }}
                 </span>
 
-                <button
-                    type="button"
-                    class="clear-filter-btn"
-                    (click)="clearTableFilter()">
+                <button type="button" class="clear-filter-btn" (click)="clearTableFilter()">
                     Clear Filter
                 </button>
 
                 <select class="interval-select" (change)="changeInterval($event)">
-                    <option
-                        *ngFor="let item of intervalOptions"
-                        [value]="item.value"
+                    <option *ngFor="let item of intervalOptions" [value]="item.value"
                         [selected]="item.value == selectedIntervalMs">
                         {{ item.label }}
                     </option>
                 </select>
 
-                <button
-                    type="button"
-                    class="logger-auto-btn"
-                    [ngClass]="{ 'active': autoRefresh }"
-                    [attr.aria-pressed]="autoRefresh"
-                    title="Refresh the current logger range every 30 seconds"
+                <button type="button" class="logger-auto-btn" [ngClass]="{ 'active': autoRefresh }"
+                    [attr.aria-pressed]="autoRefresh" title="Refresh the current logger range every 30 seconds"
                     (click)="toggleAutoRefresh()">
                     <span>Auto Refresh</span>
                     <i class="logger-toggle-dot"></i>
                 </button>
 
-                <button
-                    type="button"
-                    class="logger-icon-btn"
-                    title="Refresh table now"
-                    aria-label="Refresh data logger table"
-                    [disabled]="loading"
-                    (click)="refreshNow()">
+                <button type="button" class="logger-icon-btn" title="Refresh table now"
+                    aria-label="Refresh data logger table" [disabled]="loading" (click)="refreshNow()">
                     <i class="fa fa-refresh" [class.fa-spin]="loading"></i>
                 </button>
 
-                <button
-                    type="button"
-                    class="logger-icon-btn logger-icon-btn--clear"
-                    title="Clear table"
-                    aria-label="Clear data logger table"
-                    (click)="clearTable()">
+                <button type="button" class="logger-icon-btn logger-icon-btn--clear" title="Clear table"
+                    aria-label="Clear data logger table" (click)="clearTable()">
                     <i class="fa fa-eraser"></i>
                 </button>
             </div>
@@ -114,10 +85,7 @@
 
                     <tr>
                         <th class="time-col">
-                            <button
-                                type="button"
-                                class="th-sort-btn"
-                                (click)="sortByTime()">
+                            <button type="button" class="th-sort-btn" (click)="sortByTime()">
 
                                 <div class="th-main">
                                     TIME
@@ -131,10 +99,7 @@
                         </th>
 
                         <th *ngFor="let h of visibleHeaders; trackBy: trackByHeader">
-                            <button
-                                type="button"
-                                class="th-sort-btn"
-                                (click)="sortByHeader(h)">
+                            <button type="button" class="th-sort-btn" (click)="sortByHeader(h)">
 
                                 <div class="sensor-head">
                                     <span class="sensor-group">{{ h.group }}</span>
@@ -155,21 +120,13 @@
                     <tr class="filter-row">
 
                         <th class="time-col">
-                            <input
-                                type="text"
-                                class="column-filter"
-                                placeholder="Filter time..."
-                                [(ngModel)]="timeFilter"
-                                (ngModelChange)="onFilterChange()">
+                            <input type="text" class="column-filter" placeholder="Filter time..."
+                                [(ngModel)]="timeFilter" (ngModelChange)="onFilterChange()">
                         </th>
 
                         <th *ngFor="let h of visibleHeaders; trackBy: trackByHeader">
-                            <input
-                                type="text"
-                                class="column-filter"
-                                placeholder="Filter..."
-                                [(ngModel)]="columnFilters[h.index]"
-                                (ngModelChange)="onFilterChange()">
+                            <input type="text" class="column-filter" placeholder="Filter..."
+                                [(ngModel)]="columnFilters[h.index]" (ngModelChange)="onFilterChange()">
                         </th>
 
                         <th class="next-col"></th>
@@ -186,8 +143,7 @@
                             {{ data.timestamp }}
                         </td>
 
-                        <td
-                            *ngFor="let h of visibleHeaders; trackBy: trackByHeader"
+                        <td *ngFor="let h of visibleHeaders; trackBy: trackByHeader"
                             [ngClass]="getCellClass(data.values[h.index], h)"
                             [title]="getCellTitle(data.values[h.index], h)">
 
@@ -200,9 +156,7 @@
                     </tr>
 
                     <tr *ngIf="tableRows.length == 0">
-                        <td
-                            class="table-empty-row"
-                            [attr.colspan]="visibleHeaders.length + 2">
+                        <td class="table-empty-row" [attr.colspan]="visibleHeaders.length + 2">
 
                             No matching data found
 
@@ -262,10 +216,7 @@
                 <span class="rows-label">Rows per page</span>
 
                 <select class="rows-select" (change)="changeRowsPerPage($event)">
-                    <option
-                        *ngFor="let row of rowOptions"
-                        [value]="row"
-                        [selected]="row == pageRow">
+                    <option *ngFor="let row of rowOptions" [value]="row" [selected]="row == pageRow">
                         {{ row }}
                     </option>
                 </select>
@@ -274,28 +225,16 @@
                     {{ getRangeLabel() }}
                 </span>
 
-                <button
-                    type="button"
-                    class="page-arrow"
-                    [disabled]="pageActive == 1"
-                    (click)="previous()">
+                <button type="button" class="page-arrow" [disabled]="pageActive == 1" (click)="previous()">
                     ‹
                 </button>
 
-                <button
-                    type="button"
-                    class="page-number"
-                    *ngFor="let page of pages; trackBy: trackByPage"
-                    [ngClass]="{ 'active': page == pageActive, 'dots': page == '...' }"
-                    (click)="setActive(page)">
+                <button type="button" class="page-number" *ngFor="let page of pages; trackBy: trackByPage"
+                    [ngClass]="{ 'active': page == pageActive, 'dots': page == '...' }" (click)="setActive(page)">
                     {{ page }}
                 </button>
 
-                <button
-                    type="button"
-                    class="page-arrow"
-                    [disabled]="pageActive == pageCount"
-                    (click)="next()">
+                <button type="button" class="page-arrow" [disabled]="pageActive == pageCount" (click)="next()">
                     ›
                 </button>
 

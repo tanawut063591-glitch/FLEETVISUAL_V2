@@ -11,20 +11,9 @@ import { HeaderComponent } from './components/header/header.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 
 @NgModule({
-  imports: [
-    CommonModule,
-    RouterModule,
-    FormsModule,
-    ReactiveFormsModule,
-    SharedComponentsModule,
-  ],
+  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, SharedComponentsModule],
 
-  declarations: [
-    LoginComponent,
-    MainComponent,
-    HeaderComponent,
-    SidebarComponent,
-  ],
+  declarations: [LoginComponent, MainComponent, HeaderComponent, SidebarComponent],
 
   exports: [
     LoginComponent,
@@ -34,17 +23,12 @@ import { SidebarComponent } from './components/sidebar/sidebar.component';
     SharedComponentsModule,
   ],
 
-  providers: [
-    DatePipe,
-    DecimalPipe,
-  ],
+  providers: [DatePipe, DecimalPipe],
 })
 export class CoreModule {
   constructor(@Optional() @SkipSelf() parentModule: CoreModule) {
     if (parentModule) {
-      throw new Error(
-        'CoreModule is already loaded. Import it only in AppModule.'
-      );
+      throw new Error('CoreModule is already loaded. Import it only in AppModule.');
     }
   }
 }

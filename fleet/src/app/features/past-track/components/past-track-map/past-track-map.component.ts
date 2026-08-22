@@ -123,7 +123,7 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
     this.clearRoute();
 
     const validPoints = (this.trackPoints || []).filter((point: PastTrackPoint) =>
-      this.isValidPoint(point)
+      this.isValidPoint(point),
     );
 
     if (!this.map || validPoints.length === 0) {
@@ -141,8 +141,6 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
       bounds.extend(position);
     }
 
-
-
     const routeSegments = this.buildRouteSegments(linePoints);
 
     for (const segment of routeSegments) {
@@ -150,7 +148,6 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
         lat: Number(point.lat),
         lng: Number(point.lng),
       }));
-
 
       const halo = new google.maps.Polyline({
         path: segmentPath,
@@ -176,9 +173,6 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
 
       this.polylines.push(halo, polyline);
     }
-
-
-
 
     this.addEndpointMarker(validPoints[0], 'START', '#10b981', 40);
 
@@ -215,9 +209,7 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
       const previousTime = this.parseTrackTime(previous.time);
       const currentTime = this.parseTrackTime(current.time);
       const hasGap =
-        previousTime !== null &&
-        currentTime !== null &&
-        currentTime - previousTime > maxGapMs;
+        previousTime !== null && currentTime !== null && currentTime - previousTime > maxGapMs;
       const nextColor = this.getStatusColor(current);
       const statusChanged = nextColor !== currentColor;
 
@@ -269,7 +261,7 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
     }
 
     const match = String(value || '').match(
-      /^(\d{1,2})-([A-Za-z]{3})-(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+      /^(\d{1,2})-([A-Za-z]{3})-(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/,
     );
 
     if (!match) {
@@ -277,8 +269,18 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
     }
 
     const months: Record<string, number> = {
-      JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
-      JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11,
+      JAN: 0,
+      FEB: 1,
+      MAR: 2,
+      APR: 3,
+      MAY: 4,
+      JUN: 5,
+      JUL: 6,
+      AUG: 7,
+      SEP: 8,
+      OCT: 9,
+      NOV: 10,
+      DEC: 11,
     };
     const month = months[match[2].toUpperCase()];
 
@@ -292,7 +294,7 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
       Number(match[1]),
       Number(match[4]),
       Number(match[5]),
-      Number(match[6] || 0)
+      Number(match[6] || 0),
     ).getTime();
   }
 
@@ -300,7 +302,7 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
     point: PastTrackPoint,
     label: string,
     color: string,
-    zIndex: number
+    zIndex: number,
   ): void {
     const marker = new google.maps.Marker({
       position: { lat: Number(point.lat), lng: Number(point.lng) },
@@ -431,12 +433,10 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
 
   private getInitialCenter(): any {
     const first = (this.trackPoints || []).find((point: PastTrackPoint) =>
-      this.isValidPoint(point)
+      this.isValidPoint(point),
     );
 
-    return first
-      ? { lat: Number(first.lat), lng: Number(first.lng) }
-      : { lat: 9.5, lng: 101 };
+    return first ? { lat: Number(first.lat), lng: Number(first.lng) } : { lat: 9.5, lng: 101 };
   }
 
   private getRoutePointIcon(point: PastTrackPoint, selected: boolean): any {
@@ -468,7 +468,6 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
     };
   }
 
-
   setMapType(type: 'roadmap' | 'satellite'): void {
     this.mapType = type;
 
@@ -477,9 +476,7 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
     }
 
     this.map.setMapTypeId(
-      type === 'satellite'
-        ? google.maps.MapTypeId.SATELLITE
-        : google.maps.MapTypeId.ROADMAP
+      type === 'satellite' ? google.maps.MapTypeId.SATELLITE : google.maps.MapTypeId.ROADMAP,
     );
   }
 
@@ -492,7 +489,7 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
     this.uiRoutePoints = '';
 
     const validPoints = (this.trackPoints || []).filter((point: PastTrackPoint) =>
-      this.isValidPoint(point)
+      this.isValidPoint(point),
     );
 
     if (validPoints.length === 0) {
@@ -536,8 +533,9 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
       candidates.push(points[points.length - 1]);
     }
 
-    return candidates.filter((point, index, items) =>
-      items.findIndex((item) => item.no === point.no && item.time === point.time) === index
+    return candidates.filter(
+      (point, index, items) =>
+        items.findIndex((item) => item.no === point.no && item.time === point.time) === index,
     );
   }
 
@@ -602,7 +600,9 @@ export class PastTrackMapComponent implements AfterViewInit, OnChanges, OnDestro
   }
 
   private isEndPoint(point: PastTrackPoint): boolean {
-    return this.trackPoints.length > 0 && this.trackPoints[this.trackPoints.length - 1].no === point.no;
+    return (
+      this.trackPoints.length > 0 && this.trackPoints[this.trackPoints.length - 1].no === point.no
+    );
   }
 
   formatLat(lat: number): string {

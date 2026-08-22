@@ -1,20 +1,16 @@
-import { Injectable } from "@angular/core";
+import { Injectable } from '@angular/core';
 
 @Injectable({
   providedIn: 'root',
 })
 export class TagService {
-
   public tagSelected: TagGroup[] = [];
 
-
   public presetConfig: any[] = [];
-
 
   public points: Point[] = [];
 
   constructor() {}
-
 
   setActive(tag: any, group: any): void {
     const tagName = this.getTagName(tag);
@@ -31,7 +27,6 @@ export class TagService {
     }
   }
 
-
   private addTagSelected(groupNames: string[], tagName: string): void {
     const exists = this.tagSelected.some((item: TagGroup) => {
       return this.isSameTag(item, groupNames, tagName);
@@ -42,23 +37,19 @@ export class TagService {
     }
   }
 
-
   private removeTagSelected(groupNames: string[], tagName: string): void {
     this.tagSelected = this.tagSelected.filter((item: TagGroup) => {
       return !this.isSameTag(item, groupNames, tagName);
     });
   }
 
-
   clearTagSelected(): void {
     this.tagSelected = [];
   }
 
-
   setPresetConfig(res: any[]): void {
     this.presetConfig = Array.isArray(res) ? res : [];
   }
-
 
   addPoint(prefix: string, points: any[]): void {
     const safePrefix = this.normalizePrefix(prefix);
@@ -70,21 +61,17 @@ export class TagService {
     const safePoints = Array.isArray(points) ? points : [];
     const index = this.getPointIndex(safePrefix);
 
-
     if (index === -1) {
       this.points.push(new Point(safePrefix, safePoints));
       return;
     }
 
-
     this.points[index].points = safePoints;
   }
-
 
   hasPoint(prefix: string): boolean {
     return this.getPointIndex(prefix) > -1;
   }
-
 
   getPoint(prefix: string): any[] {
     const index = this.getPointIndex(prefix);
@@ -96,11 +83,9 @@ export class TagService {
     return this.points[index].points;
   }
 
-
   clearPoints(): void {
     this.points = [];
   }
-
 
   removePoint(prefix: string): void {
     const safePrefix = this.normalizePrefix(prefix);
@@ -114,15 +99,13 @@ export class TagService {
     });
   }
 
-
   private getTagName(tag: any): string {
     if (!tag || !tag.name) {
-      return "";
+      return '';
     }
 
     return String(tag.name).trim();
   }
-
 
   private getGroupNames(group: any): string[] {
     if (!group) {
@@ -144,12 +127,7 @@ export class TagService {
     return [];
   }
 
-
-  private isSameTag(
-    item: TagGroup,
-    groupNames: string[],
-    tagName: string,
-  ): boolean {
+  private isSameTag(item: TagGroup, groupNames: string[], tagName: string): boolean {
     if (!item || item.tags !== tagName) {
       return false;
     }
@@ -157,15 +135,12 @@ export class TagService {
     return this.isSameGroup(item.group, groupNames);
   }
 
-
   private isSameGroup(groupA: string[], groupB: string[]): boolean {
-    const a = Array.isArray(groupA) ? groupA.join("|") : "";
-    const b = Array.isArray(groupB) ? groupB.join("|") : "";
+    const a = Array.isArray(groupA) ? groupA.join('|') : '';
+    const b = Array.isArray(groupB) ? groupB.join('|') : '';
 
     return a === b;
   }
-
-
   private getPointIndex(prefix: string): number {
     const safePrefix = this.normalizePrefix(prefix);
 
@@ -181,11 +156,9 @@ export class TagService {
 
     return -1;
   }
-
-
   private normalizePrefix(prefix: string): string {
     if (!prefix) {
-      return "";
+      return '';
     }
 
     return String(prefix).trim();

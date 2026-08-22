@@ -1,10 +1,4 @@
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-  ChangeDetectorRef,
-  ViewChild,
-} from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild } from '@angular/core';
 
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
@@ -64,7 +58,7 @@ export class OverviewComponent implements OnInit, OnDestroy {
     private router: Router,
     public fvTimeService: FvTimeService,
     public coordinatesService: CoordinatesService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
@@ -146,14 +140,49 @@ export class OverviewComponent implements OnInit, OnDestroy {
     const vesselDesc = r?.desc || r?.type || r?.fv?.desc || 'AHTS';
     const vesselImg = r?.img || r?.image || r?.fv?.img || '';
 
-    const rawSpeed = this.getTagValue(tagData, ['VES_GPS_SPEED', 'GPS_SPEED', 'SPEED', 'speed'], r?.speed ?? 0);
-    const rawDistance = this.getTagValue(tagData, ['VES_GPS_DIS_TODAY', 'VES_DISTANCE_TODAY', 'DISTANCE_TODAY', 'distance'], r?.distance ?? 0);
-    const rawFuelRate = this.getTagValue(tagData, ['VES_FUEL_RATE', 'VES_CONS_RATE', 'FUEL_RATE', 'FUEL_CONSUMPTION_RATE', 'PME_CONS_RATE', 'DG1_CONS_RATE'], r?.fuelRate ?? 0);
-    const rawFuelConsumption = this.getTagValue(tagData, ['VES_CONS_TODAY', 'VES_FUEL_CONS_TODAY', 'FUEL_CONSUMPTION_TODAY'], r?.fuelConsumption ?? 0);
-    const rawCourse = this.getTagValue(tagData, ['VES_GPS_COURSE', 'VES_GPS_HEAD', 'VES_COURSE', 'GPS_COURSE', 'COURSE', 'course'], r?.course ?? 0);
+    const rawSpeed = this.getTagValue(
+      tagData,
+      ['VES_GPS_SPEED', 'GPS_SPEED', 'SPEED', 'speed'],
+      r?.speed ?? 0,
+    );
+    const rawDistance = this.getTagValue(
+      tagData,
+      ['VES_GPS_DIS_TODAY', 'VES_DISTANCE_TODAY', 'DISTANCE_TODAY', 'distance'],
+      r?.distance ?? 0,
+    );
+    const rawFuelRate = this.getTagValue(
+      tagData,
+      [
+        'VES_FUEL_RATE',
+        'VES_CONS_RATE',
+        'FUEL_RATE',
+        'FUEL_CONSUMPTION_RATE',
+        'PME_CONS_RATE',
+        'DG1_CONS_RATE',
+      ],
+      r?.fuelRate ?? 0,
+    );
+    const rawFuelConsumption = this.getTagValue(
+      tagData,
+      ['VES_CONS_TODAY', 'VES_FUEL_CONS_TODAY', 'FUEL_CONSUMPTION_TODAY'],
+      r?.fuelConsumption ?? 0,
+    );
+    const rawCourse = this.getTagValue(
+      tagData,
+      ['VES_GPS_COURSE', 'VES_GPS_HEAD', 'VES_COURSE', 'GPS_COURSE', 'COURSE', 'course'],
+      r?.course ?? 0,
+    );
 
-    const rawLat = this.getTagValue(tagData, ['VES_GPS_LAT', 'GPS_LAT', 'LAT', 'lat', 'latitude'], r?.lat ?? r?.latitude ?? null);
-    const rawLng = this.getTagValue(tagData, ['VES_GPS_LONG', 'VES_GPS_LNG', 'GPS_LONG', 'GPS_LNG', 'LNG', 'lng', 'long', 'longitude'], r?.lng ?? r?.long ?? r?.longitude ?? null);
+    const rawLat = this.getTagValue(
+      tagData,
+      ['VES_GPS_LAT', 'GPS_LAT', 'LAT', 'lat', 'latitude'],
+      r?.lat ?? r?.latitude ?? null,
+    );
+    const rawLng = this.getTagValue(
+      tagData,
+      ['VES_GPS_LONG', 'VES_GPS_LNG', 'GPS_LONG', 'GPS_LNG', 'LNG', 'lng', 'long', 'longitude'],
+      r?.lng ?? r?.long ?? r?.longitude ?? null,
+    );
 
     const latNumber = rawLat !== null && rawLat !== undefined ? this.toNumberOrNull(rawLat) : null;
     const lngNumber = rawLng !== null && rawLng !== undefined ? this.toNumberOrNull(rawLng) : null;
@@ -247,7 +276,7 @@ export class OverviewComponent implements OnInit, OnDestroy {
 
   private getStatusKey(timestamp: unknown, lastSeen: string): VesselStatus {
     const timestampStatus = getVesselStatusFromTimestamp(
-      timestamp as string | number | Date | null | undefined
+      timestamp as string | number | Date | null | undefined,
     );
     if (timestampStatus !== 'nodata') return timestampStatus;
     return getVesselStatusFromLastSeenLabel(lastSeen);
@@ -285,7 +314,8 @@ export class OverviewComponent implements OnInit, OnDestroy {
   private getLastSeenText(timestamp: string | null): string {
     if (!timestamp) return '-';
     const service: any = this.fvTimeService;
-    if (typeof service?.getLastSeenFromString === 'function') return service.getLastSeenFromString(timestamp);
+    if (typeof service?.getLastSeenFromString === 'function')
+      return service.getLastSeenFromString(timestamp);
 
     const date = new Date(timestamp);
     if (Number.isNaN(date.getTime())) return '-';
@@ -330,12 +360,28 @@ export class OverviewComponent implements OnInit, OnDestroy {
 
   private getVesselKey(vessel: any): string {
     if (!vessel) return '';
-    return String(vessel.id || vessel._id || vessel.prefix || vessel.name || vessel.vesselName || vessel.fv?.id || vessel.fv?.name || '');
+    return String(
+      vessel.id ||
+        vessel._id ||
+        vessel.prefix ||
+        vessel.name ||
+        vessel.vesselName ||
+        vessel.fv?.id ||
+        vessel.fv?.name ||
+        '',
+    );
   }
 
   private getVesselName(vessel: any): string {
     if (!vessel) return 'Unknown Vessel';
-    return vessel.name || vessel.vesselName || vessel.fv?.name || vessel.desc || vessel.fv?.desc || 'Unknown Vessel';
+    return (
+      vessel.name ||
+      vessel.vesselName ||
+      vessel.fv?.name ||
+      vessel.desc ||
+      vessel.fv?.desc ||
+      'Unknown Vessel'
+    );
   }
 
   private normalizeKey(value: any): string {

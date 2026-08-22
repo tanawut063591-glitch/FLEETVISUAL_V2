@@ -1,18 +1,6 @@
-import {
-  trigger,
-  style,
-  animate,
-  transition,
-  query,
-  stagger,
-  group,
-} from '@angular/animations';
+import { trigger, style, animate, transition, query, stagger, group } from '@angular/animations';
 
 export const Animations = {
-
-
-
-
   listAnimation: trigger('listAnimation', [
     transition(':enter', [
       query(
@@ -28,11 +16,11 @@ export const Animations = {
               style({
                 opacity: 1,
                 transform: 'translateY(0)',
-              })
+              }),
             ),
           ]),
         ],
-        { optional: true }
+        { optional: true },
       ),
     ]),
 
@@ -46,18 +34,14 @@ export const Animations = {
               style({
                 opacity: 0,
                 transform: 'translateY(8px)',
-              })
+              }),
             ),
           ]),
         ],
-        { optional: true }
+        { optional: true },
       ),
     ]),
   ]),
-
-
-
-
 
   routeAnimation: trigger('routeAnimation', [
     transition('* <=> *', [
@@ -72,7 +56,7 @@ export const Animations = {
             left: 0,
           }),
         ],
-        { optional: true }
+        { optional: true },
       ),
 
       group([
@@ -84,10 +68,10 @@ export const Animations = {
               style({
                 opacity: 0,
                 transform: 'translateY(-4px)',
-              })
+              }),
             ),
           ],
-          { optional: true }
+          { optional: true },
         ),
 
         query(
@@ -102,17 +86,14 @@ export const Animations = {
               style({
                 opacity: 1,
                 transform: 'translateY(0)',
-              })
+              }),
             ),
           ],
-          { optional: true }
+          { optional: true },
         ),
       ]),
     ]),
   ]),
-
-
-
 
   fadeSlideUp: trigger('fadeSlideUp', [
     transition(':enter', [
@@ -125,7 +106,7 @@ export const Animations = {
         style({
           opacity: 1,
           transform: 'translateY(0) scale(1)',
-        })
+        }),
       ),
     ]),
 
@@ -135,7 +116,7 @@ export const Animations = {
         style({
           opacity: 0,
           transform: 'translateY(8px) scale(0.98)',
-        })
+        }),
       ),
     ]),
   ]),

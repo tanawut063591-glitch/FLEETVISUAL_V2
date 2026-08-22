@@ -1039,3 +1039,58 @@
   .dg-live-strip__value { min-width: 74px; padding-left: 7px; }
   .dg-live-strip__value strong { font-size: 17px; }
 }
+
+
+/* ===== Realtime Pro: dual fuel KPI + squared visual language ===== */
+.dg-live-strip.dg-live-strip--dual {
+  min-height: 58px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border-radius: 6px;
+}
+.dg-top-metric {
+  min-width: 0;
+  padding: 9px 11px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.dg-top-metric + .dg-top-metric { border-left: 1px solid rgba(148,163,184,.2); }
+.dg-top-metric__icon {
+  width:28px; height:28px; display:grid; place-items:center;
+  border:1px solid rgba(37,99,235,.16); border-radius:5px;
+  color:#2563eb; background:rgba(219,234,254,.72); font-size:10px;
+}
+.dg-top-metric--today .dg-top-metric__icon { color:#7c3aed; border-color:rgba(124,58,237,.16); background:rgba(237,233,254,.72); }
+.dg-top-metric__copy { min-width:0; display:flex; flex-direction:column; gap:3px; }
+.dg-top-metric__copy small { overflow:hidden; color:var(--dg-muted); font-size:7px; line-height:1.1; font-weight:900; letter-spacing:.065em; text-overflow:ellipsis; white-space:nowrap; }
+.dg-top-metric__copy strong { overflow:hidden; color:#2563eb; font-size:17px; line-height:1; font-weight:900; letter-spacing:-.02em; font-variant-numeric:tabular-nums; text-overflow:ellipsis; white-space:nowrap; }
+.dg-top-metric--today .dg-top-metric__copy strong { color:#7c3aed; }
+.dg-top-metric__copy b { color:var(--dg-muted); font-size:8px; font-weight:850; }
+
+.dg-monitor,
+.fuel-block,
+.fuel-circuit__node,
+.dg-load,
+.dg-output { border-radius:6px; }
+.fuel-block__status { border-radius:4px; }
+.dg-performance { grid-template-columns: minmax(0,1fr) minmax(90px,.45fr); }
+.fuel-block--two-metrics .fuel-metrics { grid-template-columns: repeat(2, minmax(0,1fr)); }
+
+:host-context([data-theme='dark']) .dg-top-metric + .dg-top-metric { border-left-color:rgba(148,163,184,.16); }
+:host-context([data-theme='dark']) .dg-top-metric__icon { color:#93c5fd; background:rgba(30,64,175,.24); }
+:host-context([data-theme='dark']) .dg-top-metric--today .dg-top-metric__icon { color:#c4b5fd; background:rgba(91,33,182,.22); }
+:host-context([data-theme='dark']) .dg-top-metric__copy strong { color:#60a5fa; }
+:host-context([data-theme='dark']) .dg-top-metric--today .dg-top-metric__copy strong { color:#a78bfa; }
+
+@media (max-width:420px) {
+  .dg-top-metric { grid-template-columns:24px minmax(0,1fr); padding:8px 7px; gap:6px; }
+  .dg-top-metric__icon { width:24px; height:24px; }
+  .dg-top-metric__copy strong { font-size:14px; }
+  .dg-top-metric__copy small { font-size:6px; }
+  .dg-performance { grid-template-columns:1fr 1fr; }
+}

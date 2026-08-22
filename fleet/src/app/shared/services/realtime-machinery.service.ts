@@ -64,7 +64,8 @@ export class RealtimeMachineryService {
         if (
           Number(assignment.realtimeRow) === position.row &&
           Number(assignment.realtimeCol) === position.col
-        ) return true;
+        )
+          return true;
         return this.normalizeLabel(assignment.position) === this.normalizeLabel(position.title);
       });
 
@@ -136,18 +137,28 @@ export class RealtimeMachineryService {
   }
 
   private categoryFor(type: string, title: string): EngineProfileCategory {
-    const normalizedType = String(type || '').trim().toUpperCase();
-    const normalizedTitle = String(title || '').trim().toUpperCase();
+    const normalizedType = String(type || '')
+      .trim()
+      .toUpperCase();
+    const normalizedTitle = String(title || '')
+      .trim()
+      .toUpperCase();
     if (normalizedType === 'ME1' || normalizedTitle.includes('MAIN ENGINE')) return 'main';
     if (normalizedType === 'AE1' || normalizedTitle.includes('AUX. ENGINE')) return 'auxiliary';
-    if (normalizedType.startsWith('DG') || normalizedTitle.includes('DIESEL GENERATOR')) return 'generator';
+    if (normalizedType.startsWith('DG') || normalizedTitle.includes('DIESEL GENERATOR'))
+      return 'generator';
     return 'other';
   }
 
   private suggestedProfileId(category: EngineProfileCategory, type: string): string {
     if (category === 'main') return 'generic-main-diesel';
     if (category === 'auxiliary' || category === 'generator') return 'generic-generator-engine';
-    if (String(type || '').trim().toUpperCase() === 'MOTOR') return 'telemetry-only-engine';
+    if (
+      String(type || '')
+        .trim()
+        .toUpperCase() === 'MOTOR'
+    )
+      return 'telemetry-only-engine';
     return 'telemetry-only-engine';
   }
 

@@ -15,8 +15,6 @@ export class ThemeModeService {
     const isCurrentDefaultVersion =
       localStorage.getItem(this.defaultVersionKey) === this.defaultVersion;
 
-
-
     const mode = isCurrentDefaultVersion ? this.getSavedMode() : this.defaultMode;
 
     if (!isCurrentDefaultVersion) {

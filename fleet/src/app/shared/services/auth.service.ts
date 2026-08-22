@@ -10,15 +10,11 @@ export type LoginFailureReason =
   | 'invalid_response'
   | 'server';
 
-
-
-
-
 export class LoginError extends Error {
   constructor(
     public readonly reason: LoginFailureReason,
     public readonly status = 0,
-    message = 'Login failed'
+    message = 'Login failed',
   ) {
     super(message);
     this.name = 'LoginError';
@@ -27,10 +23,8 @@ export class LoginError extends Error {
 
 const LOGIN_TIMEOUT_MS = 8_000;
 
-
 const URL = environment.API_URL || '';
 const URL2 = environment.API2_URL || environment.API_URL || '';
-
 
 const TOKEN_KEY = 'vesselToken2';
 const OLD_TOKEN_KEY = 'vesselToken';
@@ -42,11 +36,9 @@ const SITES_KEY = 'sites';
   providedIn: 'root',
 })
 export class AuthService {
-
   redirectUrl = '';
 
   constructor(private http: HttpClient) {}
-
 
   async login(username: string, password: string): Promise<boolean> {
     if (!username || !password) {
@@ -66,14 +58,10 @@ export class AuthService {
       const res: any = await firstValueFrom(
         this.http
           .post(`${URL}/token`, body.toString(), { headers })
-          .pipe(timeout(LOGIN_TIMEOUT_MS))
+          .pipe(timeout(LOGIN_TIMEOUT_MS)),
       );
 
-      const token =
-        res?.access_token ||
-        res?.AccessToken ||
-        res?.token ||
-        '';
+      const token = res?.access_token || res?.AccessToken || res?.token || '';
 
       if (!token) {
         return false;
@@ -89,16 +77,10 @@ export class AuthService {
     }
   }
 
-
   async login2(username: string, password: string): Promise<boolean> {
     if (!username || !password) {
-      throw new LoginError(
-        'invalid_credentials',
-        400,
-        'Username and password are required.'
-      );
+      throw new LoginError('invalid_credentials', 400, 'Username and password are required.');
     }
-
 
     this.clearLoginSession();
 
@@ -109,7 +91,7 @@ export class AuthService {
             username,
             password,
           })
-          .pipe(timeout(LOGIN_TIMEOUT_MS))
+          .pipe(timeout(LOGIN_TIMEOUT_MS)),
       );
 
       const token =
@@ -126,37 +108,29 @@ export class AuthService {
 
       if (!token) {
         const backendMessage = String(
-          res?.message ||
-            res?.Message ||
-            res?.error_description ||
-            res?.error ||
-            ''
+          res?.message || res?.Message || res?.error_description || res?.error || '',
         );
 
         const rejected =
           res?.success === false ||
           res?.authenticated === false ||
           res?.isAuthenticated === false ||
-          /invalid|incorrect|unauthori[sz]ed|credential|password/i.test(
-            backendMessage
-          );
+          /invalid|incorrect|unauthori[sz]ed|credential|password/i.test(backendMessage);
 
         throw new LoginError(
           rejected ? 'invalid_credentials' : 'invalid_response',
           200,
-          backendMessage || 'The login server returned no access token.'
+          backendMessage || 'The login server returned no access token.',
         );
       }
 
       localStorage.setItem(TOKEN_KEY, String(token));
       localStorage.setItem(USERNAME_KEY, username);
 
-      const user =
-        res?.User ||
+      const user = res?.User ||
         res?.user ||
         res?.Access?.User ||
-        res?.Access?.user ||
-        {
+        res?.Access?.user || {
           username,
         };
 
@@ -179,7 +153,6 @@ export class AuthService {
     } catch (error: unknown) {
       const loginError = this.normalizeLoginError(error);
 
-
       console.warn('[AuthService] Login failed:', {
         reason: loginError.reason,
         status: loginError.status,
@@ -189,31 +162,18 @@ export class AuthService {
     }
   }
 
-
-  async loginAndGetRedirect(
-    username: string,
-    password: string
-  ): Promise<string> {
+  async loginAndGetRedirect(username: string, password: string): Promise<string> {
     const success = await this.login2(username, password);
 
     if (!success) {
       return '';
     }
 
-
-
-
-
     const redirect = this.redirectUrl;
 
     this.redirectUrl = '';
 
-    if (
-      redirect &&
-      redirect !== '/login' &&
-      redirect !== '/notfound' &&
-      redirect !== '/main'
-    ) {
+    if (redirect && redirect !== '/login' && redirect !== '/notfound' && redirect !== '/main') {
       return redirect;
     }
 
@@ -229,7 +189,6 @@ export class AuthService {
     return `/main/${allowedPages.has(preferredPage) ? preferredPage : 'overview'}`;
   }
 
-
   async tryLogin(): Promise<boolean> {
     const token = this.getToken();
 
@@ -241,7 +200,7 @@ export class AuthService {
       const res: any = await firstValueFrom(
         this.http.post(`${URL}/api/users/trytologin`, null, {
           headers: this.getAuthHeaders(),
-        })
+        }),
       );
 
       if (res) {
@@ -281,40 +240,25 @@ export class AuthService {
       error instanceof TimeoutError ||
       (error as { name?: string } | null)?.name === 'TimeoutError'
     ) {
-      return new LoginError(
-        'timeout',
-        0,
-        'The login request timed out.'
-      );
+      return new LoginError('timeout', 0, 'The login request timed out.');
     }
 
-    const status = Number(
-      (error as { status?: number } | null)?.status ?? 0
-    );
+    const status = Number((error as { status?: number } | null)?.status ?? 0);
 
     if (status === 400 || status === 401 || status === 403) {
       return new LoginError(
         'invalid_credentials',
         status,
-        'The username or password is incorrect.'
+        'The username or password is incorrect.',
       );
     }
 
     if (status === 0) {
-      return new LoginError(
-        'network',
-        status,
-        'Unable to connect to the login server.'
-      );
+      return new LoginError('network', status, 'Unable to connect to the login server.');
     }
 
-    return new LoginError(
-      'server',
-      status,
-      'The login server returned an error.'
-    );
+    return new LoginError('server', status, 'The login server returned an error.');
   }
-
 
   private clearLoginSession(): void {
     localStorage.removeItem(TOKEN_KEY);
@@ -323,20 +267,13 @@ export class AuthService {
     localStorage.removeItem(SITES_KEY);
   }
 
-
   getToken(): string {
-    return (
-      localStorage.getItem(TOKEN_KEY) ||
-      localStorage.getItem(OLD_TOKEN_KEY) ||
-      ''
-    );
+    return localStorage.getItem(TOKEN_KEY) || localStorage.getItem(OLD_TOKEN_KEY) || '';
   }
-
 
   getUsername(): string {
     return localStorage.getItem(USERNAME_KEY) || '';
   }
-
 
   getUser(): string {
     const username = localStorage.getItem(USERNAME_KEY);
@@ -367,7 +304,6 @@ export class AuthService {
       return '';
     }
   }
-
 
   getSites(): string[] {
     const rawSites = localStorage.getItem(SITES_KEY);
@@ -407,11 +343,9 @@ export class AuthService {
     }
   }
 
-
   isLoggedIn(): boolean {
     return this.getToken().trim().length > 0;
   }
-
 
   getAuthHeaders(): HttpHeaders {
     const token = this.getToken();
@@ -420,7 +354,6 @@ export class AuthService {
       Authorization: `Bearer ${token}`,
     });
   }
-
 
   logout(): void {
     localStorage.removeItem(TOKEN_KEY);

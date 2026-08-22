@@ -1,47 +1,47 @@
 export type PastTrackStatus = 'Sailing' | 'Idle' | 'No Data';
 
 export interface PastTrackPoint {
-    no: number;
-    vesselId: string;
+  no: number;
+  vesselId: string;
 
-    time: string;
+  time: string;
 
-    recordedTime?: string;
+  recordedTime?: string;
 
-    sampleOffsetMinutes?: number;
-    lat: number;
-    lng: number;
-    status: PastTrackStatus;
-    speed: number;
-    course: number;
-    engine: string;
-    fuelRate: number;
+  sampleOffsetMinutes?: number;
+  lat: number;
+  lng: number;
+  status: PastTrackStatus;
+  speed: number;
+  course: number;
+  engine: string;
+  fuelRate: number;
 }
 
 export interface PastTrackSummary {
-    vesselId: string;
-    vesselName: string;
-    vesselType: string;
-    imo: string;
-    mmsi: string;
-    status: string;
-    image: string;
-    totalDistance: number;
+  vesselId: string;
+  vesselName: string;
+  vesselType: string;
+  imo: string;
+  mmsi: string;
+  status: string;
+  image: string;
+  totalDistance: number;
 
-    trackPoints: number;
+  trackPoints: number;
 
-    rawTrackPoints?: number;
-    samplingIntervalMinutes?: number;
-    expectedSlots?: number;
-    coveragePercent?: number;
-    rangeStart?: string;
-    rangeEnd?: string;
-    avgSpeed: number;
-    totalTime: string;
-    lastUpdate: string;
+  rawTrackPoints?: number;
+  samplingIntervalMinutes?: number;
+  expectedSlots?: number;
+  coveragePercent?: number;
+  rangeStart?: string;
+  rangeEnd?: string;
+  avgSpeed: number;
+  totalTime: string;
+  lastUpdate: string;
 }
 
 export interface PastTrackResponse {
-    summary: PastTrackSummary;
-    points: PastTrackPoint[];
+  summary: PastTrackSummary;
+  points: PastTrackPoint[];
 }

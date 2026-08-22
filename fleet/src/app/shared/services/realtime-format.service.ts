@@ -1,9 +1,6 @@
 import { Injectable } from '@angular/core';
 
-import {
-  RealtimeDisplayStatus,
-  RealtimeInput,
-} from '../models/realtime-value.model';
+import { RealtimeDisplayStatus, RealtimeInput } from '../models/realtime-value.model';
 
 @Injectable({
   providedIn: 'root',
@@ -112,9 +109,7 @@ export class RealtimeFormatService {
     }
 
     const normalizedValue =
-      tagName && tagName.startsWith('A01')
-        ? numberValue - 272.15
-        : numberValue;
+      tagName && tagName.startsWith('A01') ? numberValue - 272.15 : numberValue;
 
     return normalizedValue.toFixed(2);
   }

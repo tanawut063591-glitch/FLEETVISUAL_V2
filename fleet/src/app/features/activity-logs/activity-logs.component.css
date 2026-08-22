@@ -163,7 +163,7 @@ button:disabled {
   font-weight: 700;
 }
 
-.connection-strip > div,
+.connection-strip>div,
 .refresh-actions {
   min-width: 0;
   display: flex;
@@ -366,10 +366,21 @@ button:disabled {
   border-radius: 50%;
 }
 
-.status-legend .normal { background: var(--log-green); }
-.status-legend .warning { background: var(--log-orange); }
-.status-legend .critical { background: var(--log-red); }
-.status-legend .offline { background: var(--log-gray); }
+.status-legend .normal {
+  background: var(--log-green);
+}
+
+.status-legend .warning {
+  background: var(--log-orange);
+}
+
+.status-legend .critical {
+  background: var(--log-red);
+}
+
+.status-legend .offline {
+  background: var(--log-gray);
+}
 
 .metric-grid {
   display: grid;
@@ -384,7 +395,7 @@ button:disabled {
   background: linear-gradient(180deg, var(--card-bg), var(--surface-bg-2));
 }
 
-.metric-card + .metric-card {
+.metric-card+.metric-card {
   border-left: 1px solid var(--soft-border);
 }
 
@@ -398,14 +409,14 @@ button:disabled {
   font-size: 20px;
 }
 
-.metric-card > span {
+.metric-card>span {
   display: block;
   color: var(--secondary-txt);
   font-size: 12px;
   font-weight: 900;
 }
 
-.metric-card > strong {
+.metric-card>strong {
   display: block;
   margin: 11px 0 13px;
   color: var(--primary-txt);
@@ -415,20 +426,47 @@ button:disabled {
   letter-spacing: -0.045em;
 }
 
-.metric-card > small {
+.metric-card>small {
   font-size: 9px;
   line-height: 1.35;
   font-weight: 800;
 }
 
-.metric-card.total .metric-icon { color: var(--log-blue); background: var(--log-blue-soft); }
-.metric-card.total > small { color: var(--log-blue); }
-.metric-card.critical .metric-icon { color: var(--log-red); background: var(--log-red-soft); }
-.metric-card.critical > small { color: var(--log-red); }
-.metric-card.warning .metric-icon { color: var(--log-orange); background: var(--log-orange-soft); }
-.metric-card.warning > small { color: var(--log-orange); }
-.metric-card.success .metric-icon { color: var(--log-green); background: var(--log-green-soft); }
-.metric-card.success > small { color: var(--log-green); }
+.metric-card.total .metric-icon {
+  color: var(--log-blue);
+  background: var(--log-blue-soft);
+}
+
+.metric-card.total>small {
+  color: var(--log-blue);
+}
+
+.metric-card.critical .metric-icon {
+  color: var(--log-red);
+  background: var(--log-red-soft);
+}
+
+.metric-card.critical>small {
+  color: var(--log-red);
+}
+
+.metric-card.warning .metric-icon {
+  color: var(--log-orange);
+  background: var(--log-orange-soft);
+}
+
+.metric-card.warning>small {
+  color: var(--log-orange);
+}
+
+.metric-card.success .metric-icon {
+  color: var(--log-green);
+  background: var(--log-green-soft);
+}
+
+.metric-card.success>small {
+  color: var(--log-green);
+}
 
 .feed-card {
   min-height: 420px;
@@ -507,8 +545,8 @@ button:disabled {
   line-height: 1.5;
 }
 
-.empty-state > i,
-.error-state > i {
+.empty-state>i,
+.error-state>i {
   width: 50px;
   height: 50px;
   display: grid;
@@ -517,12 +555,12 @@ button:disabled {
   font-size: 21px;
 }
 
-.empty-state > i {
+.empty-state>i {
   color: var(--log-green);
   background: var(--log-green-soft);
 }
 
-.error-state > i {
+.error-state>i {
   color: var(--log-red);
   background: var(--log-red-soft);
 }
@@ -635,9 +673,17 @@ button:disabled {
   background: var(--log-blue);
 }
 
-.activity-row[data-severity='critical'] .event-dot { background: var(--log-red); }
-.activity-row[data-severity='warning'] .event-dot { background: var(--log-orange); }
-.activity-row[data-severity='success'] .event-dot { background: var(--log-green); }
+.activity-row[data-severity='critical'] .event-dot {
+  background: var(--log-red);
+}
+
+.activity-row[data-severity='warning'] .event-dot {
+  background: var(--log-orange);
+}
+
+.activity-row[data-severity='success'] .event-dot {
+  background: var(--log-green);
+}
 
 .timestamp-cell strong,
 .message-cell strong,
@@ -674,10 +720,25 @@ button:disabled {
   white-space: nowrap;
 }
 
-.severity-badge[data-severity='critical'] { color: var(--log-red); background: var(--log-red-soft); }
-.severity-badge[data-severity='warning'] { color: var(--log-orange); background: var(--log-orange-soft); }
-.severity-badge[data-severity='info'] { color: var(--log-blue); background: var(--log-blue-soft); }
-.severity-badge[data-severity='success'] { color: var(--log-green); background: var(--log-green-soft); }
+.severity-badge[data-severity='critical'] {
+  color: var(--log-red);
+  background: var(--log-red-soft);
+}
+
+.severity-badge[data-severity='warning'] {
+  color: var(--log-orange);
+  background: var(--log-orange-soft);
+}
+
+.severity-badge[data-severity='info'] {
+  color: var(--log-blue);
+  background: var(--log-blue-soft);
+}
+
+.severity-badge[data-severity='success'] {
+  color: var(--log-green);
+  background: var(--log-green-soft);
+}
 
 .feed-footer {
   min-height: 62px;
@@ -726,13 +787,23 @@ button:disabled {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes log-pulse {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--log-green) 28%, transparent); }
-  70% { box-shadow: 0 0 0 7px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--log-green) 28%, transparent);
+  }
+
+  70% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
 }
 
 @media (max-width: 1380px) {
@@ -803,7 +874,7 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
-  .metric-card + .metric-card {
+  .metric-card+.metric-card {
     border-left: 0;
     border-top: 1px solid var(--soft-border);
   }
@@ -839,4 +910,42 @@ button:disabled {
     z-index: 2;
   }
 }
+/* =========================================================
+   Professional soft-square UI
+   Keeps telemetry/status dots circular, while making cards,
+   filters and actions more structured and consistent.
+   ========================================================= */
+.activity-page {
+  --log-radius-lg: 8px;
+  --log-radius-md: 7px;
+  --log-radius-sm: 5px;
+}
 
+.toolbar-search,
+.export-btn,
+.refresh-actions button,
+.feed-filters label,
+.feed-filters select,
+.reset-btn,
+.status-card,
+.error-state button,
+.pagination button {
+  border-radius: var(--log-radius-md);
+}
+
+.system-map-card,
+.metric-grid,
+.feed-card {
+  border-radius: var(--log-radius-lg);
+}
+
+.range-pill,
+.severity-badge {
+  border-radius: var(--log-radius-sm);
+}
+
+.metric-icon,
+.empty-state > i,
+.error-state > i {
+  border-radius: var(--log-radius-md);
+}

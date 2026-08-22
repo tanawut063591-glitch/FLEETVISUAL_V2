@@ -1,6 +1,17 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subject, Subscription, distinctUntilChanged, finalize, forkJoin, map, of, switchMap, takeUntil, timer } from 'rxjs';
+import {
+  Observable,
+  Subject,
+  distinctUntilChanged,
+  finalize,
+  forkJoin,
+  map,
+  of,
+  switchMap,
+  takeUntil,
+  timer,
+} from 'rxjs';
 
 import {
   EngineProfileCategory,
@@ -12,17 +23,21 @@ import {
   UserAccountProvisioning,
   UserAccountStatus,
   UserModulePermissionMap,
-  UserPresenceStatus,
-  UserSessionRecord,
   VesselGroupRecord,
   VesselEngineAssignment,
   VesselSettingsRecord,
   VesselSettingsStatus,
 } from '../../shared/models/settings.model';
-import { ENGINE_FORMULA_PRESETS, getEngineFormulaPreset } from '../../shared/config/engine-formula-presets';
+import {
+  ENGINE_FORMULA_PRESETS,
+  getEngineFormulaPreset,
+} from '../../shared/config/engine-formula-presets';
 import { SettingsDataService } from '../../shared/services/settings-data.service';
 import { EngineProfileService } from '../../shared/services/engine-profile.service';
-import { RealtimeMachineryPosition, RealtimeMachineryService } from '../../shared/services/realtime-machinery.service';
+import {
+  RealtimeMachineryPosition,
+  RealtimeMachineryService,
+} from '../../shared/services/realtime-machinery.service';
 import { UserAccessControlService } from '../../shared/services/user-access-control.service';
 import { UserAccountService } from '../../shared/services/user-account.service';
 import { ThemeMode, ThemeModeService } from '../../shared/services/theme-mode.service';
@@ -56,7 +71,6 @@ interface UserModuleDefinition {
   supportsManage: boolean;
 }
 
-type UserPanelMode = 'management' | 'sessions';
 type UserAccountSetupMode = 'create' | 'link';
 
 @Component({
@@ -66,15 +80,20 @@ type UserAccountSetupMode = 'create' | 'link';
   standalone: false,
 })
 export class SettingsComponent implements OnInit, OnDestroy {
-
-
   readonly tabs: SettingsTab[] = [
     { id: 'general', label: 'General', icon: 'fa fa-sun-o' },
     { id: 'users', label: 'Users', icon: 'fa fa-users' },
     { id: 'vessels', label: 'Vessels', icon: 'fa fa-ship' },
     { id: 'groups', label: 'Groups', icon: 'fa fa-object-group' },
   ];
-  readonly nationalityOptions = ['Thailand', 'Singapore', 'Indonesia', 'Malaysia', 'Vietnam', 'Other'];
+  readonly nationalityOptions = [
+    'Thailand',
+    'Singapore',
+    'Indonesia',
+    'Malaysia',
+    'Vietnam',
+    'Other',
+  ];
   readonly engineFormulaPresets = ENGINE_FORMULA_PRESETS;
   readonly engineCategoryOptions: Array<{ value: EngineProfileCategory; label: string }> = [
     { value: 'main', label: 'Main / Propulsion Engine' },
@@ -100,21 +119,96 @@ export class SettingsComponent implements OnInit, OnDestroy {
     { value: 'alerts', label: 'Alarm Center' },
   ];
   readonly userRoleOptions: Array<{ value: UserAccessRole; label: string; description: string }> = [
-    { value: 'administrator', label: 'Administrator', description: 'Full fleet and system administration.' },
-    { value: 'operator', label: 'Operator', description: 'Operate assigned fleets and acknowledge alarms.' },
+    {
+      value: 'administrator',
+      label: 'Administrator',
+      description: 'Full fleet and system administration.',
+    },
+    {
+      value: 'operator',
+      label: 'Operator',
+      description: 'Operate assigned fleets and acknowledge alarms.',
+    },
     { value: 'viewer', label: 'Viewer', description: 'View and export assigned fleet data only.' },
-    { value: 'custom', label: 'Custom', description: 'Configure every module permission manually.' },
+    {
+      value: 'custom',
+      label: 'Custom',
+      description: 'Configure every module permission manually.',
+    },
   ];
   readonly userModuleDefinitions: UserModuleDefinition[] = [
-    { key: 'overview', label: 'Overview', description: 'Fleet map and summary cards', icon: 'fa fa-map', supportsExport: false, supportsManage: false },
-    { key: 'realtime', label: 'Realtime', description: 'Live vessel telemetry', icon: 'fa fa-tachometer', supportsExport: true, supportsManage: false },
-    { key: 'data-logger', label: 'Data Logger', description: 'Historian data and tag tables', icon: 'fa fa-database', supportsExport: true, supportsManage: false },
-    { key: 'chart', label: 'Chart', description: 'Trend charts and analysis', icon: 'fa fa-area-chart', supportsExport: true, supportsManage: false },
-    { key: 'diagram', label: 'Diagram', description: 'Vessel process diagram', icon: 'fa fa-sitemap', supportsExport: true, supportsManage: false },
-    { key: 'report', label: 'Report', description: 'Daily reports and PDF export', icon: 'fa fa-file-text-o', supportsExport: true, supportsManage: false },
-    { key: 'alarm', label: 'Alarm', description: 'Alarm feed and acknowledgement', icon: 'fa fa-bell-o', supportsExport: true, supportsManage: true },
-    { key: 'log', label: 'Log', description: 'Operational and audit history', icon: 'fa fa-history', supportsExport: true, supportsManage: false },
-    { key: 'settings', label: 'Settings', description: 'Users, vessels and groups', icon: 'fa fa-cog', supportsExport: false, supportsManage: true },
+    {
+      key: 'overview',
+      label: 'Overview',
+      description: 'Fleet map and summary cards',
+      icon: 'fa fa-map',
+      supportsExport: false,
+      supportsManage: false,
+    },
+    {
+      key: 'realtime',
+      label: 'Realtime',
+      description: 'Live vessel telemetry',
+      icon: 'fa fa-tachometer',
+      supportsExport: true,
+      supportsManage: false,
+    },
+    {
+      key: 'data-logger',
+      label: 'Data Logger',
+      description: 'Historian data and tag tables',
+      icon: 'fa fa-database',
+      supportsExport: true,
+      supportsManage: false,
+    },
+    {
+      key: 'chart',
+      label: 'Chart',
+      description: 'Trend charts and analysis',
+      icon: 'fa fa-area-chart',
+      supportsExport: true,
+      supportsManage: false,
+    },
+    {
+      key: 'diagram',
+      label: 'Diagram',
+      description: 'Vessel process diagram',
+      icon: 'fa fa-sitemap',
+      supportsExport: true,
+      supportsManage: false,
+    },
+    {
+      key: 'report',
+      label: 'Report',
+      description: 'Daily reports and PDF export',
+      icon: 'fa fa-file-text-o',
+      supportsExport: true,
+      supportsManage: false,
+    },
+    {
+      key: 'alarm',
+      label: 'Alarm',
+      description: 'Alarm feed and acknowledgement',
+      icon: 'fa fa-bell-o',
+      supportsExport: true,
+      supportsManage: true,
+    },
+    {
+      key: 'log',
+      label: 'Log',
+      description: 'Operational and audit history',
+      icon: 'fa fa-history',
+      supportsExport: true,
+      supportsManage: false,
+    },
+    {
+      key: 'settings',
+      label: 'Settings',
+      description: 'Users, vessels and groups',
+      icon: 'fa fa-cog',
+      supportsExport: false,
+      supportsManage: true,
+    },
   ];
 
   activeTab: SettingsTab['id'] = 'vessels';
@@ -128,14 +222,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
   page = 1;
   pageSize = 10;
 
-  userSessions: UserSessionRecord[] = [];
-  usersLoading = false;
-  usersRefreshing = false;
-  usersError = '';
-  userSearchTerm = '';
-  userStatusFilter: 'all' | UserPresenceStatus = 'all';
-
-  userPanelMode: UserPanelMode = 'management';
   userAccessRecords: UserAccessRecord[] = [];
   userAccessLoading = false;
   userAccessRefreshing = false;
@@ -202,12 +288,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
   defaultLandingPage: LandingPage = 'overview';
   alertRefreshSeconds = 20;
   alarmAutoRefresh = true;
-  presenceRefreshSeconds = 20;
   timeFormat: ClockFormat = '24h';
   username = 'Admin';
 
   private readonly destroy$ = new Subject<void>();
-  private presenceRefreshSub?: Subscription;
   private filteredCacheSource?: VesselSettingsRecord[];
   private filteredCacheKey = '';
   private filteredCache: VesselSettingsRecord[] = [];
@@ -218,6 +302,25 @@ export class SettingsComponent implements OnInit, OnDestroy {
   private offlineCountCache = 0;
   private groupSummaryCache: VesselGroupSummary[] = [];
   private initialVesselLoadGuard: ReturnType<typeof setTimeout> | null = null;
+
+  // Server-protection guards: do not allow duplicate in-flight reads.
+  private vesselsRequestInFlight = false;
+  private groupsRequestInFlight = false;
+  private userAccessRequestInFlight = false;
+
+  // Derived UI caches: keep expensive filtering/counting out of Angular change-detection loops.
+  private filteredUserAccessCacheSource?: UserAccessRecord[];
+  private filteredUserAccessCacheKey = '';
+  private filteredUserAccessCache: UserAccessRecord[] = [];
+
+  // O(1) lookup indexes for large fleets / groups.
+  private vesselIndexSource?: VesselSettingsRecord[];
+  private groupIndexSource?: VesselGroupDefinition[];
+  private vesselById = new Map<string, VesselSettingsRecord>();
+  private groupById = new Map<string, VesselGroupDefinition>();
+
+  private dateTimeFormatterMode: ClockFormat | null = null;
+  private dateTimeFormatter: Intl.DateTimeFormat | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -231,51 +334,52 @@ export class SettingsComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.username = localStorage.getItem('username') || sessionStorage.getItem('username') || 'Admin';
+    this.username =
+      localStorage.getItem('username') || sessionStorage.getItem('username') || 'Admin';
     this.userAccountService.config$.pipe(takeUntil(this.destroy$)).subscribe((config) => {
       this.userAccountApiEnabled = config.enabled;
       this.userAccountApiSecure = config.secureTransport || !config.requireHttps;
       this.userAccountApiNotice = config.enabled
-        ? (this.userAccountApiSecure
+        ? this.userAccountApiSecure
           ? 'Login accounts are managed by the configured backend.'
-          : 'User Account API is blocked because one or more endpoints are not HTTPS.')
+          : 'User Account API is blocked because one or more endpoints are not HTTPS.'
         : 'Login Account API is disabled. Access profiles can still be linked to existing usernames.';
     });
     this.groupDefinitions = [];
     this.theme = this.themeMode.getMode();
-    this.defaultLandingPage = this.readLandingPage(localStorage.getItem('fleet-default-landing-page'));
-    this.alertRefreshSeconds = Math.max(60, Number(localStorage.getItem('fleet-alert-refresh-seconds')) || 60);
+    this.defaultLandingPage = this.readLandingPage(
+      localStorage.getItem('fleet-default-landing-page'),
+    );
+    this.alertRefreshSeconds = Math.max(
+      60,
+      Number(localStorage.getItem('fleet-alert-refresh-seconds')) || 60,
+    );
     this.alarmAutoRefresh = localStorage.getItem('fleet-alert-auto-refresh') !== 'false';
-    this.presenceRefreshSeconds =
-      Number(localStorage.getItem('fleet-user-presence-refresh-seconds')) || 20;
     this.timeFormat = localStorage.getItem('fleet-time-format') === '12h' ? '12h' : '24h';
 
-    this.route.paramMap.pipe(
-      map((params) => params.get('section')),
-      distinctUntilChanged(),
-      takeUntil(this.destroy$),
-    ).subscribe((section) => {
-      this.activeTab = this.isTab(section) ? section : 'general';
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('section')),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$),
+      )
+      .subscribe((section) => {
+        this.activeTab = this.isTab(section) ? section : 'general';
 
-      if (this.activeTab === 'vessels' || this.activeTab === 'groups') {
-        this.loadGroups();
-        this.loadVessels();
-        this.loadEngineProfiles();
-      }
-      if (this.activeTab === 'users') {
-        this.loadGroups();
-        this.loadVessels();
-        this.loadUserAccessRecords();
-        this.loadUserSessions();
-        this.restartPresenceRefresh();
-      } else {
-        this.presenceRefreshSub?.unsubscribe();
-      }
-    });
+        if (this.activeTab === 'vessels' || this.activeTab === 'groups') {
+          this.loadGroups();
+          this.loadVessels();
+          this.loadEngineProfiles();
+        }
+        if (this.activeTab === 'users') {
+          this.loadGroups();
+          this.loadVessels();
+          this.loadUserAccessRecords();
+        }
+      });
   }
 
   ngOnDestroy(): void {
-    this.presenceRefreshSub?.unsubscribe();
     this.clearInitialVesselLoadGuard();
     this.destroy$.next();
     this.destroy$.complete();
@@ -330,31 +434,20 @@ export class SettingsComponent implements OnInit, OnDestroy {
     return this.filteredCache;
   }
 
-  get filteredUsers(): UserSessionRecord[] {
-    const search = this.userSearchTerm.trim().toLowerCase();
-    return this.userSessions.filter((user) => {
-      if (this.userStatusFilter !== 'all' && user.status !== this.userStatusFilter) return false;
-      if (!search) return true;
-      return [
-        user.username,
-        user.displayName,
-        user.role,
-        user.status,
-        user.ipAddress,
-        user.device,
-        user.browser,
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(search);
-    });
-  }
-
   get filteredUserAccessRecords(): UserAccessRecord[] {
     const search = this.userAccessSearchTerm.trim().toLowerCase();
-    return this.userAccessRecords.filter((user) => {
+    const key = `${search}|${this.userRoleFilter}|${this.userAccountStatusFilter}`;
+    if (
+      this.filteredUserAccessCacheSource === this.userAccessRecords &&
+      this.filteredUserAccessCacheKey === key
+    ) {
+      return this.filteredUserAccessCache;
+    }
+
+    this.filteredUserAccessCache = this.userAccessRecords.filter((user) => {
       if (this.userRoleFilter !== 'all' && user.role !== this.userRoleFilter) return false;
-      if (this.userAccountStatusFilter !== 'all' && user.status !== this.userAccountStatusFilter) return false;
+      if (this.userAccountStatusFilter !== 'all' && user.status !== this.userAccountStatusFilter)
+        return false;
       if (!search) return true;
       return [
         user.username,
@@ -364,8 +457,14 @@ export class SettingsComponent implements OnInit, OnDestroy {
         user.status,
         this.userAccessSummary(user),
         this.assignedGroupNames(user).join(' '),
-      ].join(' ').toLowerCase().includes(search);
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(search);
     });
+    this.filteredUserAccessCacheSource = this.userAccessRecords;
+    this.filteredUserAccessCacheKey = key;
+    return this.filteredUserAccessCache;
   }
 
   get userAccessAdministratorCount(): number {
@@ -396,7 +495,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
     const search = this.userAccessVesselSearchTerm.trim().toLowerCase();
     if (!search) return this.vessels;
     return this.vessels.filter((vessel) =>
-      [vessel.id, vessel.name, vessel.prefix, vessel.status].join(' ').toLowerCase().includes(search),
+      [vessel.id, vessel.name, vessel.prefix, vessel.status]
+        .join(' ')
+        .toLowerCase()
+        .includes(search),
     );
   }
 
@@ -457,30 +559,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
     );
   }
 
-  get userOnlineCount(): number {
-    return this.userSessions.filter((user) => user.status === 'online').length;
-  }
-
-  get userIdleCount(): number {
-    return this.userSessions.filter((user) => user.status === 'idle').length;
-  }
-
-  get userOfflineCount(): number {
-    return this.userSessions.filter((user) => user.status === 'offline').length;
-  }
-
-  get userPresenceIsBackend(): boolean {
-    return this.userSessions.some((user) => user.source === 'backend');
-  }
-
   selectTab(tab: SettingsTab['id']): void {
     this.activeTab = tab;
     this.router.navigate(tab === 'general' ? ['/main/settings'] : ['/main/settings', tab]);
   }
 
   loadVessels(force = false): void {
+    if (this.vesselsRequestInFlight) return;
     if (this.vessels.length > 0 && !force) return;
 
+    this.vesselsRequestInFlight = true;
     const firstLoad = this.vessels.length === 0;
     this.loading = firstLoad;
     this.refreshing = !firstLoad;
@@ -488,9 +576,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     this.clearInitialVesselLoadGuard();
     if (firstLoad) {
-
-
-
       this.initialVesselLoadGuard = setTimeout(() => {
         this.initialVesselLoadGuard = null;
         if (this.loading) {
@@ -502,13 +587,18 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     this.settingsData
       .getVessels(force)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.vesselsRequestInFlight = false;
+        }),
+      )
       .subscribe({
         next: (rows) => {
           this.clearInitialVesselLoadGuard();
 
-
           this.vessels = rows.map((vessel) => this.realtimeMachineryService.hydrateVessel(vessel));
+          this.invalidateVesselCaches();
           this.loading = false;
           this.refreshing = false;
           this.page = Math.min(this.page, this.totalPages);
@@ -523,13 +613,22 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   loadGroups(force = false): void {
+    if (this.groupsRequestInFlight) return;
+    if (this.groupDefinitions.length > 0 && !force) return;
+    this.groupsRequestInFlight = true;
+
     this.settingsData
       .getVesselGroups(force)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.groupsRequestInFlight = false;
+        }),
+      )
       .subscribe({
         next: (groups) => {
           this.groupDefinitions = groups;
-          this.derivedGroupDefinitionsSource = undefined;
+          this.invalidateGroupCaches();
         },
         error: (error) => {
           console.warn('[SettingsComponent] load vessel groups error:', error);
@@ -538,16 +637,25 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   loadUserAccessRecords(force = false): void {
+    if (this.userAccessRequestInFlight) return;
+    if (this.userAccessRecords.length > 0 && !force) return;
+    this.userAccessRequestInFlight = true;
     const firstLoad = this.userAccessRecords.length === 0;
     this.userAccessLoading = firstLoad;
     this.userAccessRefreshing = !firstLoad;
     this.userAccessError = '';
     this.settingsData
       .getUserAccessRecords(force)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.userAccessRequestInFlight = false;
+        }),
+      )
       .subscribe({
         next: (rows) => {
           this.userAccessRecords = rows;
+          this.invalidateUserAccessCaches();
           this.userAccessLoading = false;
           this.userAccessRefreshing = false;
           this.userAccessControl.notifyRecordsChanged();
@@ -560,37 +668,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
       });
   }
 
-  loadUserSessions(force = false): void {
-    const firstLoad = this.userSessions.length === 0;
-    this.usersLoading = firstLoad;
-    this.usersRefreshing = !firstLoad;
-    this.usersError = '';
-    this.settingsData
-      .getUserSessions(force)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (rows) => {
-          this.userSessions = rows;
-          this.usersLoading = false;
-          this.usersRefreshing = false;
-        },
-        error: (error) => {
-          this.usersLoading = false;
-          this.usersRefreshing = false;
-          this.usersError = error?.message || 'Unable to load active user sessions.';
-        },
-      });
-  }
-
-  selectUserPanel(mode: UserPanelMode): void {
-    this.userPanelMode = mode;
-    if (mode === 'sessions') this.loadUserSessions(true);
-  }
-
   openAddUserAccess(): void {
     this.editingUserAccessId = '';
     this.userAccessForm = this.emptyUserAccessForm();
-    this.userAccountSetupMode = this.userAccountApiEnabled && this.userAccountApiSecure ? 'create' : 'link';
+    this.userAccountSetupMode =
+      this.userAccountApiEnabled && this.userAccountApiSecure ? 'create' : 'link';
     this.resetUserCredentialState();
     this.userAccessSaveNotice = '';
     this.userAccessVesselSearchTerm = '';
@@ -655,28 +737,44 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   toggleUserGroup(groupId: string, checked: boolean): void {
-    this.userAccessForm.groupIds = this.toggleStringValue(this.userAccessForm.groupIds, groupId, checked);
+    this.userAccessForm.groupIds = this.toggleStringValue(
+      this.userAccessForm.groupIds,
+      groupId,
+      checked,
+    );
   }
 
   toggleUserVessel(vesselId: string, checked: boolean): void {
-    this.userAccessForm.vesselIds = this.toggleStringValue(this.userAccessForm.vesselIds, vesselId, checked);
+    this.userAccessForm.vesselIds = this.toggleStringValue(
+      this.userAccessForm.vesselIds,
+      vesselId,
+      checked,
+    );
   }
 
   toggleAdditionalVessel(vesselId: string, checked: boolean): void {
     this.userAccessForm.additionalVesselIds = this.toggleStringValue(
-      this.userAccessForm.additionalVesselIds, vesselId, checked,
+      this.userAccessForm.additionalVesselIds,
+      vesselId,
+      checked,
     );
     if (checked) {
-      this.userAccessForm.excludedVesselIds = this.userAccessForm.excludedVesselIds.filter((id) => id !== vesselId);
+      this.userAccessForm.excludedVesselIds = this.userAccessForm.excludedVesselIds.filter(
+        (id) => id !== vesselId,
+      );
     }
   }
 
   toggleExcludedVessel(vesselId: string, checked: boolean): void {
     this.userAccessForm.excludedVesselIds = this.toggleStringValue(
-      this.userAccessForm.excludedVesselIds, vesselId, checked,
+      this.userAccessForm.excludedVesselIds,
+      vesselId,
+      checked,
     );
     if (checked) {
-      this.userAccessForm.additionalVesselIds = this.userAccessForm.additionalVesselIds.filter((id) => id !== vesselId);
+      this.userAccessForm.additionalVesselIds = this.userAccessForm.additionalVesselIds.filter(
+        (id) => id !== vesselId,
+      );
     }
   }
 
@@ -740,12 +838,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
     };
 
     const createLogin = !existing && this.userAccountSetupMode === 'create';
-    const identityMetadataChanged = Boolean(existing && (
-      existing.displayName.trim() !== displayName ||
-      existing.email.trim() !== record.email ||
-      existing.role !== record.role ||
-      existing.status !== record.status
-    ));
+    const identityMetadataChanged = Boolean(
+      existing &&
+      (existing.displayName.trim() !== displayName ||
+        existing.email.trim() !== record.email ||
+        existing.role !== record.role ||
+        existing.status !== record.status),
+    );
     const syncManagedAccount = Boolean(
       existing?.accountProvisioning === 'managed' &&
       identityMetadataChanged &&
@@ -765,78 +864,94 @@ export class SettingsComponent implements OnInit, OnDestroy {
       provisioning: UserAccountProvisioning;
       identityChanged: boolean;
     }> = createLogin
-      ? this.userAccountService.createAccount({
-          username,
-          password: this.userPassword,
-          displayName,
-          email: record.email,
-          role: record.role,
-          status: record.status,
-        }).pipe(
-          map((account) => ({
-            accountId: account.id || username,
-            provisioning: 'managed' as const,
-            identityChanged: true,
-          })),
-        )
-      : syncManagedAccount
-        ? this.userAccountService.updateAccount(existing?.accountId || username, {
+      ? this.userAccountService
+          .createAccount({
             username,
+            password: this.userPassword,
             displayName,
             email: record.email,
             role: record.role,
             status: record.status,
-          }).pipe(
+          })
+          .pipe(
             map((account) => ({
-              accountId: account.id || existing?.accountId || username,
+              accountId: account.id || username,
               provisioning: 'managed' as const,
               identityChanged: true,
             })),
           )
+      : syncManagedAccount
+        ? this.userAccountService
+            .updateAccount(existing?.accountId || username, {
+              username,
+              displayName,
+              email: record.email,
+              role: record.role,
+              status: record.status,
+            })
+            .pipe(
+              map((account) => ({
+                accountId: account.id || existing?.accountId || username,
+                provisioning: 'managed' as const,
+                identityChanged: true,
+              })),
+            )
         : of({
-            accountId: existing?.accountId || (this.userAccountSetupMode === 'link' ? username : ''),
+            accountId:
+              existing?.accountId || (this.userAccountSetupMode === 'link' ? username : ''),
             provisioning: existing?.accountProvisioning || ('linked' as const),
             identityChanged: false,
           });
 
-    identityOperation$.pipe(
-      switchMap((identity) => {
-        record = {
-          ...record,
-          accountId: identity.accountId || undefined,
-          accountProvisioning: identity.provisioning,
-          accountLastSyncedAt: identity.identityChanged ? now : existing?.accountLastSyncedAt,
-        };
-        return this.settingsData.saveUserAccess(record).pipe(
-          map((target) => ({ target, identityChanged: identity.identityChanged })),
-        );
-      }),
-      takeUntil(this.destroy$),
-      finalize(() => {
-        this.userAccessSaving = false;
-      }),
-    ).subscribe({
-      next: ({ target, identityChanged }) => {
-        this.userPassword = '';
-        this.userPasswordConfirm = '';
-        const identityText = createLogin
-          ? 'Login account created. '
-          : identityChanged
-            ? 'Login account synchronised. '
-            : '';
-        this.userAccessSaveNotice = identityText + (target === 'database'
-          ? 'User access saved to the database.'
-          : 'User access saved in this browser. Enable the userAccess endpoint to share permissions across devices.');
-        this.loadUserAccessRecords(true);
-        this.userAccessControl.notifyRecordsChanged();
-        window.setTimeout(() => this.closeUserAccessDrawer(), 900);
-      },
-      error: (error) => {
-        this.userPassword = '';
-        this.userPasswordConfirm = '';
-        this.userAccessSaveNotice = error?.message || 'Unable to save the user account and access profile.';
-      },
-    });
+    identityOperation$
+      .pipe(
+        switchMap((identity) => {
+          record = {
+            ...record,
+            accountId: identity.accountId || undefined,
+            accountProvisioning: identity.provisioning,
+            accountLastSyncedAt: identity.identityChanged ? now : existing?.accountLastSyncedAt,
+          };
+          return this.settingsData
+            .saveUserAccess(record)
+            .pipe(map((target) => ({ target, identityChanged: identity.identityChanged })));
+        }),
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.userAccessSaving = false;
+        }),
+      )
+      .subscribe({
+        next: ({ target, identityChanged }) => {
+          record = { ...record, source: target === 'database' ? 'backend' : 'local' };
+          this.userPassword = '';
+          this.userPasswordConfirm = '';
+          const identityText = createLogin
+            ? 'Login account created. '
+            : identityChanged
+              ? 'Login account synchronised. '
+              : '';
+          this.userAccessSaveNotice =
+            identityText +
+            (target === 'database'
+              ? 'User access saved to the database.'
+              : 'User access saved in this browser. Enable the userAccess endpoint to share permissions across devices.');
+          this.userAccessRecords = existing
+            ? this.userAccessRecords.map((user) => (user.id === record.id ? record : user))
+            : [record, ...this.userAccessRecords];
+          this.invalidateUserAccessCaches();
+          this.userAccessControl.notifyRecordsChanged();
+          timer(900)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(() => this.closeUserAccessDrawer());
+        },
+        error: (error) => {
+          this.userPassword = '';
+          this.userPasswordConfirm = '';
+          this.userAccessSaveNotice =
+            error?.message || 'Unable to save the user account and access profile.';
+        },
+      });
   }
 
   toggleResetPasswordPanel(): void {
@@ -857,7 +972,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
       return;
     }
     if (!this.isPasswordPolicyValid(this.resetPassword)) {
-      this.resetPasswordNotice = 'Use at least 10 characters with uppercase, lowercase, a number and a special character.';
+      this.resetPasswordNotice =
+        'Use at least 10 characters with uppercase, lowercase, a number and a special character.';
       return;
     }
     if (this.resetPassword !== this.resetPasswordConfirm) {
@@ -881,7 +997,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
           this.resetPassword = '';
           this.resetPasswordConfirm = '';
           this.showResetPassword = false;
-          this.resetPasswordNotice = 'Password reset successfully. The password was not stored in the browser.';
+          this.resetPasswordNotice =
+            'Password reset successfully. The password was not stored in the browser.';
         },
         error: (error) => {
           this.resetPassword = '';
@@ -913,10 +1030,18 @@ export class SettingsComponent implements OnInit, OnDestroy {
     return 'empty';
   }
 
-  passwordHasLower(value: string): boolean { return /[a-z]/.test(value); }
-  passwordHasUpper(value: string): boolean { return /[A-Z]/.test(value); }
-  passwordHasNumber(value: string): boolean { return /[0-9]/.test(value); }
-  passwordHasSpecial(value: string): boolean { return /[^A-Za-z0-9\s]/.test(value); }
+  passwordHasLower(value: string): boolean {
+    return /[a-z]/.test(value);
+  }
+  passwordHasUpper(value: string): boolean {
+    return /[A-Z]/.test(value);
+  }
+  passwordHasNumber(value: string): boolean {
+    return /[0-9]/.test(value);
+  }
+  passwordHasSpecial(value: string): boolean {
+    return /[^A-Za-z0-9\s]/.test(value);
+  }
 
   accountProvisioningLabel(user: UserAccessRecord): string {
     if (user.accountProvisioning === 'managed') return 'Managed login account';
@@ -933,16 +1058,25 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.userAccessError = 'At least one administrator must remain in the system.';
       return;
     }
-    if (!window.confirm(`Delete the access profile for ${user.displayName}? The login account will not be deleted.`)) return;
-    this.settingsData.deleteUserAccess(user.id).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
-        this.loadUserAccessRecords(true);
-        this.userAccessControl.notifyRecordsChanged();
-      },
-      error: (error) => {
-        this.userAccessError = error?.message || 'Unable to delete user access.';
-      },
-    });
+    if (
+      !window.confirm(
+        `Delete the access profile for ${user.displayName}? The login account will not be deleted.`,
+      )
+    )
+      return;
+    this.settingsData
+      .deleteUserAccess(user.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.userAccessRecords = this.userAccessRecords.filter((item) => item.id !== user.id);
+          this.invalidateUserAccessCaches();
+          this.userAccessControl.notifyRecordsChanged();
+        },
+        error: (error) => {
+          this.userAccessError = error?.message || 'Unable to delete user access.';
+        },
+      });
   }
 
   userAccessSummary(user: UserAccessRecord): string {
@@ -955,7 +1089,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   assignedGroupNames(user: UserAccessRecord): string[] {
-    return user.groupIds.map((id) => this.groupDefinitions.find((group) => group.id === id)?.name || id);
+    this.ensureLookupIndexes();
+    return user.groupIds.map((id) => this.groupById.get(id)?.name || id);
   }
 
   moduleAccessCount(user: UserAccessRecord): number {
@@ -964,11 +1099,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   effectiveVesselIds(user: UserAccessRecord): string[] {
     if (user.accessScope === 'all') return this.vessels.map((vessel) => vessel.id);
+
+    this.ensureLookupIndexes();
     const allowed = new Set<string>();
     if (user.accessScope === 'groups') {
       user.groupIds.forEach((groupId) => {
-        const group = this.groupDefinitions.find((item) => item.id === groupId);
-        group?.vesselIds.forEach((id) => allowed.add(id));
+        this.groupById.get(groupId)?.vesselIds.forEach((id) => allowed.add(id));
       });
     } else {
       user.vesselIds.forEach((id) => allowed.add(id));
@@ -979,10 +1115,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   effectiveVesselPreview(user: UserAccessRecord): string {
+    this.ensureLookupIndexes();
     const names = this.effectiveVesselIds(user)
-      .map((id) => this.vessels.find((vessel) => vessel.id === id)?.name || id)
+      .map((id) => this.vesselById.get(id)?.name || id)
       .filter(Boolean);
-    if (!names.length) return user.accessScope === 'all' ? 'All available vessels' : 'No vessel access';
+    if (!names.length)
+      return user.accessScope === 'all' ? 'All available vessels' : 'No vessel access';
     const preview = names.slice(0, 4).join(', ');
     return names.length > 4 ? `${preview} +${names.length - 4}` : preview;
   }
@@ -1012,7 +1150,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.expandedEngineAssignmentId = '';
     this.engineLibraryOpen = false;
     this.realtimeMachinery = [];
-    this.realtimeMachineryNotice = 'Enter the vessel Telemetry Prefix to load its Realtime machinery.';
+    this.realtimeMachineryNotice =
+      'Enter the vessel Telemetry Prefix to load its Realtime machinery.';
     this.pendingEngineProfiles.clear();
     this.drawerOpen = true;
     this.saveNotice = '';
@@ -1042,7 +1181,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
   closeDrawer(): void {
     if (this.isSavingVessel) return;
     if (this.pendingEngineProfiles.size > 0) {
-      const discard = window.confirm('Engine profile changes have not been saved. Discard these changes?');
+      const discard = window.confirm(
+        'Engine profile changes have not been saved. Discard these changes?',
+      );
       if (!discard) return;
     }
     this.drawerOpen = false;
@@ -1070,8 +1211,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.realtimeMachinery = this.realtimeMachineryService.getForPrefix(prefix);
 
     if (!this.realtimeMachinery.length) {
-
-
       this.form.engineAssignments = (this.form.engineAssignments || []).filter(
         (assignment) => !this.isRealtimeAssignment(assignment),
       );
@@ -1089,7 +1228,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.syncLegacyEngineNames();
     this.realtimeMachineryNotice = `${this.realtimeMachinery.length} machinery positions loaded from the Realtime layout for ${prefix}.`;
     if (showNotice) {
-      this.saveNotice = 'Realtime engine positions refreshed. Review the shared profile for each position, then save once.';
+      this.saveNotice =
+        'Realtime engine positions refreshed. Review the shared profile for each position, then save once.';
     }
   }
 
@@ -1105,7 +1245,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     const duplicateId = this.vessels.some(
-      (vessel) => vessel.id !== this.editingId && vessel.id.trim().toLowerCase() === id.toLowerCase(),
+      (vessel) =>
+        vessel.id !== this.editingId && vessel.id.trim().toLowerCase() === id.toLowerCase(),
     );
     if (duplicateId) {
       this.saveNotice = `Vessel ID “${id}” is already in use.`;
@@ -1176,14 +1317,38 @@ export class SettingsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (target) => {
           this.isSavingVessel = false;
+
+          const hydratedRecord = this.realtimeMachineryService.hydrateVessel({
+            ...record,
+            source: target === 'database' ? 'backend' : 'local',
+          });
+          const previousId = this.editingId;
+          const exists = this.vessels.some((vessel) => vessel.id === previousId || vessel.id === record.id);
+          this.vessels = exists
+            ? this.vessels.map((vessel) =>
+                vessel.id === previousId || vessel.id === record.id ? hydratedRecord : vessel,
+              )
+            : [hydratedRecord, ...this.vessels];
+
+          // Profiles are already persisted above. Keep the in-memory library in sync instead of
+          // immediately issuing another GET for the entire profile collection.
+          if (profileRecords.length) {
+            const savedProfiles = new Map(profileRecords.map((profile) => [profile.id, profile]));
+            this.engineProfiles = [
+              ...profileRecords,
+              ...this.engineProfiles.filter((profile) => !savedProfiles.has(profile.id)),
+            ];
+          }
+
           this.pendingEngineProfiles.clear();
-          this.saveNotice = target === 'database'
-            ? 'Vessel and engine settings saved to the database.'
-            : 'Database unavailable. Vessel and engine settings were saved in this browser as a fallback.';
-          this.loadGroups(true);
-          this.loadEngineProfiles(true);
-          this.loadVessels(true);
-          window.setTimeout(() => (this.drawerOpen = false), 650);
+          this.invalidateVesselCaches();
+          this.saveNotice =
+            target === 'database'
+              ? 'Vessel and engine settings saved to the database.'
+              : 'Database unavailable. Vessel and engine settings were saved in this browser as a fallback.';
+          timer(650)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(() => (this.drawerOpen = false));
         },
         error: (error) => {
           this.isSavingVessel = false;
@@ -1193,14 +1358,25 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   deleteVessel(vessel: VesselSettingsRecord): void {
-    if (!window.confirm(`Remove saved metadata for ${vessel.name}? Telemetry data will not be deleted.`)) return;
+    if (
+      !window.confirm(
+        `Remove saved metadata for ${vessel.name}? Telemetry data will not be deleted.`,
+      )
+    )
+      return;
     this.settingsData
       .deleteVessel(vessel.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.loadGroups(true);
-          this.loadVessels(true);
+          this.vessels = this.vessels.filter((item) => item.id !== vessel.id);
+          this.groupDefinitions = this.groupDefinitions.map((group) => ({
+            ...group,
+            vesselIds: group.vesselIds.filter((id) => id !== vessel.id),
+          }));
+          this.invalidateVesselCaches();
+          this.invalidateGroupCaches();
+          this.page = Math.min(this.page, this.totalPages);
         },
         error: (error) => {
           this.errorMessage = error?.message || 'Unable to remove vessel metadata.';
@@ -1254,7 +1430,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     const duplicate = this.groupDefinitions.some(
-      (group) => group.id !== this.editingGroupId && group.name.toLowerCase() === name.toLowerCase(),
+      (group) =>
+        group.id !== this.editingGroupId && group.name.toLowerCase() === name.toLowerCase(),
     );
     if (duplicate) {
       this.groupSaveNotice = 'A group with this name already exists.';
@@ -1278,16 +1455,25 @@ export class SettingsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (target) => {
+          const savedDefinition: VesselGroupDefinition = {
+            ...definition,
+            source: target === 'database' ? 'backend' : 'local',
+          };
           this.groupDefinitions = existing
-            ? this.groupDefinitions.map((group) => (group.id === existing.id ? definition : group))
-            : [...this.groupDefinitions, definition];
-          this.derivedGroupDefinitionsSource = undefined;
-          this.groupSaveNotice = target === 'database'
-            ? existing ? 'Group updated in the database.' : 'Group created in the database.'
-            : 'Database unavailable. Group saved in this browser as a fallback.';
-          this.loadGroups(true);
-          this.loadVessels(true);
-          window.setTimeout(() => this.closeGroupDrawer(), 450);
+            ? this.groupDefinitions.map((group) =>
+                group.id === existing.id ? savedDefinition : group,
+              )
+            : [...this.groupDefinitions, savedDefinition];
+          this.invalidateGroupCaches();
+          this.groupSaveNotice =
+            target === 'database'
+              ? existing
+                ? 'Group updated in the database.'
+                : 'Group created in the database.'
+              : 'Database unavailable. Group saved in this browser as a fallback.';
+          timer(450)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(() => this.closeGroupDrawer());
         },
         error: (error) => {
           this.groupSaveNotice = error?.message || 'Unable to save group.';
@@ -1297,16 +1483,20 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   deleteGroup(group: VesselGroupSummary): void {
     if (!group.editable) return;
-    if (!window.confirm(`Delete the group ${group.name}? Vessel records will not be deleted.`)) return;
+    if (!window.confirm(`Delete the group ${group.name}? Vessel records will not be deleted.`))
+      return;
     this.settingsData
       .deleteVesselGroup(group.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
           this.groupDefinitions = this.groupDefinitions.filter((item) => item.id !== group.id);
-          this.derivedGroupDefinitionsSource = undefined;
-          this.loadGroups(true);
-          this.loadVessels(true);
+          this.vessels = this.vessels.map((vessel) => ({
+            ...vessel,
+            groups: (vessel.groups || []).filter((name) => name !== group.name),
+          }));
+          this.invalidateGroupCaches();
+          this.invalidateVesselCaches();
         },
         error: (error) => {
           this.groupSaveNotice = error?.message || 'Unable to delete group.';
@@ -1328,7 +1518,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   vesselEngineCount(vessel: VesselSettingsRecord): number {
     if (vessel.engineAssignments?.length) {
-      return vessel.engineAssignments.reduce((total, assignment) => total + (Number(assignment.quantity) || 1), 0);
+      return vessel.engineAssignments.reduce(
+        (total, assignment) => total + (Number(assignment.quantity) || 1),
+        0,
+      );
     }
     return vessel.engines.length;
   }
@@ -1336,20 +1529,27 @@ export class SettingsComponent implements OnInit, OnDestroy {
   vesselEngineSummary(vessel: VesselSettingsRecord): string {
     const count = this.vesselEngineCount(vessel);
     if (!count) return 'Not assigned';
-    const realtimeCount = (vessel.engineAssignments || []).filter((assignment) => this.isRealtimeAssignment(assignment)).length;
+    const realtimeCount = (vessel.engineAssignments || []).filter((assignment) =>
+      this.isRealtimeAssignment(assignment),
+    ).length;
     if (realtimeCount) {
       const manualCount = Math.max(0, count - realtimeCount);
-      return manualCount ? `${realtimeCount} Realtime +${manualCount}` : `${realtimeCount} Realtime engines`;
+      return manualCount
+        ? `${realtimeCount} Realtime +${manualCount}`
+        : `${realtimeCount} Realtime engines`;
     }
     const profileCount = new Set(
       (vessel.engineAssignments || []).map((assignment) => assignment.profileId).filter(Boolean),
     ).size;
-    return profileCount ? `${count} · ${profileCount} profile${profileCount === 1 ? '' : 's'}` : `${count} legacy`;
+    return profileCount
+      ? `${count} · ${profileCount} profile${profileCount === 1 ? '' : 's'}`
+      : `${count} legacy`;
   }
 
   groupVesselNames(group: VesselGroupSummary): string {
+    this.ensureLookupIndexes();
     const names = group.vesselIds
-      .map((id) => this.vessels.find((vessel) => vessel.id === id)?.name)
+      .map((id) => this.vesselById.get(id)?.name)
       .filter((name): name is string => !!name);
     if (!names.length) return 'No vessels assigned';
     const preview = names.slice(0, 3).join(', ');
@@ -1357,7 +1557,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   loadEngineProfiles(forceRefresh = false): void {
-    if (this.engineProfilesLoading && !forceRefresh) return;
+    if (this.engineProfilesLoading) return;
+    if (this.engineProfiles.length > 0 && !forceRefresh) return;
     this.engineProfilesLoading = true;
     this.engineProfilesError = '';
     this.engineProfileService
@@ -1388,7 +1589,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   get assignedEngineCount(): number {
-    return (this.form.engineAssignments || []).reduce((total, assignment) => total + assignment.quantity, 0);
+    return (this.form.engineAssignments || []).reduce(
+      (total, assignment) => total + assignment.quantity,
+      0,
+    );
   }
 
   assignEngineProfile(): void {
@@ -1400,7 +1604,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     const assignments = [...(this.form.engineAssignments || [])];
     const assignmentId = `engine-assignment-${Date.now().toString(36)}`;
-    const position = this.manualEngineName.trim() || this.defaultEnginePosition(profile.category, assignments.length);
+    const position =
+      this.manualEngineName.trim() ||
+      this.defaultEnginePosition(profile.category, assignments.length);
     this.form.engineAssignments = [
       ...assignments,
       {
@@ -1436,7 +1642,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   toggleEngineAssignmentEditor(assignment: VesselEngineAssignment): void {
     this.manualEngineComposerOpen = false;
-    this.expandedEngineAssignmentId = this.expandedEngineAssignmentId === assignment.id ? '' : assignment.id;
+    this.expandedEngineAssignmentId =
+      this.expandedEngineAssignmentId === assignment.id ? '' : assignment.id;
   }
 
   isEngineAssignmentExpanded(assignment: VesselEngineAssignment): boolean {
@@ -1444,7 +1651,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   engineAssignmentNumber(assignment: VesselEngineAssignment): number {
-    const index = (this.form.engineAssignments || []).findIndex((item) => item.id === assignment.id);
+    const index = (this.form.engineAssignments || []).findIndex(
+      (item) => item.id === assignment.id,
+    );
     return index >= 0 ? index + 1 : 1;
   }
 
@@ -1459,18 +1668,25 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   engineProfileCategoryLabel(category: EngineProfileCategory): string {
-    return this.engineCategoryOptions.find((option) => option.value === category)?.label || 'Custom engine';
+    return (
+      this.engineCategoryOptions.find((option) => option.value === category)?.label ||
+      'Custom engine'
+    );
   }
 
   removeEngineAssignment(id: string): void {
-    this.form.engineAssignments = (this.form.engineAssignments || []).filter((item) => item.id !== id);
+    this.form.engineAssignments = (this.form.engineAssignments || []).filter(
+      (item) => item.id !== id,
+    );
     if (this.expandedEngineAssignmentId === id) this.expandedEngineAssignmentId = '';
     this.syncLegacyEngineNames();
   }
 
   updateEngineAssignmentQuantity(assignment: VesselEngineAssignment): void {
     const quantity = Number(assignment.quantity);
-    assignment.quantity = Number.isFinite(quantity) ? Math.min(12, Math.max(1, Math.round(quantity))) : 1;
+    assignment.quantity = Number.isFinite(quantity)
+      ? Math.min(12, Math.max(1, Math.round(quantity)))
+      : 1;
     this.syncLegacyEngineNames();
   }
 
@@ -1478,10 +1694,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
     return assignment.source === 'realtime' || Boolean(assignment.realtimeKey);
   }
 
-  realtimePositionForAssignment(assignment: VesselEngineAssignment): RealtimeMachineryPosition | undefined {
-    return this.realtimeMachinery.find((position) =>
-      position.key === assignment.realtimeKey ||
-      (position.row === assignment.realtimeRow && position.col === assignment.realtimeCol),
+  realtimePositionForAssignment(
+    assignment: VesselEngineAssignment,
+  ): RealtimeMachineryPosition | undefined {
+    return this.realtimeMachinery.find(
+      (position) =>
+        position.key === assignment.realtimeKey ||
+        (position.row === assignment.realtimeRow && position.col === assignment.realtimeCol),
     );
   }
 
@@ -1497,7 +1716,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
     return [...this.engineProfiles].sort((a, b) => {
       const aScore = a.category === category ? 0 : a.category === 'other' ? 2 : 1;
       const bScore = b.category === category ? 0 : b.category === 'other' ? 2 : 1;
-      return aScore - bScore || this.engineProfileDisplayName(a).localeCompare(this.engineProfileDisplayName(b));
+      return (
+        aScore - bScore ||
+        this.engineProfileDisplayName(a).localeCompare(this.engineProfileDisplayName(b))
+      );
     });
   }
 
@@ -1557,7 +1779,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   engineFormulaName(profile: EngineProfileRecord | undefined): string {
-    return profile ? getEngineFormulaPreset(profile.formulaPresetId).shortName : 'Legacy / no shared formula';
+    return profile
+      ? getEngineFormulaPreset(profile.formulaPresetId).shortName
+      : 'Legacy / no shared formula';
   }
 
   engineFormulaDescription(profile: EngineProfileRecord | undefined): string {
@@ -1599,9 +1823,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
       telemetryMapping: { ...profile.telemetryMapping },
       source: profile.source === 'backend' ? 'backend' : 'local',
     };
-    this.engineProfileSaveNotice = this.engineProfileUsageCount(profile.id) > 0
-      ? `Shared profile: changes will affect ${this.engineProfileUsageCount(profile.id)} assigned vessel(s).`
-      : '';
+    this.engineProfileSaveNotice =
+      this.engineProfileUsageCount(profile.id) > 0
+        ? `Shared profile: changes will affect ${this.engineProfileUsageCount(profile.id)} assigned vessel(s).`
+        : '';
   }
 
   duplicateEngineProfile(profile: EngineProfileRecord): void {
@@ -1615,7 +1840,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
       updatedAt: new Date().toISOString(),
       source: 'local',
     };
-    this.engineProfileSaveNotice = 'A safe copy was created. Saving it will not change vessels using the original profile.';
+    this.engineProfileSaveNotice =
+      'A safe copy was created. Saving it will not change vessels using the original profile.';
   }
 
   saveEngineProfile(): void {
@@ -1624,16 +1850,20 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.engineProfileSaveNotice = 'Engine profile name is required.';
       return;
     }
-    const duplicate = this.engineProfiles.find((profile) =>
-      profile.id !== this.editingEngineProfileId &&
-      profile.name.trim().toLowerCase() === name.toLowerCase() &&
-      profile.model.trim().toLowerCase() === this.engineProfileForm.model.trim().toLowerCase(),
+    const duplicate = this.engineProfiles.find(
+      (profile) =>
+        profile.id !== this.editingEngineProfileId &&
+        profile.name.trim().toLowerCase() === name.toLowerCase() &&
+        profile.model.trim().toLowerCase() === this.engineProfileForm.model.trim().toLowerCase(),
     );
     if (duplicate) {
       this.engineProfileSaveNotice = `A profile named “${duplicate.name}” with the same model already exists.`;
       return;
     }
-    if (this.engineProfileForm.ratedPowerKw !== null && Number(this.engineProfileForm.ratedPowerKw) <= 0) {
+    if (
+      this.engineProfileForm.ratedPowerKw !== null &&
+      Number(this.engineProfileForm.ratedPowerKw) <= 0
+    ) {
       this.engineProfileSaveNotice = 'Rated power must be greater than zero.';
       return;
     }
@@ -1663,13 +1893,18 @@ export class SettingsComponent implements OnInit, OnDestroy {
       description: this.engineProfileForm.description.trim(),
       createdAt: this.engineProfileForm.createdAt || now,
       updatedAt: now,
-      source: this.editingEngineProfileId && this.engineProfileForm.source === 'backend' ? 'backend' : 'local',
+      source:
+        this.editingEngineProfileId && this.engineProfileForm.source === 'backend'
+          ? 'backend'
+          : 'local',
     };
 
     this.pendingEngineProfiles.set(record.id, record);
     const profileIndex = this.engineProfiles.findIndex((profile) => profile.id === record.id);
     if (profileIndex >= 0) {
-      this.engineProfiles = this.engineProfiles.map((profile) => profile.id === record.id ? record : profile);
+      this.engineProfiles = this.engineProfiles.map((profile) =>
+        profile.id === record.id ? record : profile,
+      );
     } else {
       this.engineProfiles = [record, ...this.engineProfiles];
     }
@@ -1677,7 +1912,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.editingEngineProfileId = record.id;
     this.selectedEngineProfileId = record.id;
     this.engineProfileForm = { ...record, telemetryMapping: { ...record.telemetryMapping } };
-    this.engineProfileSaveNotice = 'Profile changes are ready. Use “Save Vessel & Engines” once to save everything.';
+    this.engineProfileSaveNotice =
+      'Profile changes are ready. Use “Save Vessel & Engines” once to save everything.';
 
     (this.form.engineAssignments || []).forEach((assignment) => {
       if (assignment.profileId === record.id) assignment.displayName = record.name;
@@ -1691,7 +1927,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
         (assignment) => assignment.profileId === profile.id,
       );
       if (assignedInCurrentEditor) {
-        this.engineProfileSaveNotice = 'This staged profile is assigned to the vessel currently being edited. Choose another profile first.';
+        this.engineProfileSaveNotice =
+          'This staged profile is assigned to the vessel currently being edited. Choose another profile first.';
         return;
       }
       this.pendingEngineProfiles.delete(profile.id);
@@ -1717,7 +1954,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           if (this.editingEngineProfileId === profile.id) this.startNewEngineProfile();
-          this.loadEngineProfiles(true);
+          this.engineProfiles = this.engineProfiles.filter((item) => item.id !== profile.id);
         },
         error: (error) => {
           this.engineProfileSaveNotice = error?.message || 'Unable to delete engine profile.';
@@ -1749,52 +1986,53 @@ export class SettingsComponent implements OnInit, OnDestroy {
   saveGeneral(): void {
     this.themeMode.setMode(this.theme);
     this.alertRefreshSeconds = Math.min(300, Math.max(60, Number(this.alertRefreshSeconds) || 60));
-    this.presenceRefreshSeconds = this.clampSeconds(this.presenceRefreshSeconds, 20);
 
     localStorage.setItem('fleet-default-landing-page', this.defaultLandingPage);
     localStorage.setItem('fleet-alert-refresh-seconds', String(this.alertRefreshSeconds));
     localStorage.setItem('fleet-alert-auto-refresh', String(this.alarmAutoRefresh));
+    localStorage.setItem('fleet-time-format', this.timeFormat);
+
+    // Rebuild the cached formatter only when the display mode changes.
+    this.dateTimeFormatterMode = null;
+    this.dateTimeFormatter = null;
     this.saveNotice = 'General preferences saved.';
-    if (this.activeTab === 'users') this.restartPresenceRefresh();
+
   }
 
   goToPage(page: number): void {
     this.page = Math.max(1, Math.min(this.totalPages, page));
   }
 
-  statusLabel(status: VesselSettingsStatus | UserPresenceStatus): string {
+  statusLabel(status: VesselSettingsStatus): string {
     if (status === 'online') return 'Online';
     if (status === 'idle') return 'Idle';
     if (status === 'offline') return 'Offline';
     return 'No Data';
   }
 
-
   formatDateTime(value?: string): string {
     if (!value) return '—';
     const date = new Date(value);
     if (!Number.isFinite(date.getTime())) return '—';
-    return new Intl.DateTimeFormat('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: this.timeFormat === '12h',
-    }).format(date);
-  }
 
-  userDevice(user: UserSessionRecord): string {
-    return user.device || (user.browser ? 'Web browser' : '—');
+    if (!this.dateTimeFormatter || this.dateTimeFormatterMode !== this.timeFormat) {
+      this.dateTimeFormatterMode = this.timeFormat;
+      this.dateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: this.timeFormat === '12h',
+      });
+    }
+
+    return this.dateTimeFormatter.format(date);
   }
 
   trackByVessel(_: number, vessel: VesselSettingsRecord): string {
     return vessel.id;
-  }
-
-  trackByUser(_: number, user: UserSessionRecord): string {
-    return user.id;
   }
 
   trackByGroup(_: number, group: VesselGroupSummary): string {
@@ -1815,7 +2053,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
       return 'Enter a valid email address.';
     }
     const duplicate = this.userAccessRecords.some(
-      (user) => user.id !== this.editingUserAccessId && user.username.toLowerCase() === username.toLowerCase(),
+      (user) =>
+        user.id !== this.editingUserAccessId &&
+        user.username.toLowerCase() === username.toLowerCase(),
     );
     if (duplicate) return 'This username already has an access profile.';
     if (this.isCurrentUser(this.userAccessForm) && this.userAccessForm.status === 'suspended') {
@@ -1827,7 +2067,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
     if (this.userAccessForm.accessScope === 'vessels' && !this.userAccessForm.vesselIds.length) {
       return 'Select at least one vessel.';
     }
-    if (!Object.values(this.userAccessForm.modulePermissions).some((permission) => permission.view)) {
+    if (
+      !Object.values(this.userAccessForm.modulePermissions).some((permission) => permission.view)
+    ) {
       return 'Enable at least one module for this user.';
     }
     if (!this.editingUserAccessId && this.userAccountSetupMode === 'create') {
@@ -1931,16 +2173,37 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
   }
 
-  private restartPresenceRefresh(): void {
-    this.presenceRefreshSub?.unsubscribe();
-    if (this.activeTab !== 'users') return;
-    const seconds = this.clampSeconds(this.presenceRefreshSeconds, 20);
-    this.presenceRefreshSub = timer(seconds * 1000, seconds * 1000)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        if (typeof document !== 'undefined' && document.hidden) return;
-        this.loadUserSessions(true);
-      });
+  private invalidateUserAccessCaches(): void {
+    this.filteredUserAccessCacheSource = undefined;
+    this.filteredUserAccessCacheKey = '';
+  }
+
+  private invalidateVesselCaches(): void {
+    this.filteredCacheSource = undefined;
+    this.filteredCacheKey = '';
+    this.derivedCacheSource = undefined;
+    this.vesselIndexSource = undefined;
+    this.invalidateUserAccessCaches();
+  }
+
+  private invalidateGroupCaches(): void {
+    this.derivedGroupDefinitionsSource = undefined;
+    this.groupIndexSource = undefined;
+    this.filteredCacheSource = undefined;
+    this.filteredCacheKey = '';
+    this.invalidateUserAccessCaches();
+  }
+
+  private ensureLookupIndexes(): void {
+    if (this.vesselIndexSource !== this.vessels) {
+      this.vesselById = new Map(this.vessels.map((vessel) => [vessel.id, vessel]));
+      this.vesselIndexSource = this.vessels;
+    }
+
+    if (this.groupIndexSource !== this.groupDefinitions) {
+      this.groupById = new Map(this.groupDefinitions.map((group) => [group.id, group]));
+      this.groupIndexSource = this.groupDefinitions;
+    }
   }
 
   private ensureVesselDerivatives(): void {
@@ -1951,7 +2214,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const counts = new Map<string, { vesselIds: Set<string>; editable: boolean; id: string; description: string }>();
+    const counts = new Map<
+      string,
+      { vesselIds: Set<string>; editable: boolean; id: string; description: string }
+    >();
     let online = 0;
     let idle = 0;
     let offline = 0;
@@ -1998,7 +2264,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
       count: item.vesselIds.size,
       vesselIds: Array.from(item.vesselIds),
       editable: item.editable,
-    })).sort((a, b) => Number(b.editable) - Number(a.editable) || b.count - a.count || a.name.localeCompare(b.name));
+    })).sort(
+      (a, b) =>
+        Number(b.editable) - Number(a.editable) ||
+        b.count - a.count ||
+        a.name.localeCompare(b.name),
+    );
 
     if (ungroupedIds.length) {
       this.groupSummaryCache.push({
@@ -2020,16 +2291,18 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   private groupSlug(name: string): string {
-    return name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'group';
+    return (
+      name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'group'
+    );
   }
 
   private clampSeconds(value: number, fallback: number): number {
     const number = Number(value);
-    return Math.min(300, Math.max(10, Number.isFinite(number) ? number : fallback));
+    return Math.min(300, Math.max(60, Number.isFinite(number) ? number : fallback));
   }
 
   private readLandingPage(value: string | null): LandingPage {
@@ -2084,14 +2357,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   private linkLegacyEngineAssignments(): void {
-    if (!this.drawerOpen || !this.form.engineAssignments?.length || !this.engineProfiles.length) return;
+    if (!this.drawerOpen || !this.form.engineAssignments?.length || !this.engineProfiles.length)
+      return;
     let changed = false;
     const assignments = this.form.engineAssignments.map((assignment) => {
       if (assignment.profileId) return assignment;
       const legacyName = assignment.displayName.trim().toLowerCase();
-      const match = this.engineProfiles.find((profile) =>
-        profile.name.trim().toLowerCase() === legacyName ||
-        profile.model.trim().toLowerCase() === legacyName,
+      const match = this.engineProfiles.find(
+        (profile) =>
+          profile.name.trim().toLowerCase() === legacyName ||
+          profile.model.trim().toLowerCase() === legacyName,
       );
       if (!match) return assignment;
       changed = true;

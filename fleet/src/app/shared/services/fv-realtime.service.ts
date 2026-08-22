@@ -41,12 +41,8 @@ export class FvRealtimeService {
   constructor(
     private http: HttpClientService,
     private newHttp: NewHttpClientService,
-    private store: Store<any>
+    private store: Store<any>,
   ) {}
-
-
-
-
 
   start(interval?: number): void {
     this.stopTimerOnly();
@@ -69,10 +65,6 @@ export class FvRealtimeService {
     this.loadRealtimeTags(safeInterval);
   }
 
-
-
-
-
   ensureStarted(interval?: number): void {
     const safeInterval = interval && interval > 0 ? interval : this.defaultInterval;
 
@@ -86,9 +78,6 @@ export class FvRealtimeService {
 
     this.start(safeInterval);
   }
-
-
-
 
   refreshNow(): void {
     this.refreshActiveData();
@@ -108,27 +97,26 @@ export class FvRealtimeService {
     }
 
     this.isLoadingTags = true;
-    this.tagFileSubscription = this.http
-      .getJsonFile('/assets/tags/dashboard.tag.json')
-      .subscribe({
-        next: (res: any) => {
-          this.isLoadingTags = false;
-          this.realtimeTags = this.mapRealtimeTags(res);
-          this.startTimer(interval);
+    this.tagFileSubscription = this.http.getJsonFile('/assets/tags/dashboard.tag.json').subscribe({
+      next: (res: any) => {
+        this.isLoadingTags = false;
+        this.realtimeTags = this.mapRealtimeTags(res);
+        this.startTimer(interval);
 
-          const vessel = this.pendingVessel || this.activeVesselSource.value || this.readStoredVessel();
-          this.pendingVessel = null;
+        const vessel =
+          this.pendingVessel || this.activeVesselSource.value || this.readStoredVessel();
+        this.pendingVessel = null;
 
-          if (vessel) {
-            this.setActiveVessel(vessel);
-          }
-        },
-        error: (error) => {
-          this.isLoadingTags = false;
-          console.error('[FvRealtimeService] load tags error:', error);
-          this.resetData(false);
-        },
-      });
+        if (vessel) {
+          this.setActiveVessel(vessel);
+        }
+      },
+      error: (error) => {
+        this.isLoadingTags = false;
+        console.error('[FvRealtimeService] load tags error:', error);
+        this.resetData(false);
+      },
+    });
   }
 
   private mapRealtimeTags(res: any): any[] {
@@ -165,7 +153,6 @@ export class FvRealtimeService {
   private startTimer(interval: number): void {
     this.timerSubscription?.unsubscribe();
 
-
     this.timerSubscription = timer(0, interval).subscribe(() => {
       this.refreshActiveData();
     });
@@ -180,9 +167,6 @@ export class FvRealtimeService {
     const nextIdentity = this.getVesselIdentity(vessel);
 
     if (previousIdentity && nextIdentity && previousIdentity !== nextIdentity) {
-
-
-
       this.realtimeRequestSubscription?.unsubscribe();
       this.realtimeRequestSubscription = null;
       this.isRequesting = false;
@@ -238,8 +222,6 @@ export class FvRealtimeService {
   }
 
   private refreshActiveData(): void {
-
-
     if (typeof document !== 'undefined' && document.hidden) {
       return;
     }
@@ -257,9 +239,6 @@ export class FvRealtimeService {
     }
 
     if (this.isRequesting) {
-
-
-
       return;
     }
 
@@ -281,7 +260,7 @@ export class FvRealtimeService {
             new fvInfoActions.SetRealtimeActiveSuccess({
               data,
               fv: payload.fv,
-            })
+            }),
           );
         },
         error: (error: any) => {
@@ -297,8 +276,6 @@ export class FvRealtimeService {
   private finishRealtimeRequest(): void {
     this.isRequesting = false;
     this.loadingSource.next(false);
-
-
   }
 
   private normalizeRealtimeResponse(response: any, prefix: string): Record<string, any> {
@@ -383,13 +360,7 @@ export class FvRealtimeService {
 
   private readTagName(item: any): string {
     return String(
-      item?.Name ||
-        item?.name ||
-        item?.TagName ||
-        item?.tagName ||
-        item?.Key ||
-        item?.key ||
-        ''
+      item?.Name || item?.name || item?.TagName || item?.tagName || item?.Key || item?.key || '',
     );
   }
 
@@ -473,7 +444,7 @@ export class FvRealtimeService {
 
         return tag.prefixes.some(
           (allowedPrefix: string) =>
-            this.normalizeKey(String(allowedPrefix)).replace(/_/g, '') === normalizedPrefix
+            this.normalizeKey(String(allowedPrefix)).replace(/_/g, '') === normalizedPrefix,
         );
       })
       .map((tag) => ({
@@ -493,6 +464,16 @@ export class FvRealtimeService {
         prefix,
       },
     };
+  }
+
+  pause(): void {
+    // Stop network activity but intentionally keep currentData/lastUpdated.
+    // Report pages can therefore hold the last known values while the browser
+    // tab is hidden, then resume polling without a visual data wipe.
+    this.stopTimerOnly();
+    this.isStarted = false;
+    this.activeInterval = 0;
+    this.resetData(false);
   }
 
   stop(): void {
@@ -529,13 +510,7 @@ export class FvRealtimeService {
   private getVesselIdentity(vessel: any): string {
     const info = vessel?.fvInfo || vessel?.fv || vessel || {};
     return String(
-      info?.prefix ||
-        info?.id ||
-        info?._id ||
-        info?.vesselId ||
-        info?.name ||
-        info?.Name ||
-        ''
+      info?.prefix || info?.id || info?._id || info?.vesselId || info?.name || info?.Name || '',
     )
       .trim()
       .toLowerCase()

@@ -1,11 +1,4 @@
-import {
-  AfterViewInit,
-  Component,
-  ElementRef,
-  OnDestroy,
-  OnInit,
-  ViewChild,
-} from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
@@ -91,7 +84,7 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
     private vesselPopup: VesselPopupService,
     private userPresence: UserPresenceService,
     private userAccess: UserAccessControlService,
-    private authService: AuthService
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -104,7 +97,7 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
     this.router.events
       .pipe(
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-        takeUntil(this.destroy$)
+        takeUntil(this.destroy$),
       )
       .subscribe((event: NavigationEnd) => {
         this.applyRouteState(event.urlAfterRedirects || event.url);
@@ -222,7 +215,7 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
         vessel?.fv?.id ||
         vessel?.fvInfo?.id ||
         vessel?.name ||
-        ''
+        '',
     ).trim();
   }
 
@@ -348,14 +341,12 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
         source.shipId,
         source.prefix,
         source.name,
-        source.vesselName
+        source.vesselName,
       );
     }
 
     return new Set(
-      values
-        .map((value) => this.normalizeIdentityPart(value))
-        .filter((value) => value.length > 0)
+      values.map((value) => this.normalizeIdentityPart(value)).filter((value) => value.length > 0),
     );
   }
 
@@ -540,7 +531,9 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private moduleFromUrl(url: string): FleetModuleKey | null {
-    const path = String(url || '').split('?')[0].split('#')[0];
+    const path = String(url || '')
+      .split('?')[0]
+      .split('#')[0];
 
     if (path.includes('/main/data-logger') || path.includes('/main/datalogger')) {
       return 'data-logger';

@@ -5,37 +5,22 @@
 
   <div class="map-filter-bar">
 
-    <button
-      type="button"
-      class="filter-pill"
-      [class.active]="activeFilter === 'all'"
-      (click)="setFilter('all')">
+    <button type="button" class="filter-pill" [class.active]="activeFilter === 'all'" (click)="setFilter('all')">
       <span class="filter-dot all"></span>
       All ({{ totalVessels }})
     </button>
 
-    <button
-      type="button"
-      class="filter-pill"
-      [class.active]="activeFilter === 'online'"
-      (click)="setFilter('online')">
+    <button type="button" class="filter-pill" [class.active]="activeFilter === 'online'" (click)="setFilter('online')">
       <span class="filter-dot online"></span>
       Online ({{ onlineCount }})
     </button>
 
-    <button
-      type="button"
-      class="filter-pill"
-      [class.active]="activeFilter === 'idle'"
-      (click)="setFilter('idle')">
+    <button type="button" class="filter-pill" [class.active]="activeFilter === 'idle'" (click)="setFilter('idle')">
       <span class="filter-dot idle"></span>
       Idle ({{ idleCount }})
     </button>
 
-    <button
-      type="button"
-      class="filter-pill"
-      [class.active]="activeFilter === 'offline'"
+    <button type="button" class="filter-pill" [class.active]="activeFilter === 'offline'"
       (click)="setFilter('offline')">
       <span class="filter-dot offline"></span>
       Offline ({{ offlineCount }})
@@ -43,28 +28,18 @@
 
   </div>
 
-  <section
-    #vesselPopup
-    class="vessel-popup"
-    *ngIf="selectedVessel">
+  <section #vesselPopup class="vessel-popup" *ngIf="selectedVessel">
 
     <div class="popup-arrow"></div>
 
-    <button
-      type="button"
-      class="popup-close"
-      (click)="closeSelectedCard()">
+    <button type="button" class="popup-close" (click)="closeSelectedCard()">
       ×
     </button>
 
     <div class="popup-head">
 
       <div class="vessel-img-wrap">
-        <img
-          class="vessel-img"
-          [src]="getVesselImage(selectedVessel)"
-          (error)="onImageError($event)"
-          alt="vessel">
+        <img class="vessel-img" [src]="getVesselImage(selectedVessel)" (error)="onImageError($event)" alt="vessel">
 
         <div class="vessel-img-fallback">
           <i class="fa fa-ship"></i>
@@ -76,9 +51,7 @@
         <div class="vessel-title-row">
           <h3>{{ getVesselName(selectedVessel) }}</h3>
 
-          <span
-            class="status-badge"
-            [ngClass]="selectedStatus">
+          <span class="status-badge" [ngClass]="selectedStatus">
             {{ getStatusText(selectedStatus) }}
           </span>
         </div>
@@ -99,10 +72,6 @@
 
     <div class="summary-title-row">
       <div class="summary-title">TODAY SUMMARY</div>
-      <span class="summary-live-state" [class.error]="popupSummaryError">
-        <span class="summary-live-dot"></span>
-        {{ popupSummaryLoading ? 'Updating' : (popupSummaryError ? 'Last available' : 'Live KPI') }}
-      </span>
     </div>
 
     <div class="summary-grid six-kpi">
@@ -165,10 +134,7 @@
 
     <div class="popup-actions">
 
-      <button
-        type="button"
-        class="action-btn past"
-        (click)="goPastTrack(selectedVessel, $event)">
+      <button type="button" class="action-btn past" (click)="goPastTrack(selectedVessel, $event)">
         <i class="fa fa-line-chart"></i>
 
         <div>
@@ -177,10 +143,7 @@
         </div>
       </button>
 
-      <button
-        type="button"
-        class="action-btn realtime"
-        (click)="goRealtime(selectedVessel, $event)">
+      <button type="button" class="action-btn realtime" (click)="goRealtime(selectedVessel, $event)">
         <i class="fa fa-bolt"></i>
 
         <div>

@@ -41,7 +41,7 @@ export class LiveReportService {
           console.warn('[LiveReportService] Unable to load report profiles.', error);
           return of(this.getFallbackDocument());
         }),
-        shareReplay({ bufferSize: 1, refCount: false })
+        shareReplay({ bufferSize: 1, refCount: false }),
       );
   }
 
@@ -49,7 +49,7 @@ export class LiveReportService {
     vessel: any,
     currentData: Record<string, any> | null | undefined,
     lastUpdated: Date | null,
-    document: LiveReportProfileDocument
+    document: LiveReportProfileDocument,
   ): LiveReportSnapshot {
     const vesselInfo = this.getVesselInfo(vessel);
     const vesselName = this.readText(
@@ -57,14 +57,14 @@ export class LiveReportService {
       vesselInfo?.Name,
       vesselInfo?.vesselName,
       vesselInfo?.VesselName,
-      'Selected Vessel'
+      'Selected Vessel',
     );
     const vesselPrefix = this.readText(
       vesselInfo?.prefix,
       vesselInfo?.Prefix,
       vesselInfo?.id,
       vesselInfo?.Id,
-      ''
+      '',
     );
     const profile = this.resolveProfile(vesselName, vesselPrefix, document);
     const data = this.normalizeData(currentData);
@@ -74,7 +74,7 @@ export class LiveReportService {
       data,
       ['VES_CONS_TODAY', 'VES_FUEL_CONS_TODAY', 'TOTAL_FUEL_USED_TODAY'],
       0,
-      10_000_000
+      10_000_000,
     ).value;
     const totalFuelFromEngines = this.sumAvailable(engines.map((engine) => engine.fuelToday));
     const totalFuel = totalFuelDirect ?? totalFuelFromEngines;
@@ -84,48 +84,43 @@ export class LiveReportService {
       data,
       ['VES_GPS_DIS_TODAY', 'VES_DISTANCE_TODAY'],
       0,
-      100_000
+      100_000,
     ).value;
-    const currentSpeed = this.readBoundedNumber(
-      data,
-      ['VES_GPS_SPEED', 'GPS_SPEED'],
-      0,
-      80
-    ).value;
+    const currentSpeed = this.readBoundedNumber(data, ['VES_GPS_SPEED', 'GPS_SPEED'], 0, 80).value;
     const averageSpeed = this.readBoundedNumber(
       data,
       ['VES_GPS_SPEED_AVG', 'GPS_SPEED_AVG'],
       0,
-      80
+      80,
     ).value;
     const maximumSpeed = this.readBoundedNumber(
       data,
       ['VES_GPS_SPEED_MAX', 'GPS_SPEED_MAX'],
       0,
-      80
+      80,
     ).value;
     const heading = this.readBoundedNumber(
       data,
       ['VES_GPS_HEAD', 'GPS_HEADING', 'VES_HEADING'],
       0,
-      360
+      360,
     ).value;
     const latitude = this.readBoundedNumber(
       data,
       ['VES_GPS_LAT', 'GPS_LAT', 'LATITUDE'],
       -90,
-      90
+      90,
     ).value;
     const longitude = this.readBoundedNumber(
       data,
       ['VES_GPS_LONG', 'VES_GPS_LON', 'GPS_LONG', 'LONGITUDE'],
       -180,
-      180
+      180,
     ).value;
     const mode = this.resolveMode(profile, data, vesselInfo, engines, currentSpeed);
 
     const invalidEngineSpeedCount = engines.filter(
-      (engine) => engine.speedQuality === 'invalid'
+      (engine) => engine.speedQuality === 'invalid',
     ).length;
     const availableEngineCount = engines.filter((engine) => engine.state !== 'no-data').length;
     const runningEngineCount = engines.filter((engine) => engine.state === 'running').length;
@@ -142,7 +137,7 @@ export class LiveReportService {
       invalidEngineSpeedCount === 0,
     ];
     const completeness = Math.round(
-      (availableChecks.filter(Boolean).length / availableChecks.length) * 100
+      (availableChecks.filter(Boolean).length / availableChecks.length) * 100,
     );
 
     const now = lastUpdated || new Date();
@@ -180,9 +175,33 @@ export class LiveReportService {
         this.metric('fuel-rate', 'Live Fuel Rate', totalFuelRate, 'L/h', 'fa fa-fire', 'violet', 2),
         this.metric('distance', 'Distance Today', distance, 'NM', 'fa fa-arrows-h', 'blue', 2),
         this.metric('speed', 'Current Speed', currentSpeed, 'knots', 'fa fa-tachometer', 'cyan', 2),
-        this.metric('average', 'Average Speed', averageSpeed, 'knots', 'fa fa-line-chart', 'green', 2),
-        this.metric('maximum', 'Maximum Speed', maximumSpeed, 'knots', 'fa fa-area-chart', 'violet', 2),
-        this.metric('heading', 'Course Over Ground', heading, '°', 'fa fa-location-arrow', 'slate', 2),
+        this.metric(
+          'average',
+          'Average Speed',
+          averageSpeed,
+          'knots',
+          'fa fa-line-chart',
+          'green',
+          2,
+        ),
+        this.metric(
+          'maximum',
+          'Maximum Speed',
+          maximumSpeed,
+          'knots',
+          'fa fa-area-chart',
+          'violet',
+          2,
+        ),
+        this.metric(
+          'heading',
+          'Course Over Ground',
+          heading,
+          '°',
+          'fa fa-location-arrow',
+          'slate',
+          2,
+        ),
       ],
       tracking: {
         latitude,
@@ -216,33 +235,21 @@ export class LiveReportService {
     });
   }
 
-
-
-
-
-
-
-
-
-
-  getOverviewMetricTagSuffixes(
-    vessel: any,
-    document: LiveReportProfileDocument
-  ): string[] {
+  getOverviewMetricTagSuffixes(vessel: any, document: LiveReportProfileDocument): string[] {
     const vesselInfo = this.getVesselInfo(vessel);
     const vesselName = this.readText(
       vesselInfo?.name,
       vesselInfo?.Name,
       vesselInfo?.vesselName,
       vesselInfo?.VesselName,
-      'Selected Vessel'
+      'Selected Vessel',
     );
     const vesselPrefix = this.readText(
       vesselInfo?.prefix,
       vesselInfo?.Prefix,
       vesselInfo?.id,
       vesselInfo?.Id,
-      ''
+      '',
     );
     const profile = this.resolveProfile(vesselName, vesselPrefix, document);
 
@@ -271,54 +278,138 @@ export class LiveReportService {
       new Set(
         [...headlineTags, ...engineFuelTags]
           .map((tag) => this.normalizeKey(String(tag || '')))
-          .filter((tag) => tag.length > 0)
-      )
+          .filter((tag) => tag.length > 0),
+      ),
     );
+  }
+
+  supportsVerifiedModeHistorian(
+    vessel: any,
+    document: LiveReportProfileDocument,
+  ): boolean {
+    const vesselInfo = this.getVesselInfo(vessel);
+    const vesselName = this.readText(
+      vesselInfo?.name,
+      vesselInfo?.Name,
+      vesselInfo?.vesselName,
+      vesselInfo?.VesselName,
+      'Selected Vessel',
+    );
+    const vesselPrefix = this.readText(
+      vesselInfo?.prefix,
+      vesselInfo?.Prefix,
+      vesselInfo?.id,
+      vesselInfo?.Id,
+      '',
+    );
+    const profile = this.resolveProfile(vesselName, vesselPrefix, document);
+    const suffix = String(profile.modeVerification?.tagSuffix || '').trim();
+
+    // Fail closed. A historian request is allowed only for vessel profiles that
+    // explicitly declare a real direct mode telemetry tag. Generic/fallback
+    // profiles must never manufacture a VES-MODE tag and query the server.
+    return profile.modeVerification?.kind === 'direct-telemetry-tag' && suffix.length > 0;
+  }
+
+  getModeHistorianTag(
+    vessel: any,
+    document: LiveReportProfileDocument,
+    preferredSourceTag?: string | null,
+  ): string | null {
+    const vesselInfo = this.getVesselInfo(vessel);
+    const vesselName = this.readText(
+      vesselInfo?.name,
+      vesselInfo?.Name,
+      vesselInfo?.vesselName,
+      vesselInfo?.VesselName,
+      'Selected Vessel',
+    );
+    const vesselPrefix = this.readText(
+      vesselInfo?.prefix,
+      vesselInfo?.Prefix,
+      vesselInfo?.id,
+      vesselInfo?.Id,
+      '',
+    );
+    const profile = this.resolveProfile(vesselName, vesselPrefix, document);
+
+    if (profile.modeVerification?.kind !== 'direct-telemetry-tag') {
+      return null;
+    }
+
+    const suffix = String(profile.modeVerification?.tagSuffix || '').trim();
+    if (!suffix) {
+      return null;
+    }
+
+    const normalizedSuffix = this.normalizeKey(suffix);
+    const preferred = String(preferredSourceTag || '').trim();
+    if (preferred && this.normalizeKey(preferred).endsWith(normalizedSuffix)) {
+      // Prefer the exact full tag returned by live telemetry. This is the
+      // strongest proof that the mode tag exists for the selected vessel.
+      if (preferred.includes('-')) {
+        return preferred;
+      }
+    }
+
+    const prefix = String(vesselPrefix || '').trim().replace(/[-_]+$/g, '');
+    if (!prefix) {
+      return null;
+    }
+
+    return `${prefix}-${suffix.replace(/^[-_]+/g, '')}`;
+  }
+
+  resolveHistorianModeLabel(
+    vessel: any,
+    rawValue: unknown,
+    document: LiveReportProfileDocument,
+  ): string | null {
+    const vesselInfo = this.getVesselInfo(vessel);
+    const vesselName = this.readText(
+      vesselInfo?.name,
+      vesselInfo?.Name,
+      vesselInfo?.vesselName,
+      vesselInfo?.VesselName,
+      'Selected Vessel',
+    );
+    const vesselPrefix = this.readText(
+      vesselInfo?.prefix,
+      vesselInfo?.Prefix,
+      vesselInfo?.id,
+      vesselInfo?.Id,
+      '',
+    );
+    const profile = this.resolveProfile(vesselName, vesselPrefix, document);
+    return this.resolveModeValue(profile, rawValue);
   }
 
   private buildEngineSnapshot(
     profile: LiveReportEngineProfile,
-    data: Record<string, any>
+    data: Record<string, any>,
   ): LiveReportEngineSnapshot {
     const fuelToday = this.readNonNegativeNumber(data, profile.fuelTodayTags || []);
     const directFuelRate = this.readBoundedNumber(
       data,
       profile.fuelRateTags || [],
       0,
-      100000
+      100000,
     ).value;
-    const supplyFlow = this.readBoundedNumber(
-      data,
-      profile.flowSupplyTags || [],
-      0,
-      100000
-    ).value;
-    const returnFlow = this.readBoundedNumber(
-      data,
-      profile.flowReturnTags || [],
-      0,
-      100000
-    ).value;
+    const supplyFlow = this.readBoundedNumber(data, profile.flowSupplyTags || [], 0, 100000).value;
+    const returnFlow = this.readBoundedNumber(data, profile.flowReturnTags || [], 0, 100000).value;
     const calculatedFuelRate =
       supplyFlow !== null && returnFlow !== null && supplyFlow >= returnFlow
         ? supplyFlow - returnFlow
         : null;
     const fuelRate = directFuelRate ?? calculatedFuelRate;
     const speedLimitRpm = this.resolveSpeedLimit(profile);
-    const speedResult = this.readBoundedNumber(
-      data,
-      profile.speedTags || [],
-      0,
-      speedLimitRpm
-    );
+    const speedResult = this.readBoundedNumber(data, profile.speedTags || [], 0, speedLimitRpm);
     const speed = speedResult.value;
     const load = this.readBoundedNumber(data, profile.loadTags || [], 0, 150).value;
     const power = this.readBoundedNumber(data, profile.powerTags || [], 0, 1000000).value;
     const liveSignals = [fuelRate, speed, load, power];
     const hasLiveSignal = liveSignals.some((value) => value !== null);
-    const isRunning = liveSignals.some(
-      (value) => value !== null && Math.abs(value) > 0.01
-    );
+    const isRunning = liveSignals.some((value) => value !== null && Math.abs(value) > 0.01);
 
     return {
       key: profile.key,
@@ -328,8 +419,7 @@ export class LiveReportService {
       fuelToday,
       fuelRate,
       speed,
-      speedQuality:
-        speed !== null ? 'valid' : speedResult.hadInvalidValue ? 'invalid' : 'no-data',
+      speedQuality: speed !== null ? 'valid' : speedResult.hadInvalidValue ? 'invalid' : 'no-data',
       speedLimitRpm,
       speedSourceTag: speedResult.sourceTag,
       load,
@@ -357,7 +447,7 @@ export class LiveReportService {
 
   private resolveTelemetryState(
     ageSeconds: number | null,
-    hasTelemetryData: boolean
+    hasTelemetryData: boolean,
   ): LiveReportSnapshot['telemetryState'] {
     if (ageSeconds === null || !hasTelemetryData) {
       return 'offline';
@@ -381,7 +471,7 @@ export class LiveReportService {
     unit: string,
     icon: string,
     tone: LiveReportMetric['tone'],
-    digits: number
+    digits: number,
   ): LiveReportMetric {
     return {
       key,
@@ -397,59 +487,34 @@ export class LiveReportService {
   private resolveMode(
     profile: LiveReportVesselProfile,
     data: Record<string, any>,
-    vesselInfo: any,
-    engines: LiveReportEngineSnapshot[],
-    currentSpeed: number | null
+    _vesselInfo: any,
+    _engines: LiveReportEngineSnapshot[],
+    _currentSpeed: number | null,
   ): ModeResolution {
-
-
+    // Report mode is intentionally opt-in. Vessels without an explicitly
+    // configured direct mode tag stay on the general report. We do not infer a
+    // mode from speed/engine state because an estimate can be mistaken for an
+    // audited operating mode and can encourage unnecessary historian queries.
+    if (profile.modeVerification?.kind !== 'direct-telemetry-tag') {
+      return this.unavailableMode('Operating mode is not enabled for this vessel profile.');
+    }
 
     const verifiedFromTelemetry = this.resolveCurrentMode(profile, data);
     if (verifiedFromTelemetry) {
       return verifiedFromTelemetry;
     }
 
-
-
-
-
-
-
-    if (profile.modeVerification?.kind === 'direct-telemetry-tag') {
-      const expectedTag = profile.modeVerification.tagSuffix || 'VES-MODE';
-      return this.unavailableMode(
-        `Waiting for a valid direct ${expectedTag} value. Estimated mode is intentionally disabled for this vessel.`
-      );
-    }
-
-    const vesselRecordRaw =
-      vesselInfo?.currentMode ??
-      vesselInfo?.CurrentMode ??
-      vesselInfo?.operationMode ??
-      vesselInfo?.OperationMode ??
-      vesselInfo?.mode ??
-      vesselInfo?.Mode;
-    const vesselRecordMode = this.resolveModeValue(profile, vesselRecordRaw);
-    if (vesselRecordMode) {
-      return {
-        label: vesselRecordMode,
-        rawValue: String(vesselRecordRaw),
-        sourceTag: null,
-        source: 'vessel-record',
-        confidence: 'medium',
-        reason:
-          'Mode was supplied by the vessel record, but no direct live vessel-mode telemetry tag was available for verification.',
-      };
-    }
-
-    return this.estimateCurrentMode(profile, data, engines, currentSpeed);
+    const expectedTag = profile.modeVerification.tagSuffix || 'VES-MODE';
+    return this.unavailableMode(
+      `Waiting for a valid direct ${expectedTag} value. Mode history remains disabled until the live tag is present.`,
+    );
   }
 
   private estimateCurrentMode(
     profile: LiveReportVesselProfile,
     data: Record<string, any>,
     engines: LiveReportEngineSnapshot[],
-    currentSpeed: number | null
+    currentSpeed: number | null,
   ): ModeResolution {
     const explicitActivity = this.resolveExplicitActivityMode(profile, data);
     if (explicitActivity) {
@@ -459,17 +524,18 @@ export class LiveReportService {
         sourceTag: null,
         source: 'estimated-telemetry',
         confidence: 'high',
-        reason: 'Detected from a live operational activity signal; a verified mode tag still takes priority.',
+        reason:
+          'Detected from a live operational activity signal; a verified mode tag still takes priority.',
       };
     }
 
     const runningMainCount = engines.filter(
-      (engine) => engine.kind === 'main' && engine.state === 'running'
+      (engine) => engine.kind === 'main' && engine.state === 'running',
     ).length;
     const runningSupportCount = engines.filter(
       (engine) =>
         (engine.kind === 'auxiliary' || engine.kind === 'generator' || engine.kind === 'motor') &&
-        engine.state === 'running'
+        engine.state === 'running',
     ).length;
     const totalFuelRate = this.sumAvailable(engines.map((engine) => engine.fuelRate)) ?? 0;
     const maximumLoad = this.maxAvailable(engines.map((engine) => engine.load)) ?? 0;
@@ -493,7 +559,7 @@ export class LiveReportService {
           profile,
           'Underway (Full Speed)',
           'high',
-          `GPS speed is ${this.formatCompact(currentSpeed)} knots, indicating sustained high-speed transit.`
+          `GPS speed is ${this.formatCompact(currentSpeed)} knots, indicating sustained high-speed transit.`,
         );
       }
 
@@ -502,7 +568,7 @@ export class LiveReportService {
           profile,
           'Underway (ECO Speed)',
           'medium',
-          `GPS speed is ${this.formatCompact(currentSpeed)} knots, indicating the vessel is underway.`
+          `GPS speed is ${this.formatCompact(currentSpeed)} knots, indicating the vessel is underway.`,
         );
       }
 
@@ -511,7 +577,7 @@ export class LiveReportService {
           profile,
           'Port Movements',
           'medium',
-          `Low GPS speed of ${this.formatCompact(currentSpeed)} knots indicates controlled low-speed movement.`
+          `Low GPS speed of ${this.formatCompact(currentSpeed)} knots indicates controlled low-speed movement.`,
         );
       }
 
@@ -520,7 +586,7 @@ export class LiveReportService {
           profile,
           'Standby at mooring buoy',
           'medium',
-          'The vessel is stationary and propulsion demand is low.'
+          'The vessel is stationary and propulsion demand is low.',
         );
       }
 
@@ -529,12 +595,12 @@ export class LiveReportService {
           profile,
           'Other',
           'low',
-          'The vessel is stationary with machinery activity. A dedicated work-status tag is required to distinguish cargo, towing, anchor handling, DP or alongside operations.'
+          'The vessel is stationary with machinery activity. A dedicated work-status tag is required to distinguish cargo, towing, anchor handling, DP or alongside operations.',
         );
       }
 
       return this.unavailableMode(
-        'The vessel is stationary, but available telemetry cannot distinguish the configured offshore work modes.'
+        'The vessel is stationary, but available telemetry cannot distinguish the configured offshore work modes.',
       );
     }
 
@@ -545,7 +611,7 @@ export class LiveReportService {
         profile,
         'Passage',
         'medium',
-        `GPS speed is ${this.formatCompact(currentSpeed)} knots, indicating high-speed passage.`
+        `GPS speed is ${this.formatCompact(currentSpeed)} knots, indicating high-speed passage.`,
       );
     }
 
@@ -554,7 +620,7 @@ export class LiveReportService {
         profile,
         hasSeaPassageEconomics ? 'Sea Passage Economics' : 'Passage',
         'medium',
-        `GPS speed is ${this.formatCompact(currentSpeed)} knots, indicating sustained transit.`
+        `GPS speed is ${this.formatCompact(currentSpeed)} knots, indicating sustained transit.`,
       );
     }
 
@@ -563,7 +629,7 @@ export class LiveReportService {
         profile,
         'Manoeuvring',
         'medium',
-        `GPS speed is ${this.formatCompact(currentSpeed)} knots, indicating low-speed vessel movement.`
+        `GPS speed is ${this.formatCompact(currentSpeed)} knots, indicating low-speed vessel movement.`,
       );
     }
 
@@ -572,7 +638,7 @@ export class LiveReportService {
         profile,
         'Manoeuvring',
         'low',
-        'The vessel is nearly stationary while a main engine is active.'
+        'The vessel is nearly stationary while a main engine is active.',
       );
     }
 
@@ -581,7 +647,7 @@ export class LiveReportService {
         profile,
         'Cargo Operation',
         'low',
-        'The vessel is stationary with elevated auxiliary machinery activity.'
+        'The vessel is stationary with elevated auxiliary machinery activity.',
       );
     }
 
@@ -589,7 +655,7 @@ export class LiveReportService {
       profile,
       'Standby',
       'medium',
-      'The vessel is stationary and live propulsion demand is low.'
+      'The vessel is stationary and live propulsion demand is low.',
     );
   }
 
@@ -597,13 +663,13 @@ export class LiveReportService {
     profile: LiveReportVesselProfile,
     desiredLabel: string,
     confidence: Exclude<LiveReportModeConfidence, null>,
-    reason: string
+    reason: string,
   ): ModeResolution {
     const matched = this.findMode(profile, desiredLabel);
 
     if (!matched) {
       return this.unavailableMode(
-        `${reason} The matching mode is not configured in this vessel profile.`
+        `${reason} The matching mode is not configured in this vessel profile.`,
       );
     }
 
@@ -630,7 +696,7 @@ export class LiveReportService {
 
   private resolveExplicitActivityMode(
     profile: LiveReportVesselProfile,
-    data: Record<string, any>
+    data: Record<string, any>,
   ): string | null {
     const activityRules: Array<{ label: string; tags: string[] }> = [
       {
@@ -689,7 +755,7 @@ export class LiveReportService {
 
   private resolveCurrentMode(
     profile: LiveReportVesselProfile,
-    data: Record<string, any>
+    data: Record<string, any>,
   ): ModeResolution | null {
     const candidates = profile.modeTags || [
       'VES_MODE',
@@ -746,7 +812,7 @@ export class LiveReportService {
 
     for (const mode of profile.modes) {
       const codeMatch = (mode.codes || []).some(
-        (code) => this.normalizeKey(String(code)) === normalizedRaw
+        (code) => this.normalizeKey(String(code)) === normalizedRaw,
       );
       const labelMatch = this.normalizeKey(mode.label) === normalizedRaw;
       const keyMatch = this.normalizeKey(mode.key) === normalizedRaw;
@@ -755,8 +821,6 @@ export class LiveReportService {
         return mode.label;
       }
     }
-
-
 
     return null;
   }
@@ -769,25 +833,21 @@ export class LiveReportService {
     const normalized = this.normalizeKey(label);
     return profile.modes.find(
       (mode) =>
-        this.normalizeKey(mode.label) === normalized || this.normalizeKey(mode.key) === normalized
+        this.normalizeKey(mode.label) === normalized || this.normalizeKey(mode.key) === normalized,
     );
   }
 
   private resolveProfile(
     vesselName: string,
     vesselPrefix: string,
-    document: LiveReportProfileDocument
+    document: LiveReportProfileDocument,
   ): LiveReportVesselProfile {
     const normalizedName = this.normalizeIdentity(vesselName);
     const normalizedPrefix = this.normalizeIdentity(vesselPrefix);
 
-
-
     if (normalizedName) {
       const nameMatch = document.profiles.find((item) =>
-        (item.aliases || []).some(
-          (alias) => this.normalizeIdentity(alias) === normalizedName
-        )
+        (item.aliases || []).some((alias) => this.normalizeIdentity(alias) === normalizedName),
       );
 
       if (nameMatch) {
@@ -797,9 +857,7 @@ export class LiveReportService {
 
     if (normalizedPrefix) {
       const prefixMatch = document.profiles.find((item) =>
-        (item.prefixes || []).some(
-          (prefix) => this.normalizeIdentity(prefix) === normalizedPrefix
-        )
+        (item.prefixes || []).some((prefix) => this.normalizeIdentity(prefix) === normalizedPrefix),
       );
 
       if (prefixMatch) {
@@ -818,7 +876,7 @@ export class LiveReportService {
     const fallback = this.getFallbackDocument();
     const normalizeProfile = (
       profile: LiveReportVesselProfile | null | undefined,
-      fallbackProfile: LiveReportVesselProfile
+      fallbackProfile: LiveReportVesselProfile,
     ): LiveReportVesselProfile => {
       if (!profile || typeof profile !== 'object') {
         return fallbackProfile;
@@ -845,7 +903,9 @@ export class LiveReportService {
         label: this.readText(profile.label, fallbackProfile.label),
         aliases: Array.from(new Set((profile.aliases || []).filter(Boolean))),
         prefixes: Array.from(new Set((profile.prefixes || []).filter(Boolean))),
-        modeTags: Array.from(new Set((profile.modeTags || fallbackProfile.modeTags || []).filter(Boolean))),
+        modeTags: Array.from(
+          new Set((profile.modeTags || fallbackProfile.modeTags || []).filter(Boolean)),
+        ),
         modes: modes.length > 0 ? modes : fallbackProfile.modes,
         engines: engines.length > 0 ? engines : fallbackProfile.engines,
         sourceReport: this.readText(profile.sourceReport, ''),
@@ -904,7 +964,7 @@ export class LiveReportService {
     key: string,
     label: string,
     kind: LiveReportEngineProfile['kind'],
-    prefix: string
+    prefix: string,
   ): LiveReportEngineProfile {
     return {
       key,
@@ -950,7 +1010,7 @@ export class LiveReportService {
     data: Record<string, any>,
     candidates: string[],
     minimum: number,
-    maximum: number
+    maximum: number,
   ): BoundedNumberResult {
     let hadInvalidValue = false;
 
@@ -1022,14 +1082,14 @@ export class LiveReportService {
 
   private sumAvailable(values: Array<number | null>): number | null {
     const available = values.filter(
-      (value): value is number => value !== null && Number.isFinite(value)
+      (value): value is number => value !== null && Number.isFinite(value),
     );
     return available.length > 0 ? available.reduce((sum, value) => sum + value, 0) : null;
   }
 
   private maxAvailable(values: Array<number | null>): number | null {
     const available = values.filter(
-      (value): value is number => value !== null && Number.isFinite(value)
+      (value): value is number => value !== null && Number.isFinite(value),
     );
     return available.length > 0 ? Math.max(...available) : null;
   }

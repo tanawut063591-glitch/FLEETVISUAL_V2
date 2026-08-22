@@ -32,7 +32,7 @@ export class DateRangeService {
   createCustom(
     startInput: string,
     endInput: string,
-    preset: DateRangePreset = 'custom'
+    preset: DateRangePreset = 'custom',
   ): DateRangeSelection {
     const start = new Date(startInput);
     const end = new Date(endInput);

@@ -1375,12 +1375,15 @@ export class ChartComponent implements OnInit, OnDestroy {
         var mutedText = darkTheme ? '#a7b4c7' : '#475569';
         var primaryText = darkTheme ? '#f8fafc' : '#0f172a';
         var tooltipBackground = darkTheme ? '#121925' : '#ffffff';
-        var tooltipBorder = darkTheme ? '#475569' : '#bfdbfe';
+        var tooltipBorder = darkTheme ? '#60a5fa' : '#60a5fa';
+        var hoverMarkerSymbols: string[] = [
+            'circle', 'square', 'diamond', 'triangle', 'triangle-down'
+        ];
 
 
         var tooltipMaxHeight = Math.max(
-            132,
-            Math.min(182, (typeof window !== 'undefined' ? window.innerHeight : 900) - 230)
+            160,
+            Math.min(280, (typeof window !== 'undefined' ? window.innerHeight : 900) - 220)
         );
         var escapeTooltipHtml = function (value: any): string {
             return String(value == null ? '' : value)
@@ -1417,53 +1420,205 @@ export class ChartComponent implements OnInit, OnDestroy {
                 maximumFractionDigits: 4
             });
         };
-        var findNearestSeriesPoint = function (series: any, targetX: number): any | null {
+        var getSynchronizedSeriesValue = function (series: any, targetX: number): { y: number; sourcePoint: any | null } | null {
             var points = series && Array.isArray(series.points) ? series.points : [];
             if (!points.length || !Number.isFinite(targetX)) {
                 return null;
             }
 
+            var firstValidIndex = -1;
+            var lastValidIndex = -1;
+            for (var pointIndex = 0; pointIndex < points.length; pointIndex++) {
+                var pointX = Number(points[pointIndex] && points[pointIndex].x);
+                var pointY = Number(points[pointIndex] && points[pointIndex].y);
+                if (Number.isFinite(pointX) && Number.isFinite(pointY)) {
+                    if (firstValidIndex < 0) {
+                        firstValidIndex = pointIndex;
+                    }
+                    lastValidIndex = pointIndex;
+                }
+            }
 
+            if (firstValidIndex < 0 || lastValidIndex < 0) {
+                return null;
+            }
 
-            var low = 0;
-            var high = points.length - 1;
+            var firstPoint = points[firstValidIndex];
+            var lastPoint = points[lastValidIndex];
+            var firstX = Number(firstPoint.x);
+            var lastX = Number(lastPoint.x);
+            if (targetX < firstX || targetX > lastX) {
+                return null;
+            }
+
+            var low = firstValidIndex;
+            var high = lastValidIndex;
             while (low <= high) {
                 var middle = Math.floor((low + high) / 2);
-                var middleX = Number(points[middle] && points[middle].x);
-                if (!Number.isFinite(middleX) || middleX < targetX) {
+                var middlePoint = points[middle];
+                var middleX = Number(middlePoint && middlePoint.x);
+                var middleY = Number(middlePoint && middlePoint.y);
+
+                if (!Number.isFinite(middleX) || !Number.isFinite(middleY)) {
+                    var shifted = middle + 1;
+                    while (shifted <= high) {
+                        var shiftedX = Number(points[shifted] && points[shifted].x);
+                        var shiftedY = Number(points[shifted] && points[shifted].y);
+                        if (Number.isFinite(shiftedX) && Number.isFinite(shiftedY)) {
+                            middle = shifted;
+                            middlePoint = points[middle];
+                            middleX = shiftedX;
+                            middleY = shiftedY;
+                            break;
+                        }
+                        shifted++;
+                    }
+                }
+
+                if (!Number.isFinite(middleX) || !Number.isFinite(middleY)) {
+                    break;
+                }
+
+                if (middleX < targetX) {
                     low = middle + 1;
                 } else if (middleX > targetX) {
                     high = middle - 1;
                 } else {
-                    low = middle;
+                    return { y: middleY, sourcePoint: middlePoint };
+                }
+            }
+
+            var rightIndex = Math.min(Math.max(low, firstValidIndex), lastValidIndex);
+            while (rightIndex <= lastValidIndex) {
+                var rightCandidateX = Number(points[rightIndex] && points[rightIndex].x);
+                var rightCandidateY = Number(points[rightIndex] && points[rightIndex].y);
+                if (Number.isFinite(rightCandidateX) && Number.isFinite(rightCandidateY)) {
                     break;
                 }
+                rightIndex++;
             }
 
-            var candidateIndexes = [low - 1, low, low + 1];
-            var nearest: any | null = null;
-            var nearestDistance = Number.POSITIVE_INFINITY;
-            for (var i = 0; i < candidateIndexes.length; i++) {
-                var index = candidateIndexes[i];
-                if (index < 0 || index >= points.length) {
+            var leftIndex = Math.min(rightIndex - 1, lastValidIndex);
+            while (leftIndex >= firstValidIndex) {
+                var leftCandidateX = Number(points[leftIndex] && points[leftIndex].x);
+                var leftCandidateY = Number(points[leftIndex] && points[leftIndex].y);
+                if (Number.isFinite(leftCandidateX) && Number.isFinite(leftCandidateY)) {
+                    break;
+                }
+                leftIndex--;
+            }
+
+            if (leftIndex < firstValidIndex && rightIndex <= lastValidIndex) {
+                var onlyRight = points[rightIndex];
+                return { y: Number(onlyRight.y), sourcePoint: onlyRight };
+            }
+            if (rightIndex > lastValidIndex && leftIndex >= firstValidIndex) {
+                var onlyLeft = points[leftIndex];
+                return { y: Number(onlyLeft.y), sourcePoint: onlyLeft };
+            }
+            if (leftIndex < firstValidIndex || rightIndex > lastValidIndex) {
+                return null;
+            }
+
+            var leftPoint = points[leftIndex];
+            var rightPoint = points[rightIndex];
+            var leftX = Number(leftPoint.x);
+            var leftY = Number(leftPoint.y);
+            var rightX = Number(rightPoint.x);
+            var rightY = Number(rightPoint.y);
+            if (!Number.isFinite(leftX) || !Number.isFinite(leftY) ||
+                !Number.isFinite(rightX) || !Number.isFinite(rightY)) {
+                return null;
+            }
+
+            var seriesType = String((series.options && series.options.type) || series.type || '').toLowerCase();
+            var stepMode = series.options && series.options.step;
+            if (stepMode || seriesType === 'column') {
+                var stepPoint = targetX >= rightX ? rightPoint : leftPoint;
+                return { y: Number(stepPoint.y), sourcePoint: stepPoint };
+            }
+
+            if (rightX === leftX) {
+                return { y: leftY, sourcePoint: leftPoint };
+            }
+
+            var ratio = (targetX - leftX) / (rightX - leftX);
+            var interpolatedY = leftY + ((rightY - leftY) * ratio);
+            if (!Number.isFinite(interpolatedY)) {
+                return null;
+            }
+
+            return {
+                y: interpolatedY,
+                sourcePoint: Math.abs(targetX - leftX) <= Math.abs(rightX - targetX) ? leftPoint : rightPoint
+            };
+        };
+        var clearSynchronizedHoverMarkers = function (chart: any): void {
+            if (!chart) {
+                return;
+            }
+
+            if (chart.__fleetHoverMarkerGroup && typeof chart.__fleetHoverMarkerGroup.destroy === 'function') {
+                chart.__fleetHoverMarkerGroup.destroy();
+            }
+            chart.__fleetHoverMarkerGroup = null;
+            chart.__fleetHoverX = null;
+        };
+        var synchronizeHoverMarkers = function (chart: any, entries: any[], targetX: number): void {
+            if (!chart || !chart.renderer || !chart.xAxis || !chart.xAxis[0] || !Number.isFinite(targetX)) {
+                return;
+            }
+
+            clearSynchronizedHoverMarkers(chart);
+
+            var xPixel = Number(chart.xAxis[0].toPixels(targetX, false));
+            if (!Number.isFinite(xPixel) || xPixel < chart.plotLeft || xPixel > chart.plotLeft + chart.plotWidth) {
+                return;
+            }
+
+            var markerGroup = chart.renderer.g('fleet-synchronized-hover-markers')
+                .attr({ zIndex: 9 })
+                .css({ pointerEvents: 'none' })
+                .add();
+            chart.__fleetHoverMarkerGroup = markerGroup;
+            chart.__fleetHoverX = targetX;
+
+            for (var markerIndex = 0; markerIndex < entries.length; markerIndex++) {
+                var entry = entries[markerIndex];
+                var chartSeries = entry && entry.series;
+                var yAxis = chartSeries && chartSeries.yAxis;
+                var yValue = Number(entry && entry.y);
+                if (!chartSeries || !yAxis || !Number.isFinite(yValue)) {
                     continue;
                 }
 
-                var candidate = points[index];
-                var candidateX = Number(candidate && candidate.x);
-                var candidateY = Number(candidate && candidate.y);
-                if (!Number.isFinite(candidateX) || !Number.isFinite(candidateY)) {
+                var yPixel = Number(yAxis.toPixels(yValue, false));
+                if (!Number.isFinite(yPixel) || yPixel < chart.plotTop || yPixel > chart.plotTop + chart.plotHeight) {
                     continue;
                 }
 
-                var distance = Math.abs(candidateX - targetX);
-                if (distance < nearestDistance) {
-                    nearest = candidate;
-                    nearestDistance = distance;
-                }
-            }
+                var color = String(entry.color || chartSeries.color || '#64748b');
+                var symbol = hoverMarkerSymbols[Number(entry.seriesIndex || 0) % hoverMarkerSymbols.length];
+                var radius = 5.5;
 
-            return nearest;
+                chart.renderer.circle(xPixel, yPixel, radius + 4)
+                    .attr({
+                        fill: color,
+                        opacity: darkTheme ? 0.22 : 0.18,
+                        stroke: 'none',
+                        zIndex: 8
+                    })
+                    .add(markerGroup);
+
+                chart.renderer.symbol(symbol, xPixel - radius, yPixel - radius, radius * 2, radius * 2)
+                    .attr({
+                        fill: color,
+                        stroke: darkTheme ? '#e2e8f0' : '#ffffff',
+                        'stroke-width': 2,
+                        zIndex: 9
+                    })
+                    .add(markerGroup);
+            }
         };
         var axisLayout = this.createReadableAxisLayout(seriesItems, mutedText, gridColor, axisColor);
         var tickInterval = this.getReadableTimeTickInterval();
@@ -1520,9 +1675,16 @@ export class ChartComponent implements OnInit, OnDestroy {
                 },
                 marker: isColumnChart ? undefined : {
                     enabled: false,
-                    symbol: 'circle',
-                    radius: 2.5,
-                    states: { hover: { enabled: true, radius: 4.5 } }
+                    symbol: hoverMarkerSymbols[i % hoverMarkerSymbols.length],
+                    radius: 3,
+                    lineWidth: 2,
+                    lineColor: darkTheme ? '#0f172a' : '#ffffff',
+                    fillColor: item.color,
+                    states: {
+                        hover: {
+                            enabled: false
+                        }
+                    }
                 }
             });
         }
@@ -1541,6 +1703,26 @@ export class ChartComponent implements OnInit, OnDestroy {
                 panKey: 'shift',
                 backgroundColor: chartBackground,
                 alignTicks: false,
+                events: {
+                    load: function (this: any) {
+                        var chart = this;
+                        if (!chart || !chart.container || chart.__fleetHoverCleanupBound) {
+                            return;
+                        }
+
+                        chart.__fleetHoverCleanupBound = true;
+                        chart.container.addEventListener('mouseleave', function () {
+                            clearSynchronizedHoverMarkers(chart);
+                            if (chart.tooltip && typeof chart.tooltip.hide === 'function') {
+                                chart.tooltip.hide(0);
+                            }
+                            if (chart.xAxis && chart.xAxis[0] &&
+                                typeof chart.xAxis[0].hideCrosshair === 'function') {
+                                chart.xAxis[0].hideCrosshair();
+                            }
+                        });
+                    }
+                },
                 spacingTop: 10,
                 spacingRight: 20 + axisLayout.rightOffset,
                 spacingBottom: 10,
@@ -1569,9 +1751,10 @@ export class ChartComponent implements OnInit, OnDestroy {
                     year: '%Y'
                 },
                 crosshair: {
-                    width: 1,
-                    color: darkTheme ? '#64748b' : '#94a3b8',
-                    dashStyle: 'ShortDash'
+                    width: 1.5,
+                    color: darkTheme ? '#818cf8' : '#6366f1',
+                    dashStyle: 'Solid',
+                    zIndex: 3
                 },
                 labels: {
                     autoRotation: [-35],
@@ -1636,19 +1819,25 @@ export class ChartComponent implements OnInit, OnDestroy {
                 split: false,
                 useHTML: true,
                 outside: this.fullscreenTarget !== target,
-                stickOnContact: true,
-                hideDelay: 550,
+                stickOnContact: false,
+                hideDelay: 120,
                 className: 'fleet-chart-tooltip',
                 backgroundColor: tooltipBackground,
                 borderColor: tooltipBorder,
-                borderRadius: 10,
-                borderWidth: 1,
-                padding: 8,
-                shadow: true,
+                borderRadius: 4,
+                borderWidth: 1.5,
+                padding: 9,
+                shadow: {
+                    color: darkTheme ? 'rgba(0, 0, 0, 0.45)' : 'rgba(15, 23, 42, 0.22)',
+                    offsetX: 0,
+                    offsetY: 4,
+                    opacity: 0.22,
+                    width: 7
+                },
                 style: {
                     color: primaryText,
                     fontSize: '11px',
-                    pointerEvents: 'auto'
+                    pointerEvents: 'none'
                 },
                 positioner: function (this: any, labelWidth: number, labelHeight: number, point: any) {
                     var chart = this.chart;
@@ -1717,13 +1906,13 @@ export class ChartComponent implements OnInit, OnDestroy {
                                 continue;
                             }
 
-                            var nearestPoint = findNearestSeriesPoint(chartSeries, targetX);
-                            if (nearestPoint) {
+                            var synchronizedValue = getSynchronizedSeriesValue(chartSeries, targetX);
+                            if (synchronizedValue) {
                                 tooltipPoints.push({
                                     series: chartSeries,
-                                    point: nearestPoint,
-                                    y: Number(nearestPoint.y),
-                                    color: nearestPoint.color || chartSeries.color,
+                                    point: synchronizedValue.sourcePoint,
+                                    y: Number(synchronizedValue.y),
+                                    color: (synchronizedValue.sourcePoint && synchronizedValue.sourcePoint.color) || chartSeries.color,
                                     seriesIndex: seriesIndex
                                 });
                             }
@@ -1741,6 +1930,8 @@ export class ChartComponent implements OnInit, OnDestroy {
                     }
 
                     tooltipPoints.sort((left: any, right: any) => left.seriesIndex - right.seriesIndex);
+                    synchronizeHoverMarkers(chart, tooltipPoints, targetX);
+
                     var rows = tooltipPoints.map((entry: any) => {
                         var custom = entry.series && entry.series.options
                             ? (entry.series.options.custom || {})
@@ -1752,16 +1943,16 @@ export class ChartComponent implements OnInit, OnDestroy {
                         var formatted = formatTooltipValue(Number(entry.y));
                         var valueText = formatted + (unit ? ' ' + unit : '');
 
-                        return '<div class="fleet-tooltip-row" style="display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;column-gap:7px;min-height:21px;line-height:1.35;">' +
-                            '<span class="fleet-tooltip-dot" style="display:block;width:8px;height:8px;border-radius:50%;background:' + escapeTooltipHtml(entry.color || '#64748b') + ';"></span>' +
-                            '<span class="fleet-tooltip-name" style="min-width:0;font-weight:600;white-space:normal;overflow-wrap:anywhere;">' + escapeTooltipHtml(label) + '</span>' +
-                            '<strong class="fleet-tooltip-value" style="padding-left:8px;font-weight:800;white-space:nowrap;text-align:right;">' + escapeTooltipHtml(valueText) + '</strong>' +
+                        return '<div class="fleet-tooltip-row" style="display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;column-gap:7px;min-height:22px;line-height:1.35;">' +
+                            '<span class="fleet-tooltip-dot" style="display:block;width:8px;height:8px;border-radius:50%;background:' + escapeTooltipHtml(entry.color || '#64748b') + ';box-shadow:0 0 0 1px ' + (darkTheme ? '#334155' : '#ffffff') + ';"></span>' +
+                            '<span class="fleet-tooltip-name" style="min-width:0;font-weight:650;white-space:normal;overflow-wrap:anywhere;">' + escapeTooltipHtml(label) + '<span style="opacity:.55;padding:0 3px;">:</span></span>' +
+                            '<strong class="fleet-tooltip-value" style="padding-left:4px;font-weight:800;white-space:nowrap;text-align:right;">' + escapeTooltipHtml(valueText) + '</strong>' +
                             '</div>';
                     }).join('');
                     var timestamp = formatTooltipTime(targetX);
 
-                    return '<div class="fleet-tooltip-card" style="--fleet-tooltip-max-height:' + tooltipMaxHeight + 'px;color:' + primaryText + ';min-width:230px;max-width:440px;">' +
-                        '<div class="fleet-tooltip-time" style="padding-bottom:5px;font-size:12px;font-weight:700;white-space:nowrap;">' + escapeTooltipHtml(timestamp) + '</div>' +
+                    return '<div class="fleet-tooltip-card" style="--fleet-tooltip-max-height:' + tooltipMaxHeight + 'px;color:' + primaryText + ';min-width:250px;max-width:460px;">' +
+                        '<div class="fleet-tooltip-time" style="padding-bottom:6px;margin-bottom:3px;border-bottom:1px solid ' + (darkTheme ? '#334155' : '#e2e8f0') + ';font-size:12px;font-weight:700;white-space:nowrap;">' + escapeTooltipHtml(timestamp) + '</div>' +
                         '<div class="fleet-tooltip-scroll" style="max-height:' + tooltipMaxHeight + 'px;overflow-y:auto;overflow-x:hidden;padding-right:2px;">' + rows + '</div></div>';
                 }
             },
@@ -1771,8 +1962,8 @@ export class ChartComponent implements OnInit, OnDestroy {
                     findNearestPointBy: 'x',
                     stickyTracking: true,
                     states: {
-                        hover: { lineWidthPlus: 0.8, halo: { size: 5 } },
-                        inactive: { opacity: 0.16 }
+                        hover: { lineWidthPlus: 0, halo: { size: 0 } },
+                        inactive: { opacity: 1 }
                     }
                 },
                 line: {
@@ -1787,8 +1978,8 @@ export class ChartComponent implements OnInit, OnDestroy {
                     lineWidth: 1.9,
                     trackByArea: true,
                     states: {
-                        hover: { lineWidthPlus: 0.7 },
-                        inactive: { opacity: 0.32 }
+                        hover: { lineWidthPlus: 0 },
+                        inactive: { opacity: 1 }
                     }
                 },
                 column: {

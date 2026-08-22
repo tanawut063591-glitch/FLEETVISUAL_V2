@@ -57,8 +57,6 @@ export class TelemetryAlertsService {
   private snapshotLoading = false;
   private readonly tagConfig$: Observable<Record<string, unknown>>;
 
-
-
   private readonly relevantTagPattern =
     /^(FV-API-ALIVE|DCP-PLC-ALIVE|DCP-GATEWAY-ALIVE|GPS-PANEL-ALIVE|(?:PME|SME|CME)-ENGINE-LOAD|(?:PME|SME|CME|DG[1-4])-(?:FIN|FOUT)-TEMP)$/i;
 
@@ -75,11 +73,6 @@ export class TelemetryAlertsService {
         shareReplay({ bufferSize: 1, refCount: false }),
       );
   }
-
-
-
-
-
 
   fetch(query: AlertQuery, forceRefresh = false): Observable<AlertFetchResult> {
     return this.getSnapshot(forceRefresh).pipe(
@@ -488,8 +481,6 @@ export class TelemetryAlertsService {
     const numeric = Number(value);
     const isFuelTemperature = /(?:FIN|FOUT)-TEMP$/i.test(tagName);
     const labelledCelsius = /(?:deg\s*c|°c|celsius)/i.test(unit);
-
-
 
     if (
       isFuelTemperature &&

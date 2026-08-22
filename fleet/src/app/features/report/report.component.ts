@@ -1,15 +1,31 @@
 import {
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   ElementRef,
+  HostListener,
   OnDestroy,
   OnInit,
   QueryList,
   ViewChildren,
 } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { BehaviorSubject, Observable, Subject, combineLatest, from, of, throwError } from 'rxjs';
-import { catchError, finalize, map, switchMap, take, takeUntil, timeout } from 'rxjs/operators';
+import { BehaviorSubject, Observable, Subject, Subscription, combineLatest, from, merge, of, throwError } from 'rxjs';
+import {
+  auditTime,
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  filter,
+  finalize,
+  map,
+  shareReplay,
+  switchMap,
+  take,
+  takeUntil,
+  tap,
+  timeout,
+} from 'rxjs/operators';
 
 import { HttpClientService } from '../../shared/services/http-client.service';
 import { NewHttpClientService } from '../../shared/services/http-client1.service';
@@ -20,7 +36,9 @@ import { VesselStorageService } from '../../shared/services/vessel-storage.servi
 import * as fvInfoReducer from '../../store/reducers/fv-info.reducer';
 import {
   LiveReportEngineSnapshot,
+  LiveReportMetric,
   LiveReportModeSnapshot,
+  LiveReportProfileDocument,
   LiveReportSnapshot,
   LiveReportTab,
 } from './live-report.model';
@@ -65,11 +83,80 @@ interface FuelBreakdownItem {
   color: string;
 }
 
+interface ModeHistoryRecord {
+  timestamp: Date;
+  rawValue: unknown;
+  label: string;
+}
+
+interface ModeTimelineSegment {
+  key: string;
+  label: string;
+  start: Date;
+  end: Date;
+  durationMs: number;
+  percent: number;
+  color: string;
+  isCurrent: boolean;
+}
+
+interface ModeRunningHourItem {
+  key: string;
+  label: string;
+  durationMs: number;
+  percent: number;
+  segmentCount: number;
+  color: string;
+  isCurrent: boolean;
+}
+
+interface ModeHistoryCacheEntry {
+  records: ModeHistoryRecord[];
+  loadedAt: number;
+  syncedAt: Date;
+}
+
+interface ArchiveLookupRequest {
+  reportType: ReportType;
+  period: string;
+  vessel: string;
+  autoLoad: boolean;
+}
+
+interface ArchiveLookupCacheValue {
+  entry: OfficialReportArchiveEntry | null;
+  expiresAt: number;
+}
+
+const ARCHIVE_LOOKUP_HIT_TTL_MS = 5 * 60 * 1000;
+const ARCHIVE_LOOKUP_MISS_TTL_MS = 30 * 1000;
+const MODE_HISTORY_SUCCESS_TTL_MS = 30 * 60 * 1000;
+const MODE_HISTORY_EMPTY_TTL_MS = 60 * 60 * 1000;
+const EMPTY_FUEL_DONUT_BACKGROUND = 'conic-gradient(#e2e8f0 0deg 360deg)';
+const MODE_HISTORY_COLORS = [
+  '#2563eb',
+  '#16a34a',
+  '#f59e0b',
+  '#7c3aed',
+  '#0891b2',
+  '#e11d48',
+  '#64748b',
+  '#0f766e',
+] as const;
+
+const FUEL_GROUPS: ReadonlyArray<Omit<FuelBreakdownItem, 'value' | 'percent'>> = [
+  { key: 'main', label: 'Main Engine', color: '#2563eb' },
+  { key: 'auxiliary', label: 'Auxiliary Engine', color: '#14b8a6' },
+  { key: 'generator', label: 'Generator', color: '#84cc16' },
+  { key: 'other', label: 'Other Equipment', color: '#f59e0b' },
+];
+
 @Component({
   selector: 'app-report',
   standalone: false,
   templateUrl: './report.component.html',
   styleUrls: ['./report.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportComponent implements OnInit, OnDestroy {
   @ViewChildren('pdfPage') private pdfPages!: QueryList<ElementRef<HTMLElement>>;
@@ -122,11 +209,52 @@ export class ReportComponent implements OnInit, OnDestroy {
   liveExportErrorMessage = '';
   liveExportSuccessMessage = '';
 
+  // Derived view state is calculated only when the live snapshot changes.
+  // This avoids rebuilding arrays/reducing engine data on every Angular change-detection pass.
+  visibleModes: LiveReportModeSnapshot[] = [];
+  hiddenModeCount = 0;
+  headlineMetrics: LiveReportMetric[] = [];
+  visibleEngines: LiveReportEngineSnapshot[] = [];
+  engineView: 'all' | 'running' | 'stopped' = 'all';
+  exportEnginePages: LiveReportEngineSnapshot[][] = [];
+  exportModePages: LiveReportModeSnapshot[][] = [];
+  liveExportPageCount = 1;
+  liveExportTotalFuelLabel = '—';
+  liveExportDistanceLabel = '—';
+  liveExportAverageSpeedLabel = '—';
+  liveExportMaximumSpeedLabel = '—';
+  fuelBreakdown: FuelBreakdownItem[] = [];
+  fuelTotalValue = 0;
+  fuelTotalLabel = '—';
+  fuelDonutBackground = EMPTY_FUEL_DONUT_BACKGROUND;
+
+  modeHistoryLoading = false;
+  modeHistoryError = '';
+  modeHistorySegments: ModeTimelineSegment[] = [];
+  modeRunningHours: ModeRunningHourItem[] = [];
+  modeHistoryCoveragePercent = 0;
+  modeHistorySourceTag = '';
+  modeHistorySyncedAt: Date | null = null;
+  verifiedModeAvailable = false;
+
+  private reportProfileDocument: LiveReportProfileDocument | null = null;
+  private modeHistorySubscription: Subscription | null = null;
+  private readonly modeHistoryCache = new Map<string, ModeHistoryCacheEntry>();
+  // Keeps the last usable telemetry values per vessel so a transient empty/partial
+  // realtime response never blanks the report while the next refresh is in flight.
+  // The cache is display-only and never causes an additional server request.
+  private readonly liveDisplayDataCache = new Map<string, Record<string, any>>();
+
   private selectedVessel: any = null;
   private readonly selectedVesselSource = new BehaviorSubject<any>(null);
   private readonly reportRequestCancel$ = new Subject<void>();
   private readonly destroy$ = new Subject<void>();
-  private archiveLookupVersion = 0;
+  private readonly archiveLookupRequest$ = new Subject<ArchiveLookupRequest>();
+  private readonly archiveLookupCache = new Map<string, ArchiveLookupCacheValue>();
+  private readonly archiveLookupInFlight = new Map<
+    string,
+    Observable<OfficialReportArchiveEntry | null>
+  >();
 
   constructor(
     private http: HttpClientService,
@@ -140,7 +268,7 @@ export class ReportComponent implements OnInit, OnDestroy {
     private reportPdfCache: ReportPdfCacheService,
     private clientPdfExport: ClientPdfExportService,
     private officialReportLibrary: OfficialReportLibraryService,
-    private changeDetector: ChangeDetectorRef
+    private changeDetector: ChangeDetectorRef,
   ) {
     const defaultDate = this.dateFormat.addDays(new Date(), -1);
     this.selectedDate = this.dateFormat.formatDateInput(defaultDate);
@@ -149,27 +277,40 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadStoredVessel();
-
-
-
-    this.realtimeService.ensureStarted(this.liveRefreshSeconds * 1000);
-
     this.watchActiveVessel();
     this.watchLiveReport();
+    this.watchLocalArchiveAvailability();
+    this.syncRealtimePolling();
     this.refreshLocalArchiveAvailability();
   }
 
   ngOnDestroy(): void {
     this.reportRequestCancel$.next();
+    this.realtimeService.stop();
+    this.modeHistorySubscription?.unsubscribe();
     this.revokePdfUrl();
+    
     this.selectedVesselSource.complete();
+    this.archiveLookupRequest$.complete();
     this.reportRequestCancel$.complete();
     this.destroy$.next();
     this.destroy$.complete();
+
+    this.archiveLookupCache.clear();
+    this.archiveLookupInFlight.clear();
+    this.liveDisplayDataCache.clear();
+  }
+
+  @HostListener('document:visibilitychange')
+  onDocumentVisibilityChange(): void {
+    this.syncRealtimePolling();
   }
 
   get selectedReport(): ReportOption {
-    return this.reportOptions.find((item) => item.value === this.selectedReportType) || this.reportOptions[0];
+    return (
+      this.reportOptions.find((item) => item.value === this.selectedReportType) ||
+      this.reportOptions[0]
+    );
   }
 
   get selectedReportLabel(): string {
@@ -184,11 +325,42 @@ export class ReportComponent implements OnInit, OnDestroy {
     return this.selectedReport.icon;
   }
 
+  get selectedVesselImage(): string {
+    const vessel = this.selectedVessel || {};
+    const fvInfo = vessel?.fvInfo || vessel?.fv || vessel || {};
+
+    // Keep the report hero on the exact same vessel artwork priority as the
+    // sidebar. Some vessel payloads expose more than one image field; the old
+    // report-specific priority could therefore pick a close-up asset while the
+    // sidebar showed the normal vessel thumbnail.
+    const image =
+      fvInfo?.img ||
+      fvInfo?.image ||
+      vessel?.img ||
+      vessel?.image ||
+      vessel?.imageUrl;
+
+    return String(image || 'assets/images/vessel/notfound.png');
+  }
+
+  get selectedVesselCardStatus(): 'online' | 'offline' | 'idle' | 'empty' {
+    if (!this.selectedVesselName) {
+      return 'empty';
+    }
+
+    const state = this.liveSnapshot?.telemetryState;
+    if (state === 'offline' || state === 'stale') {
+      return 'offline';
+    }
+
+    return 'online';
+  }
+
   get selectedTimestamp(): string {
     return this.dateFormat.buildBackendTimestamp(
       this.selectedReportType,
       this.selectedDate,
-      this.selectedMonth
+      this.selectedMonth,
     );
   }
 
@@ -210,13 +382,15 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   get selectedPeriodIsFuture(): boolean {
     const selected = this.selectedReportType === 'd' ? this.selectedDate : this.selectedMonth;
-    const maximum = this.selectedReportType === 'd' ? this.maxDailyReportDate : this.maxMonthlyReportPeriod;
+    const maximum =
+      this.selectedReportType === 'd' ? this.maxDailyReportDate : this.maxMonthlyReportPeriod;
     return !!selected && selected > maximum;
   }
 
   get canStepToNextPeriod(): boolean {
     const selected = this.selectedReportType === 'd' ? this.selectedDate : this.selectedMonth;
-    const maximum = this.selectedReportType === 'd' ? this.maxDailyReportDate : this.maxMonthlyReportPeriod;
+    const maximum =
+      this.selectedReportType === 'd' ? this.maxDailyReportDate : this.maxMonthlyReportPeriod;
     return !!selected && selected < maximum;
   }
 
@@ -248,7 +422,6 @@ export class ReportComponent implements OnInit, OnDestroy {
     return !!this.pdfUrl;
   }
 
-
   get localArchiveAvailable(): boolean {
     return !!this.localArchiveEntry;
   }
@@ -262,29 +435,10 @@ export class ReportComponent implements OnInit, OnDestroy {
     }
     return this.hasPdf ? 'Official report service' : 'Not loaded';
   }
-  
+
   get officialPdfPageLabel(): string {
     const pageCount = this.loadedArchiveEntry?.pageCount || this.localArchiveEntry?.pageCount;
     return pageCount ? `${pageCount} pages` : 'Page count from PDF';
-  }
-
-  get visibleModes(): LiveReportModeSnapshot[] {
-    const modes = this.liveSnapshot?.modes || [];
-    if (this.showAllModes || modes.length <= 6) {
-      return modes;
-    }
-
-    const visible = modes.slice(0, 6);
-    const current = modes.find((mode) => mode.isCurrent);
-    if (current && !visible.some((mode) => mode.key === current.key)) {
-      visible[visible.length - 1] = current;
-    }
-    return visible;
-  }
-
-  get hiddenModeCount(): number {
-    const total = this.liveSnapshot?.modes.length || 0;
-    return Math.max(0, total - this.visibleModes.length);
   }
 
   get pdfMetaItems(): ReportMetaItem[] {
@@ -311,14 +465,13 @@ export class ReportComponent implements OnInit, OnDestroy {
       },
     ];
   }
-
   get livePeriodLabel(): string {
     if (!this.liveSnapshot) {
       return '00:00 → current time';
     }
 
     return `${this.formatDateTime(this.liveSnapshot.periodStart)} → ${this.formatTime(
-      this.liveSnapshot.periodEnd
+      this.liveSnapshot.periodEnd,
     )}`;
   }
 
@@ -361,7 +514,9 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   get currentModeConfidenceLabel(): string {
     const confidence = this.liveSnapshot?.modeConfidence;
-    return confidence ? `${confidence.charAt(0).toUpperCase()}${confidence.slice(1)} confidence` : '';
+    return confidence
+      ? `${confidence.charAt(0).toUpperCase()}${confidence.slice(1)} confidence`
+      : '';
   }
 
   get currentModeReason(): string {
@@ -441,34 +596,6 @@ export class ReportComponent implements OnInit, OnDestroy {
     });
   }
 
-  get exportEnginePages(): LiveReportEngineSnapshot[][] {
-    return this.chunkItems(this.liveSnapshot?.engines || [], 5);
-  }
-
-  get exportModePages(): LiveReportModeSnapshot[][] {
-    return this.chunkItems(this.liveSnapshot?.modes || [], 14);
-  }
-
-  get liveExportPageCount(): number {
-    return 1 + this.exportEnginePages.length + this.exportModePages.length;
-  }
-
-  get liveExportTotalFuelLabel(): string {
-    return this.metricValue('fuel');
-  }
-
-  get liveExportDistanceLabel(): string {
-    return this.metricValue('distance');
-  }
-
-  get liveExportAverageSpeedLabel(): string {
-    return this.metricValue('average');
-  }
-
-  get liveExportMaximumSpeedLabel(): string {
-    return this.metricValue('maximum');
-  }
-
   get modeSourceQualityLabel(): string {
     if (this.currentModeIsVerified) {
       return 'Verified';
@@ -485,61 +612,21 @@ export class ReportComponent implements OnInit, OnDestroy {
     return 'Unavailable';
   }
 
-  get fuelBreakdown(): FuelBreakdownItem[] {
-    const engines = this.liveSnapshot?.engines || [];
-    const groups: Array<Omit<FuelBreakdownItem, 'value' | 'percent'>> = [
-      { key: 'main', label: 'Main Engine', color: '#2563eb' },
-      { key: 'auxiliary', label: 'Auxiliary Engine', color: '#14b8a6' },
-      { key: 'generator', label: 'Generator', color: '#84cc16' },
-      { key: 'other', label: 'Other Equipment', color: '#f59e0b' },
-    ];
 
-    const values = groups.map((group) => {
-      const value = engines.reduce((sum, engine) => {
-        const matches =
-          group.key === 'main'
-            ? engine.kind === 'main' || engine.kind === 'motor'
-            : group.key === 'other'
-              ? engine.kind === 'other'
-              : engine.kind === group.key;
-        return matches && engine.fuelToday !== null ? sum + Math.max(0, engine.fuelToday) : sum;
-      }, 0);
-
-      return { ...group, value };
-    });
-
-    const total = values.reduce((sum, item) => sum + item.value, 0);
-    if (total <= 0) {
-      return [];
-    }
-
-    return values
-      .filter((item) => item.value > 0)
-      .map((item) => ({ ...item, percent: (item.value / total) * 100 }));
+  get modeHistoryHasData(): boolean {
+    return this.modeHistorySegments.length > 0;
   }
 
-  get fuelTotalValue(): number {
-    return this.fuelBreakdown.reduce((sum, item) => sum + item.value, 0);
+  get modeHistoryCoverageLabel(): string {
+    return `${Math.round(this.modeHistoryCoveragePercent)}%`;
   }
 
-  get fuelTotalLabel(): string {
-    return this.fuelTotalValue > 0 ? this.formatLiveValue(this.fuelTotalValue, 0) : '—';
+  get modeHistorySyncedLabel(): string {
+    return this.modeHistorySyncedAt ? this.formatTime(this.modeHistorySyncedAt, true) : 'Not synced';
   }
 
-  get fuelDonutBackground(): string {
-    const items = this.fuelBreakdown;
-    if (items.length === 0) {
-      return 'conic-gradient(#e2e8f0 0deg 360deg)';
-    }
-
-    let cursor = 0;
-    const segments = items.map((item) => {
-      const start = cursor;
-      cursor += item.percent;
-      return `${item.color} ${start.toFixed(2)}% ${cursor.toFixed(2)}%`;
-    });
-
-    return `conic-gradient(${segments.join(', ')})`;
+  get modeHistoryActiveModeCount(): number {
+    return this.modeRunningHours.length;
   }
 
   async exportLivePdf(): Promise<void> {
@@ -563,11 +650,11 @@ export class ReportComponent implements OnInit, OnDestroy {
         imageQuality: 0.9,
         maxPages: 40,
       });
-
+      
       this.liveExportSuccessMessage = `Live daily PDF exported successfully (${result.pageCount} pages, ${this.pdfFile.formatBytes(
-        result.sizeBytes
+        result.sizeBytes,
       )}). No report-generation request was sent to the server.`;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[ReportComponent] live PDF export error:', error);
       this.liveExportErrorMessage = this.resolveLiveExportError(error);
     } finally {
@@ -588,6 +675,16 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   toggleAllModes(): void {
     this.showAllModes = !this.showAllModes;
+    this.updateVisibleModes();
+  }
+
+  setEngineView(view: 'all' | 'running' | 'stopped'): void {
+    if (this.engineView === view) {
+      return;
+    }
+
+    this.engineView = view;
+    this.updateVisibleEngines();
   }
 
   clearLiveExportError(): void {
@@ -608,14 +705,12 @@ export class ReportComponent implements OnInit, OnDestroy {
     }
 
     this.activeTab = tab;
+    this.syncRealtimePolling();
 
-    if (tab === 'live') {
-      this.realtimeService.ensureStarted(this.liveRefreshSeconds * 1000);
-    } else {
-
-
-      this.realtimeService.stop();
+    if (tab === 'files') {
       this.refreshLocalArchiveAvailability(true);
+    } else {
+      this.maybeLoadModeHistory(this.selectedVessel, this.reportProfileDocument, false);
     }
   }
 
@@ -624,7 +719,18 @@ export class ReportComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Refresh current telemetry only. Historian is intentionally isolated from
+    // the normal Refresh action so one click cannot create an expensive history
+    // query for every vessel.
     this.realtimeService.refreshNow();
+  }
+
+  syncModeHistory(): void {
+    if (!this.verifiedModeAvailable || this.modeHistoryLoading) {
+      return;
+    }
+
+    this.maybeLoadModeHistory(this.selectedVessel, this.reportProfileDocument, true);
   }
 
   trackByMetric(_index: number, metric: { key: string }): string {
@@ -637,6 +743,28 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   trackByMode(_index: number, mode: { key: string }): string {
     return mode.key;
+  }
+
+
+  trackByModeHistorySegment(_index: number, segment: ModeTimelineSegment): string {
+    return segment.key;
+  }
+
+  trackByModeRunningHour(_index: number, item: ModeRunningHourItem): string {
+    return item.key;
+  }
+
+  formatModeDuration(durationMs: number): string {
+    const safeMs = Math.max(0, Number(durationMs) || 0);
+    const totalMinutes = Math.max(0, Math.round(safeMs / 60000));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours <= 0) {
+      return `${minutes}m`;
+    }
+
+    return `${hours}h ${minutes.toString().padStart(2, '0')}m`;
   }
 
   trackByFuelGroup(_index: number, item: FuelBreakdownItem): string {
@@ -672,7 +800,6 @@ export class ReportComponent implements OnInit, OnDestroy {
         return 'Equipment';
     }
   }
-
 
   engineLoadPercent(engine: LiveReportEngineSnapshot): number {
     const value = engine.load;
@@ -734,7 +861,8 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   shiftOfficialPeriod(direction: -1 | 1): void {
     if (this.selectedReportType === 'd') {
-      const base = this.parseLocalDate(this.selectedDate) || this.dateFormat.addDays(new Date(), -1);
+      const base =
+        this.parseLocalDate(this.selectedDate) || this.dateFormat.addDays(new Date(), -1);
       const next = this.dateFormat.addDays(base, direction);
       const nextValue = this.dateFormat.formatDateInput(next);
       this.selectedDate = nextValue > this.maxDailyReportDate ? this.maxDailyReportDate : nextValue;
@@ -742,7 +870,8 @@ export class ReportComponent implements OnInit, OnDestroy {
       const base = this.parseLocalMonth(this.selectedMonth) || new Date();
       const next = new Date(base.getFullYear(), base.getMonth() + direction, 1);
       const nextValue = this.dateFormat.formatMonthInput(next);
-      this.selectedMonth = nextValue > this.maxMonthlyReportPeriod ? this.maxMonthlyReportPeriod : nextValue;
+      this.selectedMonth =
+        nextValue > this.maxMonthlyReportPeriod ? this.maxMonthlyReportPeriod : nextValue;
     }
 
     this.resetPreviewState();
@@ -781,7 +910,8 @@ export class ReportComponent implements OnInit, OnDestroy {
     const timestamp = this.selectedTimestamp;
 
     if (this.selectedPeriodIsFuture) {
-      this.errorMessage = 'Future report periods are blocked. Select a completed date before loading a report.';
+      this.errorMessage =
+        'Future report periods are blocked. Select a completed date before loading a report.';
       return;
     }
 
@@ -803,16 +933,12 @@ export class ReportComponent implements OnInit, OnDestroy {
     const cachedReport = this.reportPdfCache.get(cacheKey);
     if (cachedReport) {
       this.reportFileName = cachedReport.fileName || this.reportFileName;
-      this.presentPdf(
-        cachedReport.blob,
-        true,
-        cachedReport.source,
-        cachedReport.archiveEntry
-      );
+      this.presentPdf(cachedReport.blob, true, cachedReport.source, cachedReport.archiveEntry);
       return;
     }
 
     this.loading = true;
+    this.changeDetector.markForCheck();
 
     this.requestSelectedReport(this.selectedReportType, timestamp, fvName)
       .pipe(
@@ -820,7 +946,8 @@ export class ReportComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$),
         finalize(() => {
           this.loading = false;
-        })
+          this.changeDetector.markForCheck();
+        }),
       )
       .subscribe({
         next: (result: ReportLoadResult) => {
@@ -833,9 +960,10 @@ export class ReportComponent implements OnInit, OnDestroy {
           this.reportPdfCache.set(cacheKey, cacheValue);
           this.presentPdf(result.blob, false, result.source, result.archiveEntry);
         },
-        error: (error: any) => {
+        error: (error: unknown) => {
           console.error('[ReportComponent] load report error:', error);
           this.errorMessage = this.resolveReportErrorMessage(error);
+          this.changeDetector.markForCheck();
         },
       });
   }
@@ -870,24 +998,24 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.pdfZoom = 1;
   }
 
-  onPdfError(error: any): void {
+  onPdfError(error: unknown): void {
     console.warn('[ReportComponent] PDF viewer error:', error);
-    this.errorMessage = 'Unable to preview this PDF. Please try downloading it or reload the report.';
+    this.errorMessage =
+      'Unable to preview this PDF. Please try downloading it or reload the report.';
   }
 
   private requestSelectedReport(
     reportType: ReportType,
     timestamp: string,
-    fvName: string
+    fvName: string,
   ): Observable<ReportLoadResult> {
     const period = this.selectedPeriodLabel;
 
-    return this.officialReportLibrary.findReport(reportType, period, fvName).pipe(
-      take(1),
+    return this.getArchiveEntry$(reportType, period, fvName).pipe(
       switchMap((entry) => {
         if (!entry) {
           return this.requestReport(reportType, timestamp, fvName).pipe(
-            map((blob) => ({ blob, source: 'server' as const, archiveEntry: null }))
+            map((blob) => ({ blob, source: 'server' as const, archiveEntry: null })),
           );
         }
 
@@ -898,33 +1026,40 @@ export class ReportComponent implements OnInit, OnDestroy {
           catchError((localError) => {
             console.warn(
               '[ReportComponent] Local official archive failed; using report service fallback.',
-              localError
+              localError,
             );
             return this.requestReport(reportType, timestamp, fvName).pipe(
-              map((blob) => ({ blob, source: 'server' as const, archiveEntry: null }))
+              map((blob) => ({ blob, source: 'server' as const, archiveEntry: null })),
             );
-          })
+          }),
         );
-      })
+      }),
     );
   }
 
   private requestReport(
     reportType: ReportType,
     timestamp: string,
-    fvName: string
+    fvName: string,
   ): Observable<Blob> {
     return this.newHttp.getReport(reportType, timestamp, fvName).pipe(
       timeout(15_000),
       switchMap((blob: Blob) => this.validatePdfBlob(blob, 'API2')),
-      catchError((firstError: any) => {
-        console.warn('[ReportComponent] Direct report API failed; using gateway fallback.', firstError);
+      catchError((firstError: unknown) => {
+        if (!this.shouldUseGatewayFallback(firstError)) {
+          return throwError(() => firstError);
+        }
+
+        console.warn(
+          '[ReportComponent] Direct report API failed; using gateway fallback.',
+          firstError,
+        );
 
         return this.http.getReport(reportType, timestamp, fvName).pipe(
           timeout(20_000),
-          switchMap((blob: Blob) => this.validatePdfBlob(blob, 'API1'))
+          switchMap((blob: Blob) => this.validatePdfBlob(blob, 'API1')),
         );
-      })
+      }),
     );
   }
 
@@ -932,7 +1067,7 @@ export class ReportComponent implements OnInit, OnDestroy {
     blob: Blob,
     fromCache: boolean,
     source: ReportLoadResult['source'],
-    archiveEntry: OfficialReportArchiveEntry | null
+    archiveEntry: OfficialReportArchiveEntry | null,
   ): void {
     this.revokePdfUrl();
     this.pdfBlob = blob;
@@ -946,59 +1081,145 @@ export class ReportComponent implements OnInit, OnDestroy {
       this.reportFileName = archiveEntry.fileName;
     }
 
-
-
-
-    this.successMessage = this.pdfFromLocalArchive || fromCache
-      ? ''
-      : 'Report PDF loaded and validated successfully.';
+    this.successMessage =
+      this.pdfFromLocalArchive || fromCache ? '' : 'Report PDF loaded and validated successfully.';
+    this.changeDetector.markForCheck();
   }
 
   private validatePdfBlob(blob: Blob, source: string): Observable<Blob> {
     return from(this.pdfFile.validatePdfBlob(blob)).pipe(
       switchMap((result) =>
-        result.valid ? of(blob) : throwError(() => new Error(`${source}:${result.reason}`))
-      )
+        result.valid ? of(blob) : throwError(() => new Error(`${source}:${result.reason}`)),
+      ),
     );
   }
 
   private refreshLocalArchiveAvailability(autoLoad = false): void {
     const period = this.selectedPeriodLabel;
-    const vessel = this.selectedVesselName;
-    const lookupVersion = ++this.archiveLookupVersion;
+    const vessel = this.selectedVesselName.trim();
 
     if (!period || !vessel || this.selectedPeriodIsFuture) {
       this.localArchiveEntry = null;
+      this.changeDetector.markForCheck();
       return;
     }
 
-    this.officialReportLibrary
-      .findReport(this.selectedReportType, period, vessel)
-      .pipe(take(1), takeUntil(this.destroy$))
-      .subscribe((entry) => {
-        if (lookupVersion !== this.archiveLookupVersion) {
-          return;
-        }
+    this.archiveLookupRequest$.next({
+      reportType: this.selectedReportType,
+      period,
+      vessel,
+      autoLoad,
+    });
+  }
 
+  private watchLocalArchiveAvailability(): void {
+    this.archiveLookupRequest$
+      .pipe(
+        debounceTime(100),
+        distinctUntilChanged(
+          (previous, current) =>
+            previous.reportType === current.reportType &&
+            previous.period === current.period &&
+            previous.vessel === current.vessel &&
+            previous.autoLoad === current.autoLoad,
+        ),
+        switchMap((request) =>
+          this.getArchiveEntry$(request.reportType, request.period, request.vessel).pipe(
+            map((entry) => ({ request, entry })),
+            catchError((error: unknown) => {
+              console.warn('[ReportComponent] Local archive lookup failed:', error);
+              return of({ request, entry: null as OfficialReportArchiveEntry | null });
+            }),
+          ),
+        ),
+        takeUntil(this.destroy$),
+      )
+      .subscribe(({ request, entry }) => {
         this.localArchiveEntry = entry;
+
         if (
-          autoLoad &&
+          request.autoLoad &&
           entry &&
           this.activeTab === 'files' &&
           !this.hasPdf &&
           !this.loading
         ) {
           this.loadReport();
+          return;
         }
+
+        this.changeDetector.markForCheck();
       });
   }
 
-  private buildReportCacheKey(reportType: ReportType, timestamp: string, vesselName: string): string {
-    return [reportType, timestamp, vesselName].join('|');
+  private getArchiveEntry$(
+    reportType: ReportType,
+    period: string,
+    vessel: string,
+  ): Observable<OfficialReportArchiveEntry | null> {
+    const key = this.buildArchiveLookupKey(reportType, period, vessel);
+    const cached = this.archiveLookupCache.get(key);
+    const now = Date.now();
+
+    if (cached && cached.expiresAt > now) {
+      return of(cached.entry);
+    }
+
+    if (cached) {
+      this.archiveLookupCache.delete(key);
+    }
+
+    const inFlight = this.archiveLookupInFlight.get(key);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const request$ = this.officialReportLibrary.findReport(reportType, period, vessel).pipe(
+      take(1),
+      tap((entry) => {
+        this.archiveLookupCache.set(key, {
+          entry,
+          expiresAt:
+            Date.now() + (entry ? ARCHIVE_LOOKUP_HIT_TTL_MS : ARCHIVE_LOOKUP_MISS_TTL_MS),
+        });
+      }),
+      finalize(() => {
+        this.archiveLookupInFlight.delete(key);
+      }),
+      shareReplay({ bufferSize: 1, refCount: true }),
+    );
+
+    this.archiveLookupInFlight.set(key, request$);
+    return request$;
   }
 
-  private resolveReportErrorMessage(error: any): string {
-    const text = String(error?.message || error || '').toLowerCase();
+  private buildArchiveLookupKey(reportType: ReportType, period: string, vessel: string): string {
+    return [reportType, period, vessel.trim().toLowerCase()].join('|');
+  }
+
+  private buildReportCacheKey(
+    reportType: ReportType,
+    timestamp: string,
+    vesselName: string,
+  ): string {
+    return [reportType, timestamp, vesselName.trim().toLowerCase()].join('|');
+  }
+
+  private shouldUseGatewayFallback(error: unknown): boolean {
+    const message = this.getErrorText(error).toLowerCase();
+
+    // A second route will return the same oversized PDF, so avoid duplicating
+    // expensive server/network work for this deterministic validation failure.
+    if (message.includes('too-large')) {
+      return false;
+    }
+
+    // Preserve the existing gateway fallback for network/HTTP/direct-route failures.
+    return true;
+  }
+
+  private resolveReportErrorMessage(error: unknown): string {
+    const text = this.getErrorText(error).toLowerCase();
 
     if (text.includes('timeout')) {
       return 'The report server took too long to respond. The request was stopped safely; please try again.';
@@ -1016,34 +1237,87 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   private watchActiveVessel(): void {
-    this.store
-      .select(fvInfoReducer.getFvInfosActive)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((active: any) => {
-        this.setSelectedVessel(active);
-      });
-
-    this.realtimeService.activeVessel$
-      .pipe(takeUntil(this.destroy$))
+    merge(
+      this.store.select(fvInfoReducer.getFvInfosActive),
+      this.realtimeService.activeVessel$,
+    )
+      .pipe(
+        filter((vessel: any) => !!this.vesselStorage.extractVesselName(vessel)),
+        distinctUntilChanged(
+          (previous: any, current: any) =>
+            this.getVesselIdentity(previous) === this.getVesselIdentity(current),
+        ),
+        takeUntil(this.destroy$),
+      )
       .subscribe((vessel: any) => {
         this.setSelectedVessel(vessel);
       });
   }
 
   private watchLiveReport(): void {
+    this.realtimeService.loading$
+      .pipe(distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe((loading) => {
+        this.liveLoading = loading;
+        this.changeDetector.markForCheck();
+      });
+
     combineLatest([
       this.selectedVesselSource,
       this.realtimeService.currentData$,
       this.realtimeService.lastUpdated$,
-      this.realtimeService.loading$,
       this.liveReportService.profileDocument$,
     ])
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(([vessel, data, updatedAt, loading, profileDocument]) => {
-        this.liveLoading = loading;
-        this.liveSnapshot = vessel
-          ? this.liveReportService.buildSnapshot(vessel, data, updatedAt, profileDocument)
-          : null;
+      .pipe(
+        // currentData$ and lastUpdated$ commonly emit in the same refresh cycle.
+        // Coalesce them so buildSnapshot() runs once for that cycle.
+        auditTime(0),
+        takeUntil(this.destroy$),
+      )
+      .subscribe(([vessel, data, updatedAt, profileDocument]) => {
+        this.reportProfileDocument = profileDocument;
+
+        if (vessel) {
+          const vesselIdentity = this.getVesselIdentity(vessel);
+          const previousSnapshot =
+            this.liveSnapshot &&
+            this.getVesselIdentity(this.selectedVessel) === vesselIdentity &&
+            this.liveSnapshot.vesselName === this.vesselStorage.extractVesselName(vessel)
+              ? this.liveSnapshot
+              : null;
+          const displayData = this.mergeLiveDataForDisplay(vessel, data);
+          const hasFreshData = this.hasUsableRealtimeData(data);
+          const effectiveUpdatedAt = hasFreshData
+            ? updatedAt
+            : previousSnapshot?.updatedAt || updatedAt;
+
+          this.liveSnapshot = this.liveReportService.buildSnapshot(
+            vessel,
+            displayData,
+            effectiveUpdatedAt,
+            profileDocument,
+          );
+        } else {
+          this.liveSnapshot = null;
+        }
+
+        // Mode UI/history is enabled only when BOTH the vessel profile explicitly
+        // declares a direct mode tag and the current telemetry actually resolved
+        // from that tag. Vessels without a real mode tag stay on the general
+        // machinery/fuel/navigation report and never query mode historian.
+        this.verifiedModeAvailable = !!(
+          vessel &&
+          this.liveSnapshot?.modeSource === 'verified-tag' &&
+          this.liveReportService.supportsVerifiedModeHistorian(vessel, profileDocument)
+        );
+
+        if (!this.verifiedModeAvailable) {
+          this.clearModeHistoryView();
+        }
+
+        this.updateDerivedLiveState();
+        this.maybeLoadModeHistory(vessel, profileDocument, false);
+        this.changeDetector.markForCheck();
       });
   }
 
@@ -1066,8 +1340,11 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.vesselStorage.setSelectedVessel(vessel, 'reportVessel');
     this.selectedVesselSource.next(vessel);
     this.showAllModes = false;
+    this.engineView = 'all';
+    this.resetModeHistory();
     this.resetPreviewState();
     this.refreshLocalArchiveAvailability(this.activeTab === 'files');
+    this.changeDetector.markForCheck();
   }
 
   private loadStoredVessel(): void {
@@ -1077,16 +1354,639 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.selectedVesselSource.next(vessel);
   }
 
+  private maybeLoadModeHistory(
+    vessel: any,
+    document: LiveReportProfileDocument | null,
+    force: boolean,
+  ): void {
+    if (!vessel || !document || this.activeTab !== 'live' || !this.liveSnapshot) {
+      return;
+    }
+
+    // Server-safety gate: do not touch historian unless the current vessel has a
+    // verified direct mode tag in live telemetry. This prevents generic profiles
+    // from generating guessed VES-MODE tags and triggering fallback API calls.
+    if (!this.verifiedModeAvailable || this.liveSnapshot.modeSource !== 'verified-tag') {
+      this.clearModeHistoryView();
+      return;
+    }
+
+    const periodStart = new Date(this.liveSnapshot.periodStart);
+    const periodEnd = new Date(this.liveSnapshot.periodEnd || new Date());
+    const sourceTag = this.liveReportService.getModeHistorianTag(
+      vessel,
+      document,
+      this.liveSnapshot.modeSourceTag,
+    );
+
+    if (!sourceTag) {
+      this.clearModeHistoryView('Verified mode telemetry is not available for this vessel.');
+      return;
+    }
+
+    const dayKey = this.dateFormat.formatDateInput(periodStart);
+    const requestKey = `${this.getVesselIdentity(vessel)}|${dayKey}|${sourceTag}`;
+    const now = Date.now();
+    const cached = this.modeHistoryCache.get(requestKey);
+
+    if (!force && cached) {
+      const ttl = cached.records.length > 0 ? MODE_HISTORY_SUCCESS_TTL_MS : MODE_HISTORY_EMPTY_TTL_MS;
+      if (now - cached.loadedAt < ttl) {
+        this.modeHistorySourceTag = sourceTag;
+        this.modeHistorySyncedAt = cached.syncedAt;
+        this.buildModeHistoryView(cached.records, periodStart, periodEnd);
+        this.modeHistoryError = cached.records.length
+          ? ''
+          : 'No verified mode history was returned. The empty result is cached to protect the historian server.';
+        this.changeDetector.markForCheck();
+        return;
+      }
+    }
+
+    if (this.modeHistoryLoading) {
+      return;
+    }
+
+    this.modeHistorySubscription?.unsubscribe();
+    this.modeHistoryLoading = true;
+    this.modeHistoryError = '';
+    this.modeHistorySourceTag = sourceTag;
+    this.changeDetector.markForCheck();
+
+    const start = this.formatHistorianRequestTime(periodStart);
+    const end = this.formatHistorianRequestTime(periodEnd);
+    const tags = [{ name: sourceTag, tagName: sourceTag }];
+
+    this.modeHistorySubscription = this.newHttp
+      .getHistorianValues(start, end, tags)
+      .pipe(
+        take(1),
+        timeout(15000),
+        catchError((error: unknown) => {
+          console.warn('[Report] Unable to load vessel mode historian.', error);
+          return of(null);
+        }),
+        finalize(() => {
+          this.modeHistoryLoading = false;
+          this.changeDetector.markForCheck();
+        }),
+        takeUntil(this.destroy$),
+      )
+      .subscribe((response: any) => {
+        const records = this.extractModeHistoryRecords(response, vessel, document);
+        const syncedAt = new Date();
+
+        this.modeHistoryCache.set(requestKey, {
+          records,
+          loadedAt: Date.now(),
+          syncedAt,
+        });
+
+        this.buildModeHistoryView(records, periodStart, periodEnd);
+        this.modeHistorySyncedAt = syncedAt;
+
+        if (records.length === 0) {
+          this.modeHistoryError =
+            'No verified mode history was returned. Fleet Visual will wait before trying this historian tag again.';
+        }
+
+        this.changeDetector.markForCheck();
+      });
+  }
+
+  private clearModeHistoryView(message = ''): void {
+    this.modeHistorySubscription?.unsubscribe();
+    this.modeHistorySubscription = null;
+    this.modeHistoryLoading = false;
+    this.modeHistoryError = message;
+    this.modeHistorySegments = [];
+    this.modeRunningHours = [];
+    this.modeHistoryCoveragePercent = 0;
+    this.modeHistorySourceTag = '';
+    this.modeHistorySyncedAt = null;
+  }
+
+  private resetModeHistory(): void {
+    this.verifiedModeAvailable = false;
+    this.clearModeHistoryView();
+  }
+
+  private extractModeHistoryRecords(
+    response: any,
+    vessel: any,
+    document: LiveReportProfileDocument,
+  ): ModeHistoryRecord[] {
+    const flatRecords: any[] = [];
+    const seen = new Set<any>();
+
+    const visit = (node: any): void => {
+      if (node === null || node === undefined || seen.has(node)) {
+        return;
+      }
+
+      if (typeof node === 'string') {
+        const text = node.trim();
+        if (!text) {
+          return;
+        }
+        try {
+          visit(JSON.parse(text));
+        } catch {
+          // Plain strings can be leaf values; there is nothing to recurse into.
+        }
+        return;
+      }
+
+      if (typeof node !== 'object') {
+        return;
+      }
+
+      seen.add(node);
+
+      if (Array.isArray(node)) {
+        node.forEach(visit);
+        return;
+      }
+
+      const timestamp = this.readHistorianTimestamp(node);
+      const rawValue = this.readHistorianValue(node);
+      if (timestamp !== null && rawValue !== undefined) {
+        flatRecords.push(node);
+        return;
+      }
+
+      const preferredContainers = [
+        'data',
+        'Data',
+        'result',
+        'Result',
+        'results',
+        'Results',
+        'records',
+        'Records',
+        'items',
+        'Items',
+        'values',
+        'Values',
+        'tags',
+        'Tags',
+        'HistorianValues',
+        'historianValues',
+        'history',
+        'History',
+        'payload',
+        'Payload',
+        'points',
+        'Points',
+        'ValueList',
+        'valueList',
+      ];
+
+      let traversedKnownContainer = false;
+      for (const key of preferredContainers) {
+        if (node[key] !== undefined && node[key] !== null) {
+          traversedKnownContainer = true;
+          visit(node[key]);
+        }
+      }
+
+      if (!traversedKnownContainer) {
+        Object.values(node).forEach(visit);
+      }
+    };
+
+    visit(response);
+
+    const resolved = flatRecords
+      .map((record: any): ModeHistoryRecord | null => {
+        const timestampValue = this.readHistorianTimestamp(record);
+        const timestamp = this.parseHistorianDate(timestampValue);
+        const rawValue = this.readHistorianValue(record);
+        const label = this.liveReportService.resolveHistorianModeLabel(vessel, rawValue, document);
+
+        if (!timestamp || !label) {
+          return null;
+        }
+
+        return { timestamp, rawValue, label };
+      })
+      .filter((record): record is ModeHistoryRecord => !!record)
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+    const deduped: ModeHistoryRecord[] = [];
+    for (const record of resolved) {
+      const previous = deduped[deduped.length - 1];
+      if (
+        previous &&
+        previous.timestamp.getTime() === record.timestamp.getTime() &&
+        previous.label === record.label
+      ) {
+        continue;
+      }
+      deduped.push(record);
+    }
+
+    return deduped;
+  }
+
+  private buildModeHistoryView(
+    records: ModeHistoryRecord[],
+    periodStart: Date,
+    periodEnd: Date,
+  ): void {
+    if (records.length === 0) {
+      this.modeHistorySegments = [];
+      this.modeRunningHours = [];
+      this.modeHistoryCoveragePercent = 0;
+      return;
+    }
+
+    const startMs = periodStart.getTime();
+    const endMs = Math.max(startMs + 1, periodEnd.getTime());
+    const bounded = records.filter((record) => {
+      const time = record.timestamp.getTime();
+      return time >= startMs && time <= endMs;
+    });
+
+    if (bounded.length === 0) {
+      this.modeHistorySegments = [];
+      this.modeRunningHours = [];
+      this.modeHistoryCoveragePercent = 0;
+      return;
+    }
+
+    const colorByMode = new Map<string, string>();
+    let nextColorIndex = 0;
+    const colorFor = (label: string): string => {
+      const key = this.normalizeModeKey(label);
+      const existing = colorByMode.get(key);
+      if (existing) {
+        return existing;
+      }
+      const color = MODE_HISTORY_COLORS[nextColorIndex % MODE_HISTORY_COLORS.length];
+      nextColorIndex += 1;
+      colorByMode.set(key, color);
+      return color;
+    };
+
+    const collapsed: ModeHistoryRecord[] = [];
+    for (const record of bounded) {
+      const previous = collapsed[collapsed.length - 1];
+      if (previous && this.normalizeModeKey(previous.label) === this.normalizeModeKey(record.label)) {
+        continue;
+      }
+      collapsed.push(record);
+    }
+
+    const segments: ModeTimelineSegment[] = [];
+    const effectiveStart = Math.max(startMs, collapsed[0].timestamp.getTime());
+    const totalWindowMs = Math.max(1, endMs - effectiveStart);
+
+    collapsed.forEach((record, index) => {
+      const segmentStart = Math.max(effectiveStart, record.timestamp.getTime());
+      const nextStart =
+        index < collapsed.length - 1 ? collapsed[index + 1].timestamp.getTime() : endMs;
+      const segmentEnd = Math.min(endMs, Math.max(segmentStart, nextStart));
+      const durationMs = Math.max(0, segmentEnd - segmentStart);
+      if (durationMs <= 0) {
+        return;
+      }
+
+      const labelKey = this.normalizeModeKey(record.label);
+      segments.push({
+        key: `${segmentStart}-${labelKey}`,
+        label: record.label,
+        start: new Date(segmentStart),
+        end: new Date(segmentEnd),
+        durationMs,
+        percent: (durationMs / totalWindowMs) * 100,
+        color: colorFor(record.label),
+        isCurrent: labelKey === this.normalizeModeKey(this.currentModeLabel),
+      });
+    });
+
+    this.modeHistorySegments = segments;
+    const coveredMs = segments.reduce((sum, segment) => sum + segment.durationMs, 0);
+    this.modeHistoryCoveragePercent = Math.max(
+      0,
+      Math.min(100, ((endMs - effectiveStart) / Math.max(1, endMs - startMs)) * 100),
+    );
+
+    const grouped = new Map<
+      string,
+      { label: string; durationMs: number; segmentCount: number; color: string; isCurrent: boolean }
+    >();
+
+    for (const segment of segments) {
+      const key = this.normalizeModeKey(segment.label);
+      const current = grouped.get(key);
+      if (current) {
+        current.durationMs += segment.durationMs;
+        current.segmentCount += 1;
+        current.isCurrent = current.isCurrent || segment.isCurrent;
+      } else {
+        grouped.set(key, {
+          label: segment.label,
+          durationMs: segment.durationMs,
+          segmentCount: 1,
+          color: segment.color,
+          isCurrent: segment.isCurrent,
+        });
+      }
+    }
+
+    this.modeRunningHours = Array.from(grouped.entries())
+      .map(([key, item]) => ({
+        key,
+        ...item,
+        percent: coveredMs > 0 ? (item.durationMs / coveredMs) * 100 : 0,
+      }))
+      .sort((a, b) => b.durationMs - a.durationMs);
+  }
+
+  private readHistorianTimestamp(record: any): any {
+    return (
+      record?.TimeStamp ??
+      record?.Timestamp ??
+      record?.timeStamp ??
+      record?.timestamp ??
+      record?.Time ??
+      record?.time ??
+      record?.DateTime ??
+      record?.datetime ??
+      record?.Date ??
+      record?.date ??
+      record?.x ??
+      null
+    );
+  }
+
+  private readHistorianValue(record: any): any {
+    if (!record || typeof record !== 'object') {
+      return undefined;
+    }
+
+    const candidates = [
+      record.Value,
+      record.value,
+      record.Data,
+      record.data,
+      record.Val,
+      record.val,
+      record.NumericValue,
+      record.numericValue,
+      record.IValue,
+      record.iValue,
+      record.y,
+    ];
+
+    return candidates.find((value) => value !== undefined && value !== null && value !== '');
+  }
+
+  private parseHistorianDate(value: any): Date | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value;
+    }
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const millis = Math.abs(value) < 10_000_000_000 ? value * 1000 : value;
+      const date = new Date(millis);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    const text = String(value).trim();
+    const dotNet = /\/Date\(([-+]?\d+)/.exec(text);
+    if (dotNet) {
+      const date = new Date(Number(dotNet[1]));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    const numeric = Number(text);
+    if (Number.isFinite(numeric) && /^\d+(?:\.\d+)?$/.test(text)) {
+      const millis = Math.abs(numeric) < 10_000_000_000 ? numeric * 1000 : numeric;
+      const date = new Date(millis);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    const direct = new Date(text);
+    if (!Number.isNaN(direct.getTime())) {
+      return direct;
+    }
+
+    const normalized = text.includes('T') ? text : text.replace(' ', 'T');
+    const fallback = new Date(normalized);
+    return Number.isNaN(fallback.getTime()) ? null : fallback;
+  }
+
+  private formatHistorianRequestTime(value: Date): string {
+    const pad = (part: number): string => String(part).padStart(2, '0');
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(
+      value.getHours(),
+    )}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
+  }
+
+  private normalizeModeKey(value: string): string {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-');
+  }
+
+  private updateDerivedLiveState(): void {
+    this.updateVisibleModes();
+    this.updateHeadlineMetrics();
+    this.updateVisibleEngines();
+
+    const snapshot = this.liveSnapshot;
+    this.exportEnginePages = this.chunkItems(snapshot?.engines || [], 5);
+    this.exportModePages = this.verifiedModeAvailable ? this.chunkItems(snapshot?.modes || [], 14) : [];
+    this.liveExportPageCount =
+      1 + this.exportEnginePages.length + this.exportModePages.length;
+
+    this.liveExportTotalFuelLabel = this.metricValue('fuel');
+    this.liveExportDistanceLabel = this.metricValue('distance');
+    this.liveExportAverageSpeedLabel = this.metricValue('average');
+    this.liveExportMaximumSpeedLabel = this.metricValue('maximum');
+
+    this.updateFuelSummary(snapshot?.engines || []);
+  }
+
+  private updateHeadlineMetrics(): void {
+    const metrics = this.liveSnapshot?.metrics || [];
+    const preferredOrder = ['fuel', 'distance', 'average', 'speed'];
+
+    this.headlineMetrics = preferredOrder
+      .map((key) => metrics.find((metric) => metric.key === key))
+      .filter((metric): metric is LiveReportMetric => !!metric);
+  }
+
+  private updateVisibleEngines(): void {
+    const engines = this.liveSnapshot?.engines || [];
+    if (this.engineView === 'running') {
+      this.visibleEngines = engines.filter((engine) => engine.state === 'running');
+      return;
+    }
+
+    if (this.engineView === 'stopped') {
+      this.visibleEngines = engines.filter((engine) => engine.state !== 'running');
+      return;
+    }
+
+    this.visibleEngines = [...engines];
+  }
+
+  private updateVisibleModes(): void {
+    const modes = this.liveSnapshot?.modes || [];
+
+    if (this.showAllModes || modes.length <= 6) {
+      this.visibleModes = modes;
+    } else {
+      const visible = modes.slice(0, 6);
+      const current = modes.find((mode) => mode.isCurrent);
+
+      if (current && !visible.some((mode) => mode.key === current.key)) {
+        visible[visible.length - 1] = current;
+      }
+
+      this.visibleModes = visible;
+    }
+
+    this.hiddenModeCount = Math.max(0, modes.length - this.visibleModes.length);
+  }
+
+  private updateFuelSummary(engines: readonly LiveReportEngineSnapshot[]): void {
+    const totals: Record<FuelBreakdownItem['key'], number> = {
+      main: 0,
+      auxiliary: 0,
+      generator: 0,
+      other: 0,
+    };
+
+    for (const engine of engines) {
+      if (engine.fuelToday === null || !Number.isFinite(engine.fuelToday)) {
+        continue;
+      }
+
+      const value = Math.max(0, engine.fuelToday);
+      const key: FuelBreakdownItem['key'] =
+        engine.kind === 'main' || engine.kind === 'motor'
+          ? 'main'
+          : engine.kind === 'auxiliary'
+            ? 'auxiliary'
+            : engine.kind === 'generator'
+              ? 'generator'
+              : 'other';
+
+      totals[key] += value;
+    }
+
+    const total = Object.values(totals).reduce((sum, value) => sum + value, 0);
+    this.fuelTotalValue = total;
+    this.fuelTotalLabel = total > 0 ? this.formatLiveValue(total, 0) : '—';
+
+    if (total <= 0) {
+      this.fuelBreakdown = [];
+      this.fuelDonutBackground = EMPTY_FUEL_DONUT_BACKGROUND;
+      return;
+    }
+
+    this.fuelBreakdown = FUEL_GROUPS
+      .map((group) => ({
+        ...group,
+        value: totals[group.key],
+        percent: (totals[group.key] / total) * 100,
+      }))
+      .filter((item) => item.value > 0);
+
+    let cursor = 0;
+    const segments = this.fuelBreakdown.map((item) => {
+      const start = cursor;
+      cursor += item.percent;
+      return `${item.color} ${start.toFixed(2)}% ${cursor.toFixed(2)}%`;
+    });
+
+    this.fuelDonutBackground = `conic-gradient(${segments.join(', ')})`;
+  }
+
+  private syncRealtimePolling(): void {
+    const shouldPoll = this.activeTab === 'live' && !document.hidden;
+
+    if (shouldPoll) {
+      this.realtimeService.ensureStarted(this.liveRefreshSeconds * 1000);
+      return;
+    }
+
+    // Pause polling without clearing the last successful telemetry snapshot.
+    // This prevents the report from visually dropping to empty values when the
+    // browser tab is backgrounded and then reopened.
+    this.realtimeService.pause();
+  }
+
+  private mergeLiveDataForDisplay(
+    vessel: any,
+    incoming: Record<string, any> | null | undefined,
+  ): Record<string, any> {
+    const key = this.getVesselIdentity(vessel);
+    if (!key) {
+      return incoming || {};
+    }
+
+    const previous = this.liveDisplayDataCache.get(key) || {};
+    const next: Record<string, any> = { ...previous };
+
+    Object.entries(incoming || {}).forEach(([tagKey, item]) => {
+      // Preserve the last known value when the backend temporarily returns an
+      // empty placeholder for a tag. New usable values always replace old ones.
+      if (this.hasUsableRealtimeItem(item) || !(tagKey in next)) {
+        next[tagKey] = item;
+      }
+    });
+
+    if (Object.keys(next).length > 0) {
+      this.liveDisplayDataCache.set(key, next);
+    }
+
+    return next;
+  }
+
+  private hasUsableRealtimeData(data: Record<string, any> | null | undefined): boolean {
+    return Object.values(data || {}).some((item) => this.hasUsableRealtimeItem(item));
+  }
+
+  private hasUsableRealtimeItem(item: any): boolean {
+    if (item === null || item === undefined || item === '') {
+      return false;
+    }
+
+    if (typeof item !== 'object') {
+      return true;
+    }
+
+    if (item.hasValue === true) {
+      return true;
+    }
+
+    const value =
+      item.rawValue ??
+      item.value ??
+      item.Value ??
+      item.IValue ??
+      item.iValue ??
+      item.CurrentValue ??
+      item.currentValue ??
+      null;
+
+    return value !== null && value !== undefined && value !== '';
+  }
+
   private getVesselIdentity(vessel: any): string {
     const info = vessel?.fvInfo || vessel?.fv || vessel || {};
     return String(
-      info?.prefix ||
-        info?.id ||
-        info?._id ||
-        info?.vesselId ||
-        info?.name ||
-        info?.Name ||
-        ''
+      info?.prefix || info?.id || info?._id || info?.vesselId || info?.name || info?.Name || '',
     )
       .trim()
       .toLowerCase()
@@ -1136,7 +2036,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   private formatCoordinate(
     value: number | null | undefined,
     positiveHemisphere: string,
-    negativeHemisphere: string
+    negativeHemisphere: string,
   ): string {
     if (value === null || value === undefined || !Number.isFinite(value)) {
       return 'No position data';
@@ -1145,7 +2045,6 @@ export class ReportComponent implements OnInit, OnDestroy {
     const hemisphere = value >= 0 ? positiveHemisphere : negativeHemisphere;
     return `${Math.abs(value).toFixed(6)}° ${hemisphere}`;
   }
-
 
   private metricValue(key: string): string {
     const metric = this.liveSnapshot?.metrics.find((item) => item.key === key);
@@ -1172,8 +2071,8 @@ export class ReportComponent implements OnInit, OnDestroy {
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   }
 
-  private resolveLiveExportError(error: any): string {
-    const code = String(error?.message || error || '');
+  private resolveLiveExportError(error: unknown): string {
+    const code = this.getErrorText(error);
     if (code.includes('EXPORT_ALREADY_RUNNING')) {
       return 'A PDF export is already running. Please wait for it to finish.';
     }
@@ -1184,6 +2083,18 @@ export class ReportComponent implements OnInit, OnDestroy {
       return 'The browser could not prepare the report image for PDF export.';
     }
     return 'Unable to export the live PDF. The page remains safe; please refresh and try again.';
+  }
+
+  private getErrorText(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (error && typeof error === 'object' && 'message' in error) {
+      return String((error as { message?: unknown }).message || '');
+    }
+
+    return String(error || '');
   }
 
   private buildReportFileName(): string {

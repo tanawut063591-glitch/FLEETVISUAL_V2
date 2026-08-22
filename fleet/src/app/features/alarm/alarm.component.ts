@@ -326,11 +326,6 @@ export class AlarmComponent implements OnInit, OnDestroy {
     this.detailOpen = false;
   }
 
-
-
-
-
-
   openAlertRealtime(alert: AlertRecord): void {
     const vessel = this.resolveAlertVessel(alert);
 
@@ -346,8 +341,6 @@ export class AlarmComponent implements OnInit, OnDestroy {
     this.closeAlertDetail();
 
     this.router.navigate(['/main/realtime']).then(() => {
-
-
       if (vessel) {
         setTimeout(() => this.fvRealtimeService.setActiveVessel(vessel), 60);
       }
@@ -367,8 +360,6 @@ export class AlarmComponent implements OnInit, OnDestroy {
       return match;
     }
 
-
-
     const fallbackPrefix = String(alert.vesselId || alert.vesselName || '').trim();
     if (!fallbackPrefix && !alert.vesselName) {
       return null;
@@ -385,9 +376,8 @@ export class AlarmComponent implements OnInit, OnDestroy {
   }
 
   private collectAlertVesselKeys(alert: AlertRecord): Set<string> {
-    const raw = alert.raw && typeof alert.raw === 'object'
-      ? (alert.raw as Record<string, any>)
-      : {};
+    const raw =
+      alert.raw && typeof alert.raw === 'object' ? (alert.raw as Record<string, any>) : {};
 
     const values: unknown[] = [
       alert.vesselId,
@@ -407,9 +397,7 @@ export class AlarmComponent implements OnInit, OnDestroy {
     ];
 
     return new Set(
-      values
-        .map((value) => this.normalizeVesselKey(value))
-        .filter((value) => value.length > 0),
+      values.map((value) => this.normalizeVesselKey(value)).filter((value) => value.length > 0),
     );
   }
 
@@ -431,9 +419,7 @@ export class AlarmComponent implements OnInit, OnDestroy {
     }
 
     return new Set(
-      values
-        .map((value) => this.normalizeVesselKey(value))
-        .filter((value) => value.length > 0),
+      values.map((value) => this.normalizeVesselKey(value)).filter((value) => value.length > 0),
     );
   }
 
