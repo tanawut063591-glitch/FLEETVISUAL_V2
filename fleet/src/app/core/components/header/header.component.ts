@@ -434,7 +434,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    if (window.innerWidth > 991) {
+    if (window.innerWidth > 1100) {
       this.closeMobileMenu();
     } else if (!this.mobileMenuOpen) {
       this.syncMobileMenuDocumentState(false);

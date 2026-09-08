@@ -39,12 +39,18 @@ export class RealtimeMachineryService {
   }
 
   hydrateVessel(vessel: VesselSettingsRecord): VesselSettingsRecord {
+    if (vessel.engineSyncMode === 'manual') return vessel;
+
     const positions = this.getForPrefix(vessel.prefix);
     if (!positions.length) return vessel;
 
+    // Legacy records did not have engineSyncMode. Preserve their previous auto-hydration
+    // behaviour, while new records can explicitly remain manual until the admin applies
+    // the Realtime detection preview.
     const assignments = this.mergeAssignments(vessel.engineAssignments || [], positions);
     return {
       ...vessel,
+      engineSyncMode: 'realtime',
       engineAssignments: assignments,
       engines: this.engineNames(assignments),
     };
@@ -88,7 +94,7 @@ export class RealtimeMachineryService {
     return {
       id: existing?.id || `rt-${position.key}`,
       profileId,
-      displayName: existing?.displayName || this.defaultProfileName(profileId),
+      displayName: existing?.displayName || position.title,
       position: position.title,
       quantity: 1,
       realtimeKey: position.key,
@@ -160,19 +166,6 @@ export class RealtimeMachineryService {
     )
       return 'telemetry-only-engine';
     return 'telemetry-only-engine';
-  }
-
-  private defaultProfileName(profileId: string): string {
-    switch (profileId) {
-      case 'generic-main-diesel':
-        return 'Generic Main Diesel Engine';
-      case 'generic-generator-engine':
-        return 'Generic Generator Engine';
-      case 'telemetry-only-engine':
-        return 'Direct Telemetry — No Calculation';
-      default:
-        return profileId;
-    }
   }
 
   private isMachinery(detail: CardDetail): boolean {

@@ -2189,7 +2189,7 @@
 
 
 
-.main-split {
+.premium-dashboard {
   container-type: inline-size;
   container-name: realtime-main-content;
 }
@@ -2249,7 +2249,7 @@
   }
 }
 
-@container realtime-main-content (max-width: 980px) {
+@container realtime-main-content (max-width: 1040px) {
   .main-split {
     grid-template-columns: 1fr;
   }
@@ -3510,4 +3510,91 @@
 
 :host-context([data-theme='dark']) .vessel-status-card.offline strong {
   color: #f87171;
+}
+
+/* =====================================================================
+   REALTIME RESPONSIVE V14 / MAP CONTAINMENT + COMPACT WORKSPACE SAFETY
+   The responsive container belongs to .premium-dashboard (the parent), so
+   queries can actually restyle .main-split. The map is paint-contained to
+   prevent Google Maps layers from visually leaking under machinery cards.
+   ===================================================================== */
+.main-split,
+.col-left,
+.col-right,
+.col-left > *,
+.col-right > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.col-left,
+.col-right {
+  position: relative;
+}
+
+.col-left {
+  z-index: 0;
+}
+
+.col-right {
+  z-index: 1;
+  isolation: isolate;
+}
+
+.map-wrapper {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+  contain: layout paint;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 300px;
+  overflow: hidden;
+}
+
+.map-component {
+  z-index: 0;
+  max-width: 100%;
+  overflow: hidden;
+  contain: layout paint;
+}
+
+@container realtime-main-content (max-width: 1040px) {
+  .main-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .col-left {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.82fr);
+    align-items: stretch;
+  }
+
+  .col-right {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: auto;
+  }
+
+  .map-wrapper {
+    min-height: 340px;
+  }
+}
+
+@container realtime-main-content (max-width: 760px) {
+  .col-left,
+  .col-right {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .map-wrapper {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .map-wrapper {
+    min-height: 260px;
+  }
 }

@@ -3,10 +3,10 @@
     <div class="diagram-title-block">
       <div class="diagram-eyebrow">SYSTEM DIAGRAM</div>
       <h1>Vessel Network Diagram</h1>
-      <p>{{ vesselName }} <span *ngIf="vesselPrefix">/ {{ vesselPrefix }}</span></p>
+      <p>{{ vesselName }}</p>
     </div>
 
-    <div class="diagram-stats">
+    <div class="diagram-stats" *ngIf="hasDiagramData">
       <div class="stat-card online">
         <span class="stat-dot"></span>
         <strong>{{ getSummary('online') }}</strong>
@@ -29,7 +29,7 @@
     </div>
   </div>
 
-  <div class="diagram-mobile-tools" aria-label="Diagram view controls">
+  <div class="diagram-mobile-tools" *ngIf="hasDiagramData" aria-label="Diagram view controls">
     <div class="diagram-pan-hint">
       <span class="diagram-pan-icon" aria-hidden="true">↔</span>
       <span>Swipe sideways • Scroll down</span>
@@ -45,7 +45,7 @@
     </div>
   </div>
 
-  <div class="diagram-scroll" #diagramViewport [class.is-fit-zoom]="diagramZoomMode === 'fit'"
+  <div class="diagram-scroll" *ngIf="hasDiagramData; else diagramUnavailable" #diagramViewport [class.is-fit-zoom]="diagramZoomMode === 'fit'"
     [class.is-full-zoom]="diagramZoomMode === 'full'">
     <div class="diagram-stage" [style.width.px]="diagramStageWidth" [style.height.px]="diagramStageHeight">
       <div class="diagram-board" [ngClass]="'profile-' + diagramProfile" [style.height.px]="diagramNaturalHeight" [style.transform]="'scale(' + diagramScale + ')'">
@@ -117,7 +117,24 @@
     </div>
   </div>
 
-  <div class="diagram-mobile-end" aria-label="End of diagram">
+  <ng-template #diagramUnavailable>
+    <section class="diagram-empty" aria-live="polite">
+      <div class="diagram-empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 48 48">
+          <rect x="8" y="10" width="32" height="24" rx="4"></rect>
+          <path d="M16 40h16M24 34v6"></path>
+          <path d="M16 20h16M16 26h10"></path>
+        </svg>
+      </div>
+      <div class="diagram-empty-copy">
+        <span class="diagram-empty-kicker">NO DIAGRAM DATA</span>
+        <h2>System diagram is not available for this vessel</h2>
+        <p>{{ vesselName }} does not have a configured vessel network diagram.</p>
+      </div>
+    </section>
+  </ng-template>
+
+  <div class="diagram-mobile-end" *ngIf="hasDiagramData" aria-label="End of diagram">
     <span class="diagram-mobile-end-icon" aria-hidden="true">✓</span>
     <span>End of diagram</span>
   </div>

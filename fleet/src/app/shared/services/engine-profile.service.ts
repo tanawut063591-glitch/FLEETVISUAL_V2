@@ -147,7 +147,7 @@ export class EngineProfileService {
       ratedPowerKw: null,
       ratedRpm: null,
       cylinders: null,
-      formulaPresetId: 'main-diesel-standard-v1',
+      formulaPresetId: 'telemetry-only-v1',
       telemetryMapping: this.emptyTelemetryMapping(),
       description: '',
       createdAt: now,
@@ -329,12 +329,9 @@ export class EngineProfileService {
     const preset = String(value ?? '')
       .trim()
       .toLowerCase();
-    if (preset === 'main-diesel-standard-v1') return preset;
-    if (preset === 'generator-standard-v1') return preset;
-    if (preset === 'telemetry-only-v1') return preset;
     if (preset === 'custom-v1') return preset;
-    if (category === 'generator' || category === 'auxiliary') return 'generator-standard-v1';
-    if (category === 'main') return 'main-diesel-standard-v1';
+    // Legacy frontend formula IDs are intentionally normalized to direct telemetry.
+    // Realtime/Report values should come from the backend or mapped telemetry.
     return 'telemetry-only-v1';
   }
 

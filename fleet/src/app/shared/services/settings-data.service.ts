@@ -14,6 +14,7 @@ import {
   shareReplay,
   switchMap,
   take,
+  throwError,
   tap,
   timeout,
 } from 'rxjs';
@@ -106,6 +107,7 @@ export class SettingsDataService {
   }
 
   saveVessel(record: VesselSettingsRecord): Observable<SettingsPersistenceTarget> {
+    const engineAssignments = this.normalizeEngineAssignments(record.engineAssignments, record.engines);
     const normalized: VesselSettingsRecord = {
       ...record,
       id: record.id.trim(),
@@ -117,8 +119,11 @@ export class SettingsDataService {
       agency: record.agency.trim(),
       description: record.description.trim(),
       groups: this.uniqueStrings(record.groups),
-      engines: this.uniqueStrings(record.engines),
-      engineAssignments: this.normalizeEngineAssignments(record.engineAssignments, record.engines),
+      // engineAssignments is the source of truth. engines remains a derived mirror for
+      // legacy APIs/readers that still expect the old string-array field.
+      engines: this.engineNamesFromAssignments(engineAssignments, record.engines),
+      engineAssignments,
+      engineSyncMode: record.engineSyncMode === 'realtime' ? 'realtime' : 'manual',
     };
 
     return this.databaseConfig.config$.pipe(
@@ -299,6 +304,13 @@ export class SettingsDataService {
     return this.userSessions$;
   }
 
+  getUserAccessPersistenceMode(): Observable<'database' | 'browser'> {
+    return this.databaseConfig.config$.pipe(
+      take(1),
+      map((config) => (config.userAccess.enabled ? ('database' as const) : ('browser' as const))),
+    );
+  }
+
   getUserAccessRecords(forceRefresh = false): Observable<UserAccessRecord[]> {
     if (forceRefresh) this.userAccess$ = undefined;
 
@@ -347,10 +359,14 @@ export class SettingsDataService {
           }),
           map(() => 'database' as const),
           catchError((error) => {
-            console.warn('[SettingsDataService] save user access fell back to browser:', error);
-            this.upsertLocalUserAccess(normalized);
+            console.error('[SettingsDataService] user access database save failed:', error);
             this.userAccess$ = undefined;
-            return of('browser' as const);
+            return throwError(
+              () =>
+                new Error(
+                  'User Access database is unavailable. No local permission fallback was written, so the previous permissions remain authoritative.',
+                ),
+            );
           }),
         );
       }),
@@ -377,10 +393,14 @@ export class SettingsDataService {
           }),
           map(() => 'database' as const),
           catchError((error) => {
-            console.warn('[SettingsDataService] delete user access fell back to browser:', error);
-            this.removeLocalUserAccess(id);
+            console.error('[SettingsDataService] user access database delete failed:', error);
             this.userAccess$ = undefined;
-            return of('browser' as const);
+            return throwError(
+              () =>
+                new Error(
+                  'User Access database is unavailable. The access profile was not deleted locally and remains unchanged.',
+                ),
+            );
           }),
         );
       }),
@@ -568,6 +588,11 @@ export class SettingsDataService {
         continue;
       }
 
+      const mergedAssignments = metadata.engineAssignments?.length
+        ? metadata.engineAssignments
+        : live.engineAssignments || [];
+      const mergedLegacyEngines = metadata.engines.length ? metadata.engines : live.engines;
+
       merged.delete(live.id);
       merged.set(live.id, {
         ...live,
@@ -581,10 +606,8 @@ export class SettingsDataService {
         owner: metadata.owner || live.owner,
         agency: metadata.agency || live.agency,
         groups: this.uniqueStrings([...live.groups, ...metadata.groups]),
-        engines: metadata.engines.length ? metadata.engines : live.engines,
-        engineAssignments: metadata.engineAssignments?.length
-          ? metadata.engineAssignments
-          : live.engineAssignments,
+        engines: this.engineNamesFromAssignments(mergedAssignments, mergedLegacyEngines),
+        engineAssignments: mergedAssignments,
         status: live.status,
         lastSeenAt: live.lastSeenAt,
         lastSeenLabel: live.lastSeenLabel,
@@ -654,6 +677,13 @@ export class SettingsDataService {
     const derivedStatus = timestampStatus !== 'nodata' ? timestampStatus : labelStatus;
     const status: VesselSettingsStatus =
       derivedStatus === 'nodata' ? explicitStatus : derivedStatus;
+    const legacyEngines = this.toStringArray(
+      row?.engines ?? row?.Engines ?? row?.engine ?? row?.Engine,
+    );
+    const engineAssignments = this.normalizeEngineAssignments(
+      row?.engineAssignments ?? row?.EngineAssignments,
+      legacyEngines,
+    );
 
     return {
       id: id || `vessel-${index + 1}`,
@@ -666,11 +696,14 @@ export class SettingsDataService {
       owner: String(row?.owner ?? row?.Owner ?? row?.ownerName ?? ''),
       agency: String(row?.agency ?? row?.Agency ?? row?.agentName ?? ''),
       groups: this.toStringArray(row?.groups ?? row?.Groups ?? row?.group ?? row?.Group),
-      engines: this.toStringArray(row?.engines ?? row?.Engines ?? row?.engine ?? row?.Engine),
-      engineAssignments: this.normalizeEngineAssignments(
-        row?.engineAssignments ?? row?.EngineAssignments,
-        this.toStringArray(row?.engines ?? row?.Engines ?? row?.engine ?? row?.Engine),
-      ),
+      engines: this.engineNamesFromAssignments(engineAssignments, legacyEngines),
+      engineAssignments,
+      engineSyncMode:
+        String(row?.engineSyncMode ?? row?.EngineSyncMode ?? '').toLowerCase() === 'manual'
+          ? 'manual'
+          : String(row?.engineSyncMode ?? row?.EngineSyncMode ?? '').toLowerCase() === 'realtime'
+            ? 'realtime'
+            : undefined,
       status,
       lastSeenAt: normalizedLastSeen,
       lastSeenLabel: this.isCompactLastSeen(compactLastSeen) ? String(compactLastSeen).trim() : '',
@@ -692,7 +725,8 @@ export class SettingsDataService {
           const displayName = String(
             item?.displayName ?? item?.DisplayName ?? item?.name ?? item?.Name ?? '',
           ).trim();
-          if (!profileId && !displayName) return null;
+          const position = String(item?.position ?? item?.Position ?? '').trim();
+          if (!profileId && !displayName && !position) return null;
           const quantityValue = Number(item?.quantity ?? item?.Quantity ?? 1);
           const sourceValue = String(item?.source ?? item?.Source ?? '')
             .trim()
@@ -702,8 +736,8 @@ export class SettingsDataService {
           return {
             id: String(item?.id ?? item?.Id ?? `${profileId || 'legacy'}-${index + 1}`).trim(),
             profileId,
-            displayName: displayName || profileId,
-            position: String(item?.position ?? item?.Position ?? `Engine ${index + 1}`).trim(),
+            displayName: displayName || position || profileId,
+            position: position || displayName || `Engine ${index + 1}`,
             quantity: Number.isFinite(quantityValue)
               ? Math.min(12, Math.max(1, Math.round(quantityValue)))
               : 1,
@@ -726,10 +760,20 @@ export class SettingsDataService {
       id: `legacy-${index + 1}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
       profileId: '',
       displayName: name,
-      position: `Engine ${index + 1}`,
+      position: name,
       quantity: 1,
       source: 'legacy' as const,
     }));
+  }
+
+  private engineNamesFromAssignments(
+    assignments: VesselEngineAssignment[],
+    fallback: string[] = [],
+  ): string[] {
+    const names = assignments
+      .map((assignment) => String(assignment.position || assignment.displayName || '').trim())
+      .filter(Boolean);
+    return this.uniqueStrings(names.length ? names : fallback);
   }
 
   private normalizeVesselGroup(row: any, index: number): VesselGroupRecord {

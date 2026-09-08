@@ -1,0 +1,683 @@
+<div class="settings-page settings-section-scope">
+    <section class="vessel-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Vessel Management</h2>
+          <p>Manage vessel details and monitor Online, Idle and Offline status.</p>
+        </div>
+        <div class="heading-actions">
+          <button type="button" class="primary-btn" (click)="openAdd()">
+            <i class="fa fa-plus"></i> Add Vessel
+          </button>
+        </div>
+      </div>
+
+      <div class="table-tools vessel-tools">
+        <label class="table-search">
+          <i class="fa fa-search"></i>
+          <input type="search" placeholder="Search vessel..." [(ngModel)]="searchTerm" (ngModelChange)="page = 1" />
+        </label>
+        <div class="tool-actions">
+          <label class="filter-select">
+            <span>Status</span>
+            <select [(ngModel)]="vesselStatusFilter" (ngModelChange)="page = 1">
+              <option value="all">All Status</option>
+              <option value="online">Online</option>
+              <option value="idle">Idle</option>
+              <option value="offline">Offline</option>
+              <option value="unknown">No Data</option>
+            </select>
+          </label>
+          <button type="button" class="ghost-btn" (click)="loadVessels(true)">
+            <i class="fa fa-refresh" [class.fa-spin]="loading || refreshing"></i> Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="loading-box" *ngIf="loading">
+        <span class="spinner"></span>
+        <strong>Loading vessel records...</strong>
+      </div>
+
+      <div class="error-box" *ngIf="!loading && errorMessage">
+        <i class="fa fa-exclamation-circle"></i>
+        <span>{{ errorMessage }}</span>
+        <button type="button" (click)="loadVessels(true)">Retry</button>
+      </div>
+
+      <div class="vessel-table-wrap" *ngIf="!loading && !errorMessage">
+        <table class="vessel-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Image</th>
+              <th>Name / Status</th>
+              <th>Prefix</th>
+              <th>Nationality</th>
+              <th>Customer</th>
+              <th>Owner</th>
+              <th>Agency</th>
+              <th>Engine</th>
+              <th>Group</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let vessel of pagedVessels; trackBy: trackByVessel">
+              <td data-label="ID">{{ vessel.id }}</td>
+              <td data-label="Image">
+                <div class="vessel-thumb">
+                  <img *ngIf="vessel.image" [src]="vessel.image" alt="" />
+                  <i *ngIf="!vessel.image" class="fa fa-ship"></i>
+                </div>
+              </td>
+              <td data-label="Name">
+                <strong>{{ vessel.name }}</strong>
+                <span class="vessel-status-line">
+                  <span class="status-pill compact" [attr.data-status]="vessel.status">
+                    <i></i>{{ statusLabel(vessel.status) }}
+                  </span>
+                </span>
+              </td>
+              <td data-label="Prefix"><span class="prefix-chip">{{ vessel.prefix }}</span></td>
+              <td data-label="Nationality">{{ vessel.nationality || '—' }}</td>
+              <td data-label="Customer">{{ vessel.customer || '—' }}</td>
+              <td data-label="Owner">{{ vessel.owner || '—' }}</td>
+              <td data-label="Agency">{{ vessel.agency || '—' }}</td>
+              <td data-label="Engine"><span class="engine-count-chip"
+                  [class.unassigned]="vesselEngineCount(vessel) === 0">{{ vesselEngineSummary(vessel) }}</span></td>
+              <td data-label="Group"><span class="group-count">{{ vesselGroupCount(vessel) }}</span></td>
+              <td data-label="Action">
+                <div class="row-actions">
+                  <button type="button" class="edit" title="Edit vessel" (click)="openEdit(vessel)">
+                    <i class="fa fa-pencil"></i>
+                  </button>
+                  <button type="button" class="delete" title="Remove vessel" (click)="deleteVessel(vessel)">
+                    <i class="fa fa-trash-o"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="pagedVessels.length === 0">
+              <td colspan="11" class="empty-table">No vessel records match this search.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="vessel-mobile-list" *ngIf="!loading && !errorMessage">
+        <article class="vessel-mobile-card" *ngFor="let vessel of pagedVessels; trackBy: trackByVessel">
+          <header class="vessel-mobile-card-head">
+            <div class="vessel-mobile-thumb">
+              <img *ngIf="vessel.image" [src]="vessel.image" [alt]="vessel.name" />
+              <i *ngIf="!vessel.image" class="fa fa-ship"></i>
+            </div>
+            <div class="vessel-mobile-identity">
+              <span class="vessel-mobile-id">ID {{ vessel.id }}</span>
+              <h3>{{ vessel.name }}</h3>
+              <div class="vessel-mobile-status-row">
+                <span class="status-pill" [attr.data-status]="vessel.status"><i></i>{{ statusLabel(vessel.status)
+                  }}</span>
+                <span class="prefix-chip">{{ vessel.prefix }}</span>
+              </div>
+            </div>
+          </header>
+
+          <dl class="vessel-mobile-meta">
+            <div>
+              <dt>Nationality</dt>
+              <dd>{{ vessel.nationality || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Customer</dt>
+              <dd>{{ vessel.customer || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Owner</dt>
+              <dd>{{ vessel.owner || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Agency</dt>
+              <dd>{{ vessel.agency || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Engines</dt>
+              <dd><span class="engine-count-chip" [class.unassigned]="vesselEngineCount(vessel) === 0">{{
+                  vesselEngineSummary(vessel) }}</span></dd>
+            </div>
+            <div>
+              <dt>Groups</dt>
+              <dd><span class="group-count">{{ vesselGroupCount(vessel) }}</span></dd>
+            </div>
+          </dl>
+
+          <footer class="vessel-mobile-actions">
+            <button type="button" class="edit" (click)="openEdit(vessel)"><i
+                class="fa fa-pencil"></i><span>Edit</span></button>
+            <button type="button" class="delete" (click)="deleteVessel(vessel)"><i
+                class="fa fa-trash-o"></i><span>Delete</span></button>
+          </footer>
+        </article>
+
+        <div class="empty-inline" *ngIf="pagedVessels.length === 0">No vessel records match this search.</div>
+      </div>
+
+      <footer class="table-footer" *ngIf="!loading && !errorMessage">
+        <span>Showing {{ pageStart }} to {{ pageEnd }} of {{ filteredVessels.length }} vessels</span>
+        <div class="pagination">
+          <button type="button" (click)="goToPage(page - 1)" [disabled]="page === 1"><i
+              class="fa fa-angle-left"></i></button>
+          <button type="button" *ngFor="let number of pageNumbers" [class.active]="page === number"
+            (click)="goToPage(number)">{{ number }}</button>
+          <button type="button" (click)="goToPage(page + 1)" [disabled]="page === totalPages"><i
+              class="fa fa-angle-right"></i></button>
+        </div>
+        <select [(ngModel)]="pageSize" (ngModelChange)="page = 1">
+          <option [ngValue]="10">10 / page</option>
+          <option [ngValue]="20">20 / page</option>
+          <option [ngValue]="50">50 / page</option>
+        </select>
+      </footer>
+
+      <div class="summary-cards vessel-summary-cards">
+        <article><span class="summary-icon total"><i class="fa fa-ship"></i></span>
+          <div><small>Total Vessels</small><strong>{{ vessels.length }}</strong>
+            <p>Backend and local records</p>
+          </div>
+        </article>
+        <article><span class="summary-icon online"><i class="fa fa-circle"></i></span>
+          <div><small>Online Vessels</small><strong>{{ onlineCount }}</strong>
+            <p>Telemetry within 1 hour</p>
+          </div>
+        </article>
+        <article><span class="summary-icon idle"><i class="fa fa-clock-o"></i></span>
+          <div><small>Idle Vessels</small><strong>{{ idleCount }}</strong>
+            <p>No data for 1–24 hours</p>
+          </div>
+        </article>
+        <article><span class="summary-icon offline"><i class="fa fa-power-off"></i></span>
+          <div><small>Offline Vessels</small><strong>{{ offlineCount }}</strong>
+            <p>No data for over 24 hours</p>
+          </div>
+        </article>
+        <article><span class="summary-icon groups"><i class="fa fa-object-group"></i></span>
+          <div><small>Groups</small><strong>{{ managedGroupCount }}</strong>
+            <p>Vessel groups</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+
+    <div class="drawer-backdrop" *ngIf="drawerOpen" (click)="closeDrawer()"></div>
+    <aside class="vessel-drawer" [class.open]="drawerOpen" aria-label="Vessel editor">
+      <header>
+        <div>
+          <h2>{{ editingId ? 'Edit Vessel' : 'Add Vessel' }}</h2>
+          <p>{{ editingId ? 'Update vessel database record' : 'Create a vessel database record' }}</p>
+        </div>
+        <button type="button" (click)="closeDrawer()" [disabled]="isSavingVessel || vesselGroupSaving || engineProfileSaving"><i class="fa fa-times"></i></button>
+      </header>
+
+      <div class="drawer-content">
+        <h3>Basic Information</h3>
+        <label>Vessel ID <em>*</em><input type="text" [(ngModel)]="form.id" [disabled]="!!editingId"
+            placeholder="Enter vessel ID" /></label>
+        <label>Vessel Name <em>*</em><input type="text" [(ngModel)]="form.name" placeholder="Enter vessel name" /></label>
+        <label>Prefix <em>*</em><input type="text" [(ngModel)]="form.prefix" (change)="onVesselPrefixChanged()"
+            placeholder="Enter telemetry prefix" /></label>
+
+        <label class="image-upload">
+          <input type="file" accept="image/png,image/jpeg" (change)="onImageSelected($event)" />
+          <img *ngIf="form.image" [src]="form.image" alt="Vessel preview" />
+          <span *ngIf="!form.image"><i class="fa fa-cloud-upload"></i><strong>Click to upload image</strong><small>PNG,
+              JPG up to 5 MB</small></span>
+        </label>
+
+        <label>Description<textarea rows="3" [(ngModel)]="form.description"
+            placeholder="Enter vessel description"></textarea></label>
+
+        <h3>Additional Information</h3>
+        <div class="form-grid">
+          <label>Nationality<select [(ngModel)]="form.nationality">
+              <option value="">Select nationality</option>
+              <option *ngFor="let option of nationalityOptions" [value]="option">{{ option }}</option>
+            </select></label>
+          <label>Customer<input type="text" [(ngModel)]="form.customer" placeholder="Enter customer" /></label>
+          <label>Owner<input type="text" [(ngModel)]="form.owner" placeholder="Enter owner" /></label>
+          <label>Agency<input type="text" [(ngModel)]="form.agency" placeholder="Enter agency" /></label>
+        </div>
+
+        <section class="vessel-group-summary vessel-group-editor" aria-labelledby="vessel-groups-heading">
+          <div class="vessel-subsection-heading">
+            <div>
+              <h3 id="vessel-groups-heading">Vessel Groups</h3>
+              <p>Select an existing group or create a new group here without leaving Add Vessel.</p>
+            </div>
+            <div class="vessel-group-heading-actions">
+              <span class="vessel-group-selected-count"><strong>{{ vesselGroupIds.length }}</strong> selected</span>
+              <button type="button" class="vessel-inline-add-group-btn" (click)="openVesselGroupComposer()"
+                [disabled]="vesselGroupSaving || isSavingVessel">
+                <i class="fa fa-plus"></i> Add Group
+              </button>
+            </div>
+          </div>
+
+          <div class="vessel-inline-group-composer" *ngIf="vesselGroupComposerOpen">
+            <div class="vessel-inline-group-composer-heading">
+              <span class="vessel-inline-group-composer-icon"><i class="fa fa-object-group"></i></span>
+              <div>
+                <strong>Create Vessel Group</strong>
+                <small>The new group is created and selected for this vessel automatically.</small>
+              </div>
+              <button type="button" class="vessel-inline-group-close" (click)="closeVesselGroupComposer()"
+                [disabled]="vesselGroupSaving" aria-label="Close group form">
+                <i class="fa fa-times"></i>
+              </button>
+            </div>
+            <div class="vessel-inline-group-grid">
+              <label>
+                <span>Group name <em>*</em></span>
+                <input type="text" [(ngModel)]="vesselNewGroupName" placeholder="e.g. Offshore Fleet"
+                  [disabled]="vesselGroupSaving || isSavingVessel" (keyup.enter)="createAndSelectVesselGroup()" />
+              </label>
+              <label>
+                <span>Description <small>Optional</small></span>
+                <input type="text" [(ngModel)]="vesselNewGroupDescription" placeholder="e.g. Gulf of Thailand operation"
+                  [disabled]="vesselGroupSaving || isSavingVessel" (keyup.enter)="createAndSelectVesselGroup()" />
+              </label>
+              <button type="button" class="vessel-inline-group-save" (click)="createAndSelectVesselGroup()"
+                [disabled]="!vesselNewGroupName.trim() || vesselGroupSaving || isSavingVessel">
+                <i class="fa" [ngClass]="vesselGroupSaving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                {{ vesselGroupSaving ? 'Creating...' : 'Create & Select' }}
+              </button>
+            </div>
+            <div class="vessel-inline-group-notice" *ngIf="vesselGroupInlineNotice">
+              <i class="fa fa-info-circle"></i><span>{{ vesselGroupInlineNotice }}</span>
+            </div>
+          </div>
+
+          <label class="vessel-group-search" *ngIf="groupDefinitions.length > 4">
+            <i class="fa fa-search"></i>
+            <input type="search" [(ngModel)]="vesselGroupSearchTerm" placeholder="Search vessel groups..." />
+          </label>
+
+          <div class="vessel-group-option-grid" *ngIf="groupDefinitions.length > 0; else noVesselGroupsAvailable">
+            <label *ngFor="let group of vesselGroupOptions; trackBy: trackByGroupDefinition"
+              [class.selected]="vesselGroupSelected(group.id)">
+              <input type="checkbox" [checked]="vesselGroupSelected(group.id)"
+                (change)="toggleVesselGroup(group.id, $any($event.target).checked)" />
+              <span class="vessel-group-check"><i class="fa fa-check"></i></span>
+              <span class="vessel-group-icon"><i class="fa fa-object-group"></i></span>
+              <span class="vessel-group-copy">
+                <strong>{{ group.name }}</strong>
+                <small>{{ group.description || 'Custom vessel group' }}</small>
+              </span>
+              <span class="vessel-group-size"><strong>{{ vesselGroupMemberCount(group) }}</strong><small>vessels</small></span>
+            </label>
+            <div class="empty-inline compact-empty" *ngIf="vesselGroupOptions.length === 0">No groups match this search.</div>
+          </div>
+
+          <ng-template #noVesselGroupsAvailable>
+            <div class="vessel-group-empty vessel-group-empty-clean">
+              <span><i class="fa fa-object-group"></i></span>
+              <div>
+                <strong>No vessel groups yet</strong>
+                <small>Use <b>Add Group</b> above when this vessel needs to be assigned to a new group.</small>
+              </div>
+            </div>
+          </ng-template>
+        </section>
+
+        <section class="engine-profile-section professional-engine-setup engine-pro-workspace" aria-labelledby="engine-profile-heading">
+          <div class="engine-section-heading professional-engine-heading engine-pro-header">
+            <div class="engine-pro-heading-copy">
+              <span class="engine-pro-kicker"><i class="fa fa-cogs"></i> Machinery configuration</span>
+              <h3 id="engine-profile-heading">Engine Setup</h3>
+              <p>Configure each physical engine once, then optionally link a reusable profile for specification and telemetry mapping.</p>
+            </div>
+            <div class="engine-heading-actions engine-pro-actions">
+              <span class="engine-count-chip" [class.unassigned]="assignedEngineCount === 0">
+                <i class="fa fa-cog"></i>
+                <strong>{{ assignedEngineCount }}</strong>
+                <span>{{ assignedEngineCount === 1 ? 'engine' : 'engines' }}</span>
+              </span>
+              <button type="button" class="engine-import-btn compact" (click)="syncRealtimeMachinery(true)"
+                [disabled]="!form.prefix.trim() || isSavingVessel" title="Import machinery positions from Realtime">
+                <i class="fa fa-refresh"></i> Import Realtime
+              </button>
+              <button type="button" class="engine-library-btn compact" (click)="openEngineLibrary()" title="Manage reusable engine profiles">
+                <i class="fa fa-sliders"></i> Profiles
+              </button>
+            </div>
+          </div>
+
+          <div class="engine-quick-entry engine-pro-composer">
+            <div class="engine-quick-entry-heading engine-pro-composer-heading">
+              <span class="engine-quick-entry-icon"><i class="fa fa-plus"></i></span>
+              <div>
+                <strong>Add physical engine</strong>
+                <small>Name the machinery position first. A shared profile is optional and can be linked later.</small>
+              </div>
+              <span class="engine-entry-rule"><i class="fa fa-check-circle"></i> 1 engine = 1 position</span>
+            </div>
+            <div class="engine-quick-entry-grid simplified engine-pro-entry-grid">
+              <label class="engine-name-field">
+                <span>Engine name / position <em>*</em></span>
+                <input type="text" [(ngModel)]="manualEngineName" placeholder="e.g. Main Engine Port"
+                  [disabled]="isSavingVessel" (keyup.enter)="assignEngineProfile()" />
+              </label>
+              <label>
+                <span>Engine profile <small>Optional</small></span>
+                <select [(ngModel)]="selectedEngineProfileId" [disabled]="engineProfilesLoading || isSavingVessel">
+                  <option value="">No shared profile</option>
+                  <option *ngFor="let profile of engineProfiles; trackBy: trackByEngineProfile" [value]="profile.id">
+                    {{ engineProfileOptionLabel(profile) }}
+                  </option>
+                </select>
+              </label>
+              <button type="button" class="engine-quick-add-btn engine-pro-add-btn" (click)="assignEngineProfile()"
+                [disabled]="(!manualEngineName.trim() && !selectedEngineProfileId) || isSavingVessel">
+                <i class="fa fa-plus"></i> Add Engine
+              </button>
+            </div>
+            <div class="engine-quick-entry-footer simplified engine-pro-entry-footer">
+              <span><i class="fa fa-lightbulb-o"></i> Example positions: Main Engine Port, Main Engine Starboard, Generator 1</span>
+              <span class="engine-profile-helper"><i class="fa fa-link"></i> Profiles are reusable across vessels</span>
+            </div>
+          </div>
+
+          <div class="realtime-detection-preview" *ngIf="realtimeDetectionPending">
+            <div class="realtime-detection-preview-head">
+              <span><i class="fa fa-search"></i></span>
+              <div>
+                <strong>Realtime Detection Preview</strong>
+                <small>No engine assignment has been changed yet. Review the result before applying.</small>
+              </div>
+              <span class="preview-prefix">{{ form.prefix }}</span>
+            </div>
+            <div class="realtime-detection-metrics">
+              <div><small>Detected</small><strong>{{ realtimeDetectionSummary.total }}</strong></div>
+              <div><small>Existing</small><strong>{{ realtimeDetectionSummary.existing }}</strong></div>
+              <div><small>New</small><strong>{{ realtimeDetectionSummary.newCount }}</strong></div>
+              <div [class.has-conflict]="realtimeDetectionSummary.conflicts > 0"><small>Conflicts</small><strong>{{ realtimeDetectionSummary.conflicts }}</strong></div>
+            </div>
+            <div class="realtime-detection-actions">
+              <button type="button" class="ghost-btn" (click)="cancelRealtimeDetectionPreview()"
+                [disabled]="isSavingVessel">Cancel Preview</button>
+              <button type="button" class="primary-btn" (click)="applyRealtimeMachinery()"
+                [disabled]="isSavingVessel || realtimeDetectionSummary.conflicts > 0">
+                <i class="fa fa-check"></i> Apply Detected Engines
+              </button>
+            </div>
+          </div>
+
+          <div class="engine-connection-summary" *ngIf="hasRealtimeEngineAssignments">
+            <span class="engine-connection-icon"><i class="fa fa-link"></i></span>
+            <div class="engine-connection-copy">
+              <strong>Realtime machinery applied</strong>
+              <small>{{ realtimeMachineryNotice }}</small>
+            </div>
+            <span class="engine-source-status">
+              <i class="fa fa-circle"></i> Applied
+            </span>
+            <button type="button" class="engine-manual-mode-btn"
+              (click)="clearRealtimeEngineAssignments()" [disabled]="isSavingVessel">
+              <i class="fa fa-unlink"></i> Manual Mode
+            </button>
+          </div>
+
+          <div class="engine-profile-loading" *ngIf="engineProfilesLoading">
+            <span class="spinner"></span><span>Loading shared engine profiles...</span>
+          </div>
+          <div class="engine-profile-error" *ngIf="engineProfilesError">
+            <i class="fa fa-exclamation-circle"></i>
+            <span>{{ engineProfilesError }}</span>
+            <button type="button" (click)="loadEngineProfiles(true)">Retry</button>
+          </div>
+
+          <div class="compact-engine-list" *ngIf="(form.engineAssignments?.length || 0) > 0">
+            <article class="compact-engine-card"
+              *ngFor="let assignment of form.engineAssignments || []; trackBy: trackByEngineAssignment"
+              [class.expanded]="isEngineAssignmentExpanded(assignment)"
+              [class.needs-setup]="isRealtimeAssignment(assignment) && !engineProfileForAssignment(assignment)">
+              <div class="compact-engine-summary">
+                <span class="compact-engine-index">{{ engineAssignmentNumber(assignment) }}</span>
+                <span class="engine-profile-icon" [attr.data-category]="engineAssignmentCategory(assignment)">
+                  <i class="fa fa-cog"></i>
+                </span>
+
+                <div class="compact-engine-identity">
+                  <strong>{{ assignment.position || assignment.displayName || 'Unnamed engine' }}</strong>
+                  <small *ngIf="isRealtimeAssignment(assignment); else manualEngineMeta">
+                    Row {{ assignment.realtimeRow }} · Column {{ assignment.realtimeCol }}
+                    <span *ngIf="assignment.realtimeType"> · {{ assignment.realtimeType }}</span>
+                  </small>
+                  <ng-template #manualEngineMeta>
+                    <small>Manual engine<span *ngIf="(assignment.quantity || 1) > 1"> · Legacy quantity {{ assignment.quantity }}</span></small>
+                  </ng-template>
+                </div>
+
+                <div class="compact-engine-profile">
+                  <span>ENGINE PROFILE</span>
+                  <strong *ngIf="engineProfileForAssignment(assignment) as profile; else profileRequired">
+                    {{ engineProfileDisplayName(profile) }}
+                  </strong>
+                  <ng-template #profileRequired>
+                    <strong [class.missing-profile]="isRealtimeAssignment(assignment)">{{ isRealtimeAssignment(assignment) ? 'Profile required' : 'Manual / no profile' }}</strong>
+                  </ng-template>
+                </div>
+
+                <span class="engine-setup-status"
+                  [class.connected]="isRealtimeAssignment(assignment) && !!engineProfileForAssignment(assignment)"
+                  [class.manual]="!isRealtimeAssignment(assignment)"
+                  [class.warning]="isRealtimeAssignment(assignment) && !engineProfileForAssignment(assignment)">
+                  <i class="fa" [ngClass]="engineAssignmentStatusIcon(assignment)"></i>
+                  {{ engineAssignmentStatusLabel(assignment) }}
+                </span>
+
+                <button type="button" class="engine-edit-toggle" (click)="toggleEngineAssignmentEditor(assignment)"
+                  [attr.aria-expanded]="isEngineAssignmentExpanded(assignment)">
+                  <i class="fa" [ngClass]="isEngineAssignmentExpanded(assignment) ? 'fa-chevron-up' : 'fa-pencil'"></i>
+                  <span>{{ isEngineAssignmentExpanded(assignment) ? 'Close' : 'Edit' }}</span>
+                </button>
+              </div>
+
+              <div class="compact-engine-editor" *ngIf="isEngineAssignmentExpanded(assignment)">
+                <div class="engine-editor-grid">
+                  <label *ngIf="!isRealtimeAssignment(assignment)">
+                    <span>Engine name / position</span>
+                    <input type="text" [(ngModel)]="assignment.position" (ngModelChange)="onEngineAssignmentPositionChange(assignment)" placeholder="Enter engine name" />
+                  </label>
+
+                  <label [class.full]="isRealtimeAssignment(assignment)">
+                    <span>Shared engine profile</span>
+                    <select [(ngModel)]="assignment.profileId"
+                      (ngModelChange)="onEngineAssignmentProfileChange(assignment)"
+                      [disabled]="engineProfilesLoading || isSavingVessel">
+                      <option value="">No shared profile</option>
+                      <option
+                        *ngFor="let profileOption of engineProfilesForAssignment(assignment); trackBy: trackByEngineProfile"
+                        [value]="profileOption.id">
+                        {{ engineProfileOptionLabel(profileOption) }}
+                      </option>
+                    </select>
+                  </label>
+
+                </div>
+
+                <div class="engine-editor-footer">
+                  <div class="engine-profile-context"
+                    *ngIf="engineProfileForAssignment(assignment) as profile; else noProfileContext">
+                    <i class="fa fa-check-circle"></i>
+                    <span>
+                      <strong>{{ profile.name }}</strong>
+                      <small>{{ engineProfileCategoryLabel(profile.category) }} · Shared profile linked</small>
+                    </span>
+                  </div>
+                  <ng-template #noProfileContext>
+                    <div class="engine-profile-context" [class.warning]="isRealtimeAssignment(assignment)">
+                      <i class="fa" [ngClass]="isRealtimeAssignment(assignment) ? 'fa-exclamation-triangle' : 'fa-pencil'"></i>
+                      <span>
+                        <strong>{{ isRealtimeAssignment(assignment) ? 'Profile required' : 'Manual engine' }}</strong>
+                        <small>{{ isRealtimeAssignment(assignment) ? 'Select a profile for complete Realtime mapping.' : 'Engine name is saved. Linking a shared profile is optional.' }}</small>
+                      </span>
+                    </div>
+                  </ng-template>
+
+                  <button type="button" class="remove-engine-btn professional-remove"
+                    *ngIf="!isRealtimeAssignment(assignment)" (click)="removeEngineAssignment(assignment.id)"
+                    [disabled]="isSavingVessel">
+                    <i class="fa fa-trash-o"></i> Remove Engine
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="engine-empty-inline engine-pro-empty" *ngIf="assignedEngineCount === 0">
+            <span class="engine-pro-empty-icon"><i class="fa fa-cog"></i></span>
+            <span class="engine-pro-empty-copy">
+              <strong>No engines configured</strong>
+              <small>Add an engine manually above or import machinery positions from Realtime.</small>
+            </span>
+          </div>
+
+
+        </section>
+
+        <div class="save-message" *ngIf="saveNotice">{{ saveNotice }}</div>
+      </div>
+
+
+      <div class="engine-library-panel" *ngIf="engineLibraryOpen" role="dialog" aria-modal="true" aria-label="Engine Profile Library">
+        <div class="engine-library-header">
+          <div class="engine-library-title">
+            <span class="engine-library-title-icon"><i class="fa fa-cogs"></i></span>
+            <div>
+              <strong>Engine Profile Library</strong>
+              <p>Maintain reusable engine specifications separately from vessel positions. A profile can be linked to multiple vessels.</p>
+            </div>
+          </div>
+          <button type="button" title="Close engine library" (click)="closeEngineLibrary()"
+            [disabled]="engineProfileSaving"><i class="fa fa-times"></i></button>
+        </div>
+
+        <div class="engine-library-tools">
+          <label class="engine-profile-search">
+            <i class="fa fa-search"></i>
+            <input type="search" [(ngModel)]="engineProfileSearchTerm" placeholder="Search engine profile..." />
+          </label>
+          <button type="button" class="new-engine-profile-btn" (click)="startNewEngineProfile()"
+            [disabled]="engineProfileSaving"><i class="fa fa-plus"></i> New Profile</button>
+        </div>
+
+        <div class="engine-library-list">
+          <article *ngFor="let profile of filteredEngineProfiles; trackBy: trackByEngineProfile"
+            [class.active]="editingEngineProfileId === profile.id">
+            <button type="button" class="engine-library-select" (click)="editEngineProfile(profile)">
+              <span class="engine-profile-icon" [attr.data-category]="profile.category"><i
+                  class="fa fa-cog"></i></span>
+              <span>
+                <strong>{{ profile.name }}</strong>
+                <small>{{ profile.manufacturer || 'Unspecified' }}{{ profile.model ? ' · ' + profile.model : ''
+                  }}</small>
+                <em>{{ engineProfileCategoryLabel(profile.category) }} · {{ engineProfileUsageCount(profile.id) }} vessel(s)</em>
+              </span>
+            </button>
+            <div class="engine-library-actions">
+              <button type="button" title="Duplicate safely" (click)="duplicateEngineProfile(profile)"
+                [disabled]="engineProfileSaving"><i class="fa fa-copy"></i></button>
+              <button type="button" class="danger" title="Delete profile" (click)="deleteEngineProfile(profile)"
+                [disabled]="engineProfileSaving"><i class="fa fa-trash-o"></i></button>
+            </div>
+          </article>
+          <div class="engine-library-empty" *ngIf="filteredEngineProfiles.length === 0">No engine profiles match this
+            search.</div>
+        </div>
+
+        <div class="engine-profile-editor">
+          <div class="engine-profile-editor-heading">
+            <div>
+              <strong>{{ editingEngineProfileId ? 'Edit Engine Profile' : 'Create Engine Profile' }}</strong>
+              <p>{{ editingEngineProfileId ? 'Changes are shared by every assigned vessel.' : 'Create a reusable
+                profile for vessels with the same engine model.' }}</p>
+            </div>
+            <span *ngIf="editingEngineProfileId">{{ engineProfileUsageCount(editingEngineProfileId) }}
+              vessel(s)</span>
+          </div>
+
+          <div class="engine-profile-form-grid">
+            <label class="full"><span>Profile Name <em>*</em></span><input type="text"
+                [(ngModel)]="engineProfileForm.name" placeholder="e.g. CAT 3512C Main Engine" /></label>
+            <label><span>Manufacturer</span><input type="text" [(ngModel)]="engineProfileForm.manufacturer"
+                placeholder="e.g. Caterpillar" /></label>
+            <label><span>Model</span><input type="text" [(ngModel)]="engineProfileForm.model"
+                placeholder="e.g. 3512C" /></label>
+            <label><span>Engine Type</span><select [(ngModel)]="engineProfileForm.category">
+                <option *ngFor="let option of engineCategoryOptions" [value]="option.value">{{ option.label }}
+                </option>
+              </select></label>
+            <label><span>Fuel Type</span><select [(ngModel)]="engineProfileForm.fuelType">
+                <option *ngFor="let fuel of engineFuelOptions" [value]="fuel">{{ fuel }}</option>
+              </select></label>
+            <label><span>Rated Power (kW)</span><input type="number" min="1"
+                [(ngModel)]="engineProfileForm.ratedPowerKw" placeholder="Optional" /></label>
+            <label><span>Rated RPM</span><input type="number" min="1" [(ngModel)]="engineProfileForm.ratedRpm"
+                placeholder="Optional" /></label>
+            <label><span>Cylinders</span><input type="number" min="1" max="32"
+                [(ngModel)]="engineProfileForm.cylinders" placeholder="Optional" /></label>
+            <label class="full"><span>Description</span><textarea rows="2" [(ngModel)]="engineProfileForm.description"
+                placeholder="Operational notes or engine specification source"></textarea></label>
+          </div>
+
+
+          <button type="button" class="telemetry-toggle"
+            (click)="engineTelemetryMappingOpen = !engineTelemetryMappingOpen"
+            [attr.aria-expanded]="engineTelemetryMappingOpen">
+            <span><i class="fa fa-database"></i> Advanced Telemetry Mapping <small>Optional — configure backend tags only when needed</small></span>
+            <i class="fa" [class.fa-chevron-down]="!engineTelemetryMappingOpen"
+              [class.fa-chevron-up]="engineTelemetryMappingOpen"></i>
+          </button>
+
+          <div class="telemetry-template-note" *ngIf="engineTelemetryMappingOpen"><i class="fa fa-lightbulb-o"></i>
+            Use <code>{{ '{' }}prefix{{ '}' }}</code>, <code>{{ '{' }}vesselId{{ '}' }}</code> and
+            <code>{{ '{' }}index{{ '}' }}</code> as reusable placeholders for each vessel and engine position.</div>
+          <div class="telemetry-mapping-grid" *ngIf="engineTelemetryMappingOpen">
+            <label><span>Power kW Tag</span><input type="text"
+                [(ngModel)]="engineProfileForm.telemetryMapping.powerKwTag"
+                placeholder="e.g. {prefix}_ME{index}_POWER_KW" /></label>
+            <label><span>RPM Tag</span><input type="text" [(ngModel)]="engineProfileForm.telemetryMapping.rpmTag"
+                placeholder="e.g. {prefix}_ME{index}_RPM" /></label>
+            <label><span>Fuel Rate kg/h Tag</span><input type="text"
+                [(ngModel)]="engineProfileForm.telemetryMapping.fuelRateKgPerHourTag"
+                placeholder="e.g. {prefix}_ME{index}_FUEL_KGH" /></label>
+            <label><span>Running Hours Tag</span><input type="text"
+                [(ngModel)]="engineProfileForm.telemetryMapping.runningHoursTag"
+                placeholder="e.g. {prefix}_ME{index}_RUN_HOURS" /></label>
+            <label class="full"><span>Status Tag</span><input type="text"
+                [(ngModel)]="engineProfileForm.telemetryMapping.statusTag"
+                placeholder="e.g. {prefix}_ME{index}_RUNNING" /></label>
+          </div>
+
+          <div class="engine-profile-save-notice" *ngIf="engineProfileSaveNotice"><i class="fa fa-info-circle"></i>{{
+            engineProfileSaveNotice }}</div>
+          <div class="engine-profile-editor-actions">
+            <button type="button" class="cancel-btn" (click)="startNewEngineProfile()"
+              [disabled]="engineProfileSaving">Clear</button>
+            <button type="button" class="primary-btn" (click)="saveEngineProfile()"
+              [disabled]="engineProfileSaving || isSavingVessel">
+              <i class="fa" [ngClass]="engineProfileSaving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+              {{ engineProfileSaving ? 'Saving...' : 'Save Profile' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <button type="button" class="cancel-btn" (click)="closeDrawer()">Cancel</button>
+        <button type="button" class="primary-btn" (click)="saveVessel()" [disabled]="isSavingVessel || engineProfileSaving"><i class="fa"
+            [ngClass]="isSavingVessel ? 'fa-spinner fa-spin' : 'fa-save'"></i> {{ isSavingVessel ? 'Saving...' : 'Save Vessel' }}</button>
+      </footer>
+    </aside>
+</div>

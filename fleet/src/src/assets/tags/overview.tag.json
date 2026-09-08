@@ -1,0 +1,32 @@
+{
+    "lat": {
+        "tagName": "VES-GPS-LAT",
+        "name": "VES_GPS_LAT",
+        "cal": false
+    },
+    "long": {
+        "tagName": "VES-GPS-LONG",
+        "name": "VES_GPS_LONG",
+        "cal": false
+    },
+    "knot_current": {
+        "tagName": "VES-GPS-SPEED",
+        "name": "VES_GPS_SPEED",
+        "cal": false
+    },
+    "heading": {
+        "tagName": "VES-GPS-HEAD",
+        "name": "VES_GPS_HEAD",
+        "cal": false
+    },
+    "mile_current": {
+        "tagName": "VES-GPS-DIS-TODAY",
+        "name": "VES_GPS_DIS_TODAY",
+        "cal": false
+    },
+    "cons_total": {
+        "tagName": "VES-CONS-TODAY",
+        "name": "VES_CONS_TODAY",
+        "cal": false
+    }
+}

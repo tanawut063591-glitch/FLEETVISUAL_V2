@@ -56,15 +56,15 @@
           </span>
         </div>
 
-        <p>{{ getVesselType(selectedVessel) }}</p>
+        <div class="vessel-meta-row">
+          <span class="vessel-type">{{ getVesselType(selectedVessel) }}</span>
+          <span class="meta-separator">•</span>
+          <span class="last-seen">Last seen {{ getLastUpdateText(selectedVessel) }}</span>
+        </div>
 
         <span class="coordinate">
           {{ getCoordinateText(selectedVessel) }}
         </span>
-
-        <small>
-          Last seen: {{ getLastUpdateText(selectedVessel) }}
-        </small>
 
       </div>
 

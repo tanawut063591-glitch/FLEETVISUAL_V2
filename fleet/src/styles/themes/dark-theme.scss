@@ -1,3 +1,4 @@
+@use './report/report-dark-overrides';
 [data-theme='dark'] {
   color-scheme: dark;
 
@@ -65,6 +66,85 @@
   --chart-brd: rgba(148, 163, 184, 0.18);
   --chart-txt: #cbd5e1;
   --chart-tlp: #0c0e12;
+
+  /* Report charts: preserve the original vivid Fleet Visual data colors.
+     Only neutral plot/grid tokens change with Light/Dark mode. */
+  --report-series-distance-start: #fbbf24;
+  --report-series-distance-end: #f59e0b;
+  --report-series-speed-start: #2dd4bf;
+  --report-series-speed-end: #0f9f91;
+  --report-series-main-start: #60a5fa;
+  --report-series-main-end: #2563eb;
+  --report-series-aux-start: #a78bfa;
+  --report-series-aux-end: #7c3aed;
+  --report-series-port-start: #60a5fa;
+  --report-series-port-end: #2563eb;
+  --report-series-starboard-start: #5eead4;
+  --report-series-starboard-end: #14b8a6;
+  --report-series-center-start: #a78bfa;
+  --report-series-center-end: #7c3aed;
+  --report-series-total-start: #fbbf24;
+  --report-series-total-mid: #f59e0b;
+  --report-series-total-end: #d97706;
+  --report-series-port-ae-start: #38bdf8;
+  --report-series-port-ae-end: #0284c7;
+  --report-series-starboard-ae-start: #94a3b8;
+  --report-series-starboard-ae-end: #64748b;
+  --report-series-shaft-run: #2387a8;
+  --report-series-shaft-rpm: #3559a8;
+  --report-series-engine-load: #f472b6;
+  --report-series-reference-max: #dc2626;
+  --report-series-reference-avg: #d97706;
+  --report-series-reference-min: #15803d;
+  --report-theme-grid: rgba(121, 164, 214, 0.15);
+  --report-theme-column-line: rgba(121, 164, 214, 0.085);
+  --report-theme-axis: #9fb2ca;
+  --report-theme-surface: #0f1a2a;
+
+  /* Report UI semantic palette — all Report theme colors are centralized here. */
+  --report-empty-donut: #26364c;
+  --report-ring-track: #26364c;
+  --report-ring-engine: #2563eb;
+  --report-ring-shaft: #14b8a6;
+  --report-ring-quality: #22c55e;
+  --report-quality-good: #16a34a;
+  --report-quality-track: #26364c;
+  --report-fuel-main: #2563eb;
+  --report-fuel-auxiliary: #14b8a6;
+  --report-fuel-generator: #84cc16;
+  --report-fuel-other: #f59e0b;
+  --report-mode-1: #67c2e8;
+  --report-mode-2: #74a8f0;
+  --report-mode-3: #7c8df2;
+  --report-mode-4: #ad76ec;
+  --report-mode-5: #d879e6;
+  --report-mode-6: #2dd4bf;
+  --report-mode-7: #fbbf24;
+  --report-mode-8: #4ade80;
+  --report-mode-9: #fb7185;
+  --report-mode-10: #22d3ee;
+  --report-mode-11: #fb923c;
+  --report-mode-12: #a3e635;
+  --report-mode-13: #f472b6;
+  --report-mode-14: #38bdf8;
+  --report-mode-15: #a78bfa;
+  --report-mode-16: #94a3b8;
+  --report-pie-text: #eaf1fb;
+  --report-pie-muted: #a5afbb;
+  --report-pie-connector: #626c79;
+  --report-pie-border: #07090b;
+  --report-pie-tooltip-bg: rgba(8, 10, 13, 0.98);
+  --report-pie-tooltip-border: #2a3038;
+  --report-pie-tooltip-shadow: rgba(0, 0, 0, 0.42);
+  --report-map-background: #0b1626;
+  --report-map-route-halo: #07101d;
+  --report-map-route-line: #60a5fa;
+  --report-map-marker-label: #ffffff;
+  --report-map-start: #16a34a;
+  --report-map-end: #ef4444;
+  --report-map-vessel: #60a5fa;
+  --report-route-sea-start: #10253b;
+  --report-route-sea-end: #0b192a;
 
   --srch-bg: #111318;
   --srch-txt: #cbd5e1;
@@ -1693,7 +1773,7 @@
 [data-theme='dark'] .p-datepicker-calendar-container,
 [data-theme='dark'] .ui-datepicker,
 [data-theme='dark'] .ui-datepicker-header {
-  background: #0a111b !important;
+  background: #090a0d !important;
   color: #e5edf8 !important;
   border-color: rgba(148, 163, 184, 0.20) !important;
 }
@@ -2058,7 +2138,7 @@
 }
 
 [data-theme='dark'] .tag-filter-btn:hover {
-  background: #17263a !important;
+  background: #1b2028 !important;
   border-color: #4e78ad !important;
   color: #bfdbfe !important;
 }
@@ -2100,7 +2180,7 @@
 
 [data-theme='dark'] .tag-side-tabs button:hover {
   color: #dbeafe !important;
-  background: #17263a !important;
+  background: #1b2028 !important;
 }
 
 [data-theme='dark'] .tag-side-tabs button.active {
@@ -3802,3 +3882,1228 @@ html[data-theme='dark'] app-report .pro-report-footer > div { border-color: rgba
   }
 }
 
+
+/* REPORT PRO V9 — explicit report/vessel hierarchy in dark mode */
+html[data-theme='dark'] app-report .pro-report-page-icon-v9 {
+  color: #7db6ff !important;
+  background: rgba(37, 99, 235, 0.15) !important;
+  border-color: rgba(96, 165, 250, 0.34) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='dark'] app-report .pro-report-title-v9 {
+  color: #f8fafc !important;
+}
+
+html[data-theme='dark'] app-report .pro-vessel-context-v9 {
+  background: rgba(15, 23, 42, 0.72) !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+html[data-theme='dark'] app-report .pro-vessel-context-label-v9 {
+  color: #94a3b8 !important;
+  border-right-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+html[data-theme='dark'] app-report .pro-vessel-name-v9 {
+  color: #dbeafe !important;
+}
+
+html[data-theme='dark'] app-report .pro-report-topbar--v5 {
+  border-top-color: #3b82f6 !important;
+}
+
+@media (max-width: 760px) {
+  html[data-theme='dark'] app-report .pro-vessel-context-label-v9 {
+    border-right: 0 !important;
+  }
+}
+
+/* ========================================================================== */
+/* REPORT PRO V15 — Dark segmented UI/PDF switch                             */
+/* Keeps the report mode control fully dark; the selected mode uses the       */
+/* FleetVisual blue accent instead of the light-theme white surface.           */
+/* ========================================================================== */
+html[data-theme='dark'] app-report .pro-report-view-switch {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  background: linear-gradient(180deg, #11151c 0%, #0b0e13 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+html[data-theme='dark'] app-report .pro-report-view-switch button {
+  border-color: transparent !important;
+  color: #94a3b8 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='dark'] app-report .pro-report-view-switch button i {
+  color: #7f93ac !important;
+}
+
+html[data-theme='dark'] app-report .pro-report-view-switch button:hover:not(.is-active) {
+  border-color: rgba(96, 165, 250, 0.18) !important;
+  color: #e2e8f0 !important;
+  background: #171d26 !important;
+}
+
+html[data-theme='dark'] app-report .pro-report-view-switch button:hover:not(.is-active) i {
+  color: #93c5fd !important;
+}
+
+html[data-theme='dark'] app-report .pro-report-view-switch button.is-active {
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #2563eb 0%, #1677ff 100%) !important;
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+}
+
+html[data-theme='dark'] app-report .pro-report-view-switch button.is-active i {
+  color: #ffffff !important;
+}
+
+html[data-theme='dark'] app-report .pro-report-view-switch button:focus-visible {
+  outline-color: #60a5fa !important;
+}
+
+/* ========================================================================== */
+/* REPORT PRO V16 — Dark timeline text contrast                              */
+/* Keeps mode-history labels readable on dark cards without changing light UI. */
+/* ========================================================================== */
+html[data-theme='dark'] app-report .pro-mode-segments article > strong,
+html[data-theme='dark'] app-report .pro-running-list .mode-running-copy > span,
+html[data-theme='dark'] app-report .pro-running-list .mode-running-value > strong {
+  color: #f1f5f9 !important;
+}
+
+html[data-theme='dark'] app-report .pro-mode-segments .mode-segment-time,
+html[data-theme='dark'] app-report .pro-mode-segments article > small,
+html[data-theme='dark'] app-report .pro-running-list .mode-running-copy > small,
+html[data-theme='dark'] app-report .pro-running-list .mode-running-value > small {
+  color: #9fb0c6 !important;
+}
+
+html[data-theme='dark'] app-report .pro-mode-segments article.current > strong,
+html[data-theme='dark'] app-report .pro-running-list > div.current .mode-running-copy > span,
+html[data-theme='dark'] app-report .pro-running-list > div.current .mode-running-value > strong {
+  color: #ffffff !important;
+}
+
+/* ========================================================================== */
+/* REPORT PRO V18 — high-contrast dark typography                            */
+/* Improves legibility for historian timeline and running-hours content only. */
+/* ========================================================================== */
+html[data-theme='dark'] app-report .pro-report-shell {
+  --pro-text: #f8fafc;
+  --pro-text-2: #e2e8f0;
+  --pro-muted: #b7c3d3;
+}
+
+html[data-theme='dark'] app-report .pro-timeline-panel .pro-panel-header h2,
+html[data-theme='dark'] app-report .pro-running-panel .pro-panel-header h2 {
+  color: #f8fafc !important;
+  font-weight: 800 !important;
+}
+
+html[data-theme='dark'] app-report .pro-timeline-panel .pro-panel-header p,
+html[data-theme='dark'] app-report .pro-timeline-meta > span,
+html[data-theme='dark'] app-report .pro-timeline-scale > span {
+  color: #b8c4d4 !important;
+  font-weight: 600 !important;
+}
+
+html[data-theme='dark'] app-report .pro-timeline-meta > span {
+  font-size: 8.6px !important;
+}
+
+html[data-theme='dark'] app-report .pro-timeline-meta > span > strong {
+  color: #f1f5f9 !important;
+  font-size: 9.5px !important;
+  font-weight: 800 !important;
+}
+
+html[data-theme='dark'] app-report .pro-timeline-scale > span {
+  font-size: 8.2px !important;
+}
+
+html[data-theme='dark'] app-report .pro-mode-segments .mode-segment-time,
+html[data-theme='dark'] app-report .pro-mode-segments .mode-segment-time > span {
+  color: #c7d2e0 !important;
+  font-size: 8.6px !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme='dark'] app-report .pro-mode-segments article > strong {
+  color: #f8fafc !important;
+  font-size: 10.4px !important;
+  font-weight: 800 !important;
+  line-height: 1.32 !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.22);
+}
+
+html[data-theme='dark'] app-report .pro-mode-segments article > small {
+  color: #c3cfdd !important;
+  font-size: 8.6px !important;
+  font-weight: 650 !important;
+}
+
+html[data-theme='dark'] app-report .pro-running-list .mode-running-copy > span {
+  color: #eef4fb !important;
+  font-size: 10.4px !important;
+  font-weight: 800 !important;
+  line-height: 1.3 !important;
+}
+
+html[data-theme='dark'] app-report .pro-running-list .mode-running-copy > small,
+html[data-theme='dark'] app-report .pro-running-list .mode-running-value > small {
+  color: #c3cfdd !important;
+  font-size: 8.4px !important;
+  font-weight: 650 !important;
+}
+
+html[data-theme='dark'] app-report .pro-running-list .mode-running-value > strong {
+  color: #ffffff !important;
+  font-size: 10.8px !important;
+  font-weight: 850 !important;
+}
+
+html[data-theme='dark'] app-report .pro-running-list > div.current .mode-running-copy > span,
+html[data-theme='dark'] app-report .pro-running-list > div.current .mode-running-value > strong,
+html[data-theme='dark'] app-report .pro-mode-segments article.current > strong {
+  color: #ffffff !important;
+}
+
+html[data-theme='dark'] app-report .pro-running-list > div,
+html[data-theme='dark'] app-report .pro-mode-segments article {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+/* ========================================================================== */
+/* REPORT PRO V24 — Historical Report dark-theme polish                       */
+/* Source of truth for the current Historical/Daily/Monthly Report dark UI.    */
+/* Layout lives in styles/report/_report-layout.scss; theme/contrast stays here. */
+/* ========================================================================== */
+
+html[data-theme='dark'] app-report {
+  /* Keep Report aligned with the Realtime/global graphite palette. */
+  --report-bg: #050607;
+  --report-card: #101216;
+  --report-card-soft: #0a0d13;
+  --report-line: rgba(148, 163, 184, 0.20);
+  --report-line-strong: rgba(148, 163, 184, 0.30);
+  --report-text: #f8fafc;
+  --report-muted: #aebbd0;
+  --report-blue: #60a5fa;
+  --report-blue-soft: rgba(59, 130, 246, 0.14);
+  --report-green: #34d399;
+  --report-orange: #fbbf24;
+  --report-red: #fb7185;
+  --report-shadow: 0 14px 38px rgba(0, 0, 0, 0.32);
+  --report-ring-track: #263244;
+
+  --fv-surface: #101216;
+  --fv-subtle-surface: #0a0d13;
+  --fv-border: rgba(148, 163, 184, 0.20);
+  --fv-text: #f8fafc;
+  --fv-muted: #aebbd0;
+}
+
+html[data-theme='dark'] app-report .historical-ui-toolbar,
+html[data-theme='dark'] app-report .historical-daily-trend,
+html[data-theme='dark'] app-report .daily-ui-master-header,
+html[data-theme='dark'] app-report .daily-overview-card,
+html[data-theme='dark'] app-report .daily-section-nav,
+html[data-theme='dark'] app-report .report-table-panel,
+html[data-theme='dark'] app-report .premium-daily-card,
+html[data-theme='dark'] app-report .report-book-section,
+html[data-theme='dark'] app-report .daily-pie-card,
+html[data-theme='dark'] app-report .daily-map-card {
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  background: linear-gradient(180deg, #0f131a 0%, #0a0d13 100%) !important;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.28) !important;
+}
+
+html[data-theme='dark'] app-report .report-table-panel__header,
+html[data-theme='dark'] app-report .premium-daily-card > .report-table-panel__header,
+html[data-theme='dark'] app-report .daily-map-card__title,
+html[data-theme='dark'] app-report .daily-ui-sync-meta,
+html[data-theme='dark'] app-report .daily-overview-legend > div,
+html[data-theme='dark'] app-report .daily-overview-metric-grid > div,
+html[data-theme='dark'] app-report .daily-pie-legend > div,
+html[data-theme='dark'] app-report .daily-chart-header-stat,
+html[data-theme='dark'] app-report .report-table-panel__meta {
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  background: #111318 !important;
+}
+
+html[data-theme='dark'] app-report .report-table-panel__header h2,
+html[data-theme='dark'] app-report .report-table-panel__meta strong,
+html[data-theme='dark'] app-report .daily-overview-card__header h3,
+html[data-theme='dark'] app-report .daily-overview-donut strong,
+html[data-theme='dark'] app-report .daily-util-ring strong,
+html[data-theme='dark'] app-report .daily-quality-ring strong,
+html[data-theme='dark'] app-report .daily-overview-metric-grid strong,
+html[data-theme='dark'] app-report .daily-quality-list strong,
+html[data-theme='dark'] app-report .daily-pie-center strong,
+html[data-theme='dark'] app-report .daily-map-card__title strong {
+  color: #f7faff !important;
+}
+
+/* High-contrast overview copy: prevents light-theme navy values from leaking into dark cards. */
+html[data-theme='dark'] app-report .daily-overview-legend span,
+html[data-theme='dark'] app-report .daily-overview-metric-grid span,
+html[data-theme='dark'] app-report .daily-quality-list span,
+html[data-theme='dark'] app-report .daily-util-caption,
+html[data-theme='dark'] app-report .daily-overview-donut span,
+html[data-theme='dark'] app-report .daily-util-ring span,
+html[data-theme='dark'] app-report .daily-quality-ring span {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme='dark'] app-report .daily-overview-legend strong {
+  color: #f8fafc !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+}
+
+html[data-theme='dark'] app-report .daily-overview-legend b,
+html[data-theme='dark'] app-report .daily-overview-card__header small {
+  color: #94a3b8 !important;
+}
+
+html[data-theme='dark'] app-report .daily-overview-card__header em {
+  color: #cbd5e1 !important;
+  border-color: rgba(148, 163, 184, 0.20) !important;
+  background: #080b11 !important;
+}
+
+/* Semantic icon chips mirror Realtime KPI cards without extra effects. */
+html[data-theme='dark'] app-report .daily-overview-icon {
+  color: #60a5fa !important;
+  border-color: rgba(96, 165, 250, 0.28) !important;
+  background: rgba(37, 99, 235, 0.14) !important;
+}
+html[data-theme='dark'] app-report .daily-overview-card--util .daily-overview-icon {
+  color: #5eead4 !important;
+  border-color: rgba(45, 212, 191, 0.28) !important;
+  background: rgba(20, 184, 166, 0.14) !important;
+}
+html[data-theme='dark'] app-report .daily-overview-card--voyage .daily-overview-icon {
+  color: #c4b5fd !important;
+  border-color: rgba(167, 139, 250, 0.28) !important;
+  background: rgba(139, 92, 246, 0.15) !important;
+}
+html[data-theme='dark'] app-report .daily-overview-card--quality .daily-overview-icon {
+  color: #86efac !important;
+  border-color: rgba(74, 222, 128, 0.28) !important;
+  background: rgba(34, 197, 94, 0.14) !important;
+}
+
+html[data-theme='dark'] app-report .report-table-panel__header p,
+html[data-theme='dark'] app-report .report-table-panel__meta small,
+html[data-theme='dark'] app-report .daily-overview-card__header p,
+html[data-theme='dark'] app-report .daily-map-card__title span,
+html[data-theme='dark'] app-report .daily-chart-legend,
+html[data-theme='dark'] app-report .historical-daily-trend > header p {
+  color: #aebbd0 !important;
+}
+
+/* Fleet Visual blue table header + graphite rows. */
+html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .report-book-table thead th,
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix thead th {
+  color: #ffffff !important;
+  border-color: rgba(147, 197, 253, 0.16) !important;
+  background: linear-gradient(135deg, #174782 0%, #1f5fae 100%) !important;
+}
+
+html[data-theme='dark'] app-report .report-book-table th,
+html[data-theme='dark'] app-report .report-book-table td,
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix th,
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix td {
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+html[data-theme='dark'] app-report .report-book-table tbody th,
+html[data-theme='dark'] app-report .report-book-table tbody td,
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix tbody th,
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix tbody td {
+  color: #e5edf8 !important;
+  background: #101216 !important;
+}
+
+html[data-theme='dark'] app-report .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) th,
+html[data-theme='dark'] app-report .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) td,
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix tbody tr:nth-child(even) th,
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix tbody tr:nth-child(even) td {
+  background: #0c0e12 !important;
+}
+
+html[data-theme='dark'] app-report .report-book-table tbody tr:hover th,
+html[data-theme='dark'] app-report .report-book-table tbody tr:hover td,
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix tbody tr:hover th,
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix tbody tr:hover td {
+  background: #1b2028 !important;
+}
+
+html[data-theme='dark'] app-report .daily-pdf-table .section-row th,
+html[data-theme='dark'] app-report .premium-daily-card .daily-pdf-table .section-row th {
+  color: #dbeafe !important;
+  background: #111a27 !important;
+}
+
+html[data-theme='dark'] app-report .daily-pdf-table .separator-row td {
+  background: #090a0d !important;
+}
+
+html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .daily-pdf-table .total-row th,
+html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .daily-pdf-table .total-row td,
+html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .daily-tracking-table .total-row th,
+html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .daily-tracking-table .total-row td {
+  color: #ffe0a3 !important;
+  border-color: rgba(245, 158, 11, 0.24) !important;
+  background: #2a2113 !important;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix th:first-child,
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix td:first-child {
+  color: #dbe5f1 !important;
+  background: #111a27 !important;
+  box-shadow: 1px 0 0 rgba(148, 163, 184, 0.18) !important;
+}
+
+/* Charts keep enough contrast without glowing or increasing GPU cost. */
+html[data-theme='dark'] app-report .premium-chart-section .daily-multi-bar-chart,
+html[data-theme='dark'] app-report .premium-chart-section .daily-stacked-chart,
+html[data-theme='dark'] app-report .premium-chart-section .daily-single-bar-chart,
+html[data-theme='dark'] app-report .premium-chart-section .daily-line-chart,
+html[data-theme='dark'] app-report .daily-route-plot {
+  border-color: rgba(148, 163, 184, 0.16) !important;
+  background:
+    linear-gradient(to top, transparent 24.5%, rgba(148, 163, 184, .10) 25%, transparent 25.5%),
+    linear-gradient(to top, transparent 49.5%, rgba(148, 163, 184, .10) 50%, transparent 50.5%),
+    linear-gradient(to top, transparent 74.5%, rgba(148, 163, 184, .10) 75%, transparent 75.5%),
+    #090d13 !important;
+}
+
+html[data-theme='dark'] app-report .premium-chart-section .daily-chart-legend span {
+  border-color: rgba(148, 163, 184, 0.17) !important;
+  color: #cbd5e1 !important;
+  background: #111318 !important;
+}
+
+html[data-theme='dark'] app-report .daily-overview-donut::after,
+html[data-theme='dark'] app-report .daily-util-ring::after,
+html[data-theme='dark'] app-report .daily-quality-ring::after,
+html[data-theme='dark'] app-report .daily-pie::after {
+  background: #0a0d13 !important;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.16) !important;
+}
+
+/* Report type/date controls and selection state. */
+html[data-theme='dark'] app-report .historical-report-type,
+html[data-theme='dark'] app-report .daily-ui-selection-state,
+html[data-theme='dark'] app-report .historical-ui-mode-switch,
+html[data-theme='dark'] app-report .period-aggregation-note {
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  background: #111318 !important;
+}
+
+html[data-theme='dark'] app-report .historical-report-type__select select {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  color: #eef4fb !important;
+  background: #0c0e12 !important;
+}
+
+html[data-theme='dark'] app-report .historical-report-type__select select:hover:not(:disabled),
+html[data-theme='dark'] app-report .historical-ui-yesterday:hover:not(:disabled) {
+  border-color: rgba(96, 165, 250, 0.48) !important;
+  background: #1b2028 !important;
+}
+
+html[data-theme='dark'] app-report .daily-ui-selection-state strong,
+html[data-theme='dark'] app-report .period-aggregation-note strong,
+html[data-theme='dark'] app-report .historical-report-type > label span {
+  color: #eef5ff !important;
+}
+
+html[data-theme='dark'] app-report .daily-ui-selection-state span,
+html[data-theme='dark'] app-report .period-aggregation-note span,
+html[data-theme='dark'] app-report .historical-report-type > label small {
+  color: #aebbd0 !important;
+}
+
+/* Interactive chart tooltip also belongs to the global theme layer. */
+html[data-theme='dark'] app-report .report-chart-tooltip {
+  border-color: rgba(148, 163, 184, .24) !important;
+  color: #f8fafc !important;
+  background: rgba(9, 10, 13, .985) !important;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, .42) !important;
+}
+
+html[data-theme='dark'] app-report .report-chart-tooltip strong {
+  color: #f8fbff !important;
+}
+
+html[data-theme='dark'] app-report .report-chart-tooltip span {
+  color: #b2c1d4 !important;
+}
+
+html[data-theme='dark'] app-report .report-book-table-wrap,
+html[data-theme='dark'] app-report .hourly-table-wrap {
+  scrollbar-color: #3a4b61 #0a1018;
+}
+
+/* ========================================================================== */
+/* REPORT PRO V25 — unified Historical command panel (dark)                   */
+/* Dark palette remains centralized here; styles/report owns Report layout.    */
+/* ========================================================================== */
+
+html[data-theme='dark'] app-report .report-page:not(.report-page--official) .pro-report-topbar--v5 {
+  border-color: rgba(148, 163, 184, 0.20) !important;
+  border-bottom: 0 !important;
+  background: linear-gradient(180deg, #0f131a 0%, #0a0d13 100%) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='dark'] app-report .report-page:not(.report-page--official) .historical-ui-toolbar {
+  border-color: rgba(148, 163, 184, 0.20) !important;
+  border-left-width: 1px !important;
+  background: linear-gradient(180deg, #0d1117 0%, #090c11 100%) !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24) !important;
+}
+
+html[data-theme='dark'] app-report .report-page:not(.report-page--official) .historical-ui-toolbar::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(148, 163, 184, 0.16) 8%,
+    rgba(148, 163, 184, 0.16) 92%,
+    transparent
+  ) !important;
+}
+
+/* ========================================================================== */
+/* REPORT — Period overview table / Fleet Visual blue                         */
+/* ========================================================================== */
+
+/* Match the monthly/daily Period Overview table with the blue headers used by
+   the other Report tables. This intentionally overrides the legacy orange
+   component rule only inside the historical trend table. */
+html[data-theme='dark'] app-report .historical-daily-trend__table .report-book-table thead th {
+  color: #ffffff !important;
+  border-color: rgba(147, 197, 253, 0.16) !important;
+  background: linear-gradient(135deg, #174782 0%, #1f5fae 100%) !important;
+}
+
+html[data-theme='dark'] app-report .historical-daily-trend__table .report-book-table tbody tr:nth-child(odd) th,
+html[data-theme='dark'] app-report .historical-daily-trend__table .report-book-table tbody tr:nth-child(odd) td {
+  color: #e5edf8 !important;
+  background: #101216 !important;
+}
+
+html[data-theme='dark'] app-report .historical-daily-trend__table .report-book-table tbody tr:nth-child(even) th,
+html[data-theme='dark'] app-report .historical-daily-trend__table .report-book-table tbody tr:nth-child(even) td {
+  color: #e5edf8 !important;
+  background: #0c0e12 !important;
+}
+
+html[data-theme='dark'] app-report .historical-daily-trend__table .report-book-table tbody tr:hover th,
+html[data-theme='dark'] app-report .historical-daily-trend__table .report-book-table tbody tr:hover td {
+  background: #172238 !important;
+}
+
+
+/* REPORT PRO V28 — Vessel Tracking table frame */
+html[data-theme='dark'] app-report .daily-tracking-table-wrap {
+  border-color: rgba(148, 163, 184, .18) !important;
+  background: #0d131c !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .18) !important;
+}
+
+
+/* ========================================================================== */
+/* REPORT PRO V16 — GRAPHITE BLACK DARK THEME / FULL REPORT POLISH             */
+/* 2026-09-07                                                                  */
+/*                                                                            */
+/* Goal: make Report visually consistent with the rest of Fleet Visual Dark   */
+/* mode. The report previously inherited several navy-blue surfaces from old  */
+/* chart/dashboard revisions. This final override keeps blue only as an accent */
+/* and preserves all telemetry series colors, MAX/AVG/MIN references, layout,  */
+/* responsive scrolling and report-service logic.                             */
+/* ========================================================================== */
+
+html[data-theme='dark'] app-report {
+  /* Graphite surfaces — blue is accent only. */
+  --report-bg: #030405;
+  --report-card: #090b0e;
+  --report-card-soft: #0d0f12;
+  --report-line: rgba(148, 163, 184, 0.14);
+  --report-line-strong: rgba(148, 163, 184, 0.22);
+  --report-text: #f5f7fa;
+  --report-muted: #929cab;
+  --report-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+
+  /* Plot/grid neutrals. Data-series colors stay unchanged. */
+  --report-theme-grid: rgba(148, 163, 184, 0.145);
+  --report-theme-column-line: rgba(148, 163, 184, 0.075);
+  --report-theme-axis: #9aa5b4;
+  --report-theme-surface: #080a0d;
+
+  /* Pro shell shares the same black/graphite language. */
+  --pro-bg: #030405;
+  --pro-card: #090b0e;
+  --pro-card-soft: #0d0f12;
+  --pro-line: rgba(148, 163, 184, 0.14);
+  --pro-line-strong: rgba(148, 163, 184, 0.22);
+  --pro-text: #f7f9fb;
+  --pro-text-2: #cbd2dc;
+  --pro-muted: #929cab;
+  --pro-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+/* Page canvas: remove the old navy glow. */
+html[data-theme='dark'] body app-report .report-page,
+html[data-theme='dark'] body app-report .report-page:not(.report-page--official) {
+  color: var(--report-text) !important;
+  background: linear-gradient(180deg, #050607 0%, #020304 100%) !important;
+}
+
+html[data-theme='dark'] body app-report .report-dashboard,
+html[data-theme='dark'] body app-report .report-dashboard--daily {
+  border-color: rgba(148, 163, 184, 0.13) !important;
+  background: #050607 !important;
+  box-shadow: none !important;
+}
+
+/* Top bars / major cards --------------------------------------------------- */
+html[data-theme='dark'] body app-report .pro-report-topbar,
+html[data-theme='dark'] body app-report .pro-report-topbar--v5,
+html[data-theme='dark'] body app-report .daily-ui-master-header,
+html[data-theme='dark'] body app-report .daily-overview-card,
+html[data-theme='dark'] body app-report .daily-section-nav,
+html[data-theme='dark'] body app-report .premium-daily-card,
+html[data-theme='dark'] body app-report .daily-pie-card,
+html[data-theme='dark'] body app-report .daily-map-card,
+html[data-theme='dark'] body app-report .pro-panel,
+html[data-theme='dark'] body app-report .pro-kpi-card,
+html[data-theme='dark'] body app-report .pro-report-footer {
+  border-color: rgba(148, 163, 184, 0.15) !important;
+  background: linear-gradient(180deg, #0d0f12 0%, #080a0d 100%) !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24) !important;
+}
+
+html[data-theme='dark'] body app-report .daily-ui-master-header::after,
+html[data-theme='dark'] body app-report .pro-report-topbar--v5::after {
+  opacity: 0.035 !important;
+}
+
+/* Section headers: graphite, not navy. Keep the thin Fleet blue accent. */
+html[data-theme='dark'] body app-report .premium-daily-card > .report-table-panel__header,
+html[data-theme='dark'] body app-report .daily-report-section .report-table-panel__header,
+html[data-theme='dark'] body app-report .pro-panel-header,
+html[data-theme='dark'] body app-report .daily-map-card__title {
+  border-color: rgba(148, 163, 184, 0.13) !important;
+  background: linear-gradient(180deg, #101216 0%, #0a0c0f 100%) !important;
+}
+
+html[data-theme='dark'] body app-report .daily-report-section,
+html[data-theme='dark'] body app-report .premium-chart-section {
+  border-color: rgba(148, 163, 184, 0.14) !important;
+  background: #090b0e !important;
+}
+
+html[data-theme='dark'] body app-report .daily-report-section:not(.daily-report-section--page1):not(.daily-report-section--mode) {
+  border-top-color: rgba(59, 130, 246, 0.78) !important;
+}
+
+/* Secondary cards / badges ------------------------------------------------ */
+html[data-theme='dark'] body app-report .daily-ui-sync-meta,
+html[data-theme='dark'] body app-report .daily-overview-legend > div,
+html[data-theme='dark'] body app-report .daily-overview-metric-grid > div,
+html[data-theme='dark'] body app-report .daily-section-nav a,
+html[data-theme='dark'] body app-report .daily-pie-legend > div,
+html[data-theme='dark'] body app-report .daily-chart-header-stat,
+html[data-theme='dark'] body app-report .daily-mode-chart-summary,
+html[data-theme='dark'] body app-report .daily-mode-chart-summary > div,
+html[data-theme='dark'] body app-report .daily-compact-note,
+html[data-theme='dark'] body app-report .daily-details-toggle,
+html[data-theme='dark'] body app-report .pro-period-control,
+html[data-theme='dark'] body app-report .pro-panel-header > em,
+html[data-theme='dark'] body app-report .pro-segmented,
+html[data-theme='dark'] body app-report .pro-segmented--switch {
+  border-color: rgba(148, 163, 184, 0.15) !important;
+  background: #0c0e11 !important;
+  box-shadow: none !important;
+}
+
+/* Chart plotting surfaces ------------------------------------------------- */
+html[data-theme='dark'] body app-report .daily-hourly-sync,
+html[data-theme='dark'] body app-report .daily-hourly-sync__content,
+html[data-theme='dark'] body app-report .daily-axis-chart,
+html[data-theme='dark'] body app-report .daily-axis-chart__plot,
+html[data-theme='dark'] body app-report .daily-chart-y-axis,
+html[data-theme='dark'] body app-report .daily-speed-axis-frame,
+html[data-theme='dark'] body app-report .daily-speed-axis-frame__plot,
+html[data-theme='dark'] body app-report .historical-daily-trend__axis-frame,
+html[data-theme='dark'] body app-report .daily-route-plot,
+html[data-theme='dark'] body app-report .daily-line-chart,
+html[data-theme='dark'] body app-report .daily-multi-bar-chart,
+html[data-theme='dark'] body app-report .daily-stacked-chart,
+html[data-theme='dark'] body app-report .daily-single-bar-chart,
+html[data-theme='dark'] body app-report .premium-chart-section .daily-multi-bar-chart,
+html[data-theme='dark'] body app-report .premium-chart-section .daily-stacked-chart,
+html[data-theme='dark'] body app-report .premium-chart-section .daily-single-bar-chart,
+html[data-theme='dark'] body app-report .premium-chart-section .daily-line-chart {
+  border-color: rgba(148, 163, 184, 0.14) !important;
+  background-color: #080a0d !important;
+  background-image: none !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018) !important;
+}
+
+/* Rebuild calm neutral plot grid after removing blue backgrounds. */
+html[data-theme='dark'] body app-report .daily-hourly-sync .daily-multi-bar-chart,
+html[data-theme='dark'] body app-report .daily-hourly-sync .daily-stacked-chart,
+html[data-theme='dark'] body app-report .daily-hourly-sync .daily-single-bar-chart,
+html[data-theme='dark'] body app-report #daily-page-5 .daily-combo-plot {
+  background:
+    repeating-linear-gradient(to right,
+      transparent 0 calc(var(--report-hour-data-col) - 1px),
+      rgba(148, 163, 184, 0.065) calc(var(--report-hour-data-col) - 1px) var(--report-hour-data-col)),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.13) 0 1px, transparent 1px 25%),
+    linear-gradient(to bottom, transparent 24.7%, rgba(148, 163, 184, 0.13) 25% 25.5%, transparent 25.8% 50%),
+    linear-gradient(to bottom, transparent 49.7%, rgba(148, 163, 184, 0.13) 50% 50.5%, transparent 50.8% 75%),
+    linear-gradient(to bottom, transparent 74.7%, rgba(148, 163, 184, 0.13) 75% 75.5%, transparent 75.8% 99.4%, rgba(148, 163, 184, 0.13) 99.4% 100%),
+    #080a0d !important;
+}
+
+html[data-theme='dark'] body app-report .daily-speed-axis-frame .daily-line-chart,
+html[data-theme='dark'] body app-report .historical-daily-trend__axis-frame .historical-daily-trend__chart {
+  background: #080a0d !important;
+}
+
+html[data-theme='dark'] body app-report .route-grid line,
+html[data-theme='dark'] body app-report .line-grid line,
+html[data-theme='dark'] body app-report .line-grid .speed-time-grid {
+  stroke: rgba(148, 163, 184, 0.16) !important;
+}
+
+/* Axes stay readable but intentionally secondary to telemetry. */
+html[data-theme='dark'] body app-report .daily-chart-y-axis,
+html[data-theme='dark'] body app-report .daily-speed-x-axis,
+html[data-theme='dark'] body app-report .daily-chart-x-title,
+html[data-theme='dark'] body app-report .daily-hour-bars small,
+html[data-theme='dark'] body app-report .stack-column small,
+html[data-theme='dark'] body app-report .single-column small {
+  color: #9aa5b4 !important;
+}
+
+/* Tables ------------------------------------------------------------------ */
+html[data-theme='dark'] body app-report .report-book-table,
+html[data-theme='dark'] body app-report .hourly-matrix,
+html[data-theme='dark'] body app-report .daily-mode-full-table,
+html[data-theme='dark'] body app-report .daily-pdf-table,
+html[data-theme='dark'] body app-report .daily-tracking-table {
+  color: #dfe5ed !important;
+  background: #090b0e !important;
+}
+
+html[data-theme='dark'] body app-report .report-book-table thead th,
+html[data-theme='dark'] body app-report .hourly-matrix thead th,
+html[data-theme='dark'] body app-report .daily-mode-full-table thead th,
+html[data-theme='dark'] body app-report .daily-pdf-table thead th,
+html[data-theme='dark'] body app-report .daily-tracking-table thead th {
+  color: #e8edf4 !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+  background: linear-gradient(180deg, #161a20 0%, #101318 100%) !important;
+  box-shadow: inset 0 -2px 0 rgba(59, 130, 246, 0.44) !important;
+}
+
+html[data-theme='dark'] body app-report .report-book-table th,
+html[data-theme='dark'] body app-report .report-book-table td,
+html[data-theme='dark'] body app-report .hourly-matrix th,
+html[data-theme='dark'] body app-report .hourly-matrix td,
+html[data-theme='dark'] body app-report .daily-mode-full-table th,
+html[data-theme='dark'] body app-report .daily-mode-full-table td,
+html[data-theme='dark'] body app-report .daily-pdf-table th,
+html[data-theme='dark'] body app-report .daily-pdf-table td,
+html[data-theme='dark'] body app-report .daily-tracking-table th,
+html[data-theme='dark'] body app-report .daily-tracking-table td {
+  border-color: rgba(148, 163, 184, 0.105) !important;
+}
+
+html[data-theme='dark'] body app-report .report-book-table tbody td,
+html[data-theme='dark'] body app-report .report-book-table tbody th,
+html[data-theme='dark'] body app-report .hourly-matrix tbody td,
+html[data-theme='dark'] body app-report .hourly-matrix tbody th {
+  color: #dce3eb !important;
+  background: #090b0e !important;
+}
+
+html[data-theme='dark'] body app-report .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) td,
+html[data-theme='dark'] body app-report .hourly-matrix tbody tr:nth-child(even) td {
+  background: #0d0f12 !important;
+}
+
+html[data-theme='dark'] body app-report .report-book-table tbody tr:hover td,
+html[data-theme='dark'] body app-report .report-book-table tbody tr:hover th,
+html[data-theme='dark'] body app-report .hourly-matrix tbody tr:hover td {
+  background: #15191f !important;
+}
+
+/* Sticky row labels should no longer look like a blue card. */
+html[data-theme='dark'] body app-report .hourly-matrix th:first-child,
+html[data-theme='dark'] body app-report .hourly-matrix td:first-child {
+  color: #d8e0ea !important;
+  background: #101318 !important;
+}
+
+html[data-theme='dark'] body app-report .hourly-matrix thead th:first-child {
+  color: #ffffff !important;
+  background: #15191f !important;
+}
+
+/* Section/total rows: subtle warm cue only, not a bright orange block. */
+html[data-theme='dark'] body app-report .daily-pdf-table .section-row th,
+html[data-theme='dark'] body app-report .daily-pdf-table .total-row th,
+html[data-theme='dark'] body app-report .daily-pdf-table .total-row td,
+html[data-theme='dark'] body app-report .daily-tracking-table .total-row th,
+html[data-theme='dark'] body app-report .daily-tracking-table .total-row td {
+  color: #f1e2bf !important;
+  background: #17130c !important;
+}
+
+/* Legends / scales -------------------------------------------------------- */
+html[data-theme='dark'] body app-report .daily-chart-legend,
+html[data-theme='dark'] body app-report .daily-combo-scale-summary {
+  color: #a9b2bf !important;
+}
+
+html[data-theme='dark'] body app-report .daily-chart-legend--machinery span,
+html[data-theme='dark'] body app-report .daily-chart-legend--auxiliary span,
+html[data-theme='dark'] body app-report .daily-chart-legend--reference span,
+html[data-theme='dark'] body app-report .daily-chart-legend--engineering-lines span,
+html[data-theme='dark'] body app-report #daily-page-5 .daily-chart-legend--engineering span,
+html[data-theme='dark'] body app-report #daily-page-5 .daily-combo-scale-summary span {
+  border-color: color-mix(in srgb, currentColor 25%, rgba(148, 163, 184, 0.14)) !important;
+  background: color-mix(in srgb, currentColor 7%, #0b0d10) !important;
+  box-shadow: none !important;
+}
+
+/* MAX / AVG / MIN remain vivid reference guides. */
+html[data-theme='dark'] body app-report .reference-line--max { stroke: #ef4444 !important; }
+html[data-theme='dark'] body app-report .reference-line--avg { stroke: #f59e0b !important; }
+html[data-theme='dark'] body app-report .reference-line--min { stroke: #22c55e !important; }
+
+/* Tooltips ---------------------------------------------------------------- */
+html[data-theme='dark'] body app-report .report-chart-tooltip {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  color: #edf2f7 !important;
+  background: rgba(8, 10, 13, 0.985) !important;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.52) !important;
+}
+
+html[data-theme='dark'] body app-report .report-chart-tooltip strong { color: #ffffff !important; }
+html[data-theme='dark'] body app-report .report-chart-tooltip span { color: #b0bac8 !important; }
+
+/* Donut/pie inner surfaces ------------------------------------------------ */
+html[data-theme='dark'] body app-report .daily-overview-donut::after,
+html[data-theme='dark'] body app-report .daily-util-ring::after,
+html[data-theme='dark'] body app-report .daily-quality-ring::after,
+html[data-theme='dark'] body app-report .daily-pie::after,
+html[data-theme='dark'] body app-report .daily-pie-center,
+html[data-theme='dark'] body app-report .pro-fuel-donut > div {
+  border-color: rgba(148, 163, 184, 0.14) !important;
+  background: #090b0e !important;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08) !important;
+}
+
+/* Loading / empty / notices ---------------------------------------------- */
+html[data-theme='dark'] body app-report .daily-ui-loading,
+html[data-theme='dark'] body app-report .daily-ui-selection-state,
+html[data-theme='dark'] body app-report .daily-chart-empty,
+html[data-theme='dark'] body app-report .daily-map-message {
+  border-color: rgba(96, 165, 250, 0.18) !important;
+  background: #0b0d10 !important;
+}
+
+html[data-theme='dark'] body app-report .daily-ui-error {
+  border-color: rgba(248, 113, 113, 0.26) !important;
+  background: #160c0e !important;
+}
+
+/* Official/PDF workspace: same graphite family. */
+html[data-theme='dark'] body app-report .official-report-workspace,
+html[data-theme='dark'] body app-report .official-control-bar,
+html[data-theme='dark'] body app-report .official-control-field,
+html[data-theme='dark'] body app-report .official-load-state,
+html[data-theme='dark'] body app-report .official-pdf-card,
+html[data-theme='dark'] body app-report .official-pdf-card .pdf-panel,
+html[data-theme='dark'] body app-report .official-pdf-card .pdf-header {
+  border-color: rgba(148, 163, 184, 0.15) !important;
+  background: #090b0e !important;
+  box-shadow: none !important;
+}
+
+/* Local scrollbars: visible enough for long 24-hour / 15-mode tables. */
+html[data-theme='dark'] body app-report .hourly-table-wrap,
+html[data-theme='dark'] body app-report .daily-mode-table-wrap,
+html[data-theme='dark'] body app-report .report-book-table-wrap,
+html[data-theme='dark'] body app-report .daily-hourly-sync {
+  scrollbar-color: #353b45 #07080a;
+  scrollbar-width: thin;
+}
+
+html[data-theme='dark'] body app-report .hourly-table-wrap::-webkit-scrollbar,
+html[data-theme='dark'] body app-report .daily-mode-table-wrap::-webkit-scrollbar,
+html[data-theme='dark'] body app-report .report-book-table-wrap::-webkit-scrollbar,
+html[data-theme='dark'] body app-report .daily-hourly-sync::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html[data-theme='dark'] body app-report .hourly-table-wrap::-webkit-scrollbar-track,
+html[data-theme='dark'] body app-report .daily-mode-table-wrap::-webkit-scrollbar-track,
+html[data-theme='dark'] body app-report .report-book-table-wrap::-webkit-scrollbar-track,
+html[data-theme='dark'] body app-report .daily-hourly-sync::-webkit-scrollbar-track {
+  background: #07080a;
+}
+
+html[data-theme='dark'] body app-report .hourly-table-wrap::-webkit-scrollbar-thumb,
+html[data-theme='dark'] body app-report .daily-mode-table-wrap::-webkit-scrollbar-thumb,
+html[data-theme='dark'] body app-report .report-book-table-wrap::-webkit-scrollbar-thumb,
+html[data-theme='dark'] body app-report .daily-hourly-sync::-webkit-scrollbar-thumb {
+  border: 2px solid #07080a;
+  border-radius: 999px;
+  background: #353b45;
+}
+
+html[data-theme='dark'] body app-report .hourly-table-wrap::-webkit-scrollbar-thumb:hover,
+html[data-theme='dark'] body app-report .daily-mode-table-wrap::-webkit-scrollbar-thumb:hover,
+html[data-theme='dark'] body app-report .report-book-table-wrap::-webkit-scrollbar-thumb:hover,
+html[data-theme='dark'] body app-report .daily-hourly-sync::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+/* iPad / mobile: keep the same black language, no blue wash. */
+@media (max-width: 900px) {
+  html[data-theme='dark'] body app-report .report-page,
+  html[data-theme='dark'] body app-report .report-dashboard,
+  html[data-theme='dark'] body app-report .premium-daily-card,
+  html[data-theme='dark'] body app-report .daily-hourly-sync {
+    background-color: #050607 !important;
+  }
+}
+
+
+/* ========================================================================== */
+/* REPORT PREMIUM PIE · GRAPHITE BLACK                                        */
+/* Keep data slices colorful, but make the card/plot shell match other dark   */
+/* Fleet Visual panels instead of the older navy-blue chart surface.           */
+/* ========================================================================== */
+html[data-theme='dark'] body app-report app-premium-pie-chart .premium-pie-card {
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  background: linear-gradient(180deg, #0c0e11 0%, #07090b 100%) !important;
+  background-image: linear-gradient(180deg, #0c0e11 0%, #07090b 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02), 0 8px 22px rgba(0, 0, 0, 0.20) !important;
+}
+
+html[data-theme='dark'] body app-report app-premium-pie-chart .premium-pie-card__header,
+html[data-theme='dark'] body app-report app-premium-pie-chart .premium-pie-card__body {
+  background: transparent !important;
+}
+
+html[data-theme='dark'] body app-report app-premium-pie-chart .premium-pie-card__hint {
+  border-color: rgba(148, 163, 184, 0.17) !important;
+  color: #aeb7c4 !important;
+  background: #0a0c0f !important;
+}
+
+
+/* ========================================================================== */
+/* REPORT FINAL READABILITY POLISH — DARK THEME · 2026-09-07                  */
+/* Graphite remains the base. Blue is used only as a high-contrast title/accent */
+/* so section names are easy to find without turning the whole card navy.      */
+/* ========================================================================== */
+html[data-theme='dark'] app-report {
+  --report-title-accent: #76baff;
+  --report-chart-axis-strong: #c7d3e1;
+  --report-chart-label-strong: #e6edf5;
+  --report-sticky-cell-bg: #0d1014;
+  --report-sticky-head-bg: #141922;
+  --report-sticky-shadow: rgba(0, 0, 0, 0.50);
+}
+
+/* One consistent Fleet-blue section accent, including Engine/Mode cards. */
+html[data-theme='dark'] body app-report .premium-daily-card > .report-table-panel__header::before {
+  background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%) !important;
+  box-shadow: 1px 0 10px rgba(59, 130, 246, .16);
+}
+
+/* Section names: brighter cyan-blue than body copy, matching the slim accent
+   rail at the left. Subtitles stay neutral so hierarchy remains calm. */
+html[data-theme='dark'] body app-report .premium-daily-card .report-table-panel__header h2,
+html[data-theme='dark'] body app-report app-premium-pie-chart .premium-pie-card__header h3 {
+  color: var(--report-title-accent) !important;
+  text-shadow: 0 0 14px rgba(59, 130, 246, .10);
+}
+html[data-theme='dark'] body app-report .premium-daily-card .report-table-panel__header p {
+  color: #a8b4c3 !important;
+}
+
+/* Mode KPI rail under the pie charts: this was too dark in the previous theme.
+   Keep the shell graphite but lift labels, values and units into readable tiers. */
+html[data-theme='dark'] body app-report .daily-mode-chart-summary {
+  border-color: rgba(148, 163, 184, .18) !important;
+  background: #090b0e !important;
+}
+html[data-theme='dark'] body app-report .daily-mode-chart-summary > div {
+  border-right-color: rgba(148, 163, 184, .14) !important;
+  background: #0b0e12 !important;
+}
+html[data-theme='dark'] body app-report .daily-mode-chart-summary small {
+  color: #92a4ba !important;
+}
+html[data-theme='dark'] body app-report .daily-mode-chart-summary strong {
+  color: #edf5ff !important;
+  text-shadow: none !important;
+}
+html[data-theme='dark'] body app-report .daily-mode-chart-summary span {
+  color: #b7c3d1 !important;
+}
+html[data-theme='dark'] body app-report .daily-mode-chart-summary > div:last-child strong {
+  color: #9fcbff !important;
+}
+
+/* Chart numbers / axes: stronger neutral contrast on black plots. */
+html[data-theme='dark'] body app-report .daily-chart-y-axis > b,
+html[data-theme='dark'] body app-report .daily-chart-y-axis > div > span,
+html[data-theme='dark'] body app-report .daily-speed-x-axis span,
+html[data-theme='dark'] body app-report .daily-chart-x-title,
+html[data-theme='dark'] body app-report .daily-hourly-sync .daily-hour-bars small,
+html[data-theme='dark'] body app-report .daily-hourly-sync .stack-column small,
+html[data-theme='dark'] body app-report .daily-hourly-sync .single-column small,
+html[data-theme='dark'] body app-report #daily-page-5 .daily-combo-hour > small {
+  color: var(--report-chart-axis-strong) !important;
+  opacity: 1 !important;
+}
+html[data-theme='dark'] body app-report .daily-chart-y-axis > div > span,
+html[data-theme='dark'] body app-report .daily-speed-x-axis span,
+html[data-theme='dark'] body app-report #daily-page-5 .daily-combo-hour > small {
+  font-weight: 850 !important;
+}
+html[data-theme='dark'] body app-report .daily-chart-x-title {
+  color: #aebdd0 !important;
+}
+
+/* Matrix values and hour headings stay crisp when viewed on a dark dashboard. */
+html[data-theme='dark'] body app-report .daily-hourly-sync .hourly-matrix thead th {
+  color: #f7fbff !important;
+}
+html[data-theme='dark'] body app-report .daily-hourly-sync .hourly-matrix tbody td {
+  color: var(--report-chart-label-strong) !important;
+}
+html[data-theme='dark'] body app-report .daily-hourly-sync .hourly-matrix tbody th:first-child,
+html[data-theme='dark'] body app-report .daily-hourly-sync .hourly-matrix tbody td:first-child {
+  color: #dbe8f6 !important;
+  background: var(--report-sticky-cell-bg) !important;
+}
+html[data-theme='dark'] body app-report .daily-hourly-sync .hourly-matrix thead th:first-child {
+  color: #ffffff !important;
+  background: var(--report-sticky-head-bg) !important;
+}
+
+/* Local legends remain semantic colors, but secondary copy gets more contrast. */
+html[data-theme='dark'] body app-report .daily-chart-legend span,
+html[data-theme='dark'] body app-report #daily-page-5 .daily-chart-legend--engineering span small,
+html[data-theme='dark'] body app-report #daily-page-5 .daily-chart-legend--engineering span strong {
+  opacity: 1 !important;
+}
+html[data-theme='dark'] body app-report #daily-page-5 .daily-chart-legend--engineering span strong {
+  color: #eef5fc !important;
+}
+
+/* Tooltip values: keep the black shell but make every numeric line legible. */
+html[data-theme='dark'] body app-report .report-chart-tooltip {
+  border-color: rgba(118, 186, 255, .24) !important;
+  color: #eef5fc !important;
+  background: rgba(6, 8, 11, .985) !important;
+}
+html[data-theme='dark'] body app-report .report-chart-tooltip strong {
+  color: #ffffff !important;
+}
+html[data-theme='dark'] body app-report .report-chart-tooltip span {
+  color: #c3cfdd !important;
+}
+
+/* ========================================================================== 
+   Report dark-theme production polish · 2026-09-08
+   --------------------------------------------------------------------------
+   Keep report color/contrast decisions in styles/themes only. These rules are
+   deliberately scoped to app-report so the rest of Fleet Visual is untouched.
+   ========================================================================== */
+html[data-theme='dark'] body app-report .daily-chart-legend--combo {
+  background: #0d131c !important;
+  border-color: #263243 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+html[data-theme='dark'] body app-report .daily-chart-legend--combo > span {
+  background: #121a25 !important;
+  border-color: #2a3748 !important;
+  color: #dce7f4 !important;
+}
+
+html[data-theme='dark'] body app-report .daily-chart-legend--combo > span strong,
+html[data-theme='dark'] body app-report .daily-chart-legend--engineering span strong {
+  color: #f5f8fc !important;
+}
+
+html[data-theme='dark'] body app-report .daily-chart-legend--combo > span small,
+html[data-theme='dark'] body app-report .daily-chart-legend--engineering span small {
+  color: #95a6ba !important;
+}
+
+html[data-theme='dark'] body app-report .daily-engineering-gate {
+  background: #0b1017 !important;
+  border-color: #202b39 !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16) !important;
+}
+
+html[data-theme='dark'] body app-report .daily-compact-note {
+  background: #101722 !important;
+  border-color: #253244 !important;
+}
+
+html[data-theme='dark'] body app-report .daily-compact-note strong {
+  color: #eef4fb !important;
+}
+
+html[data-theme='dark'] body app-report .daily-compact-note span {
+  color: #9cabbc !important;
+}
+
+html[data-theme='dark'] body app-report .daily-details-toggle {
+  background: #101722 !important;
+  border-color: #2a3a4e !important;
+  color: #cfe2fb !important;
+}
+
+html[data-theme='dark'] body app-report .daily-details-toggle:hover {
+  background: #142033 !important;
+  border-color: #3c5d86 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme='dark'] body app-report .daily-hourly-table,
+html[data-theme='dark'] body app-report .daily-mode-full-table {
+  color: #e7eef8 !important;
+}
+
+html[data-theme='dark'] body app-report .daily-hourly-table tbody td,
+html[data-theme='dark'] body app-report .daily-hourly-table tbody th,
+html[data-theme='dark'] body app-report .daily-mode-full-table tbody td,
+html[data-theme='dark'] body app-report .daily-mode-full-table tbody th {
+  border-color: #202b39 !important;
+}
+
+html[data-theme='dark'] body app-report .daily-hourly-table tbody tr:nth-child(even),
+html[data-theme='dark'] body app-report .daily-mode-full-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.012) !important;
+}
+
+html[data-theme='dark'] body app-report .report-chart-tooltip {
+  background: rgba(8, 12, 18, 0.97) !important;
+  border-color: #314156 !important;
+  color: #f3f7fc !important;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.42) !important;
+}
+
+html[data-theme='dark'] body app-report app-premium-pie-chart .premium-pie-card__hint {
+  background: #101722 !important;
+  border-color: #2a3748 !important;
+  color: #9fb0c3 !important;
+}
+
+
+/* ========================================================================== */
+/* REPORT DARK LEGEND SEMANTIC COLOR PASS · 2026-09-08                       */
+/*                                                                            */
+/* Dark mode previously neutralised several legend chips, which made series   */
+/* identification slower even though the chart bars/lines remained coloured.  */
+/* Keep the graphite shell, but tint every engineering key with the same       */
+/* semantic colour as its plotted series. All color decisions stay in themes. */
+/* ========================================================================== */
+html[data-theme='dark'] body app-report .daily-chart-legend--engineering-lines .port {
+  color: var(--report-series-port-start, #60a5fa) !important;
+}
+html[data-theme='dark'] body app-report .daily-chart-legend--engineering-lines .starboard {
+  color: var(--report-series-starboard-start, #5eead4) !important;
+}
+html[data-theme='dark'] body app-report .daily-chart-legend--engineering-lines .center {
+  color: var(--report-series-center-start, #a78bfa) !important;
+}
+html[data-theme='dark'] body app-report .daily-chart-legend--engineering-lines .ref-max,
+html[data-theme='dark'] body app-report .daily-chart-legend--machinery .ref-max,
+html[data-theme='dark'] body app-report .daily-chart-legend--auxiliary .ref-max,
+html[data-theme='dark'] body app-report .daily-chart-legend--reference .ref-max {
+  color: #ff5d67 !important;
+}
+html[data-theme='dark'] body app-report .daily-chart-legend--engineering-lines .ref-avg,
+html[data-theme='dark'] body app-report .daily-chart-legend--machinery .ref-avg,
+html[data-theme='dark'] body app-report .daily-chart-legend--auxiliary .ref-avg,
+html[data-theme='dark'] body app-report .daily-chart-legend--reference .ref-avg {
+  color: #fbbf24 !important;
+}
+html[data-theme='dark'] body app-report .daily-chart-legend--engineering-lines .ref-min,
+html[data-theme='dark'] body app-report .daily-chart-legend--machinery .ref-min,
+html[data-theme='dark'] body app-report .daily-chart-legend--auxiliary .ref-min,
+html[data-theme='dark'] body app-report .daily-chart-legend--reference .ref-min {
+  color: #34d399 !important;
+}
+
+/* Hourly performance scale rail. */
+html[data-theme='dark'] body app-report #daily-page-5 .daily-chart-legend--engineering .distance {
+  color: var(--report-series-distance-start, #fbbf24) !important;
+}
+html[data-theme='dark'] body app-report #daily-page-5 .daily-chart-legend--engineering .speed {
+  color: var(--report-series-speed-start, #2dd4bf) !important;
+}
+html[data-theme='dark'] body app-report #daily-page-5 .daily-chart-legend--engineering .main {
+  color: var(--report-series-main-start, #60a5fa) !important;
+}
+html[data-theme='dark'] body app-report #daily-page-5 .daily-chart-legend--engineering .aux {
+  color: var(--report-series-aux-start, #a78bfa) !important;
+}
+
+/* Machinery detail lines stay visually distinct on graphite. */
+html[data-theme='dark'] body app-report .daily-chart-legend--machinery .me-run,
+html[data-theme='dark'] body app-report .daily-chart-legend--auxiliary .aux-run {
+  color: #2dd4bf !important;
+}
+html[data-theme='dark'] body app-report .daily-chart-legend--machinery .shaft-run {
+  color: #38bdf8 !important;
+}
+html[data-theme='dark'] body app-report .daily-chart-legend--machinery .shaft-rpm {
+  color: #818cf8 !important;
+}
+html[data-theme='dark'] body app-report .daily-chart-legend--machinery .engine-load {
+  color: var(--report-series-engine-load, #f472b6) !important;
+}
+
+/* Give semantic chips a visible tint instead of a neutral grey capsule. */
+html[data-theme='dark'] body app-report .daily-chart-legend--engineering-lines span,
+html[data-theme='dark'] body app-report .daily-chart-legend--machinery span,
+html[data-theme='dark'] body app-report .daily-chart-legend--auxiliary span,
+html[data-theme='dark'] body app-report .daily-chart-legend--reference span,
+html[data-theme='dark'] body app-report #daily-page-5 .daily-chart-legend--engineering span {
+  border-color: color-mix(in srgb, currentColor 48%, #263243) !important;
+  background: color-mix(in srgb, currentColor 13%, #090c11) !important;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, currentColor 11%, transparent) !important;
+}
+html[data-theme='dark'] body app-report .daily-chart-legend--engineering-lines span::before,
+html[data-theme='dark'] body app-report .daily-chart-legend--machinery span::before,
+html[data-theme='dark'] body app-report .daily-chart-legend--auxiliary span::before,
+html[data-theme='dark'] body app-report .daily-chart-legend--reference span::before,
+html[data-theme='dark'] body app-report #daily-page-5 .daily-chart-legend--engineering span::before {
+  background: currentColor !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 18%, transparent), 0 0 8px color-mix(in srgb, currentColor 28%, transparent) !important;
+}

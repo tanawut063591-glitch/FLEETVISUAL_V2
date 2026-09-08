@@ -1,0 +1,11 @@
+/*
+ * Section-specific Settings styles.
+ * Shared Settings design rules are loaded from ../settings.component.css.
+ * Add overrides for this section here so future UI edits stay easy to find.
+ */
+
+.settings-section-scope {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}

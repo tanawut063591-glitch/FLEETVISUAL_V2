@@ -24,12 +24,26 @@ type MotorInput = RealtimeValue | number | string | null | undefined;
 export class ElectricMotorComponent {
   @Input() activeAlerts: readonly AlertRecord[] = [];
   @Input() speed: MotorInput = null;
+  @Input() maxRpm = 2000;
 
   constructor(public tooltipFormatService: TooltipFormatService) {}
 
+  get numericSpeed(): number {
+    const value = Number(this.getValue(this.speed));
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  }
+
   get isRunning(): boolean {
-    const currentSpeed = Number(this.getValue(this.speed));
-    return Number.isFinite(currentSpeed) && currentSpeed > 0;
+    return this.numericSpeed > 0;
+  }
+
+  get speedPercent(): number {
+    const max = Number(this.maxRpm);
+    if (!Number.isFinite(max) || max <= 0) {
+      return 0;
+    }
+
+    return Math.min(100, Math.max(0, (this.numericSpeed / max) * 100));
   }
 
   getValue(input: MotorInput): string {

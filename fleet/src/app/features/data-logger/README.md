@@ -1,9 +1,9 @@
 # Data Logger integration
 
-This feature was integrated into `FLEETVISUAL_V2-main` from the supplied Data Logger Pro project.
-
 - Route: `#/main/data-logger`
 - Sensor list: `NewHttpClientService.getPoints(prefix)`
-- Historical data: `NewHttpClientService.getChartRawData(start, end, tags)`
-- CSV export: `xlsx`
+- Historical data: `NewHttpClientService.getHistorianValues(start, end, tags)`
+- Table interval options: 1 minute, 5 minutes, 10 minutes
+- Tag selection: managed from the Data Logger parameter selector (`Manage Tags`)
+- CSV/XLSX export: `xlsx`
 - Threshold fallback rules: `data-logger-threshold.config.ts`

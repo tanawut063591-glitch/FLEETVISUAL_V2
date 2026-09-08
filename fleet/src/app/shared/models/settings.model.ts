@@ -11,8 +11,11 @@ export interface VesselSettingsRecord {
   owner: string;
   agency: string;
   groups: string[];
+  /** Legacy compatibility mirror. Derived from engineAssignments whenever the vessel is saved. */
   engines: string[];
+  /** Primary engine configuration for this vessel. One assignment represents one machinery position. */
   engineAssignments?: VesselEngineAssignment[];
+  engineSyncMode?: 'manual' | 'realtime';
   status: VesselSettingsStatus;
   lastSeenAt?: string;
   lastSeenLabel?: string;
@@ -140,8 +143,11 @@ export interface EngineProfileRecord {
 export interface VesselEngineAssignment {
   id: string;
   profileId: string;
+  /** Compatibility/display fallback; position is the canonical vessel-specific engine label. */
   displayName: string;
+  /** Canonical physical engine or machinery position on the vessel. */
   position: string;
+  /** Legacy compatibility. New manual assignments are created with quantity = 1. */
   quantity: number;
 
   realtimeKey?: string;

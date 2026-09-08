@@ -1,7 +1,7 @@
 <div class="data-logger-page">
 
     <div class="logger-filter">
-        <app-datetime-control [loading]="loading" [selectAll]="false" [searchTitle]="'Export'" [maxSelection]="12"
+        <app-datetime-control [loading]="loading" [selectAll]="false" [searchTitle]="'Export'" [maxSelection]="10"
             [dialogSubtitle]="'Select sensor parameters for Data Logger'"
             [pageTitle]="'DATA LOGGER'" [pageSubtitle]="'View and analyze historical data from your vessel sensors.'"
             [parameterText]="'Choose the sensor tags you want to display in the data logger table.'"
@@ -14,20 +14,6 @@
         <div>
             <strong>Historian data not found</strong>
             <p>{{ errorMessage }}</p>
-        </div>
-    </div>
-
-    <div class="quick-tags-card" *ngIf="headers.length > 0">
-        <div class="quick-left">
-            <span class="quick-title">QUICK TAGS</span>
-            <span class="quick-subtitle">Filter sensors by category</span>
-        </div>
-
-        <div class="quick-list">
-            <button type="button" class="quick-chip" *ngFor="let tag of quickTags; trackBy: trackByQuickTag"
-                [ngClass]="{ 'active': selectedQuickTag == tag.key }" (click)="setQuickTag(tag.key)">
-                {{ tag.label }}
-            </button>
         </div>
     </div>
 

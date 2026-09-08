@@ -1,0 +1,57 @@
+{
+    "lat": {
+        "tagName": "VES-GPS-LAT",
+        "name": "VES_GPS_LAT",
+        "cal": false
+    },
+    "long": {
+        "tagName": "VES-GPS-LONG",
+        "name": "VES_GPS_LONG",
+        "cal": false
+    },
+    "knot_current": {
+        "tagName": "VES-GPS-SPEED",
+        "name": "VES_GPS_SPEED",
+        "cal": false
+    },
+    "heading": {
+        "tagName": "VES-GPS-HEAD",
+        "name": "VES_GPS_HEAD",
+        "cal": false
+    },
+    "mile_current": {
+        "tagName": "VES-GPS-DIS-TOTAL",
+        "name": "VES_GPS_DIS_TOTAL",
+        "cal": true
+    },
+    "l_h_total": {
+        "tagName": "",
+        "name": "SUM_CONS_FLOW_TOTAL",
+        "cal": true
+    },
+    "pme_consL": {
+        "tagName": "PME-FLOW-VTOTAL",
+        "name": "PME_FLOW_VTOTAL",
+        "cal": true
+    },
+    "cme_consL": {
+        "tagName": "CME-FLOW-VTOTAL",
+        "name": "CME_FLOW_VTOTAL",
+        "cal": true
+    },
+    "sme_consL": {
+        "tagName": "SME-FLOW-VTOTAL",
+        "name": "SME_FLOW_VTOTAL",
+        "cal": true
+    },
+    "pae_consL": {
+        "tagName": "PAE-FLOW-VTOTAL",
+        "name": "PAE_FLOW_VTOTAL",
+        "cal": true
+    },
+    "sae_consL": {
+        "tagName": "SAE-FLOW-VTOTAL",
+        "name": "SAE_FLOW_VTOTAL",
+        "cal": true
+    }
+}

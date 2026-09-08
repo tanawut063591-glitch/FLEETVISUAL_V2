@@ -1,0 +1,660 @@
+/*
+ * Section-specific Settings styles.
+ * Shared Settings design rules are loaded from ../settings.component.css.
+ * Add overrides for this section here so future UI edits stay easy to find.
+ */
+
+.settings-section-scope {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* =====================================================================
+   SETTINGS V19 — Vessel / Engine professional workspace
+   Page-local overrides only. Keeps the shared Settings stylesheet stable.
+   ===================================================================== */
+
+/* Vessel Groups: one clear creation action only (Add Group in heading). */
+.vessel-group-empty-clean {
+  grid-template-columns: 34px minmax(0, 1fr);
+  min-height: 64px;
+  padding: 11px 12px;
+  border-style: dashed;
+  border-radius: 7px;
+}
+
+.vessel-group-empty-clean b {
+  color: var(--set-primary);
+  font-weight: 900;
+}
+
+/* Engine workspace hierarchy */
+.engine-pro-workspace {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--set-border);
+}
+
+.engine-pro-header {
+  margin-bottom: 10px !important;
+  padding: 12px 13px;
+  border: 1px solid var(--set-border);
+  border-radius: 7px;
+  background: linear-gradient(180deg, var(--set-surface), var(--set-surface-2));
+  box-shadow: 0 6px 18px rgba(27, 63, 108, 0.045);
+}
+
+.engine-pro-heading-copy {
+  min-width: 0;
+}
+
+.engine-pro-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+  color: var(--set-primary);
+  font-size: 7.4px;
+  font-weight: 900;
+  letter-spacing: 0.105em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.engine-pro-kicker i {
+  font-size: 8px;
+}
+
+.professional-engine-setup .engine-pro-header h3 {
+  color: var(--set-text);
+  font-size: 12.4px;
+  font-weight: 900;
+  letter-spacing: 0.015em;
+}
+
+.professional-engine-setup .engine-pro-header p {
+  max-width: 350px;
+  margin-top: 4px;
+  color: var(--set-muted);
+  font-size: 8.7px;
+  font-weight: 650;
+  line-height: 1.48;
+}
+
+.engine-pro-actions {
+  flex: 0 0 auto;
+}
+
+.professional-engine-setup .engine-pro-actions .engine-count-chip,
+.professional-engine-setup .engine-pro-actions .engine-import-btn,
+.professional-engine-setup .engine-pro-actions .engine-library-btn {
+  min-height: 31px;
+  margin: 0;
+  border-radius: 6px;
+  box-shadow: none;
+  font-size: 8px;
+}
+
+.professional-engine-setup .engine-pro-actions .engine-count-chip {
+  padding-inline: 8px;
+  border-color: var(--set-border);
+  color: var(--set-text);
+  background: var(--set-surface);
+}
+
+.professional-engine-setup .engine-pro-actions .engine-count-chip i {
+  color: var(--set-primary);
+}
+
+.professional-engine-setup .engine-pro-actions .engine-count-chip.unassigned {
+  color: var(--set-muted);
+  background: var(--set-surface);
+}
+
+.professional-engine-setup .engine-pro-actions .engine-import-btn {
+  border-color: rgba(18, 100, 245, 0.2);
+  color: var(--set-primary);
+  background: var(--set-primary-soft);
+}
+
+.professional-engine-setup .engine-pro-actions .engine-library-btn {
+  grid-column: auto;
+  padding: 0 10px;
+  border: 1px solid var(--set-border);
+  color: var(--set-text);
+  background: var(--set-surface);
+}
+
+.professional-engine-setup .engine-pro-actions .engine-library-btn i {
+  color: var(--set-primary);
+}
+
+/* Add Engine: compact, strong hierarchy, no duplicated quantity field. */
+.engine-pro-composer {
+  position: relative;
+  margin-bottom: 10px;
+  padding: 12px 12px 10px;
+  overflow: hidden;
+  border: 1px solid rgba(18, 100, 245, 0.23);
+  border-radius: 7px;
+  background: var(--set-surface);
+  box-shadow: 0 8px 20px rgba(24, 65, 117, 0.055);
+}
+
+.engine-pro-composer::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--set-primary);
+}
+
+.engine-pro-composer-heading {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.engine-pro-composer-heading .engine-quick-entry-icon {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(18, 100, 245, 0.17);
+  border-radius: 7px;
+  color: var(--set-primary);
+  background: var(--set-primary-soft);
+}
+
+.engine-pro-composer-heading .engine-quick-entry-icon i {
+  font-size: 10px;
+}
+
+.engine-pro-composer-heading strong {
+  font-size: 10.4px;
+  font-weight: 900;
+}
+
+.engine-pro-composer-heading small {
+  max-width: 330px;
+  font-size: 7.7px;
+  line-height: 1.42;
+}
+
+.engine-entry-rule {
+  min-height: 25px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(16, 163, 95, 0.16);
+  border-radius: 6px;
+  color: var(--set-green);
+  background: var(--set-green-soft);
+  font-size: 7.2px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.engine-pro-entry-grid {
+  grid-template-columns: minmax(0, 1.18fr) minmax(0, 1fr) auto !important;
+  gap: 8px;
+}
+
+.engine-pro-entry-grid label > span {
+  margin-bottom: 5px;
+  color: var(--set-muted);
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.engine-pro-entry-grid input,
+.engine-pro-entry-grid select {
+  min-height: 39px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--set-surface);
+  font-size: 9.3px;
+}
+
+.engine-pro-add-btn {
+  min-width: 92px;
+  min-height: 39px;
+  border-radius: 6px;
+  box-shadow: 0 7px 16px rgba(18, 100, 245, 0.16);
+  font-size: 8.5px;
+}
+
+.engine-pro-entry-footer {
+  margin-top: 8px;
+  padding-top: 8px;
+  justify-content: space-between !important;
+  border-top: 1px solid var(--set-border);
+  font-size: 7.2px;
+}
+
+.engine-pro-entry-footer > span {
+  white-space: normal !important;
+}
+
+.engine-profile-helper {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--set-primary);
+  font-weight: 800;
+  text-align: right;
+}
+
+.engine-profile-helper i {
+  color: var(--set-primary) !important;
+}
+
+/* Realtime state is useful but visually secondary to the engine inventory. */
+.engine-pro-workspace .realtime-detection-preview,
+.engine-pro-workspace .engine-connection-summary {
+  border-radius: 7px;
+  box-shadow: none;
+}
+
+.engine-pro-workspace .engine-connection-summary {
+  min-height: 50px;
+  padding: 8px 9px;
+}
+
+.engine-pro-workspace .engine-connection-icon {
+  width: 31px;
+  height: 31px;
+  border-radius: 7px;
+}
+
+.engine-pro-workspace .engine-connection-copy strong {
+  font-size: 9.5px;
+}
+
+.engine-pro-workspace .engine-connection-copy small {
+  font-size: 7.7px;
+}
+
+/* Engine inventory cards */
+.engine-pro-workspace .compact-engine-list {
+  gap: 8px;
+}
+
+.engine-pro-workspace .compact-engine-card {
+  border-radius: 7px;
+  box-shadow: 0 5px 16px rgba(28, 63, 107, 0.04);
+}
+
+.engine-pro-workspace .compact-engine-card.expanded {
+  box-shadow: 0 9px 22px rgba(18, 100, 245, 0.07);
+}
+
+.engine-pro-workspace .compact-engine-summary {
+  min-height: 58px;
+  padding: 8px 9px;
+}
+
+.engine-pro-workspace .compact-engine-index,
+.engine-pro-workspace .compact-engine-summary .engine-profile-icon,
+.engine-pro-workspace .engine-edit-toggle,
+.engine-pro-workspace .engine-setup-status {
+  border-radius: 6px;
+}
+
+.engine-pro-workspace .compact-engine-identity strong {
+  font-size: 9.8px;
+}
+
+.engine-pro-workspace .compact-engine-identity small,
+.engine-pro-workspace .compact-engine-profile strong {
+  font-size: 7.8px;
+}
+
+.engine-pro-workspace .compact-engine-profile span {
+  font-size: 6.4px;
+}
+
+.engine-pro-workspace .compact-engine-editor {
+  padding: 10px;
+}
+
+.engine-pro-workspace .engine-editor-grid input,
+.engine-pro-workspace .engine-editor-grid select {
+  min-height: 38px;
+  border-radius: 6px;
+}
+
+/* Empty inventory: communicate two valid workflows without another button. */
+.engine-pro-empty {
+  min-height: 64px;
+  margin-top: 8px;
+  padding: 10px 11px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 9px;
+  border: 1px dashed var(--set-border-strong);
+  border-radius: 7px;
+  background: var(--set-surface-2);
+}
+
+.engine-pro-empty-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(18, 100, 245, 0.14);
+  border-radius: 7px;
+  color: var(--set-primary);
+  background: var(--set-primary-soft);
+}
+
+.engine-pro-empty-copy strong,
+.engine-pro-empty-copy small {
+  display: block;
+}
+
+.engine-pro-empty-copy strong {
+  color: var(--set-text);
+  font-size: 9.3px;
+  font-weight: 900;
+}
+
+.engine-pro-empty-copy small {
+  margin-top: 3px;
+  color: var(--set-muted);
+  font-size: 7.6px;
+  line-height: 1.4;
+}
+
+/* Profile library — cleaner split between reusable profile and vessel engine. */
+.engine-library-panel {
+  background: var(--set-surface);
+}
+
+.engine-library-header {
+  min-height: 72px;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--set-border);
+  background: linear-gradient(180deg, var(--set-surface), var(--set-surface-2));
+}
+
+.engine-library-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.engine-library-title-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  border: 1px solid rgba(18, 100, 245, 0.16);
+  border-radius: 7px;
+  color: var(--set-primary);
+  background: var(--set-primary-soft);
+}
+
+.engine-library-title > div {
+  min-width: 0;
+}
+
+.engine-library-header .engine-library-title strong {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.engine-library-header .engine-library-title p {
+  max-width: 370px;
+  margin-top: 3px;
+  color: var(--set-muted);
+  font-size: 7.8px;
+  line-height: 1.42;
+}
+
+.engine-library-header > button {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+}
+
+.engine-library-tools {
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--set-border);
+  background: var(--set-surface);
+}
+
+.engine-library-tools .engine-profile-search input,
+.engine-library-tools .new-engine-profile-btn {
+  min-height: 37px;
+  border-radius: 6px;
+}
+
+.engine-library-list {
+  max-height: 154px;
+  padding: 8px 10px;
+  background: var(--set-surface-2);
+}
+
+.engine-library-list article {
+  border-radius: 7px;
+  background: var(--set-surface);
+}
+
+.engine-library-empty {
+  min-height: 58px;
+  color: var(--set-muted);
+  font-size: 8px;
+  background: transparent;
+}
+
+.engine-profile-editor {
+  padding: 12px 14px 16px;
+}
+
+.engine-profile-editor-heading {
+  margin-bottom: 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--set-border);
+}
+
+.engine-profile-editor-heading strong {
+  font-size: 10.8px;
+  font-weight: 900;
+}
+
+.engine-profile-editor-heading p {
+  margin-top: 3px;
+  font-size: 7.6px;
+  line-height: 1.4;
+}
+
+.engine-profile-form-grid,
+.telemetry-mapping-grid {
+  gap: 9px 10px;
+}
+
+.engine-library-panel input,
+.engine-library-panel select {
+  min-height: 39px;
+  border-radius: 6px;
+  font-size: 9.2px;
+}
+
+.engine-library-panel textarea {
+  border-radius: 6px;
+  font-size: 9.2px;
+}
+
+.engine-profile-form-grid > label > span,
+.telemetry-mapping-grid > label > span {
+  margin-bottom: 5px;
+  font-size: 7.8px;
+  font-weight: 900;
+}
+
+.telemetry-toggle {
+  min-height: 42px;
+  margin-top: 11px;
+  border: 1px solid var(--set-border);
+  border-radius: 7px;
+  background: var(--set-surface-2);
+}
+
+.telemetry-toggle > span {
+  min-width: 0;
+}
+
+.telemetry-toggle small {
+  display: block;
+  margin-top: 2px;
+  font-size: 6.9px;
+  font-weight: 650;
+}
+
+.engine-profile-editor-actions {
+  gap: 8px;
+}
+
+.engine-profile-editor-actions button {
+  min-height: 40px;
+  border-radius: 6px;
+}
+
+/* Drawer-width responsive behavior. The vessel drawer is itself a container. */
+@container (max-width: 620px) {
+  .engine-pro-header {
+    display: block;
+  }
+
+  .professional-engine-setup .engine-pro-header p {
+    max-width: none;
+  }
+
+  .engine-pro-actions {
+    width: 100%;
+    margin-top: 10px;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 0.8fr);
+    gap: 6px;
+  }
+
+  .professional-engine-setup .engine-pro-actions > * {
+    width: 100%;
+  }
+
+  .engine-pro-entry-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  }
+
+  .engine-pro-add-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .engine-pro-entry-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .engine-profile-helper {
+    text-align: left;
+  }
+
+  .engine-pro-workspace .compact-engine-summary {
+    grid-template-columns: 22px 32px minmax(0, 1fr) auto;
+  }
+
+  .engine-pro-workspace .compact-engine-profile {
+    grid-column: 3 / -1;
+    padding: 7px 0 0;
+    border-top: 1px solid var(--set-border);
+    border-left: 0;
+  }
+
+  .engine-pro-workspace .engine-setup-status {
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .engine-pro-workspace .engine-edit-toggle {
+    grid-column: 4;
+    grid-row: 2;
+  }
+}
+
+@container (max-width: 430px) {
+  .engine-pro-header,
+  .engine-pro-composer {
+    padding-inline: 10px;
+  }
+
+  .engine-pro-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .professional-engine-setup .engine-pro-actions .engine-count-chip {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+
+  .engine-pro-composer-heading {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .engine-entry-rule {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .engine-pro-entry-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .engine-pro-add-btn {
+    grid-column: 1;
+  }
+
+  .engine-library-title-icon {
+    display: none;
+  }
+
+  .engine-library-header {
+    padding-inline: 11px;
+  }
+
+  .engine-library-tools {
+    padding-inline: 9px;
+  }
+}
+
+:host-context([data-theme='dark']) .engine-pro-header,
+:host-context([data-theme='dark']) .engine-pro-composer,
+:host-context([data-theme='dark']) .engine-pro-workspace .compact-engine-card,
+:host-context([data-theme='dark']) .engine-library-list article {
+  background: #0b111a;
+}
+
+:host-context([data-theme='dark']) .engine-pro-header,
+:host-context([data-theme='dark']) .engine-pro-composer {
+  border-color: rgba(112, 154, 216, 0.22);
+}
+
+:host-context([data-theme='dark']) .engine-pro-entry-grid input,
+:host-context([data-theme='dark']) .engine-pro-entry-grid select,
+:host-context([data-theme='dark']) .professional-engine-setup .engine-pro-actions .engine-count-chip,
+:host-context([data-theme='dark']) .professional-engine-setup .engine-pro-actions .engine-library-btn {
+  color: var(--set-text);
+  border-color: var(--set-border);
+  background: #090e15;
+}
+
+:host-context([data-theme='dark']) .engine-library-list {
+  background: #080d14;
+}

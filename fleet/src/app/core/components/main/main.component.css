@@ -82,7 +82,7 @@
   background: #bfe7f5;
 }
 
-@media screen and (max-width: 991px) {
+@media screen and (max-width: 1100px) {
   .main {
     --fleet-header-height: 64px;
     grid-template-columns: minmax(0, 1fr);

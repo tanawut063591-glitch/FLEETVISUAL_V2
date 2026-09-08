@@ -17,7 +17,7 @@ import { FvRealtimeService } from '../../../shared/services/fv-realtime.service'
 import { NewHttpClientService } from '../../../shared/services/http-client1.service';
 import { getVesselStatusFromTimestamp } from '../../../shared/utils/vessel-status.util';
 import { LiveReportService } from '../../../shared/services/live-report.service';
-import { LiveReportSnapshot } from '../../report/live-report.model';
+import { LiveReportSnapshot } from '../../report/models/live-report.model';
 
 declare var google: any;
 
@@ -783,9 +783,9 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       const selectedSvg =
         '<svg width="190" height="54" viewBox="0 0 190 54" xmlns="http://www.w3.org/2000/svg">' +
         '<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">' +
-        '<feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.25"/>' +
+        '<feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.22"/>' +
         '</filter>' +
-        '<circle cx="24" cy="21" r="20" fill="#2563eb" fill-opacity="0.12" stroke="#2563eb" stroke-width="2.5" stroke-opacity="0.96"/>' +
+        '<circle cx="24" cy="21" r="20" fill="#2563eb" fill-opacity="0.10" stroke="#2563eb" stroke-width="2.5" stroke-opacity="0.92"/>' +
         '<path filter="url(#shadow)" d="M24 2C13.8 2 5.5 10.1 5.5 20C5.5 33.6 24 52 24 52C24 52 42.5 33.6 42.5 20C42.5 10.1 34.2 2 24 2Z" fill="' +
         color +
         '"/>' +
@@ -802,7 +802,7 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
         '<circle cx="21" cy="21" r="1.2" fill="white"/>' +
         '<circle cx="24" cy="21" r="1.2" fill="white"/>' +
         '<circle cx="27" cy="21" r="1.2" fill="white"/>' +
-        '<rect x="45" y="14" width="125" height="25" rx="3" fill="white" fill-opacity="0.98" stroke="#60a5fa" stroke-width="1.4"/>' +
+        '<rect x="45" y="14" width="125" height="25" rx="3" fill="white" fill-opacity="0.98" stroke="#bfdbfe" stroke-width="1.2"/>' +
         '<text x="53" y="31" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">' +
         text +
         '</text>' +
@@ -815,16 +815,19 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
       };
     }
 
+    // Keep vessel names visible at all times. Operators can identify vessels
+    // immediately without hovering, while the selected vessel still receives
+    // the stronger highlighted treatment above.
     const text = this.escapeSvgText(this.truncateText(name, 18));
     const svg =
       '<svg width="190" height="54" viewBox="0 0 190 54" xmlns="http://www.w3.org/2000/svg">' +
       '<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">' +
-      '<feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.25"/>' +
+      '<feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.22"/>' +
       '</filter>' +
       '<path filter="url(#shadow)" d="M24 2C13.8 2 5.5 10.1 5.5 20C5.5 33.6 24 52 24 52C24 52 42.5 33.6 42.5 20C42.5 10.1 34.2 2 24 2Z" fill="' +
       color +
       '"/>' +
-      '<circle cx="24" cy="21" r="12" fill="white" fill-opacity="0.96"/>' +
+      '<circle cx="24" cy="21" r="12" fill="white" fill-opacity="0.97"/>' +
       '<path d="M15.5 24.5L19 17.5H29L32.5 24.5H15.5Z" fill="' +
       color +
       '"/>' +

@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import {
   Observable,
   Subject,
+  catchError,
   distinctUntilChanged,
   finalize,
   forkJoin,
@@ -10,6 +11,7 @@ import {
   of,
   switchMap,
   takeUntil,
+  throwError,
   timer,
 } from 'rxjs';
 
@@ -28,10 +30,6 @@ import {
   VesselSettingsRecord,
   VesselSettingsStatus,
 } from '../../shared/models/settings.model';
-import {
-  ENGINE_FORMULA_PRESETS,
-  getEngineFormulaPreset,
-} from '../../shared/config/engine-formula-presets';
 import { SettingsDataService } from '../../shared/services/settings-data.service';
 import { EngineProfileService } from '../../shared/services/engine-profile.service';
 import {
@@ -62,6 +60,13 @@ interface VesselGroupSummary {
   editable: boolean;
 }
 
+interface RealtimeDetectionSummary {
+  total: number;
+  existing: number;
+  newCount: number;
+  conflicts: number;
+}
+
 interface UserModuleDefinition {
   key: FleetModuleKey;
   label: string;
@@ -76,7 +81,7 @@ type UserAccountSetupMode = 'create' | 'link';
 @Component({
   selector: 'app-settings',
   templateUrl: './settings.component.html',
-  styleUrls: ['./settings.component.css'],
+  styleUrls: ['./settings.shared.css', './settings.component.css'],
   standalone: false,
 })
 export class SettingsComponent implements OnInit, OnDestroy {
@@ -94,7 +99,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
     'Vietnam',
     'Other',
   ];
-  readonly engineFormulaPresets = ENGINE_FORMULA_PRESETS;
   readonly engineCategoryOptions: Array<{ value: EngineProfileCategory; label: string }> = [
     { value: 'main', label: 'Main / Propulsion Engine' },
     { value: 'auxiliary', label: 'Auxiliary Engine' },
@@ -238,6 +242,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   userAccountSetupMode: UserAccountSetupMode = 'link';
   userAccountApiEnabled = false;
   userAccountApiSecure = true;
+  userAccessDatabaseEnabled = false;
   userAccountApiNotice = 'Checking User Account API...';
   userAccessSaving = false;
   userPassword = '';
@@ -265,12 +270,18 @@ export class SettingsComponent implements OnInit, OnDestroy {
   editingId = '';
   form = this.emptyForm();
   saveNotice = '';
+  vesselGroupIds: string[] = [];
+  vesselGroupSearchTerm = '';
+  vesselGroupComposerOpen = false;
+  vesselNewGroupName = '';
+  vesselNewGroupDescription = '';
+  vesselGroupInlineNotice = '';
+  vesselGroupSaving = false;
 
   engineProfiles: EngineProfileRecord[] = [];
   engineProfilesLoading = false;
   engineProfilesError = '';
   selectedEngineProfileId = '';
-  manualEngineComposerOpen = false;
   manualEngineName = '';
   expandedEngineAssignmentId = '';
   engineLibraryOpen = false;
@@ -278,11 +289,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
   engineProfileSearchTerm = '';
   engineProfileForm = this.emptyEngineProfileForm();
   engineProfileSaveNotice = '';
+  engineProfileSaving = false;
   engineTelemetryMappingOpen = false;
   realtimeMachinery: RealtimeMachineryPosition[] = [];
   realtimeMachineryNotice = '';
+  realtimeDetectionPending = false;
+  realtimeDetectionSummary: RealtimeDetectionSummary = { total: 0, existing: 0, newCount: 0, conflicts: 0 };
   isSavingVessel = false;
-  private readonly pendingEngineProfiles = new Map<string, EngineProfileRecord>();
 
   theme: ThemeMode = 'light';
   defaultLandingPage: LandingPage = 'overview';
@@ -307,6 +320,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
   private vesselsRequestInFlight = false;
   private groupsRequestInFlight = false;
   private userAccessRequestInFlight = false;
+
+  private userAccessEditorSnapshot = '';
+  private vesselEditorSnapshot = '';
+  private groupEditorSnapshot = '';
+  private engineProfileEditorSnapshot = '';
 
   // Derived UI caches: keep expensive filtering/counting out of Angular change-detection loops.
   private filteredUserAccessCacheSource?: UserAccessRecord[];
@@ -336,6 +354,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.username =
       localStorage.getItem('username') || sessionStorage.getItem('username') || 'Admin';
+    this.settingsData
+      .getUserAccessPersistenceMode()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((mode) => {
+        this.userAccessDatabaseEnabled = mode === 'database';
+      });
+
     this.userAccountService.config$.pipe(takeUntil(this.destroy$)).subscribe((config) => {
       this.userAccountApiEnabled = config.enabled;
       this.userAccountApiSecure = config.secureTransport || !config.requireHttps;
@@ -381,6 +406,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearInitialVesselLoadGuard();
+    this.syncSettingsDrawerDocumentState(false);
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -402,6 +428,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
     if (this.drawerOpen) {
       this.closeDrawer();
     }
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (!this.hasUnsavedChanges()) return;
+    event.preventDefault();
+    event.returnValue = '';
   }
 
   get filteredVessels(): VesselSettingsRecord[] {
@@ -469,6 +502,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   get userAccessAdministratorCount(): number {
     return this.userAccessRecords.filter((user) => user.role === 'administrator').length;
+  }
+
+  get userAccessActiveAdministratorCount(): number {
+    return this.userAccessRecords.filter(
+      (user) => user.role === 'administrator' && user.status === 'active',
+    ).length;
   }
 
   get userAccessRestrictedCount(): number {
@@ -559,9 +598,30 @@ export class SettingsComponent implements OnInit, OnDestroy {
     );
   }
 
+  get vesselGroupOptions(): VesselGroupDefinition[] {
+    const search = this.vesselGroupSearchTerm.trim().toLowerCase();
+    if (!search) return this.groupDefinitions;
+    return this.groupDefinitions.filter((group) =>
+      [group.name, group.description].join(' ').toLowerCase().includes(search),
+    );
+  }
+
   selectTab(tab: SettingsTab['id']): void {
+    if (tab === this.activeTab) return;
+    if (
+      this.hasUnsavedChanges() &&
+      !window.confirm('You have unsaved Settings changes. Discard them and switch section?')
+    )
+      return;
+
+    this.closeOpenEditorsForNavigation();
     this.activeTab = tab;
     this.router.navigate(tab === 'general' ? ['/main/settings'] : ['/main/settings', tab]);
+  }
+
+  canDeactivateSettings(): boolean {
+    if (!this.hasUnsavedChanges()) return true;
+    return window.confirm('You have unsaved Settings changes. Leave this page without saving?');
   }
 
   loadVessels(force = false): void {
@@ -628,6 +688,18 @@ export class SettingsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (groups) => {
           this.groupDefinitions = groups;
+          if (this.drawerOpen && this.editingId) {
+            const vesselGroupNames = new Set(
+              this.form.groups.map((name) => name.trim().toLowerCase()),
+            );
+            this.vesselGroupIds = groups
+              .filter(
+                (group) =>
+                  group.vesselIds.includes(this.editingId) ||
+                  vesselGroupNames.has(group.name.trim().toLowerCase()),
+              )
+              .map((group) => group.id);
+          }
           this.invalidateGroupCaches();
         },
         error: (error) => {
@@ -672,12 +744,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.editingUserAccessId = '';
     this.userAccessForm = this.emptyUserAccessForm();
     this.userAccountSetupMode =
-      this.userAccountApiEnabled && this.userAccountApiSecure ? 'create' : 'link';
+      this.userAccountApiEnabled && this.userAccountApiSecure && this.userAccessDatabaseEnabled
+        ? 'create'
+        : 'link';
     this.resetUserCredentialState();
     this.userAccessSaveNotice = '';
     this.userAccessVesselSearchTerm = '';
     this.userAccessGroupSearchTerm = '';
     this.userAccessDrawerOpen = true;
+    this.syncSettingsDrawerDocumentState();
+    this.captureUserAccessEditorSnapshot();
   }
 
   openEditUserAccess(user: UserAccessRecord): void {
@@ -696,19 +772,34 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.userAccessVesselSearchTerm = '';
     this.userAccessGroupSearchTerm = '';
     this.userAccessDrawerOpen = true;
+    this.syncSettingsDrawerDocumentState();
+    this.captureUserAccessEditorSnapshot();
   }
 
-  closeUserAccessDrawer(): void {
+  closeUserAccessDrawer(force = false): void {
     if (this.userAccessSaving || this.resetPasswordSaving) return;
+    if (!force && this.isUserAccessEditorDirty()) {
+      const discard = window.confirm(
+        'This user has unsaved account or permission changes. Discard these changes?',
+      );
+      if (!discard) return;
+    }
     this.userAccessDrawerOpen = false;
+    this.syncSettingsDrawerDocumentState();
+    this.userAccessEditorSnapshot = '';
     this.resetUserCredentialState();
   }
 
   setUserAccountSetupMode(mode: UserAccountSetupMode): void {
-    if (mode === 'create' && (!this.userAccountApiEnabled || !this.userAccountApiSecure)) {
-      this.userAccessSaveNotice = this.userAccountApiEnabled
-        ? 'Account creation is blocked until every User Account API endpoint uses HTTPS.'
-        : 'Enable the User Account API before creating a login account.';
+    if (
+      mode === 'create' &&
+      (!this.userAccountApiEnabled || !this.userAccountApiSecure || !this.userAccessDatabaseEnabled)
+    ) {
+      this.userAccessSaveNotice = !this.userAccessDatabaseEnabled
+        ? 'Create Login is disabled while User Access is local-only. Enable the userAccess database endpoint first so account creation and permissions stay consistent.'
+        : this.userAccountApiEnabled
+          ? 'Account creation is blocked until every User Account API endpoint uses HTTPS.'
+          : 'Enable the User Account API before creating a login account.';
       return;
     }
     this.userAccountSetupMode = mode;
@@ -837,19 +928,21 @@ export class SettingsComponent implements OnInit, OnDestroy {
       source: existing?.source === 'backend' ? 'backend' : 'local',
     };
 
-    const createLogin = !existing && this.userAccountSetupMode === 'create';
+    const createLogin =
+      !existing && this.userAccountSetupMode === 'create' && this.userAccessDatabaseEnabled;
     const identityMetadataChanged = Boolean(
       existing &&
-      (existing.displayName.trim() !== displayName ||
-        existing.email.trim() !== record.email ||
-        existing.role !== record.role ||
-        existing.status !== record.status),
+        (existing.displayName.trim() !== displayName ||
+          existing.email.trim() !== record.email ||
+          existing.role !== record.role ||
+          existing.status !== record.status),
     );
     const syncManagedAccount = Boolean(
       existing?.accountProvisioning === 'managed' &&
-      identityMetadataChanged &&
-      this.userAccountApiEnabled &&
-      this.userAccountApiSecure,
+        identityMetadataChanged &&
+        this.userAccountApiEnabled &&
+        this.userAccountApiSecure &&
+        this.userAccessDatabaseEnabled,
     );
 
     this.userAccessSaving = true;
@@ -857,7 +950,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
       ? 'Creating login account and access profile...'
       : syncManagedAccount
         ? 'Synchronising login account and permissions...'
-        : 'Saving access profile...';
+        : this.userAccessDatabaseEnabled
+          ? 'Saving access profile to the database...'
+          : 'Saving LOCAL-ONLY access profile...';
 
     const identityOperation$: Observable<{
       accountId: string;
@@ -912,9 +1007,63 @@ export class SettingsComponent implements OnInit, OnDestroy {
             accountProvisioning: identity.provisioning,
             accountLastSyncedAt: identity.identityChanged ? now : existing?.accountLastSyncedAt,
           };
-          return this.settingsData
-            .saveUserAccess(record)
-            .pipe(map((target) => ({ target, identityChanged: identity.identityChanged })));
+
+          return this.settingsData.saveUserAccess(record).pipe(
+            map((target) => ({ target, identityChanged: identity.identityChanged })),
+            catchError((accessError) => {
+              if (createLogin && identity.identityChanged) {
+                return this.userAccountService.deleteAccount(identity.accountId, username).pipe(
+                  catchError((rollbackError) =>
+                    throwError(
+                      () =>
+                        new Error(
+                          `${accessError?.message || 'User Access could not be saved.'} The new login account was created, and automatic rollback also failed: ${rollbackError?.message || 'unknown rollback error'}`,
+                        ),
+                    ),
+                  ),
+                  switchMap(() =>
+                    throwError(
+                      () =>
+                        new Error(
+                          `${accessError?.message || 'User Access could not be saved.'} The newly created login account was rolled back successfully.`,
+                        ),
+                    ),
+                  ),
+                );
+              }
+
+              if (syncManagedAccount && existing && identity.identityChanged) {
+                return this.userAccountService
+                  .updateAccount(existing.accountId || existing.username, {
+                    username: existing.username,
+                    displayName: existing.displayName,
+                    email: existing.email,
+                    role: existing.role,
+                    status: existing.status,
+                  })
+                  .pipe(
+                    catchError((rollbackError) =>
+                      throwError(
+                        () =>
+                          new Error(
+                            `${accessError?.message || 'User Access could not be saved.'} Login metadata changed before the failure and automatic rollback also failed: ${rollbackError?.message || 'unknown rollback error'}`,
+                          ),
+                      ),
+                    ),
+                    switchMap(() =>
+                      throwError(
+                        () =>
+                          new Error(
+                            `${accessError?.message || 'User Access could not be saved.'} Login metadata was restored to its previous values.`,
+                          ),
+                      ),
+                    ),
+                  );
+              }
+
+              return throwError(() => accessError);
+            }),
+          );
         }),
         takeUntil(this.destroy$),
         finalize(() => {
@@ -935,15 +1084,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
             identityText +
             (target === 'database'
               ? 'User access saved to the database.'
-              : 'User access saved in this browser. Enable the userAccess endpoint to share permissions across devices.');
+              : 'LOCAL ONLY — user access was saved in this browser because the userAccess database endpoint is disabled. It is not shared across devices.');
           this.userAccessRecords = existing
             ? this.userAccessRecords.map((user) => (user.id === record.id ? record : user))
             : [record, ...this.userAccessRecords];
           this.invalidateUserAccessCaches();
           this.userAccessControl.notifyRecordsChanged();
+          this.captureUserAccessEditorSnapshot();
           timer(900)
             .pipe(takeUntil(this.destroy$))
-            .subscribe(() => this.closeUserAccessDrawer());
+            .subscribe(() => this.closeUserAccessDrawer(true));
         },
         error: (error) => {
           this.userPassword = '';
@@ -1054,8 +1204,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.userAccessError = 'The account currently in use cannot be deleted.';
       return;
     }
-    if (user.role === 'administrator' && this.userAccessAdministratorCount <= 1) {
-      this.userAccessError = 'At least one administrator must remain in the system.';
+    if (
+      user.role === 'administrator' &&
+      user.status === 'active' &&
+      this.userAccessActiveAdministratorCount <= 1
+    ) {
+      this.userAccessError = 'At least one active administrator must remain in the system.';
       return;
     }
     if (
@@ -1144,17 +1298,23 @@ export class SettingsComponent implements OnInit, OnDestroy {
   openAdd(): void {
     this.editingId = '';
     this.form = this.emptyForm();
+    this.vesselGroupIds = [];
+    this.vesselGroupSearchTerm = '';
+    this.resetVesselGroupComposer();
     this.selectedEngineProfileId = '';
-    this.manualEngineComposerOpen = false;
     this.manualEngineName = '';
     this.expandedEngineAssignmentId = '';
     this.engineLibraryOpen = false;
     this.realtimeMachinery = [];
     this.realtimeMachineryNotice =
-      'Enter the vessel Telemetry Prefix to load its Realtime machinery.';
-    this.pendingEngineProfiles.clear();
+      'Enter the vessel Telemetry Prefix to preview its Realtime machinery.';
+    this.realtimeDetectionPending = false;
+    this.realtimeDetectionSummary = { total: 0, existing: 0, newCount: 0, conflicts: 0 };
     this.drawerOpen = true;
+    this.syncSettingsDrawerDocumentState();
     this.saveNotice = '';
+    this.captureVesselEditorSnapshot();
+    this.loadGroups();
     this.loadEngineProfiles();
   }
 
@@ -1166,44 +1326,168 @@ export class SettingsComponent implements OnInit, OnDestroy {
       engines: [...vessel.engines],
       engineAssignments: this.cloneEngineAssignments(vessel),
     };
+    const vesselGroupNames = new Set(this.form.groups.map((name) => name.trim().toLowerCase()));
+    this.vesselGroupIds = this.groupDefinitions
+      .filter(
+        (group) =>
+          group.vesselIds.includes(vessel.id) || vesselGroupNames.has(group.name.trim().toLowerCase()),
+      )
+      .map((group) => group.id);
+    this.vesselGroupSearchTerm = '';
+    this.resetVesselGroupComposer();
     this.selectedEngineProfileId = '';
-    this.manualEngineComposerOpen = false;
     this.manualEngineName = '';
     this.expandedEngineAssignmentId = '';
     this.engineLibraryOpen = false;
-    this.pendingEngineProfiles.clear();
     this.drawerOpen = true;
+    this.syncSettingsDrawerDocumentState();
     this.saveNotice = '';
+    this.loadGroups();
     this.syncRealtimeMachinery(false);
+    this.captureVesselEditorSnapshot();
     this.loadEngineProfiles();
   }
 
-  closeDrawer(): void {
-    if (this.isSavingVessel) return;
-    if (this.pendingEngineProfiles.size > 0) {
+  closeDrawer(force = false): void {
+    if (this.isSavingVessel || this.vesselGroupSaving || this.engineProfileSaving) return;
+    if (!force && this.isVesselEditorDirty()) {
       const discard = window.confirm(
-        'Engine profile changes have not been saved. Discard these changes?',
+        'This vessel has unsaved information, group, engine or engine-profile changes. Discard these changes?',
       );
       if (!discard) return;
     }
     this.drawerOpen = false;
+    this.syncSettingsDrawerDocumentState();
+    this.vesselGroupIds = [];
+    this.vesselGroupSearchTerm = '';
+    this.resetVesselGroupComposer();
     this.engineLibraryOpen = false;
-    this.manualEngineComposerOpen = false;
     this.manualEngineName = '';
     this.expandedEngineAssignmentId = '';
     this.engineProfileSaveNotice = '';
     this.realtimeMachinery = [];
     this.realtimeMachineryNotice = '';
-    this.pendingEngineProfiles.clear();
+    this.realtimeDetectionPending = false;
+    this.realtimeDetectionSummary = { total: 0, existing: 0, newCount: 0, conflicts: 0 };
+    this.vesselEditorSnapshot = '';
+    this.engineProfileEditorSnapshot = '';
+  }
+
+  openVesselGroupComposer(): void {
+    this.vesselGroupComposerOpen = true;
+    this.vesselGroupInlineNotice = '';
+  }
+
+  closeVesselGroupComposer(): void {
+    if (this.vesselGroupSaving) return;
+    this.vesselGroupComposerOpen = false;
+    this.vesselNewGroupName = '';
+    this.vesselNewGroupDescription = '';
+    this.vesselGroupInlineNotice = '';
+  }
+
+  createAndSelectVesselGroup(): void {
+    const name = this.vesselNewGroupName.trim();
+    const description = this.vesselNewGroupDescription.trim();
+    if (!name || this.vesselGroupSaving || this.isSavingVessel) return;
+
+    const duplicate = this.groupDefinitions.find(
+      (group) => group.name.trim().toLowerCase() === name.toLowerCase(),
+    );
+    if (duplicate) {
+      this.toggleVesselGroup(duplicate.id, true);
+      this.vesselGroupInlineNotice = `“${duplicate.name}” already exists and has been selected.`;
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const definition: VesselGroupDefinition = {
+      id: this.createGroupId(name),
+      name,
+      description,
+      vesselIds: [],
+      createdAt: now,
+      updatedAt: now,
+      source: 'local',
+    };
+
+    this.vesselGroupSaving = true;
+    this.vesselGroupInlineNotice = 'Creating group...';
+    this.settingsData
+      .saveVesselGroup(definition)
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => (this.vesselGroupSaving = false)),
+      )
+      .subscribe({
+        next: (target) => {
+          const savedDefinition: VesselGroupDefinition = {
+            ...definition,
+            source: target === 'database' ? 'backend' : 'local',
+          };
+          this.groupDefinitions = [...this.groupDefinitions, savedDefinition].sort((a, b) =>
+            a.name.localeCompare(b.name),
+          );
+          this.invalidateGroupCaches();
+          this.toggleVesselGroup(savedDefinition.id, true);
+          this.vesselNewGroupName = '';
+          this.vesselNewGroupDescription = '';
+          this.vesselGroupInlineNotice =
+            target === 'database'
+              ? `“${savedDefinition.name}” created and selected. Save the vessel to confirm membership.`
+              : `Database unavailable. “${savedDefinition.name}” was saved locally and selected.`;
+        },
+        error: (error) => {
+          this.vesselGroupInlineNotice = error?.message || 'Unable to create vessel group.';
+        },
+      });
+  }
+
+  private resetVesselGroupComposer(): void {
+    this.vesselGroupComposerOpen = false;
+    this.vesselNewGroupName = '';
+    this.vesselNewGroupDescription = '';
+    this.vesselGroupInlineNotice = '';
+    this.vesselGroupSaving = false;
   }
 
   openGroupManagement(): void {
-    this.drawerOpen = false;
+    if (
+      this.isVesselEditorDirty() &&
+      !window.confirm('The vessel editor has unsaved changes. Discard them and open Group Management?')
+    )
+      return;
+    this.closeDrawer(true);
+    this.activeTab = 'groups';
     this.router.navigate(['/main/settings', 'groups']);
+  }
+
+  toggleVesselGroup(groupId: string, checked: boolean): void {
+    this.vesselGroupIds = checked
+      ? Array.from(new Set([...this.vesselGroupIds, groupId]))
+      : this.vesselGroupIds.filter((id) => id !== groupId);
+    this.form.groups = this.selectedVesselGroupNames();
+  }
+
+  vesselGroupSelected(groupId: string): boolean {
+    return this.vesselGroupIds.includes(groupId);
+  }
+
+  vesselGroupMemberCount(group: VesselGroupDefinition): number {
+    const currentId = this.form.id.trim();
+    const alreadyIncluded = currentId ? group.vesselIds.includes(currentId) : false;
+    const selected = this.vesselGroupSelected(group.id);
+    return group.vesselIds.length + (selected && !alreadyIncluded ? 1 : 0) - (!selected && alreadyIncluded ? 1 : 0);
   }
 
   onVesselPrefixChanged(): void {
     this.syncRealtimeMachinery(true);
+  }
+
+  get hasRealtimeEngineAssignments(): boolean {
+    return (this.form.engineAssignments || []).some((assignment) =>
+      this.isRealtimeAssignment(assignment),
+    );
   }
 
   syncRealtimeMachinery(showNotice = true): void {
@@ -1211,13 +1495,50 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.realtimeMachinery = this.realtimeMachineryService.getForPrefix(prefix);
 
     if (!this.realtimeMachinery.length) {
-      this.form.engineAssignments = (this.form.engineAssignments || []).filter(
-        (assignment) => !this.isRealtimeAssignment(assignment),
-      );
-      this.syncLegacyEngineNames();
+      this.realtimeDetectionPending = false;
+      this.realtimeDetectionSummary = { total: 0, existing: 0, newCount: 0, conflicts: 0 };
       this.realtimeMachineryNotice = prefix
-        ? `No Realtime engine layout matches prefix “${prefix}”. Check the prefix or keep manual engine entries.`
-        : 'Enter the vessel Telemetry Prefix to load its Realtime machinery.';
+        ? `No Realtime engine layout matches prefix “${prefix}”. Existing engine assignments were left unchanged.`
+        : 'Enter the vessel Telemetry Prefix to preview its Realtime machinery.';
+      if (showNotice && prefix) {
+        this.saveNotice =
+          'No Realtime machinery was applied. Check the Telemetry Prefix or keep the vessel in manual engine mode.';
+      }
+      return;
+    }
+
+    const assignments = this.form.engineAssignments || [];
+    let existing = 0;
+    let conflicts = 0;
+
+    for (const position of this.realtimeMachinery) {
+      const candidates = assignments.filter((assignment) =>
+        this.realtimePositionMatchesAssignment(position, assignment),
+      );
+      if (candidates.length > 0) existing += 1;
+      if (candidates.length > 1) conflicts += candidates.length - 1;
+    }
+
+    this.realtimeDetectionSummary = {
+      total: this.realtimeMachinery.length,
+      existing,
+      newCount: Math.max(0, this.realtimeMachinery.length - existing),
+      conflicts,
+    };
+    this.realtimeDetectionPending = showNotice;
+    this.realtimeMachineryNotice = `Preview: ${this.realtimeMachinery.length} Realtime position(s) detected for ${prefix}; ${existing} already mapped, ${Math.max(0, this.realtimeMachinery.length - existing)} new, ${conflicts} conflict(s).`;
+
+    if (showNotice) {
+      this.saveNotice =
+        'Realtime detection is in preview mode. Review the result and choose “Apply Detected Engines” before saving.';
+    }
+  }
+
+  applyRealtimeMachinery(): void {
+    if (!this.realtimeMachinery.length || this.isSavingVessel) return;
+    if (this.realtimeDetectionSummary.conflicts > 0) {
+      this.saveNotice =
+        'Resolve duplicate/conflicting engine positions before applying the Realtime layout.';
       return;
     }
 
@@ -1225,12 +1546,35 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.form.engineAssignments || [],
       this.realtimeMachinery,
     );
-    this.syncLegacyEngineNames();
-    this.realtimeMachineryNotice = `${this.realtimeMachinery.length} machinery positions loaded from the Realtime layout for ${prefix}.`;
-    if (showNotice) {
-      this.saveNotice =
-        'Realtime engine positions refreshed. Review the shared profile for each position, then save once.';
-    }
+    this.form.engineSyncMode = 'realtime';
+    this.realtimeDetectionPending = false;
+    this.realtimeMachineryNotice = `${this.realtimeMachinery.length} Realtime engine position(s) are applied to this vessel.`;
+    this.saveNotice = `${this.realtimeMachinery.length} Realtime engine position(s) applied. Review the shared profile for each engine, then save once.`;
+  }
+
+  cancelRealtimeDetectionPreview(): void {
+    this.realtimeDetectionPending = false;
+    this.saveNotice = 'Realtime detection preview dismissed. Existing engine assignments were not changed.';
+  }
+
+  clearRealtimeEngineAssignments(): void {
+    const realtimeCount = (this.form.engineAssignments || []).filter((assignment) =>
+      this.isRealtimeAssignment(assignment),
+    ).length;
+    if (!realtimeCount) return;
+    if (
+      !window.confirm(
+        `Remove ${realtimeCount} Realtime engine assignment(s) and keep only manual engines for this vessel?`,
+      )
+    )
+      return;
+
+    this.form.engineAssignments = (this.form.engineAssignments || []).filter(
+      (assignment) => !this.isRealtimeAssignment(assignment),
+    );
+    this.form.engineSyncMode = 'manual';
+    this.realtimeDetectionPending = false;
+    this.saveNotice = 'Realtime assignments removed. This vessel will remain in manual engine mode after saving.';
   }
 
   saveVessel(): void {
@@ -1265,19 +1609,43 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     const expectedMachinery = this.realtimeMachineryService.getForPrefix(prefix);
-    if (expectedMachinery.length) {
-      this.realtimeMachinery = expectedMachinery;
-      this.form.engineAssignments = this.realtimeMachineryService.mergeAssignments(
-        this.form.engineAssignments || [],
-        expectedMachinery,
-      );
-    } else {
-      this.form.engineAssignments = (this.form.engineAssignments || []).filter(
-        (assignment) => !this.isRealtimeAssignment(assignment),
-      );
+    const engineAssignments = this.normalizedEngineAssignments();
+
+    const duplicateEngine = this.duplicateEngineAssignmentLabel(engineAssignments);
+    if (duplicateEngine) {
+      this.saveNotice = `Duplicate engine position “${duplicateEngine}” detected. Use a unique name/position for each engine.`;
+      return;
     }
 
-    const engineAssignments = this.normalizedEngineAssignments();
+    const realtimeAssignments = engineAssignments.filter((assignment) =>
+      this.isRealtimeAssignment(assignment),
+    );
+    if (this.form.engineSyncMode === 'realtime') {
+      if (!expectedMachinery.length) {
+        this.saveNotice =
+          'This vessel is in Realtime engine mode, but the current Telemetry Prefix has no known machinery layout. Use “Remove Realtime / Manual Mode” or correct the prefix.';
+        return;
+      }
+      const expectedKeys = new Set(expectedMachinery.map((position) => position.key));
+      const mappedKeys = new Set(
+        realtimeAssignments.map((assignment) => assignment.realtimeKey || '').filter(Boolean),
+      );
+      if (
+        realtimeAssignments.length !== expectedMachinery.length ||
+        expectedMachinery.some((position) => !mappedKeys.has(position.key)) ||
+        realtimeAssignments.some(
+          (assignment) => assignment.realtimeKey && !expectedKeys.has(assignment.realtimeKey),
+        )
+      ) {
+        this.saveNotice =
+          'Realtime machinery does not match the current Telemetry Prefix. Use Import from Realtime and Apply Detected Engines before saving.';
+        return;
+      }
+    } else if (realtimeAssignments.length > 0) {
+      this.saveNotice =
+        'Realtime assignments are present while the vessel is in manual mode. Remove them or apply the current Realtime layout before saving.';
+      return;
+    }
     const duplicateRealtimeSlots = new Set<string>();
     for (const assignment of engineAssignments.filter((item) => item.source === 'realtime')) {
       const slot = `${assignment.realtimeRow}-${assignment.realtimeCol}`;
@@ -1288,41 +1656,53 @@ export class SettingsComponent implements OnInit, OnDestroy {
       duplicateRealtimeSlots.add(slot);
     }
 
+    const selectedGroupNames = this.selectedVesselGroupNames();
+    this.form.groups = selectedGroupNames;
     const record: VesselSettingsRecord = {
       ...this.form,
       id,
       name,
       prefix,
-      groups: Array.from(new Set(this.form.groups)),
+      groups: selectedGroupNames,
       engineAssignments,
       engines: this.engineNamesFromAssignments(engineAssignments),
       source: this.editingId ? this.form.source : 'local',
     };
 
-    const profileRecords = Array.from(this.pendingEngineProfiles.values());
-    const saveProfiles$ = profileRecords.length
-      ? forkJoin(profileRecords.map((profile) => this.engineProfileService.saveProfile(profile)))
-      : of([]);
+    const previousId = this.editingId;
+    const groupUpdates = this.buildVesselGroupUpdates(id, previousId);
 
     this.isSavingVessel = true;
-    this.saveNotice = profileRecords.length
-      ? `Saving vessel and ${profileRecords.length} engine profile change(s)...`
+    this.saveNotice = groupUpdates.length
+      ? `Saving vessel and ${groupUpdates.length} group membership change(s)...`
       : 'Saving vessel and engine assignments...';
 
-    saveProfiles$
+    this.settingsData
+      .saveVessel(record)
       .pipe(
-        switchMap(() => this.settingsData.saveVessel(record)),
+        switchMap((vesselTarget) => {
+          if (!groupUpdates.length) return of({ vesselTarget, savedGroups: [] as VesselGroupDefinition[] });
+          return forkJoin(
+            groupUpdates.map((group) =>
+              this.settingsData.saveVesselGroup(group).pipe(
+                map((groupTarget) => ({
+                  ...group,
+                  source: groupTarget === 'database' ? ('backend' as const) : ('local' as const),
+                })),
+              ),
+            ),
+          ).pipe(map((savedGroups) => ({ vesselTarget, savedGroups })));
+        }),
         takeUntil(this.destroy$),
       )
       .subscribe({
-        next: (target) => {
+        next: ({ vesselTarget, savedGroups }) => {
           this.isSavingVessel = false;
 
           const hydratedRecord = this.realtimeMachineryService.hydrateVessel({
             ...record,
-            source: target === 'database' ? 'backend' : 'local',
+            source: vesselTarget === 'database' ? 'backend' : 'local',
           });
-          const previousId = this.editingId;
           const exists = this.vessels.some((vessel) => vessel.id === previousId || vessel.id === record.id);
           this.vessels = exists
             ? this.vessels.map((vessel) =>
@@ -1330,25 +1710,29 @@ export class SettingsComponent implements OnInit, OnDestroy {
               )
             : [hydratedRecord, ...this.vessels];
 
-          // Profiles are already persisted above. Keep the in-memory library in sync instead of
-          // immediately issuing another GET for the entire profile collection.
-          if (profileRecords.length) {
-            const savedProfiles = new Map(profileRecords.map((profile) => [profile.id, profile]));
-            this.engineProfiles = [
-              ...profileRecords,
-              ...this.engineProfiles.filter((profile) => !savedProfiles.has(profile.id)),
-            ];
+          if (savedGroups.length) {
+            const savedGroupById = new Map(savedGroups.map((group) => [group.id, group]));
+            this.groupDefinitions = this.groupDefinitions.map(
+              (group) => savedGroupById.get(group.id) || group,
+            );
+            this.invalidateGroupCaches();
           }
 
-          this.pendingEngineProfiles.clear();
+          this.form = {
+            ...hydratedRecord,
+            groups: [...hydratedRecord.groups],
+            engines: [...hydratedRecord.engines],
+            engineAssignments: this.cloneEngineAssignments(hydratedRecord),
+          };
           this.invalidateVesselCaches();
           this.saveNotice =
-            target === 'database'
-              ? 'Vessel and engine settings saved to the database.'
-              : 'Database unavailable. Vessel and engine settings were saved in this browser as a fallback.';
+            vesselTarget === 'database'
+              ? 'Vessel, group membership and engine settings saved successfully.'
+              : 'Database unavailable. Vessel, group membership and engine settings were saved in this browser as a fallback.';
+          this.captureVesselEditorSnapshot();
           timer(650)
             .pipe(takeUntil(this.destroy$))
-            .subscribe(() => (this.drawerOpen = false));
+            .subscribe(() => this.closeDrawer(true));
         },
         error: (error) => {
           this.isSavingVessel = false;
@@ -1390,6 +1774,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.groupVesselSearchTerm = '';
     this.groupSaveNotice = '';
     this.groupDrawerOpen = true;
+    this.syncSettingsDrawerDocumentState();
+    this.captureGroupEditorSnapshot();
+    this.loadUserAccessRecords();
   }
 
   openEditGroup(group: VesselGroupSummary): void {
@@ -1405,10 +1792,19 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.groupVesselSearchTerm = '';
     this.groupSaveNotice = '';
     this.groupDrawerOpen = true;
+    this.syncSettingsDrawerDocumentState();
+    this.captureGroupEditorSnapshot();
+    this.loadUserAccessRecords();
   }
 
-  closeGroupDrawer(): void {
+  closeGroupDrawer(force = false): void {
+    if (!force && this.isGroupEditorDirty()) {
+      const discard = window.confirm('This vessel group has unsaved changes. Discard them?');
+      if (!discard) return;
+    }
     this.groupDrawerOpen = false;
+    this.syncSettingsDrawerDocumentState();
+    this.groupEditorSnapshot = '';
   }
 
   toggleGroupVessel(vesselId: string, checked: boolean): void {
@@ -1419,6 +1815,27 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   groupVesselSelected(vesselId: string): boolean {
     return this.groupForm.vesselIds.includes(vesselId);
+  }
+
+  get groupAssignedUserCount(): number {
+    if (!this.editingGroupId) return 0;
+    return this.userAccessRecords.filter(
+      (user) => user.accessScope === 'groups' && user.groupIds.includes(this.editingGroupId),
+    ).length;
+  }
+
+  get groupAddedVesselCount(): number {
+    const existing = this.groupDefinitions.find((group) => group.id === this.editingGroupId);
+    if (!existing) return this.groupForm.vesselIds.length;
+    const before = new Set(existing.vesselIds);
+    return this.groupForm.vesselIds.filter((id) => !before.has(id)).length;
+  }
+
+  get groupRemovedVesselCount(): number {
+    const existing = this.groupDefinitions.find((group) => group.id === this.editingGroupId);
+    if (!existing) return 0;
+    const after = new Set(this.groupForm.vesselIds);
+    return existing.vesselIds.filter((id) => !after.has(id)).length;
   }
 
   saveGroup(): void {
@@ -1437,6 +1854,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.groupSaveNotice = 'A group with this name already exists.';
       return;
     }
+
+    if (
+      this.editingGroupId &&
+      this.groupAssignedUserCount > 0 &&
+      (this.groupAddedVesselCount > 0 || this.groupRemovedVesselCount > 0) &&
+      !window.confirm(
+        `This group is assigned to ${this.groupAssignedUserCount} user(s). Saving will change group vessel access (+${this.groupAddedVesselCount} / -${this.groupRemovedVesselCount}). Continue?`,
+      )
+    )
+      return;
 
     const existing = this.groupDefinitions.find((group) => group.id === this.editingGroupId);
     const definition: VesselGroupDefinition = {
@@ -1465,15 +1892,21 @@ export class SettingsComponent implements OnInit, OnDestroy {
               )
             : [...this.groupDefinitions, savedDefinition];
           this.invalidateGroupCaches();
+          this.groupForm = {
+            name: savedDefinition.name,
+            description: savedDefinition.description,
+            vesselIds: [...savedDefinition.vesselIds],
+          };
           this.groupSaveNotice =
             target === 'database'
               ? existing
                 ? 'Group updated in the database.'
                 : 'Group created in the database.'
               : 'Database unavailable. Group saved in this browser as a fallback.';
+          this.captureGroupEditorSnapshot();
           timer(450)
             .pipe(takeUntil(this.destroy$))
-            .subscribe(() => this.closeGroupDrawer());
+            .subscribe(() => this.closeGroupDrawer(true));
         },
         error: (error) => {
           this.groupSaveNotice = error?.message || 'Unable to save group.';
@@ -1597,22 +2030,33 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   assignEngineProfile(): void {
     const profile = this.engineProfiles.find((item) => item.id === this.selectedEngineProfileId);
-    if (!profile) {
-      this.saveNotice = 'Select an engine profile before assigning it.';
+    const enteredName = this.manualEngineName.trim();
+    if (!enteredName && !profile) {
+      this.saveNotice = 'Enter an engine name or select a shared engine profile.';
       return;
     }
 
     const assignments = [...(this.form.engineAssignments || [])];
     const assignmentId = `engine-assignment-${Date.now().toString(36)}`;
     const position =
-      this.manualEngineName.trim() ||
-      this.defaultEnginePosition(profile.category, assignments.length);
+      enteredName || this.defaultEnginePosition(profile?.category || 'other', assignments.length);
+    const displayName = position;
+    const duplicatePosition = assignments.find(
+      (assignment) =>
+        this.normalizeEngineIdentity(assignment.position || assignment.displayName) ===
+        this.normalizeEngineIdentity(position),
+    );
+    if (duplicatePosition) {
+      this.saveNotice = `Engine position “${position}” already exists. Use a unique engine name/position before adding another engine.`;
+      return;
+    }
+
     this.form.engineAssignments = [
       ...assignments,
       {
         id: assignmentId,
-        profileId: profile.id,
-        displayName: profile.name,
+        profileId: profile?.id || '',
+        displayName,
         position,
         quantity: 1,
         source: 'manual',
@@ -1621,27 +2065,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     this.selectedEngineProfileId = '';
     this.manualEngineName = '';
-    this.manualEngineComposerOpen = false;
     this.expandedEngineAssignmentId = assignmentId;
-    this.syncLegacyEngineNames();
-    this.saveNotice = `${position} added with ${this.engineProfileDisplayName(profile)}. Save once when the setup is complete.`;
-  }
-
-  openManualEngineComposer(): void {
-    this.manualEngineComposerOpen = true;
-    this.manualEngineName = '';
-    this.selectedEngineProfileId = '';
-    this.expandedEngineAssignmentId = '';
-  }
-
-  closeManualEngineComposer(): void {
-    this.manualEngineComposerOpen = false;
-    this.manualEngineName = '';
-    this.selectedEngineProfileId = '';
+    this.saveNotice = profile
+      ? `${position} added with ${this.engineProfileDisplayName(profile)}. Save once when the setup is complete.`
+      : `${position} added as a manual engine. A shared profile can be linked later if needed.`;
   }
 
   toggleEngineAssignmentEditor(assignment: VesselEngineAssignment): void {
-    this.manualEngineComposerOpen = false;
     this.expandedEngineAssignmentId =
       this.expandedEngineAssignmentId === assignment.id ? '' : assignment.id;
   }
@@ -1658,13 +2088,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   engineAssignmentStatusLabel(assignment: VesselEngineAssignment): string {
-    if (!this.engineProfileForAssignment(assignment)) return 'Setup required';
-    return this.isRealtimeAssignment(assignment) ? 'Connected' : 'Manual';
+    if (!this.isRealtimeAssignment(assignment)) return 'Manual';
+    return this.engineProfileForAssignment(assignment) ? 'Connected' : 'Setup required';
   }
 
   engineAssignmentStatusIcon(assignment: VesselEngineAssignment): string {
-    if (!this.engineProfileForAssignment(assignment)) return 'fa-exclamation-triangle';
-    return this.isRealtimeAssignment(assignment) ? 'fa-check-circle' : 'fa-pencil';
+    if (!this.isRealtimeAssignment(assignment)) return 'fa-pencil';
+    return this.engineProfileForAssignment(assignment) ? 'fa-check-circle' : 'fa-exclamation-triangle';
   }
 
   engineProfileCategoryLabel(category: EngineProfileCategory): string {
@@ -1679,15 +2109,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
       (item) => item.id !== id,
     );
     if (this.expandedEngineAssignmentId === id) this.expandedEngineAssignmentId = '';
-    this.syncLegacyEngineNames();
-  }
-
-  updateEngineAssignmentQuantity(assignment: VesselEngineAssignment): void {
-    const quantity = Number(assignment.quantity);
-    assignment.quantity = Number.isFinite(quantity)
-      ? Math.min(12, Math.max(1, Math.round(quantity)))
-      : 1;
-    this.syncLegacyEngineNames();
   }
 
   isRealtimeAssignment(assignment: VesselEngineAssignment): boolean {
@@ -1723,11 +2144,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
     });
   }
 
+  onEngineAssignmentPositionChange(assignment: VesselEngineAssignment): void {
+    assignment.displayName = assignment.position;
+    assignment.quantity = 1;
+  }
+
   onEngineAssignmentProfileChange(assignment: VesselEngineAssignment): void {
     const profile = this.engineProfileForAssignment(assignment);
-    assignment.displayName = profile?.name || assignment.position;
+    assignment.displayName = assignment.position;
     assignment.quantity = 1;
-    this.syncLegacyEngineNames();
     this.saveNotice = profile
       ? `${assignment.position} linked to ${this.engineProfileDisplayName(profile)}. Save once when finished.`
       : `${assignment.position} is not linked to a shared profile.`;
@@ -1778,45 +2203,49 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
   }
 
-  engineFormulaName(profile: EngineProfileRecord | undefined): string {
-    return profile
-      ? getEngineFormulaPreset(profile.formulaPresetId).shortName
-      : 'Legacy / no shared formula';
-  }
-
-  engineFormulaDescription(profile: EngineProfileRecord | undefined): string {
-    return profile
-      ? getEngineFormulaPreset(profile.formulaPresetId).description
-      : 'Link this legacy engine to a profile to reuse the same rated values and calculation formula.';
-  }
-
-  engineFormulaLines(profile: EngineProfileRecord | undefined): string[] {
-    return profile ? [...getEngineFormulaPreset(profile.formulaPresetId).formulas] : [];
-  }
-
   openEngineLibrary(): void {
     this.engineLibraryOpen = true;
     this.engineProfileSaveNotice = '';
     this.engineProfileSearchTerm = '';
+    this.captureEngineProfileEditorSnapshot();
     if (!this.engineProfiles.length) this.loadEngineProfiles();
   }
 
-  closeEngineLibrary(): void {
+  closeEngineLibrary(force = false): void {
+    if (this.engineProfileSaving) return;
+    if (!force && this.isEngineProfileEditorDirty()) {
+      const discard = window.confirm('This engine profile has unsaved changes. Discard them?');
+      if (!discard) return;
+    }
     this.engineLibraryOpen = false;
     this.editingEngineProfileId = '';
     this.engineProfileForm = this.emptyEngineProfileForm();
     this.engineProfileSaveNotice = '';
     this.engineTelemetryMappingOpen = false;
+    this.engineProfileEditorSnapshot = '';
   }
 
-  startNewEngineProfile(): void {
+  startNewEngineProfile(force = false): void {
+    if (this.engineProfileSaving) return;
+    if (!force && this.isEngineProfileEditorDirty()) {
+      const discard = window.confirm('Discard the unsaved engine profile changes and start a new profile?');
+      if (!discard) return;
+    }
     this.editingEngineProfileId = '';
     this.engineProfileForm = this.emptyEngineProfileForm();
     this.engineProfileSaveNotice = '';
     this.engineTelemetryMappingOpen = false;
+    this.captureEngineProfileEditorSnapshot();
   }
 
   editEngineProfile(profile: EngineProfileRecord): void {
+    if (this.engineProfileSaving) return;
+    if (
+      profile.id !== this.editingEngineProfileId &&
+      this.isEngineProfileEditorDirty() &&
+      !window.confirm('Discard the unsaved engine profile changes and open another profile?')
+    )
+      return;
     this.editingEngineProfileId = profile.id;
     this.engineProfileForm = {
       ...profile,
@@ -1827,9 +2256,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.engineProfileUsageCount(profile.id) > 0
         ? `Shared profile: changes will affect ${this.engineProfileUsageCount(profile.id)} assigned vessel(s).`
         : '';
+    this.captureEngineProfileEditorSnapshot();
   }
 
   duplicateEngineProfile(profile: EngineProfileRecord): void {
+    if (this.engineProfileSaving) return;
+    if (
+      this.isEngineProfileEditorDirty() &&
+      !window.confirm('Discard the unsaved engine profile changes and create a copy?')
+    )
+      return;
     this.editingEngineProfileId = '';
     this.engineProfileForm = {
       ...profile,
@@ -1842,9 +2278,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
     };
     this.engineProfileSaveNotice =
       'A safe copy was created. Saving it will not change vessels using the original profile.';
+    // A duplicated profile is a new unsaved draft even before the user edits a field.
+    this.engineProfileEditorSnapshot = '__unsaved-duplicate-profile__';
   }
 
   saveEngineProfile(): void {
+    if (this.engineProfileSaving || this.isSavingVessel) return;
+
     const name = this.engineProfileForm.name.trim();
     if (!name) {
       this.engineProfileSaveNotice = 'Engine profile name is required.';
@@ -1871,6 +2311,17 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.engineProfileSaveNotice = 'Rated RPM must be greater than zero.';
       return;
     }
+
+    const affectedVessels = this.editingEngineProfileId
+      ? this.engineProfileUsageCount(this.editingEngineProfileId)
+      : 0;
+    if (
+      affectedVessels > 0 &&
+      !window.confirm(
+        `This shared engine profile is used by ${affectedVessels} saved vessel(s). Save these shared changes now?`,
+      )
+    )
+      return;
 
     const now = new Date().toISOString();
     const record: EngineProfileRecord = {
@@ -1899,45 +2350,46 @@ export class SettingsComponent implements OnInit, OnDestroy {
           : 'local',
     };
 
-    this.pendingEngineProfiles.set(record.id, record);
-    const profileIndex = this.engineProfiles.findIndex((profile) => profile.id === record.id);
-    if (profileIndex >= 0) {
-      this.engineProfiles = this.engineProfiles.map((profile) =>
-        profile.id === record.id ? record : profile,
-      );
-    } else {
-      this.engineProfiles = [record, ...this.engineProfiles];
-    }
+    this.engineProfileSaving = true;
+    this.engineProfileSaveNotice = 'Saving engine profile...';
+    this.engineProfileService
+      .saveProfile(record)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (target) => {
+          this.engineProfileSaving = false;
+          const savedRecord: EngineProfileRecord = {
+            ...record,
+            source: target === 'database' ? 'backend' : 'local',
+          };
+          const profileIndex = this.engineProfiles.findIndex((profile) => profile.id === record.id);
+          this.engineProfiles =
+            profileIndex >= 0
+              ? this.engineProfiles.map((profile) =>
+                  profile.id === savedRecord.id ? savedRecord : profile,
+                )
+              : [savedRecord, ...this.engineProfiles];
 
-    this.editingEngineProfileId = record.id;
-    this.selectedEngineProfileId = record.id;
-    this.engineProfileForm = { ...record, telemetryMapping: { ...record.telemetryMapping } };
-    this.engineProfileSaveNotice =
-      'Profile changes are ready. Use “Save Vessel & Engines” once to save everything.';
-
-    (this.form.engineAssignments || []).forEach((assignment) => {
-      if (assignment.profileId === record.id) assignment.displayName = record.name;
-    });
-    this.syncLegacyEngineNames();
+          this.editingEngineProfileId = savedRecord.id;
+          this.engineProfileForm = {
+            ...savedRecord,
+            telemetryMapping: { ...savedRecord.telemetryMapping },
+          };
+          this.engineProfileSaveNotice =
+            target === 'database'
+              ? 'Engine profile saved successfully.'
+              : 'Database unavailable. Engine profile was saved in this browser as a fallback.';
+          this.captureEngineProfileEditorSnapshot();
+        },
+        error: (error) => {
+          this.engineProfileSaving = false;
+          this.engineProfileSaveNotice = error?.message || 'Unable to save engine profile.';
+        },
+      });
   }
 
   deleteEngineProfile(profile: EngineProfileRecord): void {
-    if (this.pendingEngineProfiles.has(profile.id)) {
-      const assignedInCurrentEditor = (this.form.engineAssignments || []).some(
-        (assignment) => assignment.profileId === profile.id,
-      );
-      if (assignedInCurrentEditor) {
-        this.engineProfileSaveNotice =
-          'This staged profile is assigned to the vessel currently being edited. Choose another profile first.';
-        return;
-      }
-      this.pendingEngineProfiles.delete(profile.id);
-      this.engineProfiles = this.engineProfiles.filter((item) => item.id !== profile.id);
-      if (this.editingEngineProfileId === profile.id) this.startNewEngineProfile();
-      this.engineProfileSaveNotice = 'Staged profile removed. No database change was made.';
-      return;
-    }
-
+    if (this.engineProfileSaving) return;
     const usage = this.engineProfileUsageCount(profile.id);
     const assignedInCurrentEditor = (this.form.engineAssignments || []).some(
       (assignment) => assignment.profileId === profile.id,
@@ -1953,7 +2405,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          if (this.editingEngineProfileId === profile.id) this.startNewEngineProfile();
+          if (this.editingEngineProfileId === profile.id) this.startNewEngineProfile(true);
           this.engineProfiles = this.engineProfiles.filter((item) => item.id !== profile.id);
         },
         error: (error) => {
@@ -2061,6 +2513,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
     if (this.isCurrentUser(this.userAccessForm) && this.userAccessForm.status === 'suspended') {
       return 'You cannot suspend the account currently in use.';
     }
+    const existing = this.userAccessRecords.find((user) => user.id === this.editingUserAccessId);
+    if (
+      existing?.role === 'administrator' &&
+      existing.status === 'active' &&
+      this.userAccessActiveAdministratorCount <= 1 &&
+      (this.userAccessForm.role !== 'administrator' || this.userAccessForm.status !== 'active')
+    ) {
+      return 'This is the last active administrator. Create or activate another administrator before changing this account.';
+    }
     if (this.userAccessForm.accessScope === 'groups' && !this.userAccessForm.groupIds.length) {
       return 'Select at least one vessel group.';
     }
@@ -2073,6 +2534,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
       return 'Enable at least one module for this user.';
     }
     if (!this.editingUserAccessId && this.userAccountSetupMode === 'create') {
+      if (!this.userAccessDatabaseEnabled) {
+        return 'Enable the User Access database endpoint before creating a login account. Local-only permissions are not sufficient for account provisioning.';
+      }
       if (!this.userAccountApiEnabled || !this.userAccountApiSecure) {
         return 'User Account API must be enabled over HTTPS before creating a login account.';
       }
@@ -2327,7 +2791,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       ratedPowerKw: null,
       ratedRpm: null,
       cylinders: null,
-      formulaPresetId: 'main-diesel-standard-v1',
+      formulaPresetId: 'telemetry-only-v1',
       telemetryMapping: {
         powerKwTag: '',
         rpmTag: '',
@@ -2342,6 +2806,46 @@ export class SettingsComponent implements OnInit, OnDestroy {
     };
   }
 
+  private selectedVesselGroupNames(): string[] {
+    if (!this.groupDefinitions.length) {
+      return Array.from(new Set(this.form.groups.map((name) => name.trim()).filter(Boolean))).sort(
+        (a, b) => a.localeCompare(b),
+      );
+    }
+    const selectedIds = new Set(this.vesselGroupIds);
+    return this.groupDefinitions
+      .filter((group) => selectedIds.has(group.id))
+      .map((group) => group.name)
+      .sort((a, b) => a.localeCompare(b));
+  }
+
+  private buildVesselGroupUpdates(vesselId: string, previousId: string): VesselGroupDefinition[] {
+    const selectedIds = new Set(this.vesselGroupIds);
+    const updatedAt = new Date().toISOString();
+
+    return this.groupDefinitions.flatMap((group) => {
+      const before = new Set(group.vesselIds);
+      const after = new Set(group.vesselIds);
+      if (previousId && previousId !== vesselId) after.delete(previousId);
+      after.delete(vesselId);
+      if (selectedIds.has(group.id)) after.add(vesselId);
+
+      const beforeIds = Array.from(before).sort();
+      const afterIds = Array.from(after).sort();
+      const changed =
+        beforeIds.length !== afterIds.length || beforeIds.some((value, index) => value !== afterIds[index]);
+      if (!changed) return [];
+
+      return [
+        {
+          ...group,
+          vesselIds: afterIds,
+          updatedAt,
+        },
+      ];
+    });
+  }
+
   private cloneEngineAssignments(vessel: VesselSettingsRecord): VesselEngineAssignment[] {
     if (vessel.engineAssignments?.length) {
       return vessel.engineAssignments.map((assignment) => ({ ...assignment }));
@@ -2350,7 +2854,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       id: `legacy-${index + 1}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
       profileId: '',
       displayName: name,
-      position: `Engine ${index + 1}`,
+      position: name,
       quantity: 1,
       source: 'legacy' as const,
     }));
@@ -2370,24 +2874,155 @@ export class SettingsComponent implements OnInit, OnDestroy {
       );
       if (!match) return assignment;
       changed = true;
-      return { ...assignment, profileId: match.id, displayName: match.name };
+      return { ...assignment, profileId: match.id };
     });
     if (changed) {
       this.form.engineAssignments = assignments;
-      this.syncLegacyEngineNames();
     }
+  }
+
+  private realtimePositionMatchesAssignment(
+    position: RealtimeMachineryPosition,
+    assignment: VesselEngineAssignment,
+  ): boolean {
+    if (assignment.realtimeKey && assignment.realtimeKey === position.key) return true;
+    if (
+      Number(assignment.realtimeRow) === position.row &&
+      Number(assignment.realtimeCol) === position.col
+    )
+      return true;
+    return (
+      this.normalizeEngineIdentity(assignment.position || assignment.displayName) ===
+      this.normalizeEngineIdentity(position.title)
+    );
+  }
+
+  private normalizeEngineIdentity(value: string): string {
+    return String(value || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+  }
+
+  private duplicateEngineAssignmentLabel(assignments: VesselEngineAssignment[]): string {
+    const seen = new Map<string, string>();
+    for (const assignment of assignments) {
+      const label = (assignment.position || assignment.displayName || '').trim();
+      const key = this.normalizeEngineIdentity(label);
+      if (!key) continue;
+      if (seen.has(key)) return label || seen.get(key) || 'Engine';
+      seen.set(key, label);
+    }
+    return '';
+  }
+
+  private captureUserAccessEditorSnapshot(): void {
+    this.userAccessEditorSnapshot = JSON.stringify(this.userAccessEditorState());
+  }
+
+  private isUserAccessEditorDirty(): boolean {
+    if (!this.userAccessDrawerOpen || !this.userAccessEditorSnapshot) return false;
+    return (
+      this.userAccessEditorSnapshot !== JSON.stringify(this.userAccessEditorState()) ||
+      Boolean(this.userPassword || this.userPasswordConfirm || this.resetPassword || this.resetPasswordConfirm)
+    );
+  }
+
+  private userAccessEditorState(): unknown {
+    const { raw: _raw, ...form } = this.userAccessForm as UserAccessRecord & { raw?: unknown };
+    return { form, setupMode: this.userAccountSetupMode };
+  }
+
+  private captureVesselEditorSnapshot(): void {
+    this.vesselEditorSnapshot = JSON.stringify(this.vesselEditorState());
+  }
+
+  private isVesselEditorDirty(): boolean {
+    if (!this.drawerOpen || !this.vesselEditorSnapshot) return false;
+    return (
+      this.vesselEditorSnapshot !== JSON.stringify(this.vesselEditorState()) ||
+      (this.engineLibraryOpen && this.isEngineProfileEditorDirty())
+    );
+  }
+
+  private vesselEditorState(): unknown {
+    const { raw: _raw, ...form } = this.form;
+    return {
+      form,
+      draftEngine: {
+        profileId: this.selectedEngineProfileId,
+        name: this.manualEngineName,
+      },
+    };
+  }
+
+  private captureGroupEditorSnapshot(): void {
+    this.groupEditorSnapshot = JSON.stringify(this.groupForm);
+  }
+
+  private isGroupEditorDirty(): boolean {
+    return Boolean(
+      this.groupDrawerOpen &&
+        this.groupEditorSnapshot &&
+        this.groupEditorSnapshot !== JSON.stringify(this.groupForm),
+    );
+  }
+
+  private captureEngineProfileEditorSnapshot(): void {
+    this.engineProfileEditorSnapshot = JSON.stringify({
+      editingId: this.editingEngineProfileId,
+      form: this.engineProfileForm,
+    });
+  }
+
+  private isEngineProfileEditorDirty(): boolean {
+    if (!this.engineLibraryOpen || !this.engineProfileEditorSnapshot) return false;
+    return (
+      this.engineProfileEditorSnapshot !==
+      JSON.stringify({ editingId: this.editingEngineProfileId, form: this.engineProfileForm })
+    );
+  }
+
+
+  private syncSettingsDrawerDocumentState(forceOpen?: boolean): void {
+    if (typeof document === 'undefined' || !document.body) return;
+
+    const open =
+      forceOpen ?? (this.userAccessDrawerOpen || this.groupDrawerOpen || this.drawerOpen);
+
+    document.documentElement?.classList.toggle('fv-settings-drawer-open', open);
+    document.body.classList.toggle('fv-settings-drawer-open', open);
+  }
+
+  private closeOpenEditorsForNavigation(): void {
+    if (this.userAccessDrawerOpen) this.closeUserAccessDrawer(true);
+    if (this.groupDrawerOpen) this.closeGroupDrawer(true);
+    if (this.drawerOpen) this.closeDrawer(true);
+    else if (this.engineLibraryOpen) this.closeEngineLibrary(true);
+  }
+
+  private hasUnsavedChanges(): boolean {
+    return (
+      this.isUserAccessEditorDirty() ||
+      this.isGroupEditorDirty() ||
+      this.isVesselEditorDirty() ||
+      this.isEngineProfileEditorDirty()
+    );
   }
 
   private normalizedEngineAssignments(): VesselEngineAssignment[] {
     return (this.form.engineAssignments || [])
-      .filter((assignment) => assignment.profileId || assignment.displayName.trim())
+      .filter(
+        (assignment) => assignment.profileId || assignment.position.trim() || assignment.displayName.trim(),
+      )
       .map((assignment, index) => {
         const profile = this.engineProfileForAssignment(assignment);
         return {
           id: assignment.id || `engine-assignment-${index + 1}`,
           profileId: assignment.profileId,
-          displayName: profile?.name || assignment.displayName.trim() || `Engine ${index + 1}`,
-          position: assignment.position.trim() || `Engine ${index + 1}`,
+          displayName:
+            assignment.displayName.trim() || assignment.position.trim() || profile?.name || `Engine ${index + 1}`,
+          position: assignment.position.trim() || assignment.displayName.trim() || `Engine ${index + 1}`,
           quantity: this.isRealtimeAssignment(assignment)
             ? 1
             : Math.min(12, Math.max(1, Math.round(Number(assignment.quantity) || 1))),
@@ -2402,10 +3037,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   private engineNamesFromAssignments(assignments: VesselEngineAssignment[]): string[] {
     return this.realtimeMachineryService.engineNames(assignments);
-  }
-
-  private syncLegacyEngineNames(): void {
-    this.form.engines = this.engineNamesFromAssignments(this.normalizedEngineAssignments());
   }
 
   private defaultEnginePosition(category: EngineProfileCategory, existingCount: number): string {
@@ -2441,6 +3072,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       groups: [],
       engines: [],
       engineAssignments: [],
+      engineSyncMode: 'manual',
       status: 'unknown',
       source: 'local',
     };

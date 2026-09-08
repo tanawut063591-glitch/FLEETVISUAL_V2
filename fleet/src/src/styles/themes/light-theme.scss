@@ -1,0 +1,123 @@
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  /* Clean white default theme */
+  --main-bg: #f4f8ff;
+  --page-bg: #f6f9fd;
+  --card-bg: #ffffff;
+  --surface-bg: #ffffff;
+  --surface-bg-2: #f8fbff;
+  --primary-bg: #ffffff;
+  --primary-bg-50: rgba(255, 255, 255, 0.86);
+  --secondary-bg: #eef4fb;
+  --secondary-bg-50: rgba(238, 244, 251, 0.82);
+
+  --primary-txt: #0f172a;
+  --secondary-txt: #475569;
+  --muted-txt: #64748b;
+  --active-txt: #2563eb;
+  --row-txt: #1e293b;
+  --label-txt: #64748b;
+  --value-txt: #0f172a;
+
+  --border-color: #dbe5f1;
+  --soft-border: #e7eef7;
+  --shadow-soft: 0 16px 40px rgba(15, 23, 42, 0.08);
+  --shadow-card: 0 10px 28px rgba(15, 23, 42, 0.065);
+
+  --accent: #2563eb;
+  --accent-2: #0ea5e9;
+  --accent-soft: rgba(37, 99, 235, 0.10);
+  --accent-border: rgba(37, 99, 235, 0.25);
+  --logo-bg: rgba(255, 255, 255, 0.9);
+  --highlight: #f59e0b;
+
+  --color-gd1: #2563eb;
+  --color-gd2: #38bdf8;
+
+  --header-bg1: #ffffff;
+  --header-bg2: #f8fbff;
+  --header-txt: #0f172a;
+
+  --map-active: #2563eb;
+  --map-hover: #eaf2ff;
+  --map-bg: #dbeafe;
+  --map-txt: #0f172a;
+  --map-bg-80: rgba(255, 255, 255, 0.92);
+  --map-selected: #2563eb;
+
+  --thead-bg: #f7faff;
+  --thead-txt: #0f172a;
+  --thead-border: #dbe5f1;
+  --trow-bg: #ffffff;
+  --trow-txt: #1e293b;
+  --trow-border: #e7eef7;
+
+  --btn-bg: #2563eb;
+  --btn-border: #2563eb;
+  --btn-color: #ffffff;
+  --btn-hover-bg: #1d4ed8;
+  --btn-hover-border: #1d4ed8;
+  --btn-txt: #ffffff;
+  --btn-hover-txt: #ffffff;
+
+  --stack-bg: #f1f5f9;
+  --chart-brd: #dbe5f1;
+  --chart-txt: #64748b;
+  --chart-tlp: #ffffff;
+
+  --srch-bg: #ffffff;
+  --srch-txt: #475569;
+  --srch-hover-bg: #eff6ff;
+  --srch-hover-txt: #1d4ed8;
+  --srch-focus-bg: #ffffff;
+  --srch-focus-txt: #0f172a;
+
+  --dropdown-bg: #ffffff;
+  --dropdown-hover-bg: #eff6ff;
+  --dropdown-txt: #0f172a;
+  --dropdown-border: #dbe5f1;
+  --dropdown-menu-bg: #ffffff;
+  --dropdown-menu-hover-bg: #f1f5f9;
+  --dropdown-menu-txt: #0f172a;
+  --dropdown-menu-border: #dbe5f1;
+  --dropdown-item-bg: #ffffff;
+  --dropdown-item-hover-bg: #eff6ff;
+  --dropdown-item-hover-txt: #1d4ed8;
+  --dropdown-item-txt: #475569;
+
+  --sekeleton-bg1: #e7eef7;
+  --sekeleton-bg2: #cbd5e1;
+  --scrollbar-thumb: #b9c6d7;
+  --scrollbar-track: #edf3f9;
+
+  --text-xlarge: 18px;
+  --text-large: 16px;
+  --text-medium: 14px;
+  --text-small: 12px;
+  --text-xsmall: 10px;
+
+  /* Angular Material tokens */
+  --mdc-filled-text-field-container-color: #f8fbff;
+  --mdc-filled-text-field-input-text-color: #0f172a;
+  --mdc-filled-text-field-label-text-color: #64748b;
+  --mdc-filled-text-field-input-text-placeholder-color: #94a3b8;
+  --mdc-outlined-text-field-input-text-color: #0f172a;
+  --mdc-outlined-text-field-label-text-color: #64748b;
+  --mdc-outlined-text-field-outline-color: #cbd5e1;
+  --mat-select-panel-background-color: #ffffff;
+  --mat-select-enabled-trigger-text-color: #0f172a;
+  --mat-select-placeholder-text-color: #64748b;
+  --mat-select-enabled-arrow-color: #64748b;
+  --mat-option-label-text-color: #0f172a;
+  --mat-datepicker-calendar-container-background-color: #ffffff;
+  --mat-datepicker-calendar-container-text-color: #0f172a;
+  --mat-datepicker-calendar-date-text-color: #1e293b;
+  --mat-datepicker-toggle-icon-color: #475569;
+}
+
+[data-theme='light'] body {
+  background: var(--main-bg);
+  color: var(--primary-txt);
+}

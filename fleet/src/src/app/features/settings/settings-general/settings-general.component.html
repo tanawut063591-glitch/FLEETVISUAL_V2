@@ -1,0 +1,62 @@
+<div class="settings-page settings-section-scope">
+    <section class="general-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>General Preferences</h2>
+          <p>Display and monitoring preferences for this browser.</p>
+        </div>
+      </div>
+
+      <div class="preference-grid">
+        <label class="preference-card">
+          <span class="preference-icon"><i class="fa fa-adjust"></i></span>
+          <span>
+            <strong>Default theme</strong>
+            <small>Choose the interface appearance.</small>
+          </span>
+          <select [(ngModel)]="theme">
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+
+        <label class="preference-card">
+          <span class="preference-icon"><i class="fa fa-home"></i></span>
+          <span>
+            <strong>Page after sign in</strong>
+            <small>Open this page after a successful login.</small>
+          </span>
+          <select [(ngModel)]="defaultLandingPage">
+            <option *ngFor="let option of landingPageOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+
+        <label class="preference-card">
+          <span class="preference-icon"><i class="fa fa-refresh"></i></span>
+          <span>
+            <strong>Alarm refresh interval</strong>
+            <small>Refresh Alarm Center every 60–300 seconds. Recommended: 60 seconds.</small>
+          </span>
+          <input type="number" min="60" max="300" step="30" [(ngModel)]="alertRefreshSeconds" />
+        </label>
+
+        <label class="preference-card preference-toggle">
+          <span class="preference-icon"><i class="fa fa-bell-o"></i></span>
+          <span>
+            <strong>Alarm auto refresh</strong>
+            <small>Automatically retrieve new alarms in the background.</small>
+          </span>
+          <input class="toggle-input" type="checkbox" [(ngModel)]="alarmAutoRefresh" />
+        </label>
+
+      </div>
+
+      <div class="panel-actions">
+        <span class="save-notice" *ngIf="saveNotice">{{ saveNotice }}</span>
+        <button type="button" class="primary-btn" (click)="saveGeneral()">Save Preferences</button>
+      </div>
+    </section>
+
+</div>

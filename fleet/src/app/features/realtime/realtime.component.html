@@ -499,7 +499,7 @@
 
                   <ng-container *ngIf="card12.type === 'MOTOR'">
                     <app-electric-motor [activeAlerts]="alarmContext.alerts"
-                      [speed]="rtData['PPS_SPD_CALC'] || rtData['PPS_SPD']">
+                      [speed]="getMotorRealtimeSpeed(rtData, 1, 2)">
                     </app-electric-motor>
                   </ng-container>
 
@@ -682,7 +682,7 @@
                   </ng-container>
 
                   <ng-container *ngIf="card22.type === 'MOTOR'">
-                    <app-electric-motor [activeAlerts]="alarmContext.alerts" [speed]="rtData['SPS_SPD_CALC']">
+                    <app-electric-motor [activeAlerts]="alarmContext.alerts" [speed]="getMotorRealtimeSpeed(rtData, 2, 2)">
                     </app-electric-motor>
                   </ng-container>
                 </div>

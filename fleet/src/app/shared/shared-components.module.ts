@@ -17,11 +17,7 @@ import { ValueLengthPipe } from './pipes/value-length.pipe';
 import { RealtimeColorDirective } from './directives/realtime-color.directive';
 import { RealtimeValueDirective } from './directives/realtime-value.directive';
 
-import { ReportDatePickerComponent } from './components/report-date-picker/report-date-picker.component';
-import { ReportMessageAlertComponent } from './components/report-message-alert/report-message-alert.component';
 import { SelectedVesselCardComponent } from './components/selected-vessel-card/selected-vessel-card.component';
-import { ReportPdfViewerComponent } from './components/report-pdf-viewer/report-pdf-viewer.component';
-import { ReportInfoBarComponent } from './components/report-info-bar/report-info-bar.component';
 import { DateRangeToolbarComponent } from './components/date-range-toolbar/date-range-toolbar.component';
 
 const SHARED_DECLARATIONS = [
@@ -33,11 +29,7 @@ const SHARED_DECLARATIONS = [
   ValueLengthPipe,
   RealtimeColorDirective,
   RealtimeValueDirective,
-  ReportDatePickerComponent,
-  ReportMessageAlertComponent,
   SelectedVesselCardComponent,
-  ReportPdfViewerComponent,
-  ReportInfoBarComponent,
   DateRangeToolbarComponent,
 ];
 

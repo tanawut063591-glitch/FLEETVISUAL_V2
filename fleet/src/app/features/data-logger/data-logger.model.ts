@@ -12,7 +12,6 @@ export interface DataLoggerHeader {
   group: string;
   label: string;
   unit: string;
-  category: string;
   threshold: DataLoggerThreshold | null;
 }
 

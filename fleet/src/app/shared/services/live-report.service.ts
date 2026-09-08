@@ -11,7 +11,7 @@ import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
   LiveReportVesselProfile,
-} from '../../features/report/live-report.model';
+} from '../../features/report/models/live-report.model';
 
 interface BoundedNumberResult {
   value: number | null;

@@ -90,6 +90,7 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     this.refreshTimer = this.resolveRealtimeInterval(this.route.snapshot.data['timer']);
 
+    this.restoreSelectedVessel();
     this.userPresence.start();
     this.watchActiveVesselSelection();
     this.updateLayout(this.router.url);
@@ -100,7 +101,9 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
         takeUntil(this.destroy$),
       )
       .subscribe((event: NavigationEnd) => {
-        this.applyRouteState(event.urlAfterRedirects || event.url);
+        // Only a real route change should reset the content viewport. Background
+        // vessel/telemetry refreshes must preserve the user's reading position.
+        this.applyRouteState(event.urlAfterRedirects || event.url, true);
       });
 
     this.userAccess
@@ -267,6 +270,29 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
     this.lastPublishedVesselKey = selectedKey;
   }
 
+  private restoreSelectedVessel(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const keys = ['selectedVessel', 'realtimeVessel', 'reportVessel'];
+
+    for (const key of keys) {
+      try {
+        const raw = window.localStorage.getItem(key);
+        if (!raw) {
+          continue;
+        }
+
+        const vessel = JSON.parse(raw) as VesselLike;
+        if (vessel && this.collectVesselIdentities(vessel).size > 0) {
+          this.selectedVessel = vessel;
+          return;
+        }
+      } catch {}
+    }
+  }
+
   private persistSelectedVessel(vessel: VesselLike): void {
     if (typeof window === 'undefined') {
       return;
@@ -364,7 +390,7 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
       .replace(/[^a-z0-9]/g, '');
   }
 
-  private applyRouteState(url: string): void {
+  private applyRouteState(url: string, resetScroll = false): void {
     this.updateLayout(url);
 
     if (this.accessReady && this.vesselsReady) {
@@ -373,7 +399,7 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
       this.stopAllDataServices();
     }
 
-    if (url.includes('/main/')) {
+    if (resetScroll && url.includes('/main/')) {
       this.scheduleContentScrollReset();
     }
 

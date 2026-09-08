@@ -1,0 +1,505 @@
+<div class="settings-page settings-section-scope">
+    <section class="users-panel">
+      <div class="panel-heading user-management-heading">
+        <div>
+          <h2>User Access Management</h2>
+          <p>Control which vessel groups, individual vessels and modules each account can access.</p>
+        </div>
+        <div class="heading-actions">
+          <button type="button" class="ghost-btn" (click)="loadUserAccessRecords(true)">
+            <i class="fa fa-refresh" [class.fa-spin]="userAccessLoading || userAccessRefreshing"></i> Refresh
+          </button>
+          <button type="button" class="primary-btn" (click)="openAddUserAccess()">
+            <i class="fa fa-user-plus"></i> Add User
+          </button>
+        </div>
+      </div>
+
+      <div class="user-summary-grid access-summary-grid">
+        <article>
+          <span class="summary-icon total"><i class="fa fa-users"></i></span>
+          <div><small>Managed Users</small><strong>{{ userAccessRecords.length }}</strong>
+            <p>Access profiles in this environment</p>
+          </div>
+        </article>
+        <article>
+          <span class="summary-icon admin"><i class="fa fa-shield"></i></span>
+          <div><small>Administrators</small><strong>{{ userAccessAdministratorCount }}</strong>
+            <p>Full fleet and system access</p>
+          </div>
+        </article>
+        <article>
+          <span class="summary-icon restricted"><i class="fa fa-object-group"></i></span>
+          <div><small>Restricted Access</small><strong>{{ userAccessRestrictedCount }}</strong>
+            <p>Assigned groups or selected vessels</p>
+          </div>
+        </article>
+        <article>
+          <span class="summary-icon offline"><i class="fa fa-ban"></i></span>
+          <div><small>Suspended</small><strong>{{ userAccessSuspendedCount }}</strong>
+            <p>Accounts blocked from the application</p>
+          </div>
+        </article>
+      </div>
+
+      <div class="table-tools user-access-tools">
+        <label class="table-search">
+          <i class="fa fa-search"></i>
+          <input type="search" aria-label="Search access profiles"
+            placeholder="Search user, role, group or vessel access..." [(ngModel)]="userAccessSearchTerm" />
+        </label>
+        <div class="tool-actions">
+          <label class="filter-select">
+            <span>Role</span>
+            <select [(ngModel)]="userRoleFilter">
+              <option value="all">All Roles</option>
+              <option *ngFor="let role of userRoleOptions" [value]="role.value">{{ role.label }}</option>
+            </select>
+          </label>
+          <label class="filter-select">
+            <span>Status</span>
+            <select [(ngModel)]="userAccountStatusFilter">
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="loading-box" *ngIf="userAccessLoading">
+        <span class="spinner"></span>
+        <strong>Loading user access profiles...</strong>
+      </div>
+
+      <div class="error-box" *ngIf="!userAccessLoading && userAccessError">
+        <i class="fa fa-exclamation-circle"></i>
+        <span>{{ userAccessError }}</span>
+        <button type="button" (click)="loadUserAccessRecords(true)">Retry</button>
+      </div>
+
+      <div class="user-table-wrap access-table-wrap" *ngIf="!userAccessLoading && !userAccessError">
+        <table class="user-table user-access-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Role</th>
+              <th>Vessel Access</th>
+              <th>Assigned Scope</th>
+              <th>Modules</th>
+              <th>Status</th>
+              <th>Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of filteredUserAccessRecords; trackBy: trackByUserAccess">
+              <td data-label="User">
+                <div class="user-identity">
+                  <span class="avatar small">{{ user.displayName.charAt(0).toUpperCase() }}</span>
+                  <span>
+                    <strong>{{ user.displayName }}</strong>
+                    <small>{{ user.username }}<ng-container *ngIf="isCurrentUser(user)"> · Current
+                        account</ng-container></small>
+                    <small class="identity-source-line"><i class="fa"
+                        [class.fa-shield]="user.accountProvisioning === 'managed'"
+                        [class.fa-link]="user.accountProvisioning === 'linked'"
+                        [class.fa-id-card-o]="!user.accountProvisioning || user.accountProvisioning === 'access-only'"></i>
+                      {{ accountProvisioningLabel(user) }}</small>
+                  </span>
+                </div>
+              </td>
+              <td data-label="Role">
+                <span class="role-chip" [attr.data-role]="user.role">{{ userRoleLabel(user.role) }}</span>
+              </td>
+              <td data-label="Vessel Access">
+                <div class="access-scope-cell">
+                  <strong>{{ userAccessSummary(user) }}</strong>
+                  <small>{{ effectiveVesselPreview(user) }}</small>
+                </div>
+              </td>
+              <td data-label="Assigned Scope">
+                <div class="group-chip-list" *ngIf="user.accessScope === 'groups'; else nonGroupScope">
+                  <span *ngFor="let name of assignedGroupNames(user).slice(0, 2)">{{ name }}</span>
+                  <b *ngIf="assignedGroupNames(user).length > 2">+{{ assignedGroupNames(user).length - 2 }}</b>
+                </div>
+                <ng-template #nonGroupScope>
+                  <span class="scope-chip" [attr.data-scope]="user.accessScope">
+                    <i class="fa" [class.fa-globe]="user.accessScope === 'all'"
+                      [class.fa-ship]="user.accessScope === 'vessels'"></i>
+                    {{ user.accessScope === 'all' ? 'All fleet' : 'Individual vessels' }}
+                  </span>
+                </ng-template>
+              </td>
+              <td data-label="Modules">
+                <span class="module-count"><strong>{{ moduleAccessCount(user) }}</strong>/{{
+                  userModuleDefinitions.length }}</span>
+              </td>
+              <td data-label="Status">
+                <span class="account-status" [attr.data-status]="user.status">
+                  <i></i>{{ user.status === 'active' ? 'Active' : 'Suspended' }}
+                </span>
+              </td>
+              <td data-label="Updated">{{ formatDateTime(user.updatedAt || user.createdAt) }}</td>
+              <td data-label="Actions">
+                <div class="row-actions access-actions">
+                  <button type="button" class="edit" title="Edit user access" (click)="openEditUserAccess(user)">
+                    <i class="fa fa-pencil"></i>
+                  </button>
+                  <button type="button" class="delete" title="Delete access profile" [disabled]="isCurrentUser(user)"
+                    (click)="deleteUserAccess(user)">
+                    <i class="fa fa-trash-o"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredUserAccessRecords.length === 0">
+              <td colspan="8" class="empty-table">No access profiles match this filter.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="integration-note" [class.backend-ready]="userAccessDatabaseEnabled && userAccessIsBackend"
+        [class.strict-warning]="userAccessDatabaseEnabled && !userAccessIsBackend">
+        <i class="fa" [class.fa-check-circle]="userAccessDatabaseEnabled && userAccessIsBackend"
+          [class.fa-exclamation-triangle]="userAccessDatabaseEnabled && !userAccessIsBackend"
+          [class.fa-info-circle]="!userAccessDatabaseEnabled"></i>
+        <span *ngIf="userAccessDatabaseEnabled && userAccessIsBackend">
+          User Access is database-backed. Permission writes are strict: if the database is unavailable, the change is
+          rejected instead of silently falling back to this browser.
+        </span>
+        <span *ngIf="userAccessDatabaseEnabled && !userAccessIsBackend">
+          User Access database mode is enabled, but this view currently has no backend-sourced access record. Local
+          records may be shown for recovery, but permission saves/deletes will not fall back locally if the database
+          request fails.
+        </span>
+        <span *ngIf="!userAccessDatabaseEnabled">
+          <strong>LOCAL ONLY:</strong> Access profiles persist only in this browser because <code>userAccess</code> is
+          disabled in <code>public/database-api.config.json</code>. Create Login is disabled in this mode to prevent an
+          account/permission mismatch.
+        </span>
+      </div>
+    </section>
+
+
+    <div class="drawer-backdrop user-access-backdrop" *ngIf="userAccessDrawerOpen" aria-hidden="true"
+      (click)="closeUserAccessDrawer()"></div>
+    <aside class="user-access-drawer" [class.open]="userAccessDrawerOpen" role="dialog" aria-modal="true"
+      aria-labelledby="user-access-drawer-title">
+      <header>
+        <div>
+          <h2 id="user-access-drawer-title">{{ editingUserAccessId ? 'Edit User' : 'Create User' }}</h2>
+          <p>{{ editingUserAccessId ? 'Manage account details, password and permissions.' : 'Create or link a login
+            account, then assign permissions.' }}</p>
+        </div>
+        <button type="button" aria-label="Close user access editor" (click)="closeUserAccessDrawer()"><i
+            class="fa fa-times"></i></button>
+      </header>
+
+      <div class="user-access-drawer-content">
+        <section class="drawer-section account-setup-section">
+          <div class="drawer-section-title">
+            <span><i class="fa fa-user-o"></i></span>
+            <div>
+              <h3>Login Account</h3>
+              <p>Set the username and securely create or reset the password.</p>
+            </div>
+            <span class="identity-api-status" [class.ready]="userAccountApiEnabled && userAccountApiSecure"
+              [class.blocked]="userAccountApiEnabled && !userAccountApiSecure">
+              <i class="fa" [class.fa-check-circle]="userAccountApiEnabled && userAccountApiSecure"
+                [class.fa-lock]="!userAccountApiEnabled || !userAccountApiSecure"></i>
+              {{ userAccountApiEnabled && userAccountApiSecure ? 'Account API ready' : 'Access only' }}
+            </span>
+          </div>
+
+          <div class="access-credential-note" [class.success]="userAccountApiEnabled && userAccountApiSecure"
+            [class.warning]="!userAccountApiEnabled || !userAccountApiSecure">
+            <i class="fa" [class.fa-check-circle]="userAccountApiEnabled && userAccountApiSecure"
+              [class.fa-info-circle]="!userAccountApiEnabled || !userAccountApiSecure"></i>
+            <span>{{ userAccountApiNotice }} Password values are sent only to the identity backend and are never stored in
+              Local Storage or the access profile.</span>
+          </div>
+
+          <div class="account-setup-options" *ngIf="!editingUserAccessId">
+            <button type="button" [class.selected]="userAccountSetupMode === 'create'"
+              [disabled]="!userAccountApiEnabled || !userAccountApiSecure || !userAccessDatabaseEnabled"
+              (click)="setUserAccountSetupMode('create')">
+              <i class="fa fa-user-plus"></i>
+              <span><strong>Create login account</strong><small>Create a new username and password in the
+                  backend.</small></span>
+              <i class="fa fa-check-circle"></i>
+            </button>
+            <button type="button" [class.selected]="userAccountSetupMode === 'link'"
+              (click)="setUserAccountSetupMode('link')">
+              <i class="fa fa-link"></i>
+              <span><strong>Link existing username</strong><small>Use an account that already exists in the login
+                  system.</small></span>
+              <i class="fa fa-check-circle"></i>
+            </button>
+          </div>
+
+          <div class="managed-account-summary" *ngIf="editingUserAccessId">
+            <span><i class="fa" [class.fa-shield]="userAccessForm.accountProvisioning === 'managed'"
+                [class.fa-link]="userAccessForm.accountProvisioning !== 'managed'"></i></span>
+            <div><small>Identity status</small><strong>{{ accountProvisioningLabel(userAccessForm) }}</strong>
+              <p *ngIf="userAccessForm.accountLastSyncedAt">Last synced {{
+                formatDateTime(userAccessForm.accountLastSyncedAt) }}</p>
+            </div>
+            <button type="button" class="ghost-btn"
+              [disabled]="!userAccountApiEnabled || !userAccountApiSecure || userAccessSaving"
+              (click)="toggleResetPasswordPanel()">
+              <i class="fa fa-key"></i> {{ resetPasswordPanelOpen ? 'Close' : 'Reset Password' }}
+            </button>
+          </div>
+
+          <div class="user-form-grid">
+            <label>Username <em>*</em><input type="text" autocomplete="username" [(ngModel)]="userAccessForm.username"
+                [disabled]="!!editingUserAccessId || userAccessSaving" placeholder="operator01" /></label>
+            <label>Display Name <em>*</em><input type="text" autocomplete="name" [(ngModel)]="userAccessForm.displayName"
+                [disabled]="userAccessSaving" placeholder="Operations Team 01" /></label>
+            <label>Email<input type="email" autocomplete="email" [(ngModel)]="userAccessForm.email"
+                [disabled]="userAccessSaving" placeholder="operator@example.com" /></label>
+            <label>Account Status
+              <select [(ngModel)]="userAccessForm.status" [disabled]="isCurrentUser(userAccessForm) || userAccessSaving">
+                <option value="active">Active</option>
+                <option value="suspended">Suspended</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="password-editor" *ngIf="!editingUserAccessId && userAccountSetupMode === 'create'">
+            <div class="password-field-grid">
+              <label>New Password <em>*</em>
+                <span class="password-input-wrap">
+                  <input [type]="showUserPassword ? 'text' : 'password'" autocomplete="new-password"
+                    [(ngModel)]="userPassword" [disabled]="userAccessSaving" placeholder="Minimum 10 characters" />
+                  <button type="button" [attr.aria-label]="showUserPassword ? 'Hide password' : 'Show password'"
+                    (click)="showUserPassword = !showUserPassword"><i class="fa" [class.fa-eye]="!showUserPassword"
+                      [class.fa-eye-slash]="showUserPassword"></i></button>
+                </span>
+              </label>
+              <label>Confirm Password <em>*</em><input [type]="showUserPassword ? 'text' : 'password'"
+                  autocomplete="new-password" [(ngModel)]="userPasswordConfirm" [disabled]="userAccessSaving"
+                  placeholder="Enter the same password" /></label>
+            </div>
+            <div class="password-strength" [attr.data-strength]="passwordStrengthClass(userPasswordStrengthScore)">
+              <div><span *ngFor="let item of [1,2,3,4,5]" [class.active]="userPasswordStrengthScore >= item"></span></div>
+              <strong>{{ passwordStrengthLabel(userPasswordStrengthScore) }}</strong>
+            </div>
+            <div class="password-rules">
+              <span [class.met]="userPassword.length >= 10"><i class="fa fa-check"></i> 10+ characters</span>
+              <span [class.met]="passwordHasLower(userPassword)"><i class="fa fa-check"></i> Lowercase</span>
+              <span [class.met]="passwordHasUpper(userPassword)"><i class="fa fa-check"></i> Uppercase</span>
+              <span [class.met]="passwordHasNumber(userPassword)"><i class="fa fa-check"></i> Number</span>
+              <span [class.met]="passwordHasSpecial(userPassword)"><i class="fa fa-check"></i> Special</span>
+            </div>
+          </div>
+
+          <div class="password-editor reset-password-editor" *ngIf="editingUserAccessId && resetPasswordPanelOpen">
+            <div class="password-editor-head">
+              <div><strong>Reset Password</strong><small>The existing password is never displayed or returned by the
+                  server.</small></div><i class="fa fa-lock"></i>
+            </div>
+            <div class="password-field-grid">
+              <label>New Password <em>*</em>
+                <span class="password-input-wrap">
+                  <input [type]="showResetPassword ? 'text' : 'password'" autocomplete="new-password"
+                    [(ngModel)]="resetPassword" [disabled]="resetPasswordSaving" placeholder="Minimum 10 characters" />
+                  <button type="button" (click)="showResetPassword = !showResetPassword"><i class="fa"
+                      [class.fa-eye]="!showResetPassword" [class.fa-eye-slash]="showResetPassword"></i></button>
+                </span>
+              </label>
+              <label>Confirm Password <em>*</em><input [type]="showResetPassword ? 'text' : 'password'"
+                  autocomplete="new-password" [(ngModel)]="resetPasswordConfirm" [disabled]="resetPasswordSaving"
+                  placeholder="Enter the same password" /></label>
+            </div>
+            <div class="password-strength" [attr.data-strength]="passwordStrengthClass(resetPasswordStrengthScore)">
+              <div><span *ngFor="let item of [1,2,3,4,5]" [class.active]="resetPasswordStrengthScore >= item"></span>
+              </div>
+              <strong>{{ passwordStrengthLabel(resetPasswordStrengthScore) }}</strong>
+            </div>
+            <div class="reset-password-actions">
+              <span class="save-notice" *ngIf="resetPasswordNotice">{{ resetPasswordNotice }}</span>
+              <button type="button" class="primary-btn" [disabled]="resetPasswordSaving || userAccessSaving"
+                (click)="resetUserPassword()"><i class="fa" [class.fa-spin]="resetPasswordSaving"
+                  [class.fa-spinner]="resetPasswordSaving" [class.fa-key]="!resetPasswordSaving"></i> {{
+                resetPasswordSaving ? 'Resetting...' : 'Reset Password' }}</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="drawer-section">
+          <div class="drawer-section-title">
+            <span><i class="fa fa-shield"></i></span>
+            <div>
+              <h3>Permission Profile</h3>
+              <p>Start from a role preset, then customise individual modules.</p>
+            </div>
+          </div>
+          <div class="role-option-grid">
+            <label *ngFor="let role of userRoleOptions" [class.selected]="userAccessForm.role === role.value">
+              <input type="radio" name="user-role" [value]="role.value" [ngModel]="userAccessForm.role"
+                (ngModelChange)="onUserRoleChange($event)" />
+              <span class="role-option-icon"><i class="fa" [class.fa-star]="role.value === 'administrator'"
+                  [class.fa-wrench]="role.value === 'operator'" [class.fa-eye]="role.value === 'viewer'"
+                  [class.fa-sliders]="role.value === 'custom'"></i></span>
+              <span><strong>{{ role.label }}</strong><small>{{ role.description }}</small></span>
+              <i class="fa fa-check-circle role-check"></i>
+            </label>
+          </div>
+        </section>
+
+        <section class="drawer-section">
+          <div class="drawer-section-title">
+            <span><i class="fa fa-ship"></i></span>
+            <div>
+              <h3>Vessel Access Scope</h3>
+              <p>Choose exactly which fleet data this user can open.</p>
+            </div>
+          </div>
+          <div class="access-scope-options">
+            <button type="button" [class.selected]="userAccessForm.accessScope === 'all'"
+              (click)="setUserAccessScope('all')">
+              <i class="fa fa-globe"></i><span><strong>All vessels</strong><small>Full access to the entire
+                  fleet</small></span><b>{{ vessels.length }}</b>
+            </button>
+            <button type="button" [class.selected]="userAccessForm.accessScope === 'groups'"
+              (click)="setUserAccessScope('groups')">
+              <i class="fa fa-object-group"></i><span><strong>Selected groups</strong><small>Access follows vessel group
+                  membership</small></span><b>{{ userAccessForm.groupIds.length }}</b>
+            </button>
+            <button type="button" [class.selected]="userAccessForm.accessScope === 'vessels'"
+              (click)="setUserAccessScope('vessels')">
+              <i class="fa fa-anchor"></i><span><strong>Selected vessels</strong><small>Choose individual vessels
+                  directly</small></span><b>{{ userAccessForm.vesselIds.length }}</b>
+            </button>
+          </div>
+
+          <div class="access-selection-panel" *ngIf="userAccessForm.accessScope === 'groups'">
+            <div class="access-selection-head">
+              <div><strong>Select Vessel Groups</strong><small>{{ userAccessForm.groupIds.length }} selected</small></div>
+              <label><i class="fa fa-search"></i><input type="search" [(ngModel)]="userAccessGroupSearchTerm"
+                  placeholder="Search group..." /></label>
+            </div>
+            <div class="access-check-grid group-access-grid">
+              <label *ngFor="let group of filteredUserAccessGroups; trackBy: trackByGroupDefinition"
+                [class.selected]="userGroupSelected(group.id)">
+                <input type="checkbox" [checked]="userGroupSelected(group.id)"
+                  (change)="toggleUserGroup(group.id, $any($event.target).checked)" />
+                <span class="access-check-icon"><i class="fa fa-object-group"></i></span>
+                <span><strong>{{ group.name }}</strong><small>{{ group.vesselIds.length }} vessels · {{ group.description
+                    || 'Custom vessel group' }}</small></span>
+                <i class="fa fa-check"></i>
+              </label>
+              <div class="empty-inline" *ngIf="filteredUserAccessGroups.length === 0">No vessel groups match this search.
+                Create groups in the Groups tab first.</div>
+            </div>
+          </div>
+
+          <div class="access-selection-panel" *ngIf="userAccessForm.accessScope === 'vessels'">
+            <div class="access-selection-head">
+              <div><strong>Select Individual Vessels</strong><small>{{ userAccessForm.vesselIds.length }} selected</small>
+              </div>
+              <label><i class="fa fa-search"></i><input type="search" [(ngModel)]="userAccessVesselSearchTerm"
+                  placeholder="Search vessel..." /></label>
+            </div>
+            <div class="access-check-grid vessel-access-grid">
+              <label *ngFor="let vessel of filteredUserAccessVessels; trackBy: trackByVessel"
+                [class.selected]="userVesselSelected(vessel.id)">
+                <input type="checkbox" [checked]="userVesselSelected(vessel.id)"
+                  (change)="toggleUserVessel(vessel.id, $any($event.target).checked)" />
+                <span class="mini-vessel-image"><img *ngIf="vessel.image" [src]="vessel.image" alt="" /><i
+                    *ngIf="!vessel.image" class="fa fa-ship"></i></span>
+                <span><strong>{{ vessel.name }}</strong><small>{{ vessel.prefix }} · {{ statusLabel(vessel.status)
+                    }}</small></span>
+                <i class="fa fa-check"></i>
+              </label>
+            </div>
+          </div>
+
+          <div class="effective-access-card">
+            <span class="effective-access-icon"><i class="fa fa-check-circle"></i></span>
+            <div><small>Effective vessel access</small><strong>{{ userAccessEffectiveVesselIds.length }} of {{
+                vessels.length }} vessels</strong>
+              <p>{{ effectiveVesselPreview(userAccessForm) }}</p>
+            </div>
+          </div>
+
+          <details class="access-exceptions" *ngIf="userAccessForm.accessScope !== 'all'">
+            <summary><span><i class="fa fa-sliders"></i> Access Exceptions</span><small>Add or exclude individual vessels
+                without changing the group.</small></summary>
+            <div class="exception-columns">
+              <div>
+                <h4><i class="fa fa-plus-circle"></i> Additional Vessels</h4>
+                <p>Grant extra access outside the selected scope.</p>
+                <label *ngFor="let vessel of vessels; trackBy: trackByVessel">
+                  <input type="checkbox" [checked]="userAdditionalVesselSelected(vessel.id)"
+                    (change)="toggleAdditionalVessel(vessel.id, $any($event.target).checked)" />
+                  <span>{{ vessel.name }}</span>
+                </label>
+              </div>
+              <div>
+                <h4><i class="fa fa-minus-circle"></i> Excluded Vessels</h4>
+                <p>Block selected vessels even when a group includes them.</p>
+                <label *ngFor="let vessel of vessels; trackBy: trackByVessel">
+                  <input type="checkbox" [checked]="userExcludedVesselSelected(vessel.id)"
+                    (change)="toggleExcludedVessel(vessel.id, $any($event.target).checked)" />
+                  <span>{{ vessel.name }}</span>
+                </label>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <section class="drawer-section">
+          <div class="drawer-section-title">
+            <span><i class="fa fa-th-large"></i></span>
+            <div>
+              <h3>Module Permissions</h3>
+              <p>View controls navigation; Export and Manage apply only where supported.</p>
+            </div>
+          </div>
+          <div class="module-permission-table">
+            <div class="module-permission-head"><span>Module</span><span>View</span><span>Export</span><span>Manage</span>
+            </div>
+            <div class="module-permission-row" *ngFor="let module of userModuleDefinitions; trackBy: trackByUserModule">
+              <div class="module-identity"><i [class]="module.icon"></i><span><strong>{{ module.label }}</strong><small>{{
+                    module.description }}</small></span></div>
+              <label class="permission-toggle"><input type="checkbox"
+                  [ngModel]="userAccessForm.modulePermissions[module.key].view"
+                  (ngModelChange)="onModuleViewChange(module.key, $event)" /><span></span></label>
+              <label class="permission-toggle"><input type="checkbox"
+                  [(ngModel)]="userAccessForm.modulePermissions[module.key].export"
+                  [disabled]="!module.supportsExport || !userAccessForm.modulePermissions[module.key].view"
+                  (ngModelChange)="onModulePermissionChange()" /><span></span></label>
+              <label class="permission-toggle"><input type="checkbox"
+                  [(ngModel)]="userAccessForm.modulePermissions[module.key].manage"
+                  [disabled]="!module.supportsManage || !userAccessForm.modulePermissions[module.key].view"
+                  (ngModelChange)="onModulePermissionChange()" /><span></span></label>
+            </div>
+          </div>
+        </section>
+
+        <section class="access-final-summary">
+          <div><span>Role</span><strong>{{ userRoleLabel(userAccessForm.role) }}</strong></div>
+          <div><span>Vessels</span><strong>{{ userAccessEffectiveVesselIds.length }} / {{ vessels.length }}</strong></div>
+          <div><span>Modules</span><strong>{{ moduleAccessCount(userAccessForm) }} / {{ userModuleDefinitions.length
+              }}</strong></div>
+          <div><span>Status</span><strong>{{ userAccessForm.status === 'active' ? 'Active' : 'Suspended' }}</strong></div>
+        </section>
+      </div>
+
+      <footer class="user-access-drawer-footer">
+        <span class="save-notice" *ngIf="userAccessSaveNotice">{{ userAccessSaveNotice }}</span>
+        <div><button type="button" class="ghost-btn" [disabled]="userAccessSaving || resetPasswordSaving"
+            (click)="closeUserAccessDrawer()">Cancel</button><button type="button" class="primary-btn"
+            [disabled]="userAccessSaving || resetPasswordSaving" (click)="saveUserAccess()"><i class="fa"
+              [class.fa-spinner]="userAccessSaving" [class.fa-spin]="userAccessSaving"
+              [class.fa-floppy-o]="!userAccessSaving"></i> {{ userAccessSaving ? 'Saving...' : (editingUserAccessId ?
+            'Save Changes' : (userAccountSetupMode === 'create' ? 'Create User & Access' : 'Link User & Save Access'))
+            }}</button></div>
+      </footer>
+    </aside>
+
+</div>

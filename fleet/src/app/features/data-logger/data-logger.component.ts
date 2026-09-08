@@ -56,25 +56,10 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
   selectedIntervalMs: number = 60000;
 
   intervalOptions = [
-    { label: '10s interval', value: 10000 },
-    { label: '30s interval', value: 30000 },
-    { label: '1m interval', value: 60000 },
+    { label: '1 min interval', value: 60000 },
+    { label: '5 min interval', value: 300000 },
+    { label: '10 min interval', value: 600000 },
   ];
-
-  quickTags = [
-    { key: 'engine', label: 'Engine' },
-    { key: 'fuel', label: 'Fuel' },
-    { key: 'generator', label: 'Generator' },
-    { key: 'navigation', label: 'Navigation' },
-    { key: 'cargo', label: 'Cargo' },
-    { key: 'environment', label: 'Environment' },
-    { key: 'electrical', label: 'Electrical' },
-    { key: 'hydraulic', label: 'Hydraulic' },
-    { key: 'pump', label: 'Pump' },
-    { key: 'cooling', label: 'Cooling' },
-  ];
-
-  selectedQuickTag: string = 'engine';
 
   private sortDesc: boolean = true;
   private requestSub: Subscription | null = null;
@@ -249,7 +234,7 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
 
           this.ngZone.run(() => {
             this.datahis = reportValue;
-            this.refreshVisibleColumns();
+            this.visibleHeaders = this.headers.slice(0);
             this.applyTableState();
             this.lastUpdatedLabel = this.formatDisplayTime(new Date());
             this.requestPending = false;
@@ -633,7 +618,6 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
         group: this.getTagGroup(name),
         label: this.getTagLabel(name),
         unit: this.getTagUnit(name),
-        category: this.getTagCategory(name),
         threshold: getThresholdFromTag(x, name),
       };
     });
@@ -825,35 +809,6 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
     }
 
     return '';
-  }
-
-  setQuickTag(key: string) {
-    this.selectedQuickTag = key;
-    this.refreshVisibleColumns();
-    this.applyTableState();
-    this.changeDetectorRef.detectChanges();
-  }
-
-  private refreshVisibleColumns() {
-    if (!this.headers || this.headers.length === 0) {
-      this.visibleHeaders = [];
-      return;
-    }
-
-    if (this.selectedQuickTag === 'engine') {
-      this.visibleHeaders = this.headers.slice(0);
-      return;
-    }
-
-    const result: DataLoggerHeader[] = [];
-
-    for (let i = 0; i < this.headers.length; i++) {
-      if (this.headers[i].category === this.selectedQuickTag) {
-        result.push(this.headers[i]);
-      }
-    }
-
-    this.visibleHeaders = result.length > 0 ? result : this.headers.slice(0);
   }
 
   sortByTime() {
@@ -1322,10 +1277,6 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
     return item;
   }
 
-  trackByQuickTag(index: number, item: any) {
-    return item ? item.key : index;
-  }
-
   private getTagGroup(name: string): string {
     const upper = (name || '').toUpperCase();
 
@@ -1458,74 +1409,6 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
     }
 
     return '';
-  }
-
-  private getTagCategory(name: string): string {
-    const lower = (name || '').toLowerCase();
-
-    if (
-      lower.indexOf('fuel') !== -1 ||
-      lower.indexOf('fin') !== -1 ||
-      lower.indexOf('fout') !== -1 ||
-      lower.indexOf('cons') !== -1
-    ) {
-      return 'fuel';
-    }
-
-    if (
-      lower.indexOf('gps') !== -1 ||
-      lower.indexOf('lat') !== -1 ||
-      lower.indexOf('long') !== -1 ||
-      lower.indexOf('lng') !== -1 ||
-      lower.indexOf('speed') !== -1 ||
-      lower.indexOf('sog') !== -1 ||
-      lower.indexOf('cog') !== -1 ||
-      lower.indexOf('distance') !== -1
-    ) {
-      return 'navigation';
-    }
-
-    if (
-      lower.indexOf('gen') !== -1 ||
-      lower.indexOf('generator') !== -1 ||
-      lower.indexOf('dg') !== -1
-    ) {
-      return 'generator';
-    }
-
-    if (
-      lower.indexOf('volt') !== -1 ||
-      lower.indexOf('battery') !== -1 ||
-      lower.indexOf('amp') !== -1
-    ) {
-      return 'electrical';
-    }
-
-    if (lower.indexOf('hyd') !== -1) {
-      return 'hydraulic';
-    }
-
-    if (lower.indexOf('pump') !== -1) {
-      return 'pump';
-    }
-
-    if (lower.indexOf('cool') !== -1 || lower.indexOf('temp') !== -1) {
-      return 'cooling';
-    }
-
-    if (lower.indexOf('cargo') !== -1) {
-      return 'cargo';
-    }
-
-    if (
-      lower.indexOf('env') !== -1 ||
-      lower.indexOf('air') !== -1 ||
-      lower.indexOf('humidity') !== -1
-    ) {
-      return 'environment';
-    }
-
-    return 'engine';
   }
 
   private parseDateValue(value: any): Date {

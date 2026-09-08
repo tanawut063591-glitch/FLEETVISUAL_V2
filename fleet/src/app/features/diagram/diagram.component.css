@@ -829,3 +829,113 @@
 .profile-liberty233 {
     min-height: 650px;
 }
+
+
+.diagram-empty {
+    flex: 1 1 auto;
+    min-height: 360px;
+    margin: 18px 24px 24px;
+    padding: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px dashed #cbd8e8;
+    border-radius: 8px;
+    color: #061226;
+}
+
+.diagram-empty-icon {
+    flex: 0 0 auto;
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: #edf5ff;
+    color: #3976d8;
+}
+
+.diagram-empty-icon svg {
+    width: 34px;
+    height: 34px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.diagram-empty-copy {
+    max-width: 560px;
+}
+
+.diagram-empty-kicker {
+    display: inline-block;
+    margin-bottom: 7px;
+    color: #6b7d94;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+}
+
+.diagram-empty-copy h2 {
+    margin: 0;
+    color: #0b1830;
+    font-size: 20px;
+    line-height: 1.25;
+    font-weight: 900;
+}
+
+.diagram-empty-copy p {
+    margin: 7px 0 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.55;
+    font-weight: 600;
+}
+
+:host-context([data-theme='dark']) .diagram-empty {
+    background: linear-gradient(180deg, #0d121b 0%, #080c12 100%);
+    border-color: rgba(148, 163, 184, 0.26);
+    color: #f8fafc;
+}
+
+:host-context([data-theme='dark']) .diagram-empty-icon {
+    background: rgba(59, 130, 246, 0.14);
+    color: #79aaf8;
+}
+
+:host-context([data-theme='dark']) .diagram-empty-kicker {
+    color: #8fa1b8;
+}
+
+:host-context([data-theme='dark']) .diagram-empty-copy h2 {
+    color: #f8fafc;
+}
+
+:host-context([data-theme='dark']) .diagram-empty-copy p {
+    color: #aebbd0;
+}
+
+@media screen and (max-width: 980px) {
+    .diagram-empty {
+        min-height: 320px;
+        margin: 14px 16px 16px;
+    }
+}
+
+@media screen and (max-width: 560px) {
+    .diagram-empty {
+        min-height: 300px;
+        margin: 0 10px 10px;
+        padding: 24px 18px;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .diagram-empty-copy h2 {
+        font-size: 17px;
+    }
+}

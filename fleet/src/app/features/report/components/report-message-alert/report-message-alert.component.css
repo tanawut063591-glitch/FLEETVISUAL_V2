@@ -1,0 +1,50 @@
+/* Layout-only stylesheet. Report colors/appearance are centralized in src/styles/themes/report/. */
+:host {
+  display: block;
+}
+
+.report-message-alert,
+.report-message-alert * {
+  box-sizing: border-box;
+}
+
+.report-message-alert {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 14px;
+  border-radius: 13px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.report-message-alert strong {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.report-message-alert button {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  margin-left: 2px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+@media screen and (max-width: 760px) {
+.report-message-alert {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.report-message-alert strong,
+  .report-message-alert button {
+  margin-left: 0;
+}
+}

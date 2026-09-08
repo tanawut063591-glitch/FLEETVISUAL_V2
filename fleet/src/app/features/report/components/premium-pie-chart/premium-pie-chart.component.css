@@ -1,0 +1,112 @@
+/* Layout-only stylesheet. Report colors/appearance are centralized in src/styles/themes/report/. */
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.premium-pie-card {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.premium-pie-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+}
+
+.premium-pie-card__header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 17px 4px;
+}
+
+.premium-pie-card__header > div {
+  min-width: 0;
+}
+
+.premium-pie-card__header small {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.premium-pie-card__header h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.premium-pie-card__hint {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  font-size: 7.5px;
+  font-weight: 800;
+}
+
+.premium-pie-card__body {
+  min-width: 0;
+  padding: 0 4px 4px;
+}
+
+.premium-pie-chart {
+  width: 100%;
+  display: block;
+}
+
+.premium-pie-card__empty {
+  min-height: 270px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 22px;
+  text-align: left;
+}
+
+.premium-pie-card__empty > span {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.premium-pie-card__empty strong {
+  display: block;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.premium-pie-card__empty p {
+  margin: 3px 0 0;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+.premium-pie-card__header {
+  padding: 14px 14px 2px;
+}
+
+.premium-pie-card__hint {
+  display: none;
+}
+}

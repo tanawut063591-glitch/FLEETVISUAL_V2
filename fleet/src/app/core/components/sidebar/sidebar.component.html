@@ -21,13 +21,18 @@
 <div id="mobile-vessel-drawer" class="main" [class.is-open]="isShowMenu" [attr.aria-hidden]="isSm && !isShowMenu">
   <aside class="vessel-sidebar">
 
-    <div class="sidebar-header">
-      <div>
-        <div class="sidebar-title">SELECT VESSEL</div>
+    <div class="sidebar-search-row">
+      <div class="search-box">
+        <i class="fa fa-search search-icon" aria-hidden="true"></i>
 
-        <div class="sidebar-subtitle">
-          {{ visibleVessels.length }} vessels available
-        </div>
+        <input
+          #searchInput
+          type="search"
+          aria-label="Search vessels"
+          placeholder="Search vessel..."
+          [value]="keyword"
+          (input)="onSearch(searchInput.value)"
+        />
       </div>
 
       <button
@@ -41,20 +46,15 @@
       </button>
     </div>
 
+    <div class="vessel-list-header" aria-live="polite">
+      <span class="vessel-list-label">
+        {{ keyword.trim() ? 'SEARCH RESULTS' : 'ALL VESSELS' }}
+      </span>
 
-    <div class="search-box">
-      <i class="fa fa-search search-icon"></i>
-
-      <input
-        #searchInput
-        type="text"
-        placeholder="Search vessel..."
-        [value]="keyword"
-        (input)="onSearch(searchInput.value)"
-      />
-
+      <span class="vessel-list-count" [attr.aria-label]="visibleVessels.length + ' vessels'">
+        {{ visibleVessels.length }}
+      </span>
     </div>
-
 
     <div class="vessel-list" *ngIf="visibleVessels.length > 0">
       <div
@@ -66,7 +66,6 @@
       >
         <div class="selected-line"></div>
 
-
         <div class="vessel-image">
           <img
             [src]="vessel.image"
@@ -74,7 +73,6 @@
             loading="lazy"
           />
         </div>
-
 
         <div class="vessel-info">
           <div class="vessel-row top">
@@ -113,7 +111,6 @@
         </div>
       </div>
     </div>
-
 
     <div class="empty-state" *ngIf="visibleVessels.length === 0">
       <div class="empty-icon">

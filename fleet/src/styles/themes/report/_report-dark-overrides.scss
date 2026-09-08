@@ -1,0 +1,400 @@
+/* Fleet Visual Report — dark-mode overrides moved out of component styles. */
+
+/* ===== src/app/features/report/report.component.css : dark overrides ===== */
+html[data-theme='dark'] app-report .report-table-panel,
+html[data-theme='dark'] app-report .report-book-section {
+background: #0f172a;
+  border-color: #253247;
+}
+
+html[data-theme='dark'] app-report .report-table-panel__header,
+html[data-theme='dark'] app-report .report-utilization-strip,
+html[data-theme='dark'] app-report .report-mode-meta {
+background: #111c2d;
+  border-color: #253247;
+}
+
+html[data-theme='dark'] app-report .report-book-table th,
+html[data-theme='dark'] app-report .report-book-table td {
+border-color: #253247;
+}
+
+html[data-theme='dark'] app-report .report-book-table tbody tr:nth-child(odd) td {
+background: rgba(245, 158, 11, 0.055);
+}
+
+html[data-theme='dark'] app-report .report-book-table tbody tr:hover td {
+background: rgba(37, 99, 235, 0.12);
+}
+
+html[data-theme='dark'] app-report .report-book-table tfoot th,
+html[data-theme='dark'] app-report .report-book-table tfoot td {
+background: rgba(245, 158, 11, 0.08);
+}
+
+html[data-theme='dark'] app-report .daily-ui-loading {
+border-color: #1d4ed8;
+  background: #0f1d35;
+}
+
+html[data-theme='dark'] app-report .daily-ui-error {
+border-color: #9a3412;
+  background: #2a1710;
+}
+
+html[data-theme='dark'] app-report .daily-pdf-table .section-row th,
+html[data-theme='dark'] app-report .daily-pdf-table .total-row th,
+html[data-theme='dark'] app-report .daily-pdf-table .total-row td,
+html[data-theme='dark'] app-report .daily-tracking-table .total-row th,
+html[data-theme='dark'] app-report .daily-tracking-table .total-row td,
+html[data-theme='dark'] app-report .hourly-matrix th:first-child {
+background: #2c2415;
+}
+
+html[data-theme='dark'] app-report .daily-route-plot,
+html[data-theme='dark'] app-report .daily-line-chart,
+html[data-theme='dark'] app-report .daily-multi-bar-chart,
+html[data-theme='dark'] app-report .daily-stacked-chart,
+html[data-theme='dark'] app-report .daily-single-bar-chart {
+background: #0d1728;
+}
+
+html[data-theme='dark'] app-report .route-grid line,
+html[data-theme='dark'] app-report .line-grid line {
+stroke: #24344c;
+}
+
+html[data-theme='dark'] app-report .daily-pie-card,
+html[data-theme='dark'] app-report .daily-map-card {
+background: #0d1728;
+}
+
+html[data-theme='dark'] app-report .daily-pie {
+border-color: rgba(255, 255, 255, .12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 8px 22px rgba(0, 0, 0, .24);
+}
+
+html[data-theme='dark'] app-report .daily-ui-master-header,
+html[data-theme='dark'] app-report .daily-overview-card,
+html[data-theme='dark'] app-report .daily-section-nav,
+html[data-theme='dark'] app-report .premium-daily-card,
+html[data-theme='dark'] app-report .premium-daily-card > .report-table-panel__header,
+html[data-theme='dark'] app-report .daily-pie-card,
+html[data-theme='dark'] app-report .daily-map-card {
+border-color: #24344c;
+  background: linear-gradient(145deg, #0f1a2b, #0c1625);
+  box-shadow: 0 10px 26px rgba(0,0,0,.16);
+}
+
+html[data-theme='dark'] app-report .daily-ui-sync-meta,
+html[data-theme='dark'] app-report .daily-overview-legend > div,
+html[data-theme='dark'] app-report .daily-overview-metric-grid > div,
+html[data-theme='dark'] app-report .daily-section-nav a,
+html[data-theme='dark'] app-report .daily-pie-legend > div,
+html[data-theme='dark'] app-report .daily-map-card__title,
+html[data-theme='dark'] app-report .daily-chart-header-stat {
+border-color: #26384f;
+  background: #111f32;
+}
+
+html[data-theme='dark'] app-report .daily-overview-card__header h3,
+html[data-theme='dark'] app-report .daily-overview-donut strong,
+html[data-theme='dark'] app-report .daily-util-ring strong,
+html[data-theme='dark'] app-report .daily-quality-ring strong,
+html[data-theme='dark'] app-report .daily-overview-metric-grid strong,
+html[data-theme='dark'] app-report .daily-quality-list strong,
+html[data-theme='dark'] app-report .premium-daily-card .report-table-panel__header h2,
+html[data-theme='dark'] app-report .daily-pie-center strong,
+html[data-theme='dark'] app-report .daily-map-card__title strong {
+color: #eef6ff;
+}
+
+html[data-theme='dark'] app-report .daily-overview-donut::after,
+html[data-theme='dark'] app-report .daily-util-ring::after,
+html[data-theme='dark'] app-report .daily-quality-ring::after,
+html[data-theme='dark'] app-report .daily-pie::after {
+background: #0e1a2a; box-shadow: inset 0 0 0 1px #26364c;
+}
+
+html[data-theme='dark'] app-report .premium-chart-section .daily-multi-bar-chart,
+html[data-theme='dark'] app-report .premium-chart-section .daily-stacked-chart,
+html[data-theme='dark'] app-report .premium-chart-section .daily-single-bar-chart,
+html[data-theme='dark'] app-report .premium-chart-section .daily-line-chart {
+border-color: #24364e;
+  background:
+    linear-gradient(to top, transparent 24.5%, rgba(94, 126, 166, .15) 25%, transparent 25.5%),
+    linear-gradient(to top, transparent 49.5%, rgba(94, 126, 166, .15) 50%, transparent 50.5%),
+    linear-gradient(to top, transparent 74.5%, rgba(94, 126, 166, .15) 75%, transparent 75.5%),
+    #0b1626;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row),
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix tbody tr:nth-child(even) td {
+background: #0d1929;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix th:first-child {
+color: #cbd8e8; background: #132238;
+}
+
+html[data-theme='dark'] app-report .daily-mode-chart-summary {
+border-color: #2b3b51;
+  background: linear-gradient(180deg, #121d2d, #0f1826);
+}
+
+html[data-theme='dark'] app-report .daily-mode-chart-summary > div {
+border-right-color: #26364a;
+}
+
+html[data-theme='dark'] app-report .daily-mode-chart-summary strong {
+color: #eef4ff;
+}
+
+html[data-theme='dark'] app-report .daily-details-toggle {
+border-color: #2a4261;
+  color: #cfe2ff;
+  background: #112039;
+}
+
+html[data-theme='dark'] app-report .daily-details-toggle:hover {
+background: #172a46;
+}
+
+html[data-theme='dark'] app-report .daily-compact-note {
+border-color: #263b57;
+  border-left-color: #60a5fa;
+  color: #9fb2ca;
+  background: linear-gradient(135deg, #101e31, #0d192a);
+}
+
+html[data-theme='dark'] app-report .daily-compact-note > i {
+color: #8bbcff; background: #172b48;
+}
+
+html[data-theme='dark'] app-report .daily-compact-note strong {
+color: #e5f0ff;
+}
+
+html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .daily-pdf-table .total-row th,
+html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .daily-pdf-table .total-row td,
+html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .daily-tracking-table .total-row th,
+html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .daily-tracking-table .total-row td {
+color: #ffd58a;
+  background: #2a2112;
+}
+
+html[data-theme='dark'] app-report .historical-ui-toolbar {
+border-color: rgba(115, 151, 202, 0.22);
+  border-left-color: #4b8eff;
+  background: linear-gradient(135deg, #172233 0%, #142031 100%);
+  box-shadow: none;
+}
+
+html[data-theme='dark'] app-report .historical-ui-yesterday {
+border-color: rgba(115, 151, 202, 0.28);
+  background: #1a2a3e;
+  color: #d8e7fb;
+}
+
+html[data-theme='dark'] app-report .historical-ui-yesterday:hover:not(:disabled) {
+border-color: #4b8eff;
+  background: #20334b;
+  color: #ffffff;
+}
+
+html[data-theme='dark'] app-report .historical-ui-toolbar__intro > strong,
+html[data-theme='dark'] app-report .historical-daily-trend > header h3 {
+color: #eef5ff;
+}
+
+html[data-theme='dark'] app-report .historical-ui-mode-switch,
+html[data-theme='dark'] app-report .historical-daily-trend {
+border-color: rgba(115, 151, 202, 0.22);
+  background: #162234;
+}
+
+html[data-theme='dark'] app-report .period-aggregation-note {
+border-color: rgba(96, 165, 250, 0.24);
+  background: rgba(30, 64, 175, 0.12);
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] app-report .period-aggregation-note strong {
+color: #e2e8f0;
+}
+
+html[data-theme='dark'] app-report .period-aggregation-note span {
+color: #aebed1;
+}
+
+html[data-theme='dark'] app-report .historical-report-type {
+border-color: rgba(115, 151, 202, 0.24);
+  background: #172538;
+}
+
+html[data-theme='dark'] app-report .historical-report-type > label span {
+color: #9fb2ca;
+}
+
+html[data-theme='dark'] app-report .historical-report-type > label small {
+color: #7890ab;
+}
+
+html[data-theme='dark'] app-report .historical-report-type__select select {
+border-color: rgba(115, 151, 202, 0.28);
+  background: #132033;
+  color: #f2f7ff;
+}
+
+html[data-theme='dark'] app-report .historical-report-type__select select:hover:not(:disabled) {
+border-color: #4b8eff;
+  background: #182a40;
+}
+
+html[data-theme='dark'] app-report .historical-report-type__select > i:first-child,
+html[data-theme='dark'] app-report .historical-report-type__caret {
+color: #8bbcff;
+}
+
+html[data-theme='dark'] app-report .daily-ui-selection-state {
+border-color: rgba(115, 151, 202, 0.28);
+  background: #152236;
+  color: #c5d4e8;
+}
+
+html[data-theme='dark'] app-report .daily-ui-selection-state > i {
+border-color: rgba(96, 165, 250, 0.28);
+  background: #172d4a;
+  color: #8bbcff;
+}
+
+html[data-theme='dark'] app-report .daily-ui-selection-state strong {
+color: #eef5ff;
+}
+
+html[data-theme='dark'] app-report .daily-ui-selection-state span {
+color: #9fb2ca;
+}
+
+html[data-theme='dark'] app-report .report-chart-tooltip {
+border-color: rgba(118, 153, 201, .28);
+  background: rgba(14, 24, 38, .98);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, .38);
+  color: #eef4ff;
+}
+
+html[data-theme='dark'] app-report .report-chart-tooltip strong {
+color: #f4f8ff;
+}
+
+html[data-theme='dark'] app-report .report-chart-tooltip span {
+color: #aabbd1;
+}
+
+html[data-theme='dark'] app-report .daily-hourly-sync,
+html[data-theme='dark'] app-report .daily-axis-chart,
+html[data-theme='dark'] app-report .daily-chart-y-axis,
+html[data-theme='dark'] app-report .daily-speed-axis-frame,
+html[data-theme='dark'] app-report .historical-daily-trend__axis-frame {
+border-color: #26384f;
+  background: var(--report-chart-surface);
+}
+
+html[data-theme='dark'] app-report .daily-chart-y-axis,
+html[data-theme='dark'] app-report .daily-speed-x-axis,
+html[data-theme='dark'] app-report .daily-hourly-sync .hourly-table-wrap {
+border-color: #26384f !important;
+}
+
+html[data-theme='dark'] app-report .daily-speed-axis-frame .daily-line-chart,
+html[data-theme='dark'] app-report .historical-daily-trend__axis-frame .historical-daily-trend__chart {
+background: var(--report-chart-surface) !important;
+}
+
+html[data-theme='dark'] app-report #daily-page-5 .hourly-matrix tbody td {
+color: #e7eef8;
+}
+
+html[data-theme='dark'] app-report #daily-page-5 .hourly-matrix .hourly-peak-cell {
+background: rgba(245, 158, 11, .13) !important;
+  color: #fff5d6 !important;
+}
+
+html[data-theme='dark'] app-report #daily-page-5 .daily-combo-scale-summary span strong {
+color: #f3f7fd;
+}
+
+html[data-theme='dark'] app-report #daily-page-5 .hourly-matrix tbody td {
+color: #f0f5fc !important;
+  font-weight: 800 !important;
+}
+
+html[data-theme='dark'] app-report #daily-page-5 .daily-chart-legend--engineering span strong {
+color: #f2f7fd;
+}
+
+html[data-theme='dark'] app-report .daily-chart-legend--machinery span,
+html[data-theme='dark'] app-report .daily-chart-legend--auxiliary span,
+html[data-theme='dark'] app-report .daily-chart-legend--reference span,
+html[data-theme='dark'] app-report .daily-chart-legend--engineering-lines span {
+background: color-mix(in srgb, currentColor 8%, var(--report-chart-surface)) !important;
+}
+/* ===== src/app/features/report/components/premium-pie-chart/premium-pie-chart.component.css : dark overrides ===== */
+html[data-theme='dark'] app-report app-premium-pie-chart .premium-pie-card {
+border-color: rgba(148, 163, 184, 0.18);
+  background: linear-gradient(180deg, #0c0e11 0%, #07090b 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+html[data-theme='dark'] app-report app-premium-pie-chart .premium-pie-card__header h3 {
+color: #edf4ff;
+}
+
+html[data-theme='dark'] app-report app-premium-pie-chart .premium-pie-card__hint {
+border-color: rgba(148, 163, 184, 0.17);
+  color: #aeb7c4;
+  background: rgba(9, 11, 14, 0.88);
+}
+
+html[data-theme='dark'] app-report app-premium-pie-chart .premium-pie-card__empty > span {
+border-color: rgba(148, 163, 184, 0.17);
+  background: #0c0f12;
+}
+
+html[data-theme='dark'] app-report app-premium-pie-chart .premium-pie-card__empty strong {
+color: #e9f1fb;
+}
+/* ===== src/app/features/report/components/report-date-picker/report-date-picker.component.css : dark overrides ===== */
+html[data-theme='dark'] app-report app-report-date-picker .report-date-picker--compact {
+border-color: rgba(115, 151, 202, 0.24);
+  background: #172538;
+}
+
+html[data-theme='dark'] app-report app-report-date-picker .report-date-picker--compact .field-label {
+color: #9fb2ca;
+}
+
+html[data-theme='dark'] app-report app-report-date-picker .report-date-picker--compact .field-control input {
+border-color: rgba(115, 151, 202, 0.28);
+  background: #132033;
+  color: #f2f7ff;
+}
+
+
+/* Mirrored official PDF command surface — dark */
+html[data-theme='dark'] app-report .report-page--official .pro-report-topbar--v5 {
+  border-color: rgba(148, 163, 184, 0.20) !important;
+  border-bottom: 0 !important;
+  background: linear-gradient(180deg, #0f131a 0%, #0a0d13 100%) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='dark'] app-report .report-page--official .official-mirrored-toolbar {
+  border-color: rgba(148, 163, 184, 0.20) !important;
+  background: linear-gradient(180deg, #0d1117 0%, #090c11 100%) !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24) !important;
+}
+
+html[data-theme='dark'] app-report .report-page--official .official-mirrored-toolbar::before {
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.16) 8%, rgba(148, 163, 184, 0.16) 92%, transparent) !important;
+}

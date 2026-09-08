@@ -82,7 +82,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
   ngOnInit(): void {
 
     this.breakpointSub = this.breakpointObserver
-      .observe(['(max-width: 991px)'])
+      .observe(['(max-width: 1100px)'])
       .subscribe((state: BreakpointState) => {
         this.isSm = state.matches;
         this.isShowMenu = !state.matches;
@@ -260,11 +260,12 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       return '-';
     }
 
-
     if (vessel.timestamp) {
-      return this.formatLastSeen(vessel.timestamp);
+      const formatted = this.formatLastSeen(vessel.timestamp);
+      if (formatted !== '-') {
+        return formatted;
+      }
     }
-
 
     if (vessel.lastSeen) {
       return String(vessel.lastSeen);
@@ -527,19 +528,28 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
         vessel.state,
       timestamp:
         tagTimestamp() ||
-        fvInfo.timestamp ||
-        fvInfo.lastUpdate ||
-        fvInfo.lastSeenAt ||
-        fvInfo.updatedAt ||
-        fvInfo.dateTime ||
-        fvInfo.DateTime ||
-        vessel.timestamp ||
-        vessel.lastUpdate ||
-        vessel.lastSeenAt ||
-        vessel.updatedAt ||
-        vessel.dateTime ||
-        vessel.DateTime,
-      lastSeen: fvInfo.lastSeen || vessel.lastSeen || vessel.time || vessel.lastSeenText,
+        (vessel?.newData || Array.isArray(vessel?.datas)
+          ? undefined
+          : fvInfo.timestamp ||
+            fvInfo.lastUpdate ||
+            fvInfo.lastSeenAt ||
+            fvInfo.updatedAt ||
+            fvInfo.dateTime ||
+            fvInfo.DateTime ||
+            vessel.timestamp ||
+            vessel.lastUpdate ||
+            vessel.lastSeenAt ||
+            vessel.updatedAt ||
+            vessel.dateTime ||
+            vessel.DateTime),
+      lastSeen:
+        fvInfo.lastSeen ||
+        fvInfo.lastSeenLabel ||
+        fvInfo.lastSeenText ||
+        vessel.lastSeen ||
+        vessel.lastSeenLabel ||
+        vessel.lastSeenText ||
+        vessel.time,
     };
   }
 

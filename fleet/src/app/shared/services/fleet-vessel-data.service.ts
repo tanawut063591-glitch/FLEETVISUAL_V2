@@ -72,11 +72,15 @@ export class FleetVesselDataService {
     try {
       const vessels = await this.loadVessels();
       const rows = this.buildSidebarRows(vessels);
+
+      await this.attachCurrentValues(rows);
+
       this.lastRows = rows;
       return rows;
     } catch (error) {
       console.warn('[FleetVesselDataService] sidebar stream fallback:', error);
       const fallback = this.buildSidebarRows(this.getSafeFallbackVessels());
+      await this.attachCurrentValues(fallback);
       this.lastRows = fallback;
       return fallback;
     }
@@ -86,13 +90,25 @@ export class FleetVesselDataService {
     return (Array.isArray(vessels) ? vessels : [])
       .map((item: any) => this.normalizeVessel(item))
       .filter((fv: any) => !!fv.name)
-      .map((fv: any) => ({
-        fv,
-        fvInfo: fv,
-        datas: [],
-        newData: {},
-        tags: [],
-      }));
+      .map((fv: any) => {
+        const prefix = fv.prefix || fv.id || fv.name;
+
+        return {
+          fv,
+          fvInfo: fv,
+          datas: [],
+          newData: {},
+          tags: prefix
+            ? [
+                {
+                  name: 'VES_GPS_LAT',
+                  tagName: `${prefix}-${this.normalizeBackendTag('VES-GPS-LAT')}`,
+                  cal: false,
+                },
+              ]
+            : [],
+        };
+      });
   }
 
   async loadVessels(): Promise<any[]> {
@@ -313,7 +329,7 @@ export class FleetVesselDataService {
         if (value && typeof value === 'object') {
           values.push({ TagName: key, ...value });
         } else {
-          values.push({ TagName: key, Value: value, TimeStamp: new Date().toISOString() });
+          values.push({ TagName: key, Value: value, TimeStamp: '' });
         }
       });
     }
@@ -374,7 +390,14 @@ export class FleetVesselDataService {
   }
 
   private seedDirectValues(row: OverviewPayloadRow, fv: any): void {
-    const timestamp = fv?.timestamp || fv?.lastUpdate || new Date().toISOString();
+    const timestamp =
+      fv?.timestamp ||
+      fv?.lastUpdate ||
+      fv?.lastSeenAt ||
+      fv?.updatedAt ||
+      fv?.dateTime ||
+      fv?.DateTime ||
+      '';
 
     const directMap: Record<string, any> = {
       VES_GPS_LAT: fv?.lat,
@@ -528,11 +551,24 @@ export class FleetVesselDataService {
         fv.lastUpdate ||
         fv.lastSeenAt ||
         fv.updatedAt ||
+        fv.dateTime ||
+        fv.DateTime ||
         item?.timestamp ||
         item?.lastUpdate ||
         item?.lastSeenAt ||
         item?.updatedAt ||
-        new Date().toISOString(),
+        item?.dateTime ||
+        item?.DateTime ||
+        '',
+      lastSeen:
+        fv.lastSeen ||
+        fv.lastSeenLabel ||
+        fv.lastSeenText ||
+        item?.lastSeen ||
+        item?.lastSeenLabel ||
+        item?.lastSeenText ||
+        item?.time ||
+        '',
     };
   }
 
@@ -626,7 +662,10 @@ export class FleetVesselDataService {
     // HOME and production must never replace an unavailable real server with
     // embedded/demo vessel data. The fallback is explicitly opt-in and is
     // kept only for the office development environment.
-    if (environment.allowDemoFallback !== true) {
+    const allowDemoFallback =
+      (environment as { allowDemoFallback?: boolean }).allowDemoFallback === true;
+
+    if (!allowDemoFallback) {
       return [];
     }
     return this.userAccess.filterVessels(this.getFallbackVessels());

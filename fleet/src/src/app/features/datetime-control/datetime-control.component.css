@@ -1,0 +1,2773 @@
+:host {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px 6px;
+  background: transparent;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+
+.dl-shell {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dl-panel {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 18px 16px;
+  border-radius: 30px;
+  border: 1px solid rgba(125, 211, 252, 0.38);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.085), transparent 30%),
+    radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.075), transparent 30%),
+    linear-gradient(180deg, #f8fbff 0%, #f7fbff 52%, #f8fafc 100%);
+  color: #0f172a;
+  box-shadow:
+    0 16px 38px rgba(15, 23, 42, 0.075),
+    0 4px 12px rgba(37, 99, 235, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  position: relative;
+  overflow: visible;
+}
+
+.dl-panel::before {
+  content: "";
+  position: absolute;
+  left: 26px;
+  right: 26px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.55), rgba(37, 99, 235, 0.35), transparent);
+  pointer-events: none;
+}
+
+.dl-top {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(250px, 380px) 1fr;
+  align-items: end;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.dl-title {
+  min-width: 0;
+  transform: translateY(-12px);
+}
+
+.dl-badge {
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  margin-bottom: 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.25px;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.07);
+}
+
+.dl-title h1 {
+  margin: 0 0 6px 0;
+  color: #06142b;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.8px;
+  line-height: 1;
+}
+
+.dl-title p {
+  max-width: 410px;
+  margin: 0;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.32;
+}
+
+.dl-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dl-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dl-date-field label {
+  color: #475569;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.32px;
+}
+
+.dl-calendar {
+  width: 292px;
+  height: 46px;
+  position: relative;
+  z-index: 20;
+  overflow: visible;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.055), inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  transition: all 0.22s ease;
+}
+
+.dl-calendar:hover {
+  border-color: rgba(37, 99, 235, 0.58);
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.12), 0 0 0 4px rgba(37, 99, 235, 0.065);
+}
+
+.dl-separator {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  color: #94a3b8;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+:host ::ng-deep .dl-prime-calendar.ui-calendar,
+:host ::ng-deep .dl-calendar .ui-calendar {
+  width: 292px !important;
+  height: 46px !important;
+  display: block !important;
+  position: relative !important;
+  overflow: visible !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar-input {
+  width: 100% !important;
+  height: 46px !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: #0f172a !important;
+  padding: 0 16px 0 52px !important;
+  font-size: 14px !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.1px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .ui-calendar-button,
+:host ::ng-deep .dl-calendar .ui-calendar-button {
+  width: 44px !important;
+  height: 46px !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  border: none !important;
+  border-right: 1px solid rgba(226, 232, 240, 0.95) !important;
+  border-radius: 999px 0 0 999px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%) !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  transition: all 0.22s ease !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .ui-calendar-button:hover,
+:host ::ng-deep .dl-calendar .ui-calendar-button:hover {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+}
+
+:host ::ng-deep .ui-datepicker {
+  z-index: 999999 !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(148, 163, 184, 0.35) !important;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28) !important;
+  overflow: hidden !important;
+}
+
+.dl-period {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.055), inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+.dl-period button {
+  height: 46px;
+  min-width: 52px;
+  border: none;
+  border-right: 1px solid #e2e8f0;
+  outline: none;
+  background: transparent;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.22s ease;
+}
+
+.dl-period button:last-child {
+  border-right: none;
+}
+
+.dl-period button:hover {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.dl-period button.active {
+  background: linear-gradient(135deg, #2563eb 0%, #0057ff 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.dl-apply {
+  height: 46px;
+  min-width: 132px;
+  border: none;
+  outline: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb 0%, #0057ff 60%, #1d4ed8 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  transition: all 0.22s ease;
+}
+
+.dl-apply:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 34px rgba(37, 99, 235, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.dl-apply.loading {
+  opacity: 0.85;
+  cursor: wait;
+}
+
+.dl-card {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 15px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.20);
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.985) 0%, rgba(249, 252, 255, 0.985) 100%);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.065), inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+.dl-card-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dl-card-icon {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.dl-card-text label {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.32px;
+}
+
+.dl-card-text h3 {
+  margin: 4px 0 0;
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.dl-card-text p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dl-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dl-tags {
+  width: 330px;
+  max-width: 100%;
+  height: 46px;
+  padding: 0 15px;
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  border-radius: 999px;
+  outline: none;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.045), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: all 0.22s ease;
+}
+
+.dl-tags:hover {
+  transform: translateY(-1px);
+  border-color: #2563eb;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.13), 0 0 0 4px rgba(37, 99, 235, 0.06);
+}
+
+.dl-tags span {
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.dl-tags strong {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.dl-export {
+  height: 46px;
+  min-width: 132px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 999px;
+  outline: none;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 18px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.055), inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  transition: all 0.22s ease;
+}
+
+.dl-export:hover {
+  transform: translateY(-1px);
+  color: #2563eb;
+  border-color: #2563eb;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.11);
+}
+
+
+:host ::ng-deep .ui-dialog {
+  width: 94vw !important;
+  max-width: 1544px !important;
+  min-width: 1120px !important;
+  border-radius: 24px !important;
+  overflow: hidden !important;
+  box-shadow: 0 30px 90px rgba(15, 23, 42, 0.35) !important;
+}
+
+:host ::ng-deep p-dialog .ui-dialog.ui-widget .ui-dialog-titlebar {
+  padding: 0 !important;
+  border: none !important;
+}
+
+:host ::ng-deep p-dialog .ui-widget-header {
+  background: linear-gradient(90deg, #132344 0%, #1d3c88 100%) !important;
+  border: none !important;
+}
+
+:host ::ng-deep p-dialog .ui-widget-content {
+  border: none !important;
+  background: #f3f6fa !important;
+}
+
+:host ::ng-deep .manage-tags-dialog .ui-dialog-content,
+:host ::ng-deep .pro-tags-dialog .ui-dialog-content {
+  padding: 0 !important;
+  background: #f3f6fa !important;
+}
+
+:host ::ng-deep .manage-tags-dialog {
+  top: 3% !important;
+}
+
+
+.manage-tags-header {
+  width: 100%;
+  min-height: 78px;
+  box-sizing: border-box;
+  padding: 16px;
+  background: linear-gradient(90deg, #132344 0%, #1d3c88 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.manage-tags-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.manage-tags-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.10);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.manage-tags-title h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.manage-tags-title p {
+  margin: 7px 0 0;
+  color: #dde7f6;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.manage-tags-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tag-action-btn {
+  height: 40px;
+  border: none;
+  border-radius: 999px;
+  padding: 0 17px;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+}
+
+.tag-action-btn.ok {
+  background: #16a34a;
+}
+
+.tag-action-btn.clear {
+  background: #f59e0b;
+}
+
+.tag-action-btn.cancel {
+  background: #ef2b2d;
+}
+
+.manage-tags-body {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 24px 28px 30px;
+  background: #f3f6fa;
+  min-height: 690px;
+  max-height: calc(100vh - 150px);
+  overflow: hidden;
+}
+
+.tag-control-bar {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 18px;
+  padding: 12px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.94);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tag-search {
+  height: 42px;
+  flex: 1;
+  min-width: 280px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+}
+
+.tag-search i {
+  color: #94a3b8;
+}
+
+.tag-search input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tag-search-clear {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.tag-preset {
+  height: 42px;
+  min-width: 178px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.tag-preset i {
+  color: #64748b;
+}
+
+.tag-preset select {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+  outline: none;
+}
+
+.tag-summary-chip {
+  height: 42px;
+  min-width: 120px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tag-summary-chip span {
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.tag-summary-chip strong {
+  color: #1d4ed8;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.tag-filter-btn {
+  height: 42px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 0 15px;
+  background: #ffffff;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tag-filter-btn.active {
+  color: #ffffff;
+  border-color: #2563eb;
+  background: #2563eb;
+}
+
+.tag-filter-btn:hover {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.tag-filter-btn.danger:hover {
+  color: #ef2b2d;
+  border-color: #fecaca;
+  background: #fff1f2;
+}
+
+
+.manage-tags-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.tag-side-panel {
+  width: 250px;
+  min-height: 548px;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.075);
+  overflow: hidden;
+}
+
+.tag-side-tabs {
+  height: 48px;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tag-side-tabs button {
+  border: none;
+  border-radius: 13px;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tag-side-tabs button.active {
+  background: #ffffff;
+  color: #2563eb;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.tag-side-content {
+  padding: 14px;
+  max-height: 500px;
+  overflow: auto;
+}
+
+.side-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.side-section-title strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.side-section-title span {
+  min-width: 26px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.side-tag-item {
+  width: 100%;
+  min-height: 36px;
+  margin-bottom: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 13px;
+  background: #ffffff;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.side-tag-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.side-tag-item.active,
+.side-tag-item:hover {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.side-empty {
+  min-height: 240px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+  padding: 14px;
+}
+
+.side-empty i {
+  font-size: 28px;
+  color: #cbd5e1;
+}
+
+.side-empty p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.tags-scroll {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 0 14px;
+}
+
+.tags-layout {
+  width: max-content;
+  min-width: max-content;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.tag-column {
+  width: 220px;
+  flex: 0 0 220px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.075);
+}
+
+.tag-column-head {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tag-column-title {
+  width: 100%;
+  height: 44px;
+  border: none;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tag-column-title span {
+  flex: 1;
+}
+
+.tag-column-title small {
+  min-width: 42px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.selected-header {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
+}
+
+.tag-column-head p {
+  margin: 0;
+  padding: 8px 12px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.tag-list {
+  width: 100%;
+  max-height: 490px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.tag-row {
+  width: 100%;
+  min-height: 37px;
+  box-sizing: border-box;
+  border: none;
+  border-bottom: 1px solid #e8eef5;
+  background: #ffffff;
+  color: #0b1f3a;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px 0 12px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.tag-row:nth-child(even) {
+  background: #fcfdff;
+}
+
+.tag-row span {
+  min-width: 0;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tag-row:hover {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.tag-row.active {
+  background: linear-gradient(135deg, #2563eb 0%, #0057ff 100%);
+  color: #ffffff;
+  box-shadow: inset 4px 0 0 rgba(255, 255, 255, 0.45);
+}
+
+.check-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+}
+
+.tag-row.active .check-icon {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.star-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border-radius: 50%;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.star-icon:hover,
+.star-icon.active {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.10);
+}
+
+
+.selected-panel {
+  width: 300px;
+  min-height: 548px;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.075);
+  overflow: hidden;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.selected-panel-head {
+  padding: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selected-panel-head h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.selected-panel-head p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.selected-count {
+  width: 42px;
+  height: 42px;
+  border-radius: 15px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.selected-panel-range {
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.selected-panel-range label {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.selected-panel-range span {
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.selected-panel-range small {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.selected-summary {
+  padding: 12px 14px 0;
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.selected-summary-chip {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.selected-summary-chip strong {
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.selected-summary-chip span {
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.selected-list {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 332px;
+  overflow: auto;
+}
+
+.selected-item {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.selected-item span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.selected-empty {
+  min-height: 260px;
+  padding: 24px;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  text-align: center;
+}
+
+.selected-empty i {
+  font-size: 28px;
+  color: #cbd5e1;
+}
+
+.selected-empty strong {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.selected-empty span {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+
+.tags-scroll::-webkit-scrollbar,
+.tag-list::-webkit-scrollbar,
+.selected-list::-webkit-scrollbar,
+.tag-side-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.tags-scroll::-webkit-scrollbar-track,
+.tag-list::-webkit-scrollbar-track,
+.selected-list::-webkit-scrollbar-track,
+.tag-side-content::-webkit-scrollbar-track {
+  background: #eef2f7;
+  border-radius: 999px;
+}
+
+.tags-scroll::-webkit-scrollbar-thumb,
+.tag-list::-webkit-scrollbar-thumb,
+.selected-list::-webkit-scrollbar-thumb,
+.tag-side-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+
+button {
+  font-family: inherit;
+  user-select: none;
+}
+
+button:focus,
+input:focus,
+select:focus {
+  outline: none;
+}
+
+
+@media screen and (max-width: 1360px) {
+  .dl-top {
+    grid-template-columns: 1fr;
+  }
+
+  .dl-toolbar {
+    justify-content: flex-start;
+  }
+
+  .dl-title {
+    transform: translateY(0);
+  }
+
+  :host ::ng-deep .ui-dialog {
+    min-width: 960px !important;
+  }
+
+  .manage-tags-grid {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .tag-side-panel {
+    width: 220px;
+  }
+
+  .selected-panel {
+    width: 280px;
+  }
+}
+
+@media screen and (max-width: 992px) {
+
+  .dl-toolbar,
+  .dl-period,
+  .dl-apply {
+    width: 100%;
+  }
+
+  .dl-date-field {
+    width: calc(50% - 8px);
+  }
+
+  .dl-calendar,
+  :host ::ng-deep .dl-prime-calendar.ui-calendar,
+  :host ::ng-deep .dl-calendar .ui-calendar {
+    width: 100% !important;
+  }
+
+  .dl-card {
+    grid-template-columns: 1fr;
+  }
+
+  .dl-card-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dl-tags,
+  .dl-export {
+    width: 100%;
+  }
+
+  .manage-tags-header,
+  .tag-control-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .manage-tags-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tag-side-panel,
+  .selected-panel {
+    width: 100%;
+    position: relative;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .dl-title h1 {
+    font-size: 22px;
+  }
+
+  .dl-date-field {
+    width: 100%;
+  }
+
+  .dl-separator {
+    display: none;
+  }
+
+  .dl-period {
+    height: auto;
+    flex-wrap: wrap;
+  }
+
+  .dl-period button {
+    flex: 1 1 25%;
+  }
+
+  .manage-tags-body {
+    padding: 18px;
+  }
+}
+
+
+
+.tag-summary-chip strong small {
+  margin-left: 2px;
+  color: #60a5fa;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.selected-count {
+  gap: 2px;
+}
+
+.selected-count small {
+  color: #60a5fa;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+
+
+
+:host-context([data-theme='dark']) .dl-panel {
+  background:
+    radial-gradient(circle at 14% -15%, rgba(37, 99, 235, 0.14), transparent 30%),
+    linear-gradient(180deg, #0d131d 0%, #070b11 100%) !important;
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  color: #f8fafc !important;
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+}
+
+:host-context([data-theme='dark']) .dl-panel::before {
+  background: linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.45), transparent) !important;
+}
+
+:host-context([data-theme='dark']) .dl-title h1,
+:host-context([data-theme='dark']) .dl-card-text h3 {
+  color: #ffffff !important;
+}
+
+:host-context([data-theme='dark']) .dl-title p,
+:host-context([data-theme='dark']) .dl-date-field label,
+:host-context([data-theme='dark']) .dl-card-text label,
+:host-context([data-theme='dark']) .dl-card-text p,
+:host-context([data-theme='dark']) .dl-separator {
+  color: #94a3b8 !important;
+}
+
+:host-context([data-theme='dark']) .dl-badge {
+  background: rgba(59, 130, 246, 0.14) !important;
+  border-color: rgba(96, 165, 250, 0.28) !important;
+  color: #93c5fd !important;
+  box-shadow: none !important;
+}
+
+:host-context([data-theme='dark']) .dl-calendar,
+:host-context([data-theme='dark']) .dl-period,
+:host-context([data-theme='dark']) .dl-card,
+:host-context([data-theme='dark']) .dl-tags,
+:host-context([data-theme='dark']) .dl-export {
+  background: linear-gradient(180deg, #111925 0%, #0a1018 100%) !important;
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  color: #e2e8f0 !important;
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+:host-context([data-theme='dark']) .dl-calendar:hover,
+:host-context([data-theme='dark']) .dl-tags:hover,
+:host-context([data-theme='dark']) .dl-export:hover {
+  border-color: rgba(96, 165, 250, 0.52) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.40), 0 0 0 3px rgba(59, 130, 246, 0.08) !important;
+}
+
+:host-context([data-theme='dark']) ::ng-deep .dl-prime-calendar .ui-inputtext,
+:host-context([data-theme='dark']) ::ng-deep .dl-calendar .ui-inputtext,
+:host-context([data-theme='dark']) ::ng-deep .dl-calendar-input {
+  color: #f8fafc !important;
+  background: transparent !important;
+}
+
+:host-context([data-theme='dark']) ::ng-deep .dl-prime-calendar .ui-calendar-button,
+:host-context([data-theme='dark']) ::ng-deep .dl-calendar .ui-calendar-button {
+  background: #0d1420 !important;
+  color: #94a3b8 !important;
+  border-right-color: rgba(148, 163, 184, 0.20) !important;
+}
+
+:host-context([data-theme='dark']) ::ng-deep .dl-prime-calendar .ui-calendar-button:hover,
+:host-context([data-theme='dark']) ::ng-deep .dl-calendar .ui-calendar-button:hover {
+  background: #111c2a !important;
+  color: #93c5fd !important;
+}
+
+:host-context([data-theme='dark']) .dl-period button {
+  color: #cbd5e1 !important;
+  border-right-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+:host-context([data-theme='dark']) .dl-period button:hover {
+  background: #111c2a !important;
+  color: #93c5fd !important;
+}
+
+:host-context([data-theme='dark']) .dl-period button.active,
+:host-context([data-theme='dark']) .dl-apply {
+  background: linear-gradient(135deg, #2563eb 0%, #0f5de8 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.28) !important;
+}
+
+:host-context([data-theme='dark']) .dl-card-icon {
+  background: rgba(59, 130, 246, 0.16) !important;
+  color: #93c5fd !important;
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.16) !important;
+}
+
+:host-context([data-theme='dark']) .dl-tags span,
+:host-context([data-theme='dark']) .dl-tags strong {
+  color: #93c5fd !important;
+}
+
+:host-context([data-theme='dark']) .dl-export {
+  color: #e2e8f0 !important;
+}
+
+
+:host-context([data-theme='dark']) ::ng-deep .ui-datepicker,
+:host-context([data-theme='dark']) ::ng-deep p-dialog .ui-widget-content,
+:host-context([data-theme='dark']) ::ng-deep .manage-tags-dialog .ui-dialog-content,
+:host-context([data-theme='dark']) ::ng-deep .pro-tags-dialog .ui-dialog-content,
+:host-context([data-theme='dark']) .manage-tags-body {
+  background: #070b12 !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+:host-context([data-theme='dark']) ::ng-deep p-dialog .ui-widget-header,
+:host-context([data-theme='dark']) .manage-tags-header {
+  background: linear-gradient(90deg, #0b111a 0%, #111c2d 100%) !important;
+}
+
+:host-context([data-theme='dark']) .tag-control-bar,
+:host-context([data-theme='dark']) .tag-search,
+:host-context([data-theme='dark']) .tag-preset,
+:host-context([data-theme='dark']) .tag-column,
+:host-context([data-theme='dark']) .tag-side-panel,
+:host-context([data-theme='dark']) .selected-panel,
+:host-context([data-theme='dark']) .selected-item,
+:host-context([data-theme='dark']) .tag-filter-btn {
+  background: #0d1420 !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  color: #e2e8f0 !important;
+}
+
+:host-context([data-theme='dark']) .tag-search input,
+:host-context([data-theme='dark']) .tag-preset select {
+  color: #e2e8f0 !important;
+}
+
+
+
+
+
+.tag-load-state {
+  min-height: 150px;
+  padding: 22px;
+  border: 1px dashed #cbd8e8;
+  border-radius: 18px;
+  background: #ffffff;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: left;
+}
+
+.tag-load-state>i {
+  flex: 0 0 auto;
+  color: #2563eb;
+  font-size: 26px;
+}
+
+.tag-load-state>div {
+  min-width: 0;
+  flex: 1;
+}
+
+.tag-load-state strong,
+.tag-load-state span {
+  display: block;
+}
+
+.tag-load-state strong {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.tag-load-state span {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.tag-load-state button {
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid #bfdbfe;
+  border-radius: 11px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tag-load-state button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.tag-load-state.error>i {
+  color: #ef4444;
+}
+
+.tag-load-state.empty>i {
+  color: #64748b;
+}
+
+.tag-row {
+  align-items: flex-start;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.tag-row span {
+  line-height: 1.35;
+}
+
+
+:host ::ng-deep .manage-tags-dialog.p-dialog,
+:host ::ng-deep .pro-tags-dialog.p-dialog,
+:host ::ng-deep .manage-tags-dialog.ui-dialog,
+:host ::ng-deep .pro-tags-dialog.ui-dialog {
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  box-shadow: 0 30px 90px rgba(15, 23, 42, 0.34) !important;
+}
+
+:host ::ng-deep .manage-tags-dialog .p-dialog-header,
+:host ::ng-deep .pro-tags-dialog .p-dialog-header {
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+:host ::ng-deep .manage-tags-dialog .p-dialog-content,
+:host ::ng-deep .pro-tags-dialog .p-dialog-content {
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: #f3f6fa !important;
+}
+
+@media screen and (max-width: 992px) {
+
+  :host ::ng-deep .manage-tags-dialog.p-dialog,
+  :host ::ng-deep .pro-tags-dialog.p-dialog,
+  :host ::ng-deep .manage-tags-dialog.ui-dialog,
+  :host ::ng-deep .pro-tags-dialog.ui-dialog {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    min-width: 0 !important;
+    max-height: calc(100dvh - 16px) !important;
+    margin: 8px !important;
+    border-radius: 19px !important;
+  }
+
+  .manage-tags-header {
+    min-height: 0;
+    padding: 14px;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .manage-tags-title {
+    align-items: flex-start;
+  }
+
+  .manage-tags-title h3 {
+    font-size: 18px;
+  }
+
+  .manage-tags-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .tag-action-btn {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    padding: 0 10px;
+  }
+
+  .manage-tags-body {
+    min-height: 0;
+    max-height: calc(100dvh - 178px);
+    padding: 14px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tag-control-bar {
+    position: relative;
+    z-index: 2;
+    margin-bottom: 12px;
+    padding: 10px;
+    gap: 9px;
+  }
+
+  .tag-search,
+  .tag-preset,
+  .tag-summary-chip,
+  .tag-filter-btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    border-radius: 13px;
+  }
+
+  .tag-summary-chip {
+    padding: 0 13px;
+  }
+
+  .manage-tags-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tags-scroll {
+    order: 1;
+    width: 100%;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .tags-layout {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .tag-column {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+    border: 1px solid #dce6f2;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  .tag-list {
+    max-height: 260px;
+  }
+
+  .selected-panel {
+    order: 2;
+    min-height: 0;
+  }
+
+  .tag-side-panel {
+    order: 3;
+    min-height: 0;
+  }
+
+  .tag-side-content {
+    max-height: 240px;
+  }
+
+  .side-empty {
+    min-height: 120px;
+  }
+}
+
+@media screen and (max-width: 620px) {
+  .dl-shell {
+    padding: 10px;
+  }
+
+  .dl-panel {
+    padding: 16px 13px;
+    border-radius: 18px;
+  }
+
+  .dl-toolbar {
+    gap: 10px;
+  }
+
+  .dl-card {
+    padding: 13px;
+    border-radius: 16px;
+  }
+
+  .dl-card-info {
+    align-items: flex-start;
+  }
+
+  .dl-card-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .manage-tags-body {
+    max-height: calc(100dvh - 188px);
+    padding: 10px;
+  }
+
+  .tags-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .tag-list {
+    max-height: 300px;
+  }
+
+  .tag-side-panel {
+    display: none;
+  }
+
+  .selected-panel-range {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .selected-panel-range small {
+    display: none;
+  }
+
+  .tag-load-state {
+    min-height: 180px;
+    padding: 18px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tag-load-state button {
+    width: 100%;
+  }
+}
+
+:host-context([data-theme='dark']) .tag-load-state {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: #0b111b;
+  color: #a8b6c9;
+}
+
+:host-context([data-theme='dark']) .tag-load-state strong {
+  color: #f8fafc;
+}
+
+:host-context([data-theme='dark']) .tag-column {
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+
+
+
+
+
+.dl-calendar {
+  width: 310px;
+  max-width: 100%;
+  height: 52px;
+  overflow: hidden;
+  border: 1px solid #cbd8e8;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.055),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+.dl-calendar:hover {
+  border-color: #93b4e8;
+  box-shadow:
+    0 13px 28px rgba(37, 99, 235, 0.10),
+    0 0 0 3px rgba(37, 99, 235, 0.055);
+}
+
+.dl-calendar:focus-within {
+  border-color: #5b8def;
+  box-shadow:
+    0 14px 30px rgba(37, 99, 235, 0.12),
+    0 0 0 4px rgba(37, 99, 235, 0.10);
+}
+
+:host ::ng-deep .dl-prime-calendar.p-datepicker,
+:host ::ng-deep .dl-calendar .p-datepicker,
+:host ::ng-deep .dl-prime-calendar.ui-calendar,
+:host ::ng-deep .dl-calendar .ui-calendar {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  position: relative !important;
+  overflow: visible !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input,
+:host ::ng-deep .dl-calendar .p-datepicker-input,
+:host ::ng-deep .dl-prime-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar-input {
+  width: 100% !important;
+  height: 50px !important;
+  margin: 0 !important;
+  padding: 0 66px 0 20px !important;
+  border: 0 !important;
+  border-radius: 13px !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #0f172a !important;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 850 !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.12px !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  cursor: pointer !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon-container,
+:host ::ng-deep .dl-calendar .p-datepicker-input-icon-container {
+  width: 58px !important;
+  height: 50px !important;
+  position: absolute !important;
+  z-index: 3 !important;
+  top: 0 !important;
+  right: 0 !important;
+  left: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-left: 1px solid #dbe4ef !important;
+  border-radius: 0 13px 13px 0 !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%) !important;
+  color: #64748b !important;
+  transform: none !important;
+  cursor: pointer !important;
+  transition: background 160ms ease, color 160ms ease !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon-container:hover,
+:host ::ng-deep .dl-calendar .p-datepicker-input-icon-container:hover {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon,
+:host ::ng-deep .dl-calendar .p-datepicker-input-icon {
+  width: 17px !important;
+  height: 17px !important;
+  color: currentColor !important;
+  cursor: pointer !important;
+}
+
+
+:host ::ng-deep .dl-prime-calendar .ui-calendar-button,
+:host ::ng-deep .dl-calendar .ui-calendar-button {
+  display: none !important;
+}
+
+:host-context([data-theme='dark']) .dl-calendar {
+  background: linear-gradient(180deg, #111925 0%, #0b111a 100%) !important;
+  border-color: rgba(148, 163, 184, 0.28) !important;
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+:host-context([data-theme='dark']) .dl-calendar:hover,
+:host-context([data-theme='dark']) .dl-calendar:focus-within {
+  border-color: rgba(96, 165, 250, 0.58) !important;
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.40),
+    0 0 0 3px rgba(59, 130, 246, 0.10) !important;
+}
+
+:host-context([data-theme='dark']) ::ng-deep .dl-prime-calendar .p-datepicker-input,
+:host-context([data-theme='dark']) ::ng-deep .dl-calendar .p-datepicker-input {
+  color: #f8fafc !important;
+}
+
+:host-context([data-theme='dark']) ::ng-deep .dl-prime-calendar .p-datepicker-input-icon-container,
+:host-context([data-theme='dark']) ::ng-deep .dl-calendar .p-datepicker-input-icon-container {
+  border-left-color: rgba(148, 163, 184, 0.22) !important;
+  background: linear-gradient(180deg, #111925 0%, #0d1420 100%) !important;
+  color: #a7b4c7 !important;
+}
+
+:host-context([data-theme='dark']) ::ng-deep .dl-prime-calendar .p-datepicker-input-icon-container:hover,
+:host-context([data-theme='dark']) ::ng-deep .dl-calendar .p-datepicker-input-icon-container:hover {
+  background: #142033 !important;
+  color: #93c5fd !important;
+}
+
+@media screen and (max-width: 992px) {
+  .dl-calendar {
+    width: 100%;
+  }
+
+  :host ::ng-deep .dl-prime-calendar.p-datepicker,
+  :host ::ng-deep .dl-calendar .p-datepicker,
+  :host ::ng-deep .dl-prime-calendar.ui-calendar,
+  :host ::ng-deep .dl-calendar .ui-calendar {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+@media screen and (max-width: 620px) {
+  .dl-calendar {
+    height: 50px;
+    border-radius: 13px;
+  }
+
+  :host ::ng-deep .dl-prime-calendar .p-datepicker-input,
+  :host ::ng-deep .dl-calendar .p-datepicker-input,
+  :host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon-container,
+  :host ::ng-deep .dl-calendar .p-datepicker-input-icon-container {
+    height: 48px !important;
+  }
+}
+
+
+
+
+
+
+.dl-toolbar {
+  gap: 8px;
+}
+
+.dl-date-field {
+  gap: 4px;
+}
+
+.dl-date-field label {
+  font-size: 10px;
+  letter-spacing: 0.28px;
+}
+
+.dl-calendar {
+  width: 268px;
+  height: 42px;
+  border-radius: 12px;
+  box-shadow:
+    0 7px 18px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+.dl-calendar:hover,
+.dl-calendar:focus-within {
+  box-shadow:
+    0 9px 22px rgba(37, 99, 235, 0.09),
+    0 0 0 3px rgba(37, 99, 235, 0.065);
+}
+
+:host ::ng-deep .dl-prime-calendar.p-datepicker,
+:host ::ng-deep .dl-calendar .p-datepicker,
+:host ::ng-deep .dl-prime-calendar.ui-calendar,
+:host ::ng-deep .dl-calendar .ui-calendar {
+  height: 40px !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input,
+:host ::ng-deep .dl-calendar .p-datepicker-input,
+:host ::ng-deep .dl-prime-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar-input {
+  height: 40px !important;
+  padding: 0 50px 0 15px !important;
+  border-radius: 11px !important;
+  font-size: 12.5px !important;
+  font-weight: 820 !important;
+  letter-spacing: -0.08px !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon-container,
+:host ::ng-deep .dl-calendar .p-datepicker-input-icon-container {
+  width: 44px !important;
+  height: 40px !important;
+  border-radius: 0 11px 11px 0 !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon,
+:host ::ng-deep .dl-calendar .p-datepicker-input-icon {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+.dl-separator {
+  height: 42px;
+  font-size: 15px;
+}
+
+.dl-period {
+  height: 42px;
+}
+
+.dl-period button {
+  height: 42px;
+  min-width: 45px;
+  font-size: 12px;
+}
+
+.dl-apply {
+  height: 42px;
+  min-width: 112px;
+  gap: 7px;
+  font-size: 13px;
+  box-shadow:
+    0 9px 21px rgba(37, 99, 235, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+:host-context([data-theme='dark']) .dl-calendar:hover,
+:host-context([data-theme='dark']) .dl-calendar:focus-within {
+  box-shadow:
+    0 11px 25px rgba(0, 0, 0, 0.36),
+    0 0 0 3px rgba(59, 130, 246, 0.085) !important;
+}
+
+@media screen and (max-width: 1180px) {
+  .dl-calendar {
+    width: 248px;
+  }
+
+  .dl-period button {
+    min-width: 43px;
+  }
+}
+
+@media screen and (max-width: 992px) {
+  .dl-calendar {
+    width: 100%;
+  }
+}
+
+@media screen and (max-width: 620px) {
+  .dl-calendar {
+    height: 42px;
+    border-radius: 12px;
+  }
+
+  :host ::ng-deep .dl-prime-calendar .p-datepicker-input,
+  :host ::ng-deep .dl-calendar .p-datepicker-input,
+  :host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon-container,
+  :host ::ng-deep .dl-calendar .p-datepicker-input-icon-container {
+    height: 40px !important;
+  }
+}
+
+
+
+
+
+.manage-tags-body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+.tags-scroll {
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: auto;
+}
+
+.tag-list,
+.selected-list,
+.tag-side-content {
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: auto;
+}
+
+.tags-scroll::-webkit-scrollbar,
+.tag-list::-webkit-scrollbar,
+.selected-list::-webkit-scrollbar,
+.tag-side-content::-webkit-scrollbar,
+.manage-tags-body::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+.tag-row {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+@media screen and (max-width: 992px) {
+  .manage-tags-body {
+    max-height: calc(100dvh - 166px);
+  }
+
+  .tag-list,
+  .selected-list,
+  .tag-side-content {
+    max-height: min(42dvh, 360px);
+  }
+}
+
+@media screen and (max-width: 620px) {
+  .manage-tags-header {
+    padding: 10px;
+    gap: 9px;
+  }
+
+  .manage-tags-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    font-size: 17px;
+  }
+
+  .manage-tags-title {
+    gap: 10px;
+  }
+
+  .manage-tags-title h3 {
+    font-size: 17px;
+  }
+
+  .manage-tags-title p {
+    margin-top: 3px;
+    font-size: 10.5px;
+  }
+
+  .manage-tags-actions {
+    gap: 6px;
+  }
+
+  .tag-action-btn {
+    height: 38px;
+    padding-inline: 7px;
+    gap: 5px;
+    font-size: 11.5px;
+  }
+
+  .manage-tags-body {
+    max-height: calc(100dvh - 150px);
+    padding: 9px;
+    touch-action: pan-y;
+  }
+
+  .tag-control-bar {
+    margin-bottom: 9px;
+  }
+
+  .tags-scroll {
+    overflow: visible !important;
+    touch-action: pan-y;
+  }
+
+  .tags-layout {
+    display: flex !important;
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .tag-column {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+
+
+
+  .tag-list,
+  .selected-list {
+    max-height: none !important;
+    overflow: visible !important;
+    touch-action: auto;
+  }
+
+  .tag-row {
+    min-height: 48px;
+  }
+
+  .selected-panel {
+    position: relative;
+    top: auto;
+  }
+}
+
+
+
+
+
+
+.dl-panel {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(37, 99, 235, 0.035), transparent 32%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.995), rgba(251, 253, 255, 0.995));
+  box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.055),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+.dl-panel::before {
+  display: none;
+}
+
+.dl-card {
+  border-radius: 15px;
+  border-color: rgba(148, 163, 184, 0.22);
+  background: #ffffff;
+  box-shadow:
+    0 8px 22px rgba(15, 23, 42, 0.045),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+.dl-calendar,
+.dl-period,
+.dl-tags,
+.dl-export {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  border-color: rgba(148, 163, 184, 0.28);
+  box-shadow:
+    0 6px 16px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+.dl-tags {
+  background: #ffffff;
+}
+
+.dl-badge {
+  background: #f3f7ff;
+  border-color: rgba(37, 99, 235, 0.14);
+  box-shadow: none;
+}
+
+
+:host-context([data-theme='dark']) .dl-panel {
+  background:
+    radial-gradient(circle at 14% -15%, rgba(37, 99, 235, 0.14), transparent 30%),
+    linear-gradient(180deg, #0d131d 0%, #070b11 100%) !important;
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  color: #f8fafc !important;
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+}
+
+:host-context([data-theme='dark']) .dl-card,
+:host-context([data-theme='dark']) .dl-calendar,
+:host-context([data-theme='dark']) .dl-period,
+:host-context([data-theme='dark']) .dl-tags,
+:host-context([data-theme='dark']) .dl-export {
+  background: linear-gradient(180deg, #111925 0%, #0b111a 100%) !important;
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  color: #f8fafc !important;
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+
+
+
+
+
+:host-context([data-theme='dark']) .dl-panel {
+  background: linear-gradient(180deg,
+      rgba(18, 25, 37, 0.98) 0%,
+      rgba(8, 12, 18, 0.98) 100%) !important;
+  border: 1px solid rgba(148, 163, 184, 0.22) !important;
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+}
+
+:host-context([data-theme='dark']) .dl-panel::before {
+  display: none !important;
+}
+
+:host-context([data-theme='dark']) .dl-card {
+  background: rgba(0, 0, 0, 0.10) !important;
+  border-color: rgba(203, 213, 225, 0.18) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+:host-context([data-theme='dark']) .dl-calendar,
+:host-context([data-theme='dark']) .dl-period,
+:host-context([data-theme='dark']) .dl-tags,
+:host-context([data-theme='dark']) .dl-export {
+  background: linear-gradient(180deg, #0f151f 0%, #090e15 100%) !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  color: #e2e8f0 !important;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+:host-context([data-theme='dark']) .dl-calendar:hover,
+:host-context([data-theme='dark']) .dl-tags:hover,
+:host-context([data-theme='dark']) .dl-export:hover {
+  background: linear-gradient(180deg, #121a27 0%, #0b111a 100%) !important;
+  border-color: rgba(96, 165, 250, 0.42) !important;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.30),
+    0 0 0 3px rgba(59, 130, 246, 0.07) !important;
+}
+
+:host-context([data-theme='dark']) ::ng-deep .dl-prime-calendar .ui-calendar-button,
+:host-context([data-theme='dark']) ::ng-deep .dl-calendar .ui-calendar-button {
+  background: #0b111a !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+:host-context([data-theme='dark']) .dl-period button:hover {
+  background: #121a27 !important;
+}
+
+:host-context([data-theme='dark']) .dl-title p,
+:host-context([data-theme='dark']) .dl-date-field label,
+:host-context([data-theme='dark']) .dl-card-text label,
+:host-context([data-theme='dark']) .dl-card-text p,
+:host-context([data-theme='dark']) .dl-separator {
+  color: #cbd5e1 !important;
+}
+
+/* 2026-08 compact historical filter layout (Data Logger + Chart). */
+.dl-title {
+  transform: none;
+}
+
+.dl-toolbar {
+  gap: 7px;
+}
+
+.dl-date-field {
+  gap: 4px;
+}
+
+.dl-date-field label {
+  font-size: 9.5px;
+  letter-spacing: 0.3px;
+}
+
+.dl-calendar {
+  width: 180px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+:host ::ng-deep .dl-prime-calendar.p-datepicker,
+:host ::ng-deep .dl-calendar .p-datepicker,
+:host ::ng-deep .dl-prime-calendar.ui-calendar,
+:host ::ng-deep .dl-calendar .ui-calendar {
+  width: 180px !important;
+  max-width: 180px !important;
+  height: 38px !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input,
+:host ::ng-deep .dl-calendar .p-datepicker-input,
+:host ::ng-deep .dl-prime-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar-input {
+  height: 38px !important;
+  padding: 0 42px 0 12px !important;
+  border-radius: 9px !important;
+  font-size: 11.5px !important;
+  font-weight: 820 !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon-container,
+:host ::ng-deep .dl-calendar .p-datepicker-input-icon-container {
+  width: 36px !important;
+  height: 38px !important;
+  border-radius: 0 9px 9px 0 !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon,
+:host ::ng-deep .dl-calendar .p-datepicker-input-icon {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.dl-separator {
+  height: 40px;
+  font-size: 13px;
+}
+
+.dl-period {
+  height: 40px;
+  flex: 0 0 auto;
+}
+
+.dl-period button {
+  height: 40px;
+  min-width: 36px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.dl-apply {
+  height: 40px;
+  min-width: 100px;
+  padding: 0 14px;
+  gap: 6px;
+  font-size: 12.5px;
+}
+
+@media screen and (min-width: 1361px) {
+  .dl-top {
+    grid-template-columns: minmax(230px, 270px) minmax(0, 1fr);
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .dl-toolbar {
+    flex-wrap: nowrap;
+  }
+
+  .dl-title h1 {
+    font-size: 27px;
+  }
+
+  .dl-title p {
+    max-width: 270px;
+    font-size: 12.5px;
+    line-height: 1.35;
+  }
+}
+
+@media screen and (max-width: 1360px) {
+  .dl-title {
+    transform: none;
+  }
+}
+
+@media screen and (max-width: 1180px) {
+  .dl-calendar {
+    width: 170px;
+  }
+
+  :host ::ng-deep .dl-prime-calendar.p-datepicker,
+  :host ::ng-deep .dl-calendar .p-datepicker,
+  :host ::ng-deep .dl-prime-calendar.ui-calendar,
+  :host ::ng-deep .dl-calendar .ui-calendar {
+    width: 170px !important;
+    max-width: 170px !important;
+  }
+}
+
+@media screen and (max-width: 992px) {
+  .dl-calendar {
+    width: 100%;
+  }
+
+  :host ::ng-deep .dl-prime-calendar.p-datepicker,
+  :host ::ng-deep .dl-calendar .p-datepicker,
+  :host ::ng-deep .dl-prime-calendar.ui-calendar,
+  :host ::ng-deep .dl-calendar .ui-calendar {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .dl-period {
+    order: 0;
+  }
+
+  .dl-date-field {
+    order: 1;
+  }
+
+  .dl-separator {
+    order: 1;
+  }
+
+  .dl-apply {
+    order: 2;
+  }
+}
+
+/* 2026-08 keep page subtitle on one line on desktop/tablet layouts. */
+@media screen and (min-width: 993px) {
+  .dl-title p {
+    max-width: none;
+    white-space: nowrap;
+  }
+}
+
+@media screen and (min-width: 1361px) {
+  .dl-top {
+    grid-template-columns: minmax(360px, 400px) minmax(0, 1fr);
+  }
+}
+
+/* =========================================================
+   Professional square refinement — Data Logger / Chart tags
+   Balanced enterprise styling: 9px surfaces, 7px controls, light shadow.
+   ========================================================= */
+:host {
+  --mt-radius: 9px;
+  --mt-control-radius: 7px;
+  --mt-shadow: 0 2px 8px rgba(15, 23, 42, 0.07);
+  --mt-shadow-strong: 0 4px 12px rgba(15, 23, 42, 0.09);
+}
+
+/* Main Data Logger / Chart date-control surfaces */
+.dl-panel,
+.dl-card {
+  border-radius: var(--mt-radius);
+  box-shadow: var(--mt-shadow);
+}
+
+.dl-calendar,
+.dl-period,
+.dl-tags,
+.dl-export,
+.dl-apply {
+  border-radius: var(--mt-control-radius);
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input,
+:host ::ng-deep .dl-calendar .p-datepicker-input,
+:host ::ng-deep .dl-prime-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar-input {
+  border-radius: var(--mt-control-radius) !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon-container,
+:host ::ng-deep .dl-calendar .p-datepicker-input-icon-container {
+  border-radius: 0 var(--mt-control-radius) var(--mt-control-radius) 0 !important;
+}
+
+/* PrimeNG dialog shell */
+:host ::ng-deep .manage-tags-dialog.p-dialog,
+:host ::ng-deep .pro-tags-dialog.p-dialog,
+:host ::ng-deep .manage-tags-dialog.ui-dialog,
+:host ::ng-deep .pro-tags-dialog.ui-dialog {
+  border: 1px solid rgba(148, 163, 184, 0.30) !important;
+  border-radius: var(--mt-radius) !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18) !important;
+}
+
+.manage-tags-header {
+  min-height: 72px;
+  padding: 13px 16px;
+  position: relative;
+  z-index: 2;
+  border-bottom: 2px solid rgba(96, 165, 250, 0.72);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
+}
+
+.manage-tags-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--mt-control-radius);
+}
+
+.tag-action-btn {
+  height: 38px;
+  min-width: 82px;
+  padding: 0 14px;
+  border-radius: var(--mt-control-radius);
+  box-shadow: none;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.tag-action-btn:hover {
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.16);
+}
+
+.manage-tags-body {
+  padding: 20px 22px 24px;
+  background: #eef3f8;
+}
+
+/* Filter / search toolbar */
+.tag-control-bar {
+  margin-bottom: 14px;
+  padding: 10px;
+  gap: 10px;
+  border-radius: var(--mt-radius);
+  border-color: #d5dfeb;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
+}
+
+.tag-search,
+.tag-preset,
+.tag-summary-chip,
+.tag-filter-btn {
+  height: 40px;
+  min-height: 40px;
+  border-radius: var(--mt-control-radius);
+}
+
+.tag-search,
+.tag-preset {
+  background: #ffffff;
+}
+
+.tag-search-clear {
+  border-radius: var(--mt-control-radius);
+}
+
+.tag-summary-chip {
+  padding-inline: 12px;
+}
+
+.tag-filter-btn {
+  padding-inline: 13px;
+}
+
+.tag-filter-btn:hover,
+.tag-filter-btn.active {
+  box-shadow: none;
+}
+
+/* Favorite / Recent panel */
+.manage-tags-grid {
+  gap: 12px;
+}
+
+.tag-side-panel {
+  border-radius: var(--mt-radius);
+  border: 1px solid #dbe4ef;
+  box-shadow: var(--mt-shadow);
+}
+
+.tag-side-tabs {
+  height: 46px;
+  padding: 5px;
+  gap: 4px;
+}
+
+.tag-side-tabs button {
+  border-radius: var(--mt-control-radius);
+}
+
+.tag-side-tabs button.active {
+  border: 1px solid #dbe4ef;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
+}
+
+.side-section-title span,
+.tag-column-title small {
+  border-radius: var(--mt-control-radius);
+}
+
+.side-tag-item {
+  margin-bottom: 6px;
+  border-radius: var(--mt-control-radius);
+}
+
+/* Sensor group columns */
+.tags-layout {
+  gap: 10px;
+}
+
+.tag-column {
+  border: 1px solid #dbe4ef;
+  border-radius: var(--mt-radius);
+  box-shadow: var(--mt-shadow);
+}
+
+.tag-column-title {
+  box-shadow: none;
+}
+
+.tag-row {
+  transition: background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+.tag-row:hover {
+  box-shadow: inset 3px 0 0 #60a5fa;
+}
+
+.tag-row.active {
+  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.58);
+}
+
+/* Empty / loading states use the same enterprise radius. */
+.tag-load-state,
+.tag-load-state button {
+  border-radius: var(--mt-control-radius);
+}
+
+/* Keep semantic status/check controls circular; they are indicators, not cards. */
+.check-icon,
+.star-icon {
+  border-radius: 50%;
+}
+
+/* Dark mode keeps the same square hierarchy. */
+:host-context([data-theme='dark']) .tag-control-bar,
+:host-context([data-theme='dark']) .tag-side-panel,
+:host-context([data-theme='dark']) .tag-column {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+}
+
+@media screen and (max-width: 992px) {
+  :host ::ng-deep .manage-tags-dialog.p-dialog,
+  :host ::ng-deep .pro-tags-dialog.p-dialog,
+  :host ::ng-deep .manage-tags-dialog.ui-dialog,
+  :host ::ng-deep .pro-tags-dialog.ui-dialog {
+    border-radius: var(--mt-radius) !important;
+  }
+
+  .tag-search,
+  .tag-preset,
+  .tag-summary-chip,
+  .tag-filter-btn {
+    border-radius: var(--mt-control-radius);
+  }
+
+  .tag-column,
+  .tag-side-panel {
+    border-radius: var(--mt-radius);
+  }
+}
+
+@media screen and (max-width: 620px) {
+  .dl-panel,
+  .dl-card,
+  .tag-control-bar,
+  .tag-side-panel,
+  .tag-column {
+    border-radius: var(--mt-radius);
+  }
+
+  .manage-tags-icon,
+  .tag-action-btn {
+    border-radius: var(--mt-control-radius);
+  }
+}
+
+/* =========================================================
+   2026-08 frame consistency pass
+   Keep the top filter block aligned exactly with Chart/Data Logger content.
+   One border weight, one surface radius, one shadow language.
+   ========================================================= */
+:host {
+  padding: 0;
+  --ui-frame-radius: 10px;
+  --ui-control-radius: 8px;
+  --ui-frame-border: rgba(148, 163, 184, 0.28);
+  --ui-frame-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+}
+
+.dl-panel,
+.dl-card {
+  border: 1px solid var(--ui-frame-border);
+  border-radius: var(--ui-frame-radius);
+  box-shadow: var(--ui-frame-shadow);
+}
+
+/* Remove the extra decorative top rule so every edge reads equally. */
+.dl-panel::before {
+  display: none;
+}
+
+.dl-calendar,
+.dl-period,
+.dl-tags,
+.dl-export,
+.dl-apply {
+  border-radius: var(--ui-control-radius);
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input,
+:host ::ng-deep .dl-calendar .p-datepicker-input,
+:host ::ng-deep .dl-prime-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar .ui-inputtext,
+:host ::ng-deep .dl-calendar-input {
+  border-radius: var(--ui-control-radius) !important;
+}
+
+:host ::ng-deep .dl-prime-calendar .p-datepicker-input-icon-container,
+:host ::ng-deep .dl-calendar .p-datepicker-input-icon-container {
+  border-radius: 0 var(--ui-control-radius) var(--ui-control-radius) 0 !important;
+}
+
+:host-context([data-theme='dark']) .dl-panel,
+:host-context([data-theme='dark']) .dl-card {
+  border-color: rgba(148, 163, 184, 0.28) !important;
+}

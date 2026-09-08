@@ -365,10 +365,14 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     }
 
     if (type === 'MOTOR') {
-      const motorPrefix = row === 1 && col === 2 ? 'PPS' : row === 2 && col === 2 ? 'SPS' : '';
-      return motorPrefix
-        ? this.resolveRuntimeState(data, [`${motorPrefix}_SPD_CALC`, `${motorPrefix}_SPD`])
-        : null;
+      const speed = this.getMotorRealtimeSpeed(data, row, col);
+      const value = this.getNumericRealtimeValue(speed);
+
+      if (value === null) {
+        return null;
+      }
+
+      return Math.abs(value) > 0.0001 ? 'running' : 'stopped';
     }
 
     if (type === 'DG_NO_RPM' || type === 'DG_NO_RPM_VTOTAL') {
@@ -436,6 +440,45 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     }
 
     return null;
+  }
+
+  getMotorRealtimeSpeed(
+    rtData: Record<string, any> | null | undefined,
+    row: number,
+    col: number,
+  ): any {
+    const data = this.normalizeRealtimeData(rtData);
+    const motorPrefix = row === 1 && col === 2 ? 'PPS' : row === 2 && col === 2 ? 'SPS' : '';
+
+    if (!motorPrefix || Object.keys(data).length === 0) {
+      return null;
+    }
+
+    const calculated = this.getTag(data, `${motorPrefix}_SPD_CALC`);
+    if (this.getNumericRealtimeValue(calculated) !== null) {
+      return calculated;
+    }
+
+    const raw = this.getTag(data, `${motorPrefix}_SPD`);
+    return this.getNumericRealtimeValue(raw) !== null ? raw : null;
+  }
+
+  private getNumericRealtimeValue(input: any): number | null {
+    if (input === null || input === undefined || input === '') {
+      return null;
+    }
+
+    const raw =
+      typeof input === 'object'
+        ? input.value ?? input.Value ?? input.ivalue ?? input.IValue ?? input.val
+        : input;
+
+    if (raw === null || raw === undefined || raw === '') {
+      return null;
+    }
+
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
   }
 
   private resolveRuntimeState(

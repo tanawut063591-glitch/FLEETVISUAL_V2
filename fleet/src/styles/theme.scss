@@ -1,3 +1,5 @@
+@use './report/report-layout';
+@use './themes/report/report-visual';
 @use './themes/light-theme' as light;
 @use './themes/dark-theme' as dark;
 

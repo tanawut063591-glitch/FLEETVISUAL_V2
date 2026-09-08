@@ -32,48 +32,50 @@
 
 .map-filter-bar {
   position: absolute;
-  top: 58px;
-  left: 22px;
+  top: 54px;
+  left: 18px;
   z-index: 20;
 
   display: flex;
-  gap: 6px;
+  gap: 3px;
+  padding: 3px;
 
+  border: 1px solid rgba(226, 232, 240, 0.92);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.16);
+  background: rgba(255, 255, 255, 0.90);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.12);
   backdrop-filter: blur(14px);
   overflow: hidden;
 }
 
 .filter-pill {
-  height: 44px;
-  padding: 0 18px;
+  height: 36px;
+  padding: 0 14px;
 
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 7px;
 
   border: none;
   background: transparent;
 
   color: #0f172a;
-  font-size: 13px;
-  font-weight: 850;
+  font-size: 12px;
+  font-weight: 800;
 
   cursor: pointer;
   transition: 0.2s ease;
 }
 
 .filter-pill.active {
-  background: #ffffff;
+  background: #eff6ff;
   color: #1455ff;
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.12);
 }
 
 .filter-dot {
-  width: 13px;
-  height: 13px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
 }
 
@@ -103,13 +105,13 @@
   left: 18px;
   z-index: 35;
 
-  width: 430px;
-  padding: 18px;
+  width: 420px;
+  padding: 14px;
 
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.99);
   border: 1px solid rgba(226, 232, 240, 0.95);
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.20);
 
   box-sizing: border-box;
   will-change: left, top;
@@ -138,11 +140,11 @@
 
 .popup-close {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 10px;
+  right: 10px;
 
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
 
   border: none;
   background: transparent;
@@ -189,18 +191,18 @@
 
 .popup-head {
   display: flex;
-  gap: 13px;
+  gap: 12px;
 
-  padding-bottom: 15px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #e2e8f0;
 }
 
 .vessel-img-wrap {
   position: relative;
 
-  width: 74px;
-  height: 74px;
-  flex: 0 0 74px;
+  width: 68px;
+  height: 68px;
+  flex: 0 0 68px;
 
   border-radius: 6px;
   overflow: hidden;
@@ -244,10 +246,10 @@
 }
 
 .vessel-title-row h3 {
-  margin: 2px 0 5px;
+  margin: 1px 0 4px;
 
   color: #0f172a;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 950;
 
   white-space: nowrap;
@@ -255,33 +257,40 @@
   text-overflow: ellipsis;
 }
 
-.vessel-info p {
-  margin: 0 0 6px;
+.vessel-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 5px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 750;
+}
 
+.vessel-type {
   color: #334155;
-  font-size: 12px;
   font-weight: 900;
+}
+
+.meta-separator {
+  color: #cbd5e1;
+}
+
+.last-seen {
+  color: #64748b;
+  font-weight: 700;
 }
 
 .coordinate {
   display: block;
-
-  color: #334155;
-  font-size: 12px;
+  color: #475569;
+  font-size: 11px;
   font-weight: 700;
 }
 
-.vessel-info small {
-  display: block;
-  margin-top: 5px;
-
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 650;
-}
-
 .status-badge {
-  padding: 5px 10px;
+  padding: 4px 9px;
   border-radius: 6px;
 
   font-size: 11px;
@@ -305,7 +314,7 @@
 }
 
 .summary-title-row {
-  margin: 15px 0 11px;
+  margin: 12px 0 9px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -357,8 +366,8 @@
 }
 
 .summary-item {
-  min-height: 102px;
-  padding: 12px 8px 10px;
+  min-height: 86px;
+  padding: 9px 7px 8px;
 
   display: flex;
   flex-direction: column;
@@ -378,8 +387,8 @@
 }
 
 .summary-icon {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
 
   border-radius: 6px;
 
@@ -426,19 +435,19 @@
 }
 
 .summary-item span {
-  margin-top: 7px;
+  margin-top: 5px;
 
   color: #64748b;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 950;
   text-align: center;
 }
 
 .summary-item strong {
-  margin-top: 4px;
+  margin-top: 3px;
 
   color: #0f172a;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 950;
   font-variant-numeric: tabular-nums;
   line-height: 1.08;
@@ -453,14 +462,14 @@
 .popup-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
 
-  margin-top: 14px;
+  margin-top: 11px;
 }
 
 .action-btn {
-  height: 56px;
-  padding: 0 14px;
+  height: 48px;
+  padding: 0 12px;
 
   border: none;
   border-radius: 8px;
@@ -568,37 +577,14 @@
   }
 }
 
-.map-filter-bar {
-  top: 52px;
-  left: 18px;
-  border-radius: 8px;
-}
-
-.filter-pill {
-  height: 40px;
-  padding: 0 16px;
-  font-size: 12px;
-}
-
 .vessel-popup {
-  width: 470px;
   max-width: calc(100vw - 36px);
-  border-radius: 8px;
-  padding: 15px;
-}
-
-.summary-item {
-  min-height: 98px;
-}
-
-.popup-actions .action-btn {
-  height: 50px;
 }
 
 
 @media (max-width: 1280px) and (min-width: 901px) {
   .vessel-popup {
-    width: min(470px, calc(100% - 36px));
+    width: min(410px, calc(100% - 36px));
   }
 }
 

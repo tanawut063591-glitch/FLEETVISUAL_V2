@@ -1,0 +1,448 @@
+[
+    {
+        "name":"All",
+        "tags" :[]
+    },
+    {
+        "name": "PME Raw Data",
+        "tags": [
+            {
+                "name" : "VES-GPS-SPEED",
+                "tagName" : "VES-GPS-SPEED"
+            },
+            {
+                "name" : "PME-SPD-CALC",
+                "tagName" : "PME-SPD-CALC"
+            },
+            {
+                "name" : "PME-FIN-MFLOW",
+                "tagName" : "PME-FIN-MFLOW"
+            },
+            {
+                "name" : "PME-FIN-MTOTAL",
+                "tagName" : "PME-FIN-MTOTAL"
+            },
+            {
+                "name" : "PME-FOUT-MFLOW",
+                "tagName" : "PME-FOUT-MFLOW"
+            },
+            {
+                "name" : "PME-FOUT-MTOTAL",
+                "tagName" : "PME-FOUT-MTOTAL"
+            },
+
+            {
+                "name" : "PME-FLOW-CONS",
+                "tagName" : "PME-FLOW-CONS"
+            },
+            {
+                "name" : "PME-FIN-VTOTAL",
+                "tagName" : "PME-FIN-VTOTAL"
+            },
+            {
+                "name" : "PME-FOUT-VTOTAL",
+                "tagName" : "PME-FOUT-VTOTAL"
+            }
+        ]
+    },
+    {
+        "name": "CME Raw Data",
+        "tags": [
+            {
+                "name" : "VES-GPS-SPEED",
+                "tagName" : "VES-GPS-SPEED"
+            },
+            {
+                "name" : "CME-SPD-CALC",
+                "tagName" : "CME-SPD-CALC"
+            },
+            {
+                "name" : "CME-FIN-MFLOW",
+                "tagName" : "CME-FIN-MFLOW"
+            },
+            {
+                "name" : "CME-FIN-MTOTAL",
+                "tagName" : "CME-FIN-MTOTAL"
+            },
+            {
+                "name" : "CME-FOUT-MFLOW",
+                "tagName" : "CME-FOUT-MFLOW"
+            },
+            {
+                "name" : "CME-FOUT-MTOTAL",
+                "tagName" : "CME-FOUT-MTOTAL"
+            },
+
+            {
+                "name" : "CME-FLOW-CONS",
+                "tagName" : "CME-FLOW-CONS"
+            },
+            {
+                "name" : "CME-FIN-VTOTAL",
+                "tagName" : "CME-FIN-VTOTAL"
+            },
+            {
+                "name" : "CME-FOUT-VTOTAL",
+                "tagName" : "CME-FOUT-VTOTAL"
+            }
+        ]
+    },
+    {
+        "name": "SME Raw Data",
+        "tags": [
+            {
+                "name" : "VES-GPS-SPEED",
+                "tagName" : "VES-GPS-SPEED"
+            },
+            {
+                "name" : "SME-SPD-CALC",
+                "tagName" : "SME-SPD-CALC"
+            },
+            {
+                "name" : "SME-FIN-MFLOW",
+                "tagName" : "SME-FIN-MFLOW"
+            },
+            {
+                "name" : "SME-FIN-MTOTAL",
+                "tagName" : "SME-FIN-MTOTAL"
+            },
+            {
+                "name" : "SME-FOUT-MFLOW",
+                "tagName" : "SME-FOUT-MFLOW"
+            },
+            {
+                "name" : "SME-FOUT-MTOTAL",
+                "tagName" : "SME-FOUT-MTOTAL"
+            },
+
+            {
+                "name" : "SME-FLOW-CONS",
+                "tagName" : "SME-FLOW-CONS"
+            },
+            {
+                "name" : "SME-FIN-VTOTAL",
+                "tagName" : "SME-FIN-VTOTAL"
+            },
+            {
+                "name" : "SME-FOUT-VTOTAL",
+                "tagName" : "SME-FOUT-VTOTAL"
+            }
+        ]
+    },
+    {
+        "name": "Speed Raw Data",
+        "tags": [
+            {
+                "name" : "PPS-SPD-CALC",
+                "tagName" : "PPS-SPD-CALC"
+            },
+            {
+                "name" : "SPS_SPD_CALC",
+                "tagName" : "SPS_SPD_CALC"
+            },
+            {
+                "name" : "CPS-SPD-CALC",
+                "tagName" : "CPS-SPD-CALC"
+            },
+            {
+                "name" : "PME-SPD-CALC",
+                "tagName" : "PME-SPD-CALC"
+            },
+            {
+                "name" : "SME-SPD-CALC",
+                "tagName" : "SME-SPD-CALC"
+            },
+            {
+                "name" : "SME-FOUT-MTOTAL",
+                "tagName" : "SME-FOUT-MTOTAL"
+            },
+
+            {
+                "name" : "CME-SPD-CALC",
+                "tagName" : "CME-SPD-CALC"
+            },
+            {
+                "name" : "VES-GPS-LAT",
+                "tagName" : "VES-GPS-LAT"
+            },
+            {
+                "name" : "VES-GPS-LONG",
+                "tagName" : "VES-GPS-LONG"
+            },
+            {
+                "name" : "VES-GPS-SPEED",
+                "tagName" : "VES-GPS-SPEED"
+            },
+            {
+                "name" : "VES-GPS-HEAD",
+                "tagName" : "VES-GPS-HEAD"
+            }
+        ]
+    },
+    {
+        "name": "Test Result",
+        "tags": [
+            {
+                "name" : "VES-GPS-LAT",
+                "tagName" :"VES-GPS-LAT"
+            },
+            {
+                "name" : "VES-GPS-LONG",
+                "tagName" :"VES-GPS-LONG"
+            },
+            {
+                "name" : "VES-GPS-SPEED",
+                "tagName" :"VES-GPS-SPEED"
+            },
+            {
+                "name" : "VES-GPS-HEAD",
+                "tagName" :"VES-GPS-HEAD"
+            },
+            {
+                "name" : "PME-FIN-MTOTAL",
+                "tagName" :"PME-FIN-MTOTAL"
+            },
+            {
+                "name" : "PME-FOUT-MTOTAL",
+                "tagName" :"PME-FOUT-MTOTAL"
+            },
+            {
+                "name" : "PME-FLOW-CONS",
+                "tagName" :"PME-FLOW-CONS"
+            },
+            {
+                "name" : "PME-FIN-VTOTAL",
+                "tagName" :"PME-FIN-VTOTAL"
+            },
+            {
+                "name" : "PME-FOUT-VTOTAL",
+                "tagName" :"PME-FOUT-VTOTAL"
+            },
+            {
+                "name" : "PME-FOUT-MFLOW",
+                "tagName" :"PME-FOUT-MFLOW"
+            },
+            {
+                "name" : "CME-FIN-MTOTAL",
+                "tagName" :"CME-FIN-MTOTAL"
+            },
+            {
+                "name" : "CME-FOUT-MTOTAL",
+                "tagName" :"CME-FOUT-MTOTAL"
+            },
+            {
+                "name" : "CME-FLOW-CONS",
+                "tagName" :"CME-FLOW-CONS"
+            },
+            {
+                "name" : "CME-FIN-VTOTAL",
+                "tagName" :"CME-FIN-VTOTAL"
+            },
+            {
+                "name" : "CME-FOUT-VTOTAL",
+                "tagName" :"CME-FOUT-VTOTAL"
+            },
+            {
+                "name" : "CME-FOUT-MFLOW",
+                "tagName" :"CME-FOUT-MFLOW"
+            },
+            {
+                "name" : "SME-FIN-MTOTAL",
+                "tagName" :"SME-FIN-MTOTAL"
+            },
+            {
+                "name" : "SME-FOUT-MTOTAL",
+                "tagName" :"SME-FOUT-MTOTAL"
+            },
+            {
+                "name" : "SME-FLOW-CONS",
+                "tagName" :"SME-FLOW-CONS"
+            },
+            {
+                "name" : "SME-FIN-VTOTAL",
+                "tagName" :"SME-FIN-VTOTAL"
+            },
+            {
+                "name" : "SME-FOUT-VTOTAL",
+                "tagName" :"SME-FOUT-VTOTAL"
+            },
+            {
+                "name" : "SME-FOUT-MFLOW",
+                "tagName" :"SME-FOUT-MFLOW"
+            },
+            {
+                "name" : "PAE-FIN-MTOTAL",
+                "tagName" :"PAE-FIN-MTOTAL"
+            },
+            {
+                "name" : "PAE-FOUT-MTOTAL",
+                "tagName" :"PAE-FOUT-MTOTAL"
+            },
+            {
+                "name" : "PAE-FLOW-CONS",
+                "tagName" :"PAE-FLOW-CONS"
+            },
+            {
+                "name" : "PAE-FIN-VTOTAL",
+                "tagName" :"PAE-FIN-VTOTAL"
+            },
+            {
+                "name" : "PAE-FOUT-VTOTAL",
+                "tagName" :"PAE-FOUT-VTOTAL"
+            },
+            {
+                "name" : "PAE-FOUT-MFLOW",
+                "tagName" :"PAE-FOUT-MFLOW"
+            },
+
+            {
+                "name" : "CAE-FIN-MTOTAL",
+                "tagName" :"CAE-FIN-MTOTAL"
+            },
+            {
+                "name" : "CAE-FOUT-MTOTAL",
+                "tagName" :"CAE-FOUT-MTOTAL"
+            },
+            {
+                "name" : "CAE-FLOW-CONS",
+                "tagName" :"CAE-FLOW-CONS"
+            },
+            {
+                "name" : "CAE-FIN-VTOTAL",
+                "tagName" :"CAE-FIN-VTOTAL"
+            },
+            {
+                "name" : "CAE-FOUT-VTOTAL",
+                "tagName" :"CAE-FOUT-VTOTAL"
+            },
+            {
+                "name" : "CAE-FOUT-MFLOW",
+                "tagName" :"CAE-FOUT-MFLOW"
+            },
+
+            {
+                "name" : "SAE-FIN-MTOTAL",
+                "tagName" :"SAE-FIN-MTOTAL"
+            },
+            {
+                "name" : "SAE-FOUT-MTOTAL",
+                "tagName" :"SAE-FOUT-MTOTAL"
+            },
+            {
+                "name" : "SAE-FLOW-CONS",
+                "tagName" :"SAE-FLOW-CONS"
+            },
+            {
+                "name" : "SAE-FIN-VTOTAL",
+                "tagName" :"SAE-FIN-VTOTAL"
+            },
+            {
+                "name" : "SAE-FOUT-VTOTAL",
+                "tagName" :"SAE-FOUT-VTOTAL"
+            },
+            {
+                "name" : "SAE-FOUT-MFLOW",
+                "tagName" :"SAE-FOUT-MFLOW"
+            }
+        ]
+    },
+    {
+        "name" : "Daily Report",
+        "tags" : [
+            {
+                "name" : "VES-GPS-DIS",
+                "tagName" : "VES-GPS-DIS"
+            },
+            {
+                "name" : "VES-GPS-HEAD",
+                "tagName" : "VES-GPS-HEAD"
+            },
+            {
+                "name" : "VES-GPS-LAT",
+                "tagName" : "VES-GPS-LAT"
+            },
+            {
+                "name" : "VES-GPS-LONG",
+                "tagName" : "VES-GPS-LONG"
+            },
+            {
+                "name" : "VES-GPS-SPEED",
+                "tagName" : "VES-GPS-SPEED"
+            },
+
+            {
+                "name" : "PME-FIN-VTOTAL",
+                "tagName" : "PME-FIN-VTOTAL"
+            },
+            {
+                "name" : "PME-FOUT-VTOTAL",
+                "tagName" : "PME-FOUT-VTOTAL"
+            },
+            {
+                "name" : "PME-SPD",
+                "tagName" : "PME-SPD"
+            },
+            {
+                "name" : "PPS-SPD",
+                "tagName" : "PPS-SPD"
+            },
+            {
+                "name" : "CME-FIN-VTOTAL",
+                "tagName" : "CME-FIN-VTOTAL"
+            },
+            {
+                "name" : "CME-FOUT-VTOTAL",
+                "tagName" : "CME-FOUT-VTOTAL"
+            },
+            {
+                "name" : "CME-SPD",
+                "tagName" : "CME-SPD"
+            },
+            {
+                "name" : "CPS-SPD",
+                "tagName" : "CPS-SPD"
+            },
+            {
+                "name" : "SME-FIN-VTOTAL",
+                "tagName" : "SME-FIN-VTOTAL"
+            },
+            {
+                "name" : "SME-FOUT-VTOTAL",
+                "tagName" : "SME-FOUT-VTOTAL"
+            },
+            {
+                "name" : "SME-SPD",
+                "tagName" : "SME-SPD"
+            },
+            {
+                "name" : "SPS-SPD",
+                "tagName" : "SPS-SPD"
+            },
+
+            {
+                "name" : "PAE-FIN-VTOTAL",
+                "tagName" : "PAE-FIN-VTOTAL"
+            },
+            {
+                "name" : "PAE-FOUT-VTOTAL",
+                "tagName" : "PAE-FOUT-VTOTAL"
+            },
+            {
+                "name" : "PAE-SPD",
+                "tagName" : "PAE-SPD"
+            },
+            {
+                "name" : "SAE-FIN-VTOTAL",
+                "tagName" : "SAE-FIN-VTOTAL"
+            },
+            {
+                "name" : "SAE-FOUT-VTOTAL",
+                "tagName" : "SAE-FOUT-VTOTAL"
+            },
+            {
+                "name" : "SAE-SPD",
+                "tagName" : "SAE-SPD"
+            }
+        ]
+    }
+]

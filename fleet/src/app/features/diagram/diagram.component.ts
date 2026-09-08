@@ -74,6 +74,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
   diagramStageHeight = this.diagramNaturalHeight + this.diagramBottomGutter;
   diagramZoomMode: 'fit' | 'full' = 'full';
   diagramProfile: DiagramProfileKey = 'default';
+  hasDiagramData = false;
 
   private readonly allDevices: DiagramDevice[] = [
     {
@@ -501,13 +502,20 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
       if (!info) {
         this.vesselName = 'SELECTED VESSEL';
         this.vesselPrefix = '';
-        this.applyDiagramProfile('default');
+        this.clearDiagramProfile();
         return;
       }
 
       this.vesselName = info.name || info.prefix || 'SELECTED VESSEL';
       this.vesselPrefix = info.prefix || '';
-      this.applyDiagramProfile(this.resolveDiagramProfile(info));
+
+      const profile = this.resolveDiagramProfile(info);
+      if (profile) {
+        this.hasDiagramData = true;
+        this.applyDiagramProfile(profile);
+      } else {
+        this.clearDiagramProfile();
+      }
 
       const identity = this.getVesselIdentity(data);
 
@@ -536,6 +544,12 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
     );
 
     const dataSubscription = this.data$.subscribe((data) => {
+      if (!this.hasDiagramData) {
+        this.currentValues = {};
+        this.lastUpdated = '-';
+        return;
+      }
+
       this.currentValues = this.normalizeRealtimeData(data);
       this.lastUpdated = this.findLastUpdated();
     });
@@ -589,7 +603,7 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
     return String(info?.prefix || info?.id || info?.name || '').toLowerCase();
   }
 
-  private resolveDiagramProfile(info: VesselInfoLike): DiagramProfileKey {
+  private resolveDiagramProfile(info: VesselInfoLike): DiagramProfileKey | null {
     const identity = [info.prefix, info.name, info.id]
       .filter(Boolean)
       .join(' ')
@@ -618,7 +632,17 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
       return 'intan';
     }
 
-    return 'default';
+    return null;
+  }
+
+  private clearDiagramProfile(): void {
+    this.hasDiagramData = false;
+    this.currentValues = {};
+    this.lastUpdated = '-';
+    this.devices = [];
+    this.groupPaths = [];
+    this.bluePaths = [];
+    this.greenPaths = [];
   }
 
   private applyDiagramProfile(key: DiagramProfileKey): void {

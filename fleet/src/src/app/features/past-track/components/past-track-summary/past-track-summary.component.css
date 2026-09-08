@@ -1,0 +1,224 @@
+.summary-grid {
+    display: grid;
+    grid-template-columns: 2fr repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.vessel-card,
+.kpi-card {
+    min-height: 90px;
+    background: #ffffff;
+    border: 1px solid #dbe7f5;
+    border-radius: 12px;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+}
+
+.vessel-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+}
+
+.ship-box {
+    width: 106px;
+    height: 70px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(180deg, #aee4ff, #8bd2f4);
+    overflow: hidden;
+}
+
+.ship-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.vessel-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.vessel-name span {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #e9fff4;
+    color: #10a462;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.vessel-meta {
+    margin-top: 10px;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.kpi-card {
+    padding: 16px;
+}
+
+.kpi-card small {
+    display: block;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.kpi-card strong {
+    display: block;
+    margin-top: 8px;
+    color: #1769ff;
+    font-size: 27px;
+    line-height: 1;
+    font-weight: 900;
+}
+
+.kpi-card span {
+    display: block;
+    margin-top: 7px;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.kpi-card .date-text {
+    color: #0f172a;
+    font-size: 18px;
+    line-height: 1.15;
+}
+
+@media (max-width: 1400px) {
+    .summary-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+
+
+
+@media (max-width: 900px) {
+    .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .vessel-card {
+        grid-column: 1 / -1;
+        min-width: 0;
+        padding: 14px;
+    }
+
+    .ship-box {
+        width: 92px;
+        height: 64px;
+        flex: 0 0 auto;
+    }
+
+    .vessel-card>div:last-child {
+        min-width: 0;
+    }
+
+    .vessel-name {
+        flex-wrap: wrap;
+        font-size: 17px;
+        line-height: 1.25;
+    }
+
+    .vessel-meta {
+        margin-top: 7px;
+        overflow-wrap: anywhere;
+        line-height: 1.45;
+    }
+
+    .kpi-card {
+        min-width: 0;
+        min-height: 106px;
+        padding: 14px;
+    }
+
+    .kpi-card strong {
+        font-size: clamp(23px, 7vw, 29px);
+        overflow-wrap: anywhere;
+    }
+
+    .kpi-card .date-text {
+        font-size: 15px;
+        line-height: 1.3;
+    }
+}
+
+@media (max-width: 430px) {
+    .summary-grid {
+        gap: 10px;
+    }
+
+    .vessel-card {
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .ship-box {
+        width: 82px;
+        height: 62px;
+    }
+
+    .vessel-name {
+        gap: 7px;
+        font-size: 16px;
+    }
+
+    .vessel-name span {
+        padding: 4px 8px;
+        font-size: 9px;
+    }
+
+    .kpi-card {
+        min-height: 98px;
+        padding: 13px;
+    }
+
+    .kpi-card small,
+    .kpi-card span {
+        font-size: 10px;
+    }
+
+    .kpi-card strong {
+        margin-top: 7px;
+        font-size: 24px;
+    }
+
+
+    .kpi-card:last-child {
+        grid-column: 1 / -1;
+        min-height: 82px;
+    }
+}
+
+/* Professional square card treatment */
+.summary-grid {
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.vessel-card,
+.kpi-card {
+    border-color: var(--border-color, #dbe7f5);
+    border-radius: var(--pt-radius, 6px);
+    background: var(--card-bg, #ffffff);
+    box-shadow: var(--pt-shadow, 0 2px 8px rgba(15, 23, 42, 0.07));
+}
+
+.ship-box {
+    border-radius: var(--pt-control-radius, 4px);
+}
+
+.vessel-name span {
+    border-radius: var(--pt-control-radius, 4px);
+}

@@ -73,7 +73,7 @@ export class DateRangeToolbarComponent implements AfterViewInit {
       return null;
     }
   }
-
+  
   private emitSelection(refreshPreset: boolean): DateRangeSelection | null {
     const selection = this.getSelection(refreshPreset);
     if (!selection) return null;
