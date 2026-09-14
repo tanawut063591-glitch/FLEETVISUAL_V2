@@ -12,6 +12,11 @@ import {
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
 import {
+  buildGpsPdfParityModeSummary,
+  buildLegacyPdfFuelDeltaMap,
+  isCompletedDailyWindow,
+} from '../../common/pdf-mode-parity';
+import {
   SC_PAILIN_MODE_HISTORIAN_TAG,
   SC_PAILIN_REPORT_PROFILE,
 } from './sc-pailin-report.profile';
@@ -362,13 +367,29 @@ export class ScPailinReportService implements VesselReportAdapter {
     }
 
     const requestTags = ALL_TAGS.map((tagName) => ({ name: tagName, tagName }));
-    const request$ = this.newHttp
-      .getHistorianValues(
-        this.formatHistorianRequestTime(start),
-        this.formatHistorianRequestTime(end),
-        requestTags,
-      )
-      .pipe(
+    const completedDaily = isCompletedDailyWindow(start, end, MINUTE_MS);
+    const historianEnd = completedDaily
+      ? new Date(start.getTime() + 24 * 60 * MINUTE_MS)
+      : end;
+    const requestStartText = this.formatHistorianRequestTime(start);
+    const requestEndText = this.formatHistorianRequestTime(historianEnd);
+
+    // Completed Daily UI must read the historian exactly like SCReportingService/PDF:
+    // one tag per loggergethistorianvalues request, including next-day 00:00.
+    const historianRequest$: Observable<any> = completedDaily
+      ? from(ALL_TAGS).pipe(
+          mergeMap(
+            (tagName) =>
+              this.newHttp.getRawData(requestStartText, requestEndText, [{ name: tagName, tagName }]).pipe(
+                map((response) => ({ __legacyTagName: tagName, __legacyResponse: response })),
+              ),
+            1,
+          ),
+          toArray(),
+        )
+      : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
+
+    const request$ = historianRequest$.pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
           this.detailedReportCache.set(key, {
@@ -676,6 +697,13 @@ export class ScPailinReportService implements VesselReportAdapter {
         litresPerHour: runningHours > 0 ? fuelUsed / runningHours : null,
       } satisfies ScPailinModeSummaryRow;
     });
+    // A one-day UI report must preserve the already verified daily values exactly.
+    // Re-aggregating the same row can introduce small percentage/LPH rounding drift.
+    const pdfParityModeSummary =
+      reports.length === 1
+        ? reports[0].modeSummary.map((row) => ({ ...row }))
+        : modeSummary;
+
 
     const passageReports = reports.map((report) => report.passageSummary);
     const passageMainEngines = (['port', 'starboard'] as const).map((key) => {
@@ -890,7 +918,7 @@ export class ScPailinReportService implements VesselReportAdapter {
       mainEngineFuelTotal,
       auxiliaryFuelTotal,
       totalFuelUsed,
-      modeSummary,
+      modeSummary: pdfParityModeSummary,
       passageSummary,
       tracking,
       hourly,
@@ -906,9 +934,21 @@ export class ScPailinReportService implements VesselReportAdapter {
     const series = this.extractHistorianSeries(response, ALL_TAGS);
     const minuteStart = this.floorToMinute(periodStart).getTime();
     const minuteEnd = Math.max(minuteStart + MINUTE_MS, this.floorToMinute(periodEnd).getTime());
+    const completedDaily = isCompletedDailyWindow(
+      this.floorToMinute(periodStart),
+      this.floorToMinute(periodEnd),
+      MINUTE_MS,
+    );
+    const pdfModeDataEnd = completedDaily
+      ? minuteStart + 24 * 60 * MINUTE_MS
+      : minuteEnd;
     const minuteCount = Math.max(1, Math.floor((minuteEnd - minuteStart) / MINUTE_MS) + 1);
 
-    const gpsSpeed = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsSpeed)) || []);
+    const gpsSpeedPoints = series.get(this.tagKey(TAGS.gpsSpeed)) || [];
+    const gpsSpeed = this.buildInstantMap(gpsSpeedPoints);
+    // The PDF's dtRawData uses exact minute equality; do not floor a 10:15:23
+    // historian row into 10:15:00 for mode allocation.
+    const pdfModeGpsSpeed = this.buildExactMinuteInstantMap(gpsSpeedPoints);
     const gpsLat = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLat)) || []);
     const gpsLong = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLong)) || []);
     const gpsHead = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsHead)) || []);
@@ -973,6 +1013,43 @@ export class ScPailinReportService implements VesselReportAdapter {
       this.buildAuxSummary('center', 'Thruster A/E', caeRpm, caeFuel),
       this.buildAuxSummary('starboard', 'Stb. A/E', saeRpm, saeFuel),
     ];
+
+    // Engine Summary in the legacy PDF does NOT sum interpolated minute deltas.
+    // SCPailin.CalFLowTotalSME uses first/last accepted totalizer values from the
+    // exact-minute dtRawData grid. Reproduce that rule and use those official
+    // totals everywhere downstream (including mode scaling).
+    const legacyFuelTotals = {
+      pme: this.calculateLegacyFlowTotal(
+        series.get(this.tagKey(TAGS.pmeFuelIn)) || [],
+        series.get(this.tagKey(TAGS.pmeFuelOut)) || [],
+      ),
+      sme: this.calculateLegacyFlowTotal(
+        series.get(this.tagKey(TAGS.smeFuelIn)) || [],
+        series.get(this.tagKey(TAGS.smeFuelOut)) || [],
+      ),
+      pae: this.calculateLegacyFlowTotal(
+        series.get(this.tagKey(TAGS.paeFuelIn)) || [],
+        series.get(this.tagKey(TAGS.paeFuelOut)) || [],
+      ),
+      cae: this.calculateLegacyFlowTotal(
+        series.get(this.tagKey(TAGS.caeFuelIn)) || [],
+        series.get(this.tagKey(TAGS.caeFuelOut)) || [],
+      ),
+      sae: this.calculateLegacyFlowTotal(
+        series.get(this.tagKey(TAGS.saeFuelIn)) || [],
+        series.get(this.tagKey(TAGS.saeFuelOut)) || [],
+      ),
+    };
+    const portMain = engineSummary.find((row) => row.key === 'port');
+    const starboardMain = engineSummary.find((row) => row.key === 'starboard');
+    const portAux = auxSummary.find((row) => row.key === 'port');
+    const centerAux = auxSummary.find((row) => row.key === 'center');
+    const starboardAux = auxSummary.find((row) => row.key === 'starboard');
+    if (portMain) portMain.fuelUsed = legacyFuelTotals.pme;
+    if (starboardMain) starboardMain.fuelUsed = legacyFuelTotals.sme;
+    if (portAux) portAux.fuelUsed = legacyFuelTotals.pae;
+    if (centerAux) centerAux.fuelUsed = legacyFuelTotals.cae;
+    if (starboardAux) starboardAux.fuelUsed = legacyFuelTotals.sae;
 
     const mainEngineFuelTotal = engineSummary.reduce((sum, row) => sum + row.fuelUsed, 0);
     const auxiliaryFuelTotal = auxSummary.reduce((sum, row) => sum + row.fuelUsed, 0);
@@ -1145,24 +1222,52 @@ export class ScPailinReportService implements VesselReportAdapter {
       }
     }
 
-    const rawModeFuelTotal = Array.from(modeMap.values()).reduce((sum, row) => sum + row.fuelUsed, 0);
-    const modeFuelScale = rawModeFuelTotal > 0 ? totalFuelUsed / rawModeFuelTotal : 0;
-    const observedModeHours = Math.max(0, modeAvailableMinutes / 60);
-    const modeSummary = SC_PAILIN_REPORT_PROFILE.modes.map((profileMode) => {
-      const row = modeMap.get(profileMode.key)!;
-      const fuelUsed = row.fuelUsed * modeFuelScale;
-      const fuelPercent = totalFuelUsed > 0 ? (fuelUsed / totalFuelUsed) * 100 : 0;
-      const runningPercent =
-        observedModeHours > 0 ? (row.runningHours / observedModeHours) * 100 : 0;
-      return {
-        ...row,
-        fuelUsed,
-        fuelPercent,
-        runningPercent,
-        litresPerNm: row.distanceNm > 0 ? fuelUsed / row.distanceNm : null,
-        litresPerHour: row.runningHours > 0 ? fuelUsed / row.runningHours : null,
-      };
+    const pdfModePMEFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.pmeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.pmeFuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
+    );
+    const pdfModeSMEFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.smeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.smeFuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
+    );
+    const pdfModePAEFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.paeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.paeFuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
+    );
+    const pdfModeCAEFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.caeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.caeFuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
+    );
+    const pdfModeSAEFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.saeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.saeFuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
+    );
+
+    const pdfParityMode = buildGpsPdfParityModeSummary({
+      modes: SC_PAILIN_REPORT_PROFILE.modes,
+      minuteStart,
+      dataEnd: pdfModeDataEnd,
+      completedDaily,
+      minuteMs: MINUTE_MS,
+      officialTotalFuel: totalFuelUsed,
+      gpsSpeed: pdfModeGpsSpeed,
+      minuteFuelAt: (minute) =>
+        (pdfModePMEFuel.get(minute) || 0) +
+        (pdfModeSMEFuel.get(minute) || 0) +
+        (pdfModePAEFuel.get(minute) || 0) +
+        (pdfModeCAEFuel.get(minute) || 0) +
+        (pdfModeSAEFuel.get(minute) || 0),
+      resolveModeLabel: (speed) => this.resolveModeFromGpsSpeed(speed),
+      resolveModeKey: (label) => this.resolveModeProfileKey(label),
+      standbyLabel: 'Standby',
+      legacySinglePrecision: true,
     });
+    const modeSummary = pdfParityMode.modeSummary as ScPailinModeSummaryRow[];
 
     const passageSummary = this.buildPassageSummary(
       passageMinuteKeys,
@@ -1254,7 +1359,7 @@ export class ScPailinReportService implements VesselReportAdapter {
       };
     });
 
-    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 260);
+    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 1600);
     const validSpeedValues = Array.from(gpsSpeed.entries())
       .filter(
         ([bucket, value]) =>
@@ -1516,6 +1621,63 @@ export class ScPailinReportService implements VesselReportAdapter {
     };
   }
 
+  private buildExactMinuteInstantMap(points: readonly NumericPoint[]): Map<number, number> {
+    const result = new Map<number, number>();
+    for (const point of points) {
+      const time = point.timestamp.getTime();
+      if (!Number.isFinite(time) || time % MINUTE_MS !== 0) continue;
+      result.set(time, point.value);
+    }
+    return result;
+  }
+
+  /**
+   * Exact TypeScript port of SCPailin.CalFLowTotalSME used by the legacy
+   * Engine Summary PDF. Only exact-minute logger rows can exist in dtRawData.
+   * The accepted max advances only when the totalizer is increasing and the
+   * step from the previous accepted max is < 300, while the overall increase
+   * from the first accepted value must remain < 20000.
+   */
+  private calculateLegacyFlowTotal(
+    supplyPoints: readonly NumericPoint[],
+    returnPoints: readonly NumericPoint[],
+  ): number {
+    const scan = (points: readonly NumericPoint[], inclusiveStep: boolean): [number, number] => {
+      const exact = [...points]
+        .filter((point) => {
+          const time = point.timestamp.getTime();
+          return Number.isFinite(time) && time % MINUTE_MS === 0 && Number.isFinite(point.value) && point.value > 0;
+        })
+        .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+      let minVal = 0;
+      let maxVal = 0;
+      for (const point of exact) {
+        const value = point.value;
+        if (minVal === 0) {
+          if (value < 100_000_000) minVal = value;
+          continue;
+        }
+        if (value - minVal >= 20_000) continue;
+        if (maxVal > 0) {
+          if (value > maxVal) {
+            const step = value - maxVal;
+            if (inclusiveStep ? step <= 300 : step < 300) maxVal = value;
+          }
+        } else {
+          const step = value - minVal;
+          if (inclusiveStep ? step <= 300 : step < 300) maxVal = value;
+        }
+      }
+      return [minVal, maxVal];
+    };
+
+    const [minIn, maxIn] = scan(supplyPoints, false);
+    const [minOut, maxOut] = scan(returnPoints, true);
+    const total = (maxIn - minIn) - (maxOut - minOut);
+    return Number.isFinite(total) ? total : 0;
+  }
+
   private buildInstantMap(points: readonly NumericPoint[]): Map<number, number> {
     const result = new Map<number, number>();
     for (const point of points) {
@@ -1603,10 +1765,47 @@ export class ScPailinReportService implements VesselReportAdapter {
     return result;
   }
 
+  private isLegacyHistorianBundle(
+    response: any,
+  ): response is Array<{ __legacyTagName: string; __legacyResponse: any }> {
+    return (
+      Array.isArray(response) &&
+      response.every(
+        (item) =>
+          item &&
+          typeof item === 'object' &&
+          typeof item.__legacyTagName === 'string' &&
+          Object.prototype.hasOwnProperty.call(item, '__legacyResponse'),
+      )
+    );
+  }
+
+  private extractLegacyHistorianBundle(
+    bundle: Array<{ __legacyTagName: string; __legacyResponse: any }>,
+    requestedTags: readonly string[],
+  ): Map<string, NumericPoint[]> {
+    const result = new Map<string, NumericPoint[]>();
+    requestedTags.forEach((tag) => result.set(this.tagKey(tag), []));
+
+    for (const item of bundle) {
+      const tagName = item.__legacyTagName;
+      const singleSeries = this.extractHistorianSeries(item.__legacyResponse, [tagName], true);
+      const key = this.tagKey(tagName);
+      const points = singleSeries.get(key) || [];
+      result.set(key, [...(result.get(key) || []), ...points]);
+    }
+
+    return this.sortSeries(result);
+  }
+
   private extractHistorianSeries(
     response: any,
     requestedTags: readonly string[],
+    legacyUtcTimestamps = false,
   ): Map<string, NumericPoint[]> {
+    if (this.isLegacyHistorianBundle(response)) {
+      return this.extractLegacyHistorianBundle(response, requestedTags);
+    }
     const result = new Map<string, NumericPoint[]>();
     requestedTags.forEach((tag) => result.set(this.tagKey(tag), []));
 
@@ -1615,7 +1814,9 @@ export class ScPailinReportService implements VesselReportAdapter {
 
     if (Array.isArray(source) && source.length > 0 && this.looksLikeMultiValueRecord(source[0])) {
       source.forEach((record: any) => {
-        const timestamp = this.parseDate(this.getRecordTimestamp(record));
+        const timestamp = legacyUtcTimestamps
+          ? this.parseLegacyHistorianDate(this.getRecordTimestamp(record))
+          : this.parseDate(this.getRecordTimestamp(record));
         const values = record?.Values || record?.values;
         if (!timestamp || !Array.isArray(values)) return;
         values.forEach((rawValue: any, index: number) => {
@@ -1635,7 +1836,9 @@ export class ScPailinReportService implements VesselReportAdapter {
       const records = this.extractRecords(series);
 
       if (records.length === 0 && this.looksLikeFlatRecord(series)) {
-        const timestamp = this.parseDate(this.getRecordTimestamp(series));
+        const timestamp = legacyUtcTimestamps
+          ? this.parseLegacyHistorianDate(this.getRecordTimestamp(series))
+          : this.parseDate(this.getRecordTimestamp(series));
         const value = this.parseNumber(this.getRecordValue(series));
         if (timestamp && value !== null && tagName) {
           this.pushSeriesPoint(result, tagName, timestamp, value);
@@ -1644,7 +1847,9 @@ export class ScPailinReportService implements VesselReportAdapter {
       }
 
       records.forEach((record: any) => {
-        const timestamp = this.parseDate(this.getRecordTimestamp(record));
+        const timestamp = legacyUtcTimestamps
+          ? this.parseLegacyHistorianDate(this.getRecordTimestamp(record))
+          : this.parseDate(this.getRecordTimestamp(record));
         const value = this.parseNumber(this.getRecordValue(record));
         const recordTag = this.getTagName(record) || tagName;
         if (!timestamp || value === null || !recordTag) return;
@@ -1853,6 +2058,41 @@ export class ScPailinReportService implements VesselReportAdapter {
     }
     const date = new Date(text);
     return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private parseLegacyHistorianDate(value: any): Date | null {
+    if (value === null || value === undefined || value === '') return null;
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : new Date(value.getTime());
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return this.parseDate(value);
+    }
+
+    const text = String(value).trim();
+    const dotNet = /\/Date\(([-+]?\d+)/.exec(text);
+    if (dotNet) {
+      const date = new Date(Number(dotNet[1]));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(text)) {
+      return this.parseDate(text);
+    }
+
+    // SCReportingService applies TimeStamp.AddHours(7). Parsing a naive logger
+    // timestamp as UTC produces the same +07:00 alignment in the Thailand UI.
+    const parts = /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,7}))?)?$/.exec(text);
+    if (parts) {
+      const milliseconds = Number(`0.${parts[7] || '0'}`) * 1000;
+      const date = new Date(Date.UTC(
+        Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]),
+        Number(parts[4]), Number(parts[5]), Number(parts[6] || 0), Math.floor(milliseconds),
+      ));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    return this.parseDate(text);
   }
 
   private downsampleSpeedSeries(

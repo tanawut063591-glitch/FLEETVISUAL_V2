@@ -11,6 +11,7 @@ import {
   VesselModeHistoryConfig,
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
+import { buildGpsPdfParityModeSummary } from '../../common/pdf-mode-parity';
 import {
   SC_GLORY_7_MODE_HISTORIAN_TAG,
   SC_GLORY_7_REPORT_PROFILE,
@@ -672,6 +673,13 @@ export class ScGlory7ReportService implements VesselReportAdapter {
         litresPerHour: runningHours > 0 ? fuelUsed / runningHours : null,
       } satisfies ScGlory7ModeSummaryRow;
     });
+    // A one-day UI report must preserve the already verified daily values exactly.
+    // Re-aggregating the same row can introduce small percentage/LPH rounding drift.
+    const pdfParityModeSummary =
+      reports.length === 1
+        ? reports[0].modeSummary.map((row) => ({ ...row }))
+        : modeSummary;
+
 
     const passageReports = reports.map((report) => report.passageSummary);
     const passageMainEngines = (['port', 'center', 'starboard'] as const).map((key) => {
@@ -882,7 +890,7 @@ export class ScGlory7ReportService implements VesselReportAdapter {
       mainEngineFuelTotal,
       auxiliaryFuelTotal,
       totalFuelUsed,
-      modeSummary,
+      modeSummary: pdfParityModeSummary,
       passageSummary,
       tracking,
       hourly,
@@ -1029,86 +1037,35 @@ export class ScGlory7ReportService implements VesselReportAdapter {
     const legacySaeFuel = this.buildLegacyFuelDeltaMap(saeFuelInPoints, saeFuelOutPoints, 300, 300);
 
     const passageMinuteKeys: number[] = [];
-    const modeMinuteCounts = new Map<string, number>();
-    const modeSpeedSums = new Map<string, number>();
-    SC_GLORY_7_REPORT_PROFILE.modes.forEach((mode) => {
-      modeMinuteCounts.set(mode.key, 0);
-      modeSpeedSums.set(mode.key, 0);
-    });
-
     let gpsAvailableMinutes = 0;
-    for (let bucket = minuteStart; bucket <= legacyDataEnd; bucket += MINUTE_MS) {
-      const rawSpeed = gpsSpeed.get(bucket);
-      const speed = rawSpeed !== undefined && Number.isFinite(rawSpeed) ? Math.max(0, rawSpeed) : 0;
-      if (bucket <= minuteEnd && rawSpeed !== undefined && Number.isFinite(rawSpeed)) gpsAvailableMinutes += 1;
-      const modeLabel = this.resolveModeFromGpsSpeed(speed) || 'Standby';
-      const modeKey = this.resolveModeProfileKey(modeLabel);
-      const mode = modeMap.get(modeKey);
-      if (!mode) continue;
-      mode.fuelUsed +=
-        (legacyPmeFuel.get(bucket) || 0) +
-        (legacyCmeFuel.get(bucket) || 0) +
-        (legacySmeFuel.get(bucket) || 0) +
-        (legacyPaeFuel.get(bucket) || 0) +
-        (legacySaeFuel.get(bucket) || 0);
-      modeMinuteCounts.set(modeKey, (modeMinuteCounts.get(modeKey) || 0) + 1);
-      modeSpeedSums.set(modeKey, (modeSpeedSums.get(modeKey) || 0) + speed);
-      if (modeLabel === 'Passage') passageMinuteKeys.push(bucket);
+    for (let minute = minuteStart; minute <= minuteEnd; minute += MINUTE_MS) {
+      const speed = gpsSpeed.get(minute);
+      if (speed !== undefined && Number.isFinite(speed)) gpsAvailableMinutes += 1;
     }
 
-    const rawModeFuelTotal = Array.from(modeMap.values()).reduce((sum, row) => sum + row.fuelUsed, 0);
-    const modeFuelScale = rawModeFuelTotal !== 0 && totalFuelUsed > 0 ? totalFuelUsed / rawModeFuelTotal : 1;
-    const totalModeMinutes = Array.from(modeMinuteCounts.values()).reduce((sum, value) => sum + value, 0);
-    const standbyKey = this.resolveModeProfileKey('Standby');
-    const roundedHours = new Map<string, number>();
-    let nonStandbyHours = 0;
-    let nonStandbyRunningPercent = 0;
-    let nonStandbyFuelPercent = 0;
-
-    for (const profileMode of SC_GLORY_7_REPORT_PROFILE.modes) {
-      if (profileMode.key === standbyKey) continue;
-      const hours = this.roundLegacy2((modeMinuteCounts.get(profileMode.key) || 0) / 60);
-      roundedHours.set(profileMode.key, hours);
-      nonStandbyHours += hours;
-    }
-    roundedHours.set(standbyKey, this.roundLegacy2(Math.max(0, utilizationHours - nonStandbyHours)));
-
-    const preliminary = SC_GLORY_7_REPORT_PROFILE.modes.map((profileMode) => {
-      const row = modeMap.get(profileMode.key)!;
-      const count = modeMinuteCounts.get(profileMode.key) || 0;
-      const hours = roundedHours.get(profileMode.key) || 0;
-      const averageModeSpeed = count > 0 ? (modeSpeedSums.get(profileMode.key) || 0) / count : 0;
-      const distanceNm = this.roundLegacy2(averageModeSpeed * hours);
-      const fuelUsed = this.roundLegacy2(row.fuelUsed * modeFuelScale);
-      const directFuelPercent = rawModeFuelTotal !== 0 ? this.roundLegacy2((row.fuelUsed / rawModeFuelTotal) * 100) : 0;
-      const directRunningPercent = totalModeMinutes > 0 ? this.roundLegacy2((count / totalModeMinutes) * 100) : 0;
-      if (profileMode.key !== standbyKey) {
-        nonStandbyFuelPercent += directFuelPercent;
-        nonStandbyRunningPercent += directRunningPercent;
-      }
-      return {
-        ...row,
-        fuelUsed,
-        fuelPercent: directFuelPercent,
-        runningHours: hours,
-        runningPercent: directRunningPercent,
-        distanceNm,
-        litresPerNm: distanceNm > 0 ? this.roundLegacy2(fuelUsed / distanceNm) : null,
-        litresPerHour: hours > 0 ? this.roundLegacy2(fuelUsed / hours) : null,
-      };
+    const pdfParityMode = buildGpsPdfParityModeSummary({
+      modes: SC_GLORY_7_REPORT_PROFILE.modes,
+      minuteStart,
+      dataEnd: legacyDataEnd,
+      completedDaily,
+      minuteMs: MINUTE_MS,
+      officialTotalFuel: totalFuelUsed,
+      gpsSpeed,
+      minuteFuelAt: (minute) =>
+        (legacyPmeFuel.get(minute) || 0) +
+        (legacyCmeFuel.get(minute) || 0) +
+        (legacySmeFuel.get(minute) || 0) +
+        (legacyPaeFuel.get(minute) || 0) +
+        (legacySaeFuel.get(minute) || 0),
+      resolveModeLabel: (speed) => this.resolveModeFromGpsSpeed(speed),
+      resolveModeKey: (label) => this.resolveModeProfileKey(label),
+      standbyLabel: 'Standby',
     });
-    const modeSummary = preliminary.map((row) =>
-      row.key === standbyKey
-        ? {
-            ...row,
-            fuelPercent: this.roundLegacy2(Math.max(0, 100 - nonStandbyFuelPercent)),
-            runningPercent: this.roundLegacy2(Math.max(0, 100 - nonStandbyRunningPercent)),
-          }
-        : row,
-    );
-
+    const modeSummary = pdfParityMode.modeSummary as ScGlory7ModeSummaryRow[];
     const passageModeKey = this.resolveModeProfileKey('Passage');
-    const passageFuelTotal = (modeMap.get(passageModeKey)?.fuelUsed || 0) * modeFuelScale;
+    passageMinuteKeys.push(...(pdfParityMode.minuteKeysByMode.get(passageModeKey) || []));
+    const passageFuelTotal = pdfParityMode.scaledFuelByMode.get(passageModeKey) || 0;
+
     const passageSummary = this.buildLegacyPassageSummary(
       passageMinuteKeys,
       pmeSpeedPoints,
@@ -1161,7 +1118,7 @@ export class ScGlory7ReportService implements VesselReportAdapter {
       modeDistanceTotal,
     );
 
-    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 260);
+    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 1600);
     const validSpeedValues = Array.from(gpsSpeed.entries())
       .filter(([bucket, value]) => bucket >= minuteStart && bucket <= minuteEnd && value >= 0 && Number.isFinite(value))
       .map(([, value]) => value);

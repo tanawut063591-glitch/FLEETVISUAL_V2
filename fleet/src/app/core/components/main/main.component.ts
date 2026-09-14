@@ -236,7 +236,13 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
 
           if (selectedMatch) {
             this.selectedVessel = selectedMatch;
+            this.persistSelectedVessel(selectedMatch);
             this.publishSelectedVesselIfNeeded(selectedMatch);
+          } else if (this.selectedVessel) {
+            // Keep the restored/previous selection instead of jumping to vessel #1.
+            // Sidebar refreshes can briefly return a row shape that does not match the
+            // stored object yet; preserving the selection mirrors Realtime behaviour.
+            this.publishSelectedVesselIfNeeded(this.selectedVessel);
           } else if (this.vessels.length > 0) {
             this.selectedVessel = this.vessels[0];
             this.persistSelectedVessel(this.selectedVessel);
@@ -303,6 +309,8 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
       window.localStorage.setItem('selectedVessel', serialized);
       window.localStorage.setItem('realtimeVessel', serialized);
       window.localStorage.setItem('pastTrackVessel', serialized);
+      window.localStorage.setItem('reportVessel', serialized);
+      window.localStorage.setItem('activeVessel', serialized);
     } catch {}
   }
 

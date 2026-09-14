@@ -667,31 +667,48 @@ export class ScGlory3ReportService implements VesselReportAdapter {
       },
     ];
 
-    const totalObservedModeHours = reports.reduce(
-      (sum, report) =>
-        sum + report.modeSummary.reduce((modeSum, row) => modeSum + Math.max(0, row.runningHours), 0),
-      0,
-    );
-    const modeSummary = SC_GLORY_3_REPORT_PROFILE.modes.map((profileMode) => {
-      const rows = reports
-        .map((report) => report.modeSummary.find((row) => row.key === profileMode.key))
-        .filter((row): row is ScGlory3ModeSummaryRow => !!row);
-      const fuelUsed = rows.reduce((sum, row) => sum + row.fuelUsed, 0);
-      const runningHours = rows.reduce((sum, row) => sum + row.runningHours, 0);
-      const distanceNm = rows.reduce((sum, row) => sum + row.distanceNm, 0);
-      return {
-        key: profileMode.key,
-        label: profileMode.label,
-        fuelUsed,
-        fuelPercent: totalFuelUsed > 0 ? (fuelUsed / totalFuelUsed) * 100 : 0,
-        runningHours,
-        runningPercent:
-          totalObservedModeHours > 0 ? (runningHours / totalObservedModeHours) * 100 : 0,
-        distanceNm,
-        litresPerNm: distanceNm > 0 ? fuelUsed / distanceNm : null,
-        litresPerHour: runningHours > 0 ? fuelUsed / runningHours : null,
-      } satisfies ScGlory3ModeSummaryRow;
-    });
+    // A one-day UI report must keep the already calculated LEGACY_CALC values intact.
+    // Recomputing the percentages here (for example runningHours / 24) changes the
+    // verified 1,441-row PDF result: 47.11 becomes 47.08, 21.24 becomes 21.25, etc.
+    // Keep all displayed Mode values (Fuel, %, Run Hrs, Run %, Distance, L/NM, LPH)
+    // exactly as buildExcelParityModeSummary() produced them.
+    const modeSummary: ScGlory3ModeSummaryRow[] =
+      reports.length === 1
+        ? reports[0].modeSummary.map((row) => ({ ...row }))
+        : (() => {
+            const totalObservedModeHours = reports.reduce(
+              (sum, report) =>
+                sum +
+                report.modeSummary.reduce(
+                  (modeSum, row) => modeSum + Math.max(0, row.runningHours),
+                  0,
+                ),
+              0,
+            );
+
+            return SC_GLORY_3_REPORT_PROFILE.modes.map((profileMode) => {
+              const rows = reports
+                .map((report) => report.modeSummary.find((row) => row.key === profileMode.key))
+                .filter((row): row is ScGlory3ModeSummaryRow => !!row);
+              const fuelUsed = rows.reduce((sum, row) => sum + row.fuelUsed, 0);
+              const runningHours = rows.reduce((sum, row) => sum + row.runningHours, 0);
+              const distanceNm = rows.reduce((sum, row) => sum + row.distanceNm, 0);
+              return {
+                key: profileMode.key,
+                label: profileMode.label,
+                fuelUsed,
+                fuelPercent: totalFuelUsed > 0 ? (fuelUsed / totalFuelUsed) * 100 : 0,
+                runningHours,
+                runningPercent:
+                  totalObservedModeHours > 0
+                    ? (runningHours / totalObservedModeHours) * 100
+                    : 0,
+                distanceNm,
+                litresPerNm: distanceNm > 0 ? fuelUsed / distanceNm : null,
+                litresPerHour: runningHours > 0 ? fuelUsed / runningHours : null,
+              } satisfies ScGlory3ModeSummaryRow;
+            });
+          })();
 
     const passageReports = reports.map((report) => report.passageSummary);
     const passageMainEngines = (['port', 'center', 'starboard'] as const).map((key) => {
@@ -1120,7 +1137,7 @@ export class ScGlory3ReportService implements VesselReportAdapter {
       modeDistanceTotal,
     );
 
-    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 260);
+    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 1600);
     const validSpeedValues = Array.from(gpsSpeed.entries())
       .filter(([bucket, value]) => bucket >= minuteStart && bucket <= minuteEnd && value >= 0 && Number.isFinite(value))
       .map(([, value]) => value);

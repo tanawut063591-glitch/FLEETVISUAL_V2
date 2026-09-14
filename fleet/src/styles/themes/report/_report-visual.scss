@@ -2757,6 +2757,16 @@ app-report .speed-hover-point:hover {
   stroke: rgba(255, 255, 255, .95);
 }
 
+app-report .speed-hover-guide {
+  stroke: rgba(37, 99, 235, .48);
+}
+
+app-report .speed-hover-marker {
+  fill: #2563eb;
+  stroke: rgba(255, 255, 255, .98);
+  filter: drop-shadow(0 1px 2px rgba(37, 99, 235, .28));
+}
+
 app-report .route-hover-point:hover {
   fill: #2563eb;
   stroke: rgba(255, 255, 255, .96);
@@ -3766,4 +3776,9 @@ app-report .report-abbreviation-note__items b {
 
 app-report .report-abbreviation-note__items em {
   color: var(--report-muted);
+}
+
+app-report .premium-chart-section .stack-bar .segment.fourth {
+  background: var(--report-series-fourth-aux, #f97316) !important;
+  box-shadow: none !important;
 }

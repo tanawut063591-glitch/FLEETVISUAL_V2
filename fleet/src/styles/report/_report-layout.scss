@@ -7581,6 +7581,34 @@ app-report .speed-hover-point:hover {
 stroke-width: 2px;
 }
 
+/* One hit target for the dense minute-resolution speed chart.  This avoids
+   overlapping point hit areas and keeps hover values stable. */
+app-report .speed-hover-overlay {
+  fill: transparent;
+  cursor: crosshair;
+  pointer-events: all;
+}
+
+app-report .speed-hover-indicator,
+app-report .speed-hover-guide,
+app-report .speed-hover-marker {
+  pointer-events: none;
+}
+
+app-report .speed-hover-guide,
+app-report .speed-hover-marker {
+  vector-effect: non-scaling-stroke;
+}
+
+app-report .speed-hover-guide {
+  stroke-width: 1px;
+  stroke-dasharray: 3 3;
+}
+
+app-report .speed-hover-marker {
+  stroke-width: 2px;
+}
+
 app-report .route-hover-point:hover {
 stroke-width: 2px;
 }
@@ -9298,6 +9326,31 @@ transform: translateX(0);
 
 app-report .daily-speed-x-axis span:last-child {
 transform: translateX(-100%);
+}
+
+app-report .daily-speed-x-axis.daily-speed-x-axis--pdf {
+height: 26px;
+  margin-inline: 8px;
+}
+
+/* The web report keeps the PDF-calculated minute series, but X-axis labels
+   must stay readable at responsive widths. Do not rotate/draw dozens of
+   timestamps; the component now supplies thirteen horizontal time-only labels for a daily view. */
+app-report .daily-speed-x-axis.daily-speed-x-axis--pdf span {
+top: 6px;
+  transform: translateX(-50%);
+  transform-origin: center;
+  font-size: 8.5px;
+  font-weight: 850;
+  letter-spacing: .01em;
+}
+
+app-report .daily-speed-x-axis.daily-speed-x-axis--pdf span:first-child {
+  transform: translateX(0);
+}
+
+app-report .daily-speed-x-axis.daily-speed-x-axis--pdf span:last-child {
+  transform: translateX(-100%);
 }
 
 app-report .speed-track {

@@ -12,6 +12,11 @@ import {
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
 import {
+  buildGpsPdfParityModeSummary,
+  buildLegacyPdfFuelDeltaMap,
+  isCompletedDailyWindow,
+} from '../../common/pdf-mode-parity';
+import {
   SC_WINTER_MODE_HISTORIAN_TAG,
   SC_WINTER_REPORT_PROFILE,
 } from './sc-winter-report.profile';
@@ -365,16 +370,29 @@ export class ScWinterReportService implements VesselReportAdapter {
     }
 
     const requestTags = ALL_TAGS.map((tagName) => ({ name: tagName, tagName }));
-    const completedDayBoundary = end.getHours() === 23 && end.getMinutes() === 59
-      ? new Date(end.getTime() + MINUTE_MS)
+    const completedDaily = isCompletedDailyWindow(start, end, MINUTE_MS);
+    const historianEnd = completedDaily
+      ? new Date(start.getTime() + 24 * 60 * MINUTE_MS)
       : end;
-    const request$ = this.newHttp
-      .getHistorianValues(
-        this.formatHistorianRequestTime(start),
-        this.formatHistorianRequestTime(completedDayBoundary),
-        requestTags,
-      )
-      .pipe(
+    const requestStartText = this.formatHistorianRequestTime(start);
+    const requestEndText = this.formatHistorianRequestTime(historianEnd);
+
+    // Completed Daily UI must read the historian exactly like SCReportingService/PDF:
+    // one tag per loggergethistorianvalues request, including next-day 00:00.
+    const historianRequest$: Observable<any> = completedDaily
+      ? from(ALL_TAGS).pipe(
+          mergeMap(
+            (tagName) =>
+              this.newHttp.getRawData(requestStartText, requestEndText, [{ name: tagName, tagName }]).pipe(
+                map((response) => ({ __legacyTagName: tagName, __legacyResponse: response })),
+              ),
+            1,
+          ),
+          toArray(),
+        )
+      : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
+
+    const request$ = historianRequest$.pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
           this.detailedReportCache.set(key, {
@@ -649,6 +667,13 @@ export class ScWinterReportService implements VesselReportAdapter {
         litresPerHour: runningHours > 0 ? fuelUsed / runningHours : null,
       } satisfies ScWinterModeSummaryRow;
     });
+    // A one-day UI report must preserve the already verified daily values exactly.
+    // Re-aggregating the same row can introduce small percentage/LPH rounding drift.
+    const pdfParityModeSummary =
+      reports.length === 1
+        ? reports[0].modeSummary.map((row) => ({ ...row }))
+        : modeSummary;
+
 
     const passageReports = reports.map((report) => report.passageSummary);
     const passageMainEngines = (['port', 'starboard'] as const).map((key) => {
@@ -846,7 +871,7 @@ export class ScWinterReportService implements VesselReportAdapter {
       mainEngineFuelTotal,
       auxiliaryFuelTotal,
       totalFuelUsed,
-      modeSummary,
+      modeSummary: pdfParityModeSummary,
       passageSummary,
       tracking,
       hourly,
@@ -862,7 +887,13 @@ export class ScWinterReportService implements VesselReportAdapter {
     const series = this.extractHistorianSeries(response, ALL_TAGS);
     const minuteStart = this.floorToMinute(periodStart).getTime();
     const minuteEnd = Math.max(minuteStart + MINUTE_MS, this.floorToMinute(periodEnd).getTime());
+    const completedDaily = isCompletedDailyWindow(
+      this.floorToMinute(periodStart),
+      this.floorToMinute(periodEnd),
+      MINUTE_MS,
+    );
     const boundaryBucket = minuteEnd + MINUTE_MS;
+    const pdfModeDataEnd = completedDaily ? boundaryBucket : minuteEnd;
     const minuteCount = Math.max(1, Math.floor((minuteEnd - minuteStart) / MINUTE_MS) + 1);
 
     const gpsSpeed = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsSpeed)) || []);
@@ -1046,15 +1077,45 @@ export class ScWinterReportService implements VesselReportAdapter {
       if (speed !== null && speed >= 7) passageMinuteKeys.push(bucket);
     }
 
-    const modeSummary = Array.from(modeMap.values());
-    const modeFuelTotal = modeSummary.reduce((sum, row) => sum + row.fuelUsed, 0);
-    const modeHourTotal = modeSummary.reduce((sum, row) => sum + row.runningHours, 0);
-    for (const mode of modeSummary) {
-      mode.fuelPercent = modeFuelTotal > 0 ? (mode.fuelUsed / modeFuelTotal) * 100 : 0;
-      mode.runningPercent = modeHourTotal > 0 ? (mode.runningHours / modeHourTotal) * 100 : 0;
-      mode.litresPerNm = mode.distanceNm > 0 ? mode.fuelUsed / mode.distanceNm : null;
-      mode.litresPerHour = mode.runningHours > 0 ? mode.fuelUsed / mode.runningHours : null;
-    }
+    const pdfModeAE1Fuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.ae1FuelIn)) || [],
+      series.get(this.tagKey(TAGS.ae1FuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
+    );
+    const pdfModeAE2Fuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.ae2FuelIn)) || [],
+      series.get(this.tagKey(TAGS.ae2FuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
+    );
+    const pdfModeAE3Fuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.ae3FuelIn)) || [],
+      series.get(this.tagKey(TAGS.ae3FuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
+    );
+    const pdfModeAE4Fuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.ae4FuelIn)) || [],
+      series.get(this.tagKey(TAGS.ae4FuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
+    );
+
+    const pdfParityMode = buildGpsPdfParityModeSummary({
+      modes: SC_WINTER_REPORT_PROFILE.modes,
+      minuteStart,
+      dataEnd: pdfModeDataEnd,
+      completedDaily,
+      minuteMs: MINUTE_MS,
+      officialTotalFuel: totalFuelUsed,
+      gpsSpeed,
+      minuteFuelAt: (minute) =>
+        (pdfModeAE1Fuel.get(minute) || 0) +
+        (pdfModeAE2Fuel.get(minute) || 0) +
+        (pdfModeAE3Fuel.get(minute) || 0) +
+        (pdfModeAE4Fuel.get(minute) || 0),
+      resolveModeLabel: (speed) => this.resolveModeFromGpsSpeed(speed),
+      resolveModeKey: (label) => this.resolveModeProfileKey(label),
+      standbyLabel: 'Standby',
+    });
+    const modeSummary = pdfParityMode.modeSummary as ScWinterModeSummaryRow[];
 
     const passageSummary = this.buildPassageSummary(
       passageMinuteKeys,
@@ -1114,7 +1175,7 @@ export class ScWinterReportService implements VesselReportAdapter {
       };
     });
 
-    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 260);
+    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 1600);
     const validSpeedValues = Array.from(gpsSpeed.entries())
       .filter(([bucket, value]) => bucket >= minuteStart && bucket <= minuteEnd && value >= 0 && Number.isFinite(value))
       .map(([, value]) => value);
@@ -1381,10 +1442,47 @@ export class ScWinterReportService implements VesselReportAdapter {
     map.delete(boundaryBucket);
   }
 
+  private isLegacyHistorianBundle(
+    response: any,
+  ): response is Array<{ __legacyTagName: string; __legacyResponse: any }> {
+    return (
+      Array.isArray(response) &&
+      response.every(
+        (item) =>
+          item &&
+          typeof item === 'object' &&
+          typeof item.__legacyTagName === 'string' &&
+          Object.prototype.hasOwnProperty.call(item, '__legacyResponse'),
+      )
+    );
+  }
+
+  private extractLegacyHistorianBundle(
+    bundle: Array<{ __legacyTagName: string; __legacyResponse: any }>,
+    requestedTags: readonly string[],
+  ): Map<string, NumericPoint[]> {
+    const result = new Map<string, NumericPoint[]>();
+    requestedTags.forEach((tag) => result.set(this.tagKey(tag), []));
+
+    for (const item of bundle) {
+      const tagName = item.__legacyTagName;
+      const singleSeries = this.extractHistorianSeries(item.__legacyResponse, [tagName], true);
+      const key = this.tagKey(tagName);
+      const points = singleSeries.get(key) || [];
+      result.set(key, [...(result.get(key) || []), ...points]);
+    }
+
+    return this.sortSeries(result);
+  }
+
   private extractHistorianSeries(
     response: any,
     requestedTags: readonly string[],
+    legacyUtcTimestamps = false,
   ): Map<string, NumericPoint[]> {
+    if (this.isLegacyHistorianBundle(response)) {
+      return this.extractLegacyHistorianBundle(response, requestedTags);
+    }
     const result = new Map<string, NumericPoint[]>();
     requestedTags.forEach((tag) => result.set(this.tagKey(tag), []));
 
@@ -1393,7 +1491,9 @@ export class ScWinterReportService implements VesselReportAdapter {
 
     if (Array.isArray(source) && source.length > 0 && this.looksLikeMultiValueRecord(source[0])) {
       source.forEach((record: any) => {
-        const timestamp = this.parseDate(this.getRecordTimestamp(record));
+        const timestamp = legacyUtcTimestamps
+          ? this.parseLegacyHistorianDate(this.getRecordTimestamp(record))
+          : this.parseDate(this.getRecordTimestamp(record));
         const values = record?.Values || record?.values;
         if (!timestamp || !Array.isArray(values)) return;
         values.forEach((rawValue: any, index: number) => {
@@ -1413,7 +1513,9 @@ export class ScWinterReportService implements VesselReportAdapter {
       const records = this.extractRecords(series);
 
       if (records.length === 0 && this.looksLikeFlatRecord(series)) {
-        const timestamp = this.parseDate(this.getRecordTimestamp(series));
+        const timestamp = legacyUtcTimestamps
+          ? this.parseLegacyHistorianDate(this.getRecordTimestamp(series))
+          : this.parseDate(this.getRecordTimestamp(series));
         const value = this.parseNumber(this.getRecordValue(series));
         if (timestamp && value !== null && tagName) {
           this.pushSeriesPoint(result, tagName, timestamp, value);
@@ -1422,7 +1524,9 @@ export class ScWinterReportService implements VesselReportAdapter {
       }
 
       records.forEach((record: any) => {
-        const timestamp = this.parseDate(this.getRecordTimestamp(record));
+        const timestamp = legacyUtcTimestamps
+          ? this.parseLegacyHistorianDate(this.getRecordTimestamp(record))
+          : this.parseDate(this.getRecordTimestamp(record));
         const value = this.parseNumber(this.getRecordValue(record));
         const recordTag = this.getTagName(record) || tagName;
         if (!timestamp || value === null || !recordTag) return;
@@ -1631,6 +1735,41 @@ export class ScWinterReportService implements VesselReportAdapter {
     }
     const date = new Date(text);
     return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private parseLegacyHistorianDate(value: any): Date | null {
+    if (value === null || value === undefined || value === '') return null;
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : new Date(value.getTime());
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return this.parseDate(value);
+    }
+
+    const text = String(value).trim();
+    const dotNet = /\/Date\(([-+]?\d+)/.exec(text);
+    if (dotNet) {
+      const date = new Date(Number(dotNet[1]));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(text)) {
+      return this.parseDate(text);
+    }
+
+    // SCReportingService applies TimeStamp.AddHours(7). Parsing a naive logger
+    // timestamp as UTC produces the same +07:00 alignment in the Thailand UI.
+    const parts = /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,7}))?)?$/.exec(text);
+    if (parts) {
+      const milliseconds = Number(`0.${parts[7] || '0'}`) * 1000;
+      const date = new Date(Date.UTC(
+        Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]),
+        Number(parts[4]), Number(parts[5]), Number(parts[6] || 0), Math.floor(milliseconds),
+      ));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    return this.parseDate(text);
   }
 
   private downsampleSpeedSeries(

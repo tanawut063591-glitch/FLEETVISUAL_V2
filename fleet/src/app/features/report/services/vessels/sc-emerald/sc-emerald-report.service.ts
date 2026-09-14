@@ -12,6 +12,10 @@ import {
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
 import {
+  buildLegacyPdfFuelDeltaMap,
+  normalizeModeFuelToOfficialTotal,
+} from '../../common/pdf-mode-parity';
+import {
   SC_EMERALD_MODE_HISTORIAN_TAG,
   SC_EMERALD_REPORT_PROFILE,
 } from './sc-emerald-report.profile';
@@ -673,6 +677,13 @@ export class ScEmeraldReportService implements VesselReportAdapter {
         litresPerHour: runningHours > 0 ? fuelUsed / runningHours : null,
       } satisfies ScEmeraldModeSummaryRow;
     });
+    // A one-day UI report must preserve the already verified daily values exactly.
+    // Re-aggregating the same row can introduce small percentage/LPH rounding drift.
+    const pdfParityModeSummary =
+      reports.length === 1
+        ? reports[0].modeSummary.map((row) => ({ ...row }))
+        : modeSummary;
+
 
     const passageReports = reports.map((report) => report.passageSummary);
     const passageMainEngines = (['port', 'starboard'] as const).map((key) => {
@@ -887,7 +898,7 @@ export class ScEmeraldReportService implements VesselReportAdapter {
       mainEngineFuelTotal,
       auxiliaryFuelTotal,
       totalFuelUsed,
-      modeSummary,
+      modeSummary: pdfParityModeSummary,
       passageSummary,
       tracking,
       hourly,
@@ -946,6 +957,34 @@ export class ScEmeraldReportService implements VesselReportAdapter {
       series.get(this.tagKey(TAGS.saeFuelIn)) || [],
       series.get(this.tagKey(TAGS.saeFuelOut)) || [],
       300,
+    );
+
+    // PDF page-2 Mode fuel must use the legacy SCReportingService raw totalizer deltas.
+    // Do not interpolate totalizer gaps: a gap can move fuel into the wrong vessel Mode.
+    const pmePdfModeFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.pmeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.pmeFuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true },
+    );
+    const smePdfModeFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.smeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.smeFuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true },
+    );
+    const paePdfModeFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.paeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.paeFuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true },
+    );
+    const caePdfModeFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.caeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.caeFuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true },
+    );
+    const saePdfModeFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.saeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.saeFuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true },
     );
 
     const elapsedHours = Math.max(
@@ -1133,7 +1172,8 @@ export class ScEmeraldReportService implements VesselReportAdapter {
         const modeKey = this.resolveModeProfileKey(modeLabel);
         const mode = modeMap.get(modeKey);
         if (mode) {
-          mode.fuelUsed += minuteFuel;
+          const pdfModeMinuteFuel = (pmePdfModeFuel.get(bucket) || 0) + (smePdfModeFuel.get(bucket) || 0) + (paePdfModeFuel.get(bucket) || 0) + (caePdfModeFuel.get(bucket) || 0) + (saePdfModeFuel.get(bucket) || 0);
+          mode.fuelUsed += pdfModeMinuteFuel;
           mode.runningHours += 1 / 60;
           mode.distanceNm += distance;
         }
@@ -1145,7 +1185,7 @@ export class ScEmeraldReportService implements VesselReportAdapter {
 
     const rawModeFuelTotal = Array.from(modeMap.values()).reduce((sum, row) => sum + row.fuelUsed, 0);
     const observedModeHours = Math.max(0, modeAvailableMinutes / 60);
-    const modeSummary = SC_EMERALD_REPORT_PROFILE.modes.map((profileMode) => {
+    const rawModeSummary = SC_EMERALD_REPORT_PROFILE.modes.map((profileMode) => {
       const row = modeMap.get(profileMode.key)!;
       // Legacy SCEmerald mode percentages are calculated against fuel observed while Mode > 0.
       const fuelUsed = row.fuelUsed;
@@ -1161,6 +1201,10 @@ export class ScEmeraldReportService implements VesselReportAdapter {
         litresPerHour: row.runningHours > 0 ? fuelUsed / row.runningHours : null,
       };
     });
+    const modeSummary = normalizeModeFuelToOfficialTotal<ScEmeraldModeSummaryRow>(
+      rawModeSummary,
+      totalFuelUsed,
+    );
 
     const passageSummary = this.buildPassageSummary(
       passageMinuteKeys,
@@ -1252,7 +1296,7 @@ export class ScEmeraldReportService implements VesselReportAdapter {
       };
     });
 
-    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 260);
+    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 1600);
     const validSpeedValues = Array.from(gpsSpeed.entries())
       .filter(
         ([bucket, value]) =>

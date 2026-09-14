@@ -12,6 +12,10 @@ import {
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
 import {
+  buildGpsPdfParityModeSummary,
+  isCompletedDailyWindow,
+} from '../../common/pdf-mode-parity';
+import {
   SC_GLORY_1_MODE_HISTORIAN_TAG,
   SC_GLORY_1_REPORT_PROFILE,
 } from './sc-glory-1-report.profile';
@@ -365,13 +369,29 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     }
 
     const requestTags = ALL_TAGS.map((tagName) => ({ name: tagName, tagName }));
-    const request$ = this.newHttp
-      .getHistorianValues(
-        this.formatHistorianRequestTime(start),
-        this.formatHistorianRequestTime(end),
-        requestTags,
-      )
-      .pipe(
+    const completedDaily = isCompletedDailyWindow(start, end, MINUTE_MS);
+    const historianEnd = completedDaily
+      ? new Date(start.getTime() + 24 * 60 * MINUTE_MS)
+      : end;
+    const requestStartText = this.formatHistorianRequestTime(start);
+    const requestEndText = this.formatHistorianRequestTime(historianEnd);
+
+    // Completed Daily UI must read the historian exactly like SCReportingService/PDF:
+    // one tag per loggergethistorianvalues request, including next-day 00:00.
+    const historianRequest$: Observable<any> = completedDaily
+      ? from(ALL_TAGS).pipe(
+          mergeMap(
+            (tagName) =>
+              this.newHttp.getRawData(requestStartText, requestEndText, [{ name: tagName, tagName }]).pipe(
+                map((response) => ({ __legacyTagName: tagName, __legacyResponse: response })),
+              ),
+            1,
+          ),
+          toArray(),
+        )
+      : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
+
+    const request$ = historianRequest$.pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
           this.detailedReportCache.set(key, {
@@ -670,6 +690,13 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         litresPerHour: runningHours > 0 ? fuelUsed / runningHours : null,
       } satisfies ScGlory1ModeSummaryRow;
     });
+    // A one-day UI report must preserve the already verified daily values exactly.
+    // Re-aggregating the same row can introduce small percentage/LPH rounding drift.
+    const pdfParityModeSummary =
+      reports.length === 1
+        ? reports[0].modeSummary.map((row) => ({ ...row }))
+        : modeSummary;
+
 
     const passageReports = reports.map((report) => report.passageSummary);
     const passageMainEngines = (['port', 'center', 'starboard'] as const).map((key) => {
@@ -880,7 +907,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       mainEngineFuelTotal,
       auxiliaryFuelTotal,
       totalFuelUsed,
-      modeSummary,
+      modeSummary: pdfParityModeSummary,
       passageSummary,
       tracking,
       hourly,
@@ -896,12 +923,46 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     const series = this.extractHistorianSeries(response, ALL_TAGS);
     const minuteStart = this.floorToMinute(periodStart).getTime();
     const minuteEnd = Math.max(minuteStart + MINUTE_MS, this.floorToMinute(periodEnd).getTime());
+    const completedDaily = isCompletedDailyWindow(
+      new Date(minuteStart),
+      new Date(minuteEnd),
+      MINUTE_MS,
+    );
+    // SCReportingService creates 1,441 rows for a completed Daily report:
+    // 00:00 through next-day 00:00, inclusive.
+    const legacyDataEnd = completedDaily ? minuteStart + 24 * 60 * MINUTE_MS : minuteEnd;
     const minuteCount = Math.max(1, Math.floor((minuteEnd - minuteStart) / MINUTE_MS) + 1);
 
-    const gpsSpeed = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsSpeed)) || []);
-    const gpsLat = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLat)) || []);
-    const gpsLong = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLong)) || []);
-    const gpsHead = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsHead)) || []);
+    // Keep the normal UI maps for Engine Summary / hourly charts / tracking.
+    // Mode parity uses a separate exact-minute grid below so fixing Mode cannot
+    // change totals that already match the legacy PDF.
+    const gpsSpeedPoints = series.get(this.tagKey(TAGS.gpsSpeed)) || [];
+    const gpsLatPoints = series.get(this.tagKey(TAGS.gpsLat)) || [];
+    const gpsLongPoints = series.get(this.tagKey(TAGS.gpsLong)) || [];
+    const gpsHeadPoints = series.get(this.tagKey(TAGS.gpsHead)) || [];
+
+    const gpsSpeed = this.buildInstantMap(gpsSpeedPoints);
+    const gpsLat = this.buildInstantMap(gpsLatPoints);
+    const gpsLong = this.buildInstantMap(gpsLongPoints);
+    const gpsHead = this.buildInstantMap(gpsHeadPoints);
+
+    // PDF/C# parity path: DataTable.Select uses exact timestamps. A historian
+    // record such as 10:15:23 is NOT moved into the 10:15 row. Missing GPS
+    // remains 0 in the pre-created grid and therefore falls into Standby.
+    const legacyPoints = (points: readonly NumericPoint[]): NumericPoint[] =>
+      completedDaily
+        ? this.filterLegacyExactMinutePoints(points, minuteStart, legacyDataEnd)
+        : [...points];
+    const legacyGpsSpeedPoints = legacyPoints(gpsSpeedPoints);
+    const legacyGpsLatPoints = legacyPoints(gpsLatPoints);
+    const legacyGpsLongPoints = legacyPoints(gpsLongPoints);
+    const legacyGpsHeadPoints = legacyPoints(gpsHeadPoints);
+    // GPSSpd is System.Single in the legacy DataTable. Keep float32 precision
+    // for mode speed sums/distance so L/NM follows the PDF calculation order.
+    const legacyGpsSpeed = this.buildLegacySingleInstantMap(legacyGpsSpeedPoints);
+    const legacyGpsLat = this.buildInstantMap(legacyGpsLatPoints);
+    const legacyGpsLong = this.buildInstantMap(legacyGpsLongPoints);
+    const legacyGpsHead = this.buildInstantMap(legacyGpsHeadPoints);
 
     const pmeRpm = this.buildCounterRateMap(series.get(this.tagKey(TAGS.pmeSpeed)) || [], 12, 2000);
     const cmeRpm = this.buildCounterRateMap(series.get(this.tagKey(TAGS.cmeSpeed)) || [], 12, 2000);
@@ -932,29 +993,145 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     const paeFuel = this.buildFuelMap(paeFuelInPoints, paeFuelOutPoints);
     const saeFuel = this.buildFuelMap(saeFuelInPoints, saeFuelOutPoints);
 
-    const pmeFuelTotal = this.buildLegacyDailyFuelTotal(pmeFuelInPoints, pmeFuelOutPoints);
-    const cmeFuelTotal = this.buildLegacyDailyFuelTotal(cmeFuelInPoints, cmeFuelOutPoints);
-    const smeFuelTotal = this.buildLegacyDailyFuelTotal(smeFuelInPoints, smeFuelOutPoints);
-    const paeFuelTotal = this.buildLegacyDailyFuelTotal(paeFuelInPoints, paeFuelOutPoints);
-    const saeFuelTotal = this.buildLegacyDailyFuelTotal(saeFuelInPoints, saeFuelOutPoints);
+    // The completed Daily PDF never calculates summary fuel from arbitrary raw
+    // historian timestamps. GetRawData first performs an exact timestamp join into
+    // its 1,441-row minute DataTable, then CalFLowTotalSME/SME3 reads that table.
+    // Use the same exact-minute input here; otherwise an off-minute point can change
+    // the official total even though it never existed in the legacy PDF DataTable.
+    const dailyPmeFuelInPoints = completedDaily ? legacyPoints(pmeFuelInPoints) : pmeFuelInPoints;
+    const dailyPmeFuelOutPoints = completedDaily ? legacyPoints(pmeFuelOutPoints) : pmeFuelOutPoints;
+    const dailyCmeFuelInPoints = completedDaily ? legacyPoints(cmeFuelInPoints) : cmeFuelInPoints;
+    const dailyCmeFuelOutPoints = completedDaily ? legacyPoints(cmeFuelOutPoints) : cmeFuelOutPoints;
+    const dailySmeFuelInPoints = completedDaily ? legacyPoints(smeFuelInPoints) : smeFuelInPoints;
+    const dailySmeFuelOutPoints = completedDaily ? legacyPoints(smeFuelOutPoints) : smeFuelOutPoints;
+    const dailyPaeFuelInPoints = completedDaily ? legacyPoints(paeFuelInPoints) : paeFuelInPoints;
+    const dailyPaeFuelOutPoints = completedDaily ? legacyPoints(paeFuelOutPoints) : paeFuelOutPoints;
+    const dailySaeFuelInPoints = completedDaily ? legacyPoints(saeFuelInPoints) : saeFuelInPoints;
+    const dailySaeFuelOutPoints = completedDaily ? legacyPoints(saeFuelOutPoints) : saeFuelOutPoints;
+
+    const pmeFuelTotal = this.buildLegacyDailyFuelTotal(
+      dailyPmeFuelInPoints, dailyPmeFuelOutPoints, 8000, 300,
+    );
+    const cmeFuelTotal = this.buildLegacyDailyFuelTotal(
+      dailyCmeFuelInPoints, dailyCmeFuelOutPoints, 8000, 300,
+    );
+    // The archived production Daily PDF (period label ends at 23:59) is generated
+    // by the catch-up/official branch, which uses CalFLowTotalSME for SME just
+    // like PME/CME/AE: span < 8000 and accepted step < / <= 300 (IN / OUT).
+    // CalFLowTotalSME3 (5000/200) belongs to the separate test/yesterday branch
+    // whose report period ends at next-day 00:00, so using it here can drop a
+    // legitimate ~200-300 L SME step and make the UI daily total differ from PDF.
+    const smeFuelTotal = this.buildLegacyDailyFuelTotal(
+      dailySmeFuelInPoints, dailySmeFuelOutPoints, 8000, 300,
+    );
+    const paeFuelTotal = this.buildLegacyDailyFuelTotal(
+      dailyPaeFuelInPoints, dailyPaeFuelOutPoints, 8000, 300,
+    );
+    const saeFuelTotal = this.buildLegacyDailyFuelTotal(
+      dailySaeFuelInPoints, dailySaeFuelOutPoints, 8000, 300,
+    );
 
     const elapsedHours = Math.max(MINUTE_MS / 3_600_000, (minuteEnd - minuteStart + MINUTE_MS) / 3_600_000);
-    const engineSummary: ScGlory1EngineSummaryRow[] = [
-      this.buildEngineSummary('port', 'Port M/E', pmeRpm, pmeFuel, elapsedHours, pmeFuelTotal),
-      this.buildEngineSummary('center', 'Ctr. M/E', cmeRpm, cmeFuel, elapsedHours, cmeFuelTotal),
-      this.buildEngineSummary('starboard', 'Stb. M/E', smeRpm, smeFuel, elapsedHours, smeFuelTotal),
-    ];
 
-    const shaftSummary: ScGlory1ShaftSummaryRow[] = [
-      this.buildShaftSummary('port', 'Port Shaft', ppsRpm, pmeRpm),
-      this.buildShaftSummary('center', 'Ctr. Shaft', cpsRpm, cmeRpm),
-      this.buildShaftSummary('starboard', 'Stb. Shaft', spsRpm, smeRpm),
-    ];
+    // For a completed Daily report, reproduce CalSpeedSummary /
+    // CalSpeedShaftSummary / CalSpeedShaftRunningHr directly on the legacy minute
+    // grid. The previous UI interpolated counters across short gaps, which is useful
+    // for live charts but changes PDF running hours and RPM statistics.
+    const legacyPmeCounterPoints = legacyPoints(series.get(this.tagKey(TAGS.pmeSpeed)) || []);
+    const legacyCmeCounterPoints = legacyPoints(series.get(this.tagKey(TAGS.cmeSpeed)) || []);
+    const legacySmeCounterPoints = legacyPoints(series.get(this.tagKey(TAGS.smeSpeed)) || []);
+    const legacyPpsCounterPoints = legacyPoints(series.get(this.tagKey(TAGS.ppsSpeed)) || []);
+    const legacyCpsCounterPoints = legacyPoints(series.get(this.tagKey(TAGS.cpsSpeed)) || []);
+    const legacySpsCounterPoints = legacyPoints(series.get(this.tagKey(TAGS.spsSpeed)) || []);
+    const legacyPaeCounterPoints = legacyPoints(series.get(this.tagKey(TAGS.paeSpeed)) || []);
+    const legacySaeCounterPoints = legacyPoints(series.get(this.tagKey(TAGS.saeSpeed)) || []);
 
-    const auxSummary: ScGlory1AuxSummaryRow[] = [
-      this.buildAuxSummary('port', 'Port A/E', paeRpm, paeFuel, paeFuelTotal),
-      this.buildAuxSummary('starboard', 'Stb. A/E', saeRpm, saeFuel, saeFuelTotal),
-    ];
+    const pmeLegacyStats = completedDaily
+      ? this.calculateLegacySpeedSummary(legacyPmeCounterPoints, minuteStart, legacyDataEnd, 12, 2000)
+      : null;
+    const cmeLegacyStats = completedDaily
+      ? this.calculateLegacySpeedSummary(legacyCmeCounterPoints, minuteStart, legacyDataEnd, 12, 2000)
+      : null;
+    const smeLegacyStats = completedDaily
+      ? this.calculateLegacySpeedSummary(legacySmeCounterPoints, minuteStart, legacyDataEnd, 12, 2000)
+      : null;
+    const ppsLegacyStats = completedDaily
+      ? this.calculateLegacyShaftSpeedSummary(legacyPpsCounterPoints, minuteStart, legacyDataEnd, 12, 800)
+      : null;
+    const cpsLegacyStats = completedDaily
+      ? this.calculateLegacyShaftSpeedSummary(legacyCpsCounterPoints, minuteStart, legacyDataEnd, 12, 800)
+      : null;
+    const spsLegacyStats = completedDaily
+      ? this.calculateLegacyShaftSpeedSummary(legacySpsCounterPoints, minuteStart, legacyDataEnd, 12, 800)
+      : null;
+    const paeLegacyStats = completedDaily
+      ? this.calculateLegacySpeedSummary(legacyPaeCounterPoints, minuteStart, legacyDataEnd, 8, 2000)
+      : null;
+    const saeLegacyStats = completedDaily
+      ? this.calculateLegacySpeedSummary(legacySaeCounterPoints, minuteStart, legacyDataEnd, 2, 2000)
+      : null;
+
+    const engineSummary: ScGlory1EngineSummaryRow[] = completedDaily
+      ? [
+          this.legacyEngineSummary('port', 'Port M/E', pmeLegacyStats!, pmeFuelTotal),
+          this.legacyEngineSummary('center', 'Ctr. M/E', cmeLegacyStats!, cmeFuelTotal),
+          this.legacyEngineSummary('starboard', 'Stb. M/E', smeLegacyStats!, smeFuelTotal),
+        ]
+      : [
+          this.buildEngineSummary('port', 'Port M/E', pmeRpm, pmeFuel, elapsedHours, pmeFuelTotal),
+          this.buildEngineSummary('center', 'Ctr. M/E', cmeRpm, cmeFuel, elapsedHours, cmeFuelTotal),
+          this.buildEngineSummary('starboard', 'Stb. M/E', smeRpm, smeFuel, elapsedHours, smeFuelTotal),
+        ];
+
+    const shaftSummary: ScGlory1ShaftSummaryRow[] = completedDaily
+      ? [
+          this.legacyShaftSummary('port', 'Port Shaft', {
+            ...ppsLegacyStats!,
+            runningHours: this.calculateLegacyShaftRunningHours(
+              legacyPmeCounterPoints, legacyPpsCounterPoints, minuteStart, legacyDataEnd,
+            ),
+          }),
+          this.legacyShaftSummary('center', 'Ctr. Shaft', {
+            ...cpsLegacyStats!,
+            runningHours: this.calculateLegacyShaftRunningHours(
+              legacyCmeCounterPoints, legacyCpsCounterPoints, minuteStart, legacyDataEnd,
+            ),
+          }),
+          this.legacyShaftSummary('starboard', 'Stb. Shaft', {
+            ...spsLegacyStats!,
+            runningHours: this.calculateLegacyShaftRunningHours(
+              legacySmeCounterPoints, legacySpsCounterPoints, minuteStart, legacyDataEnd,
+            ),
+          }),
+        ]
+      : [
+          this.buildShaftSummary('port', 'Port Shaft', ppsRpm, pmeRpm),
+          this.buildShaftSummary('center', 'Ctr. Shaft', cpsRpm, cmeRpm),
+          this.buildShaftSummary('starboard', 'Stb. Shaft', spsRpm, smeRpm),
+        ];
+
+    let legacyPaeHours = paeLegacyStats?.runningHours ?? 0;
+    let legacySaeHours = saeLegacyStats?.runningHours ?? 0;
+    if (completedDaily) {
+      // Same special-case correction as SCReportingService GenerateReport.
+      if (legacySaeHours <= 0.2 && legacyPaeHours >= 23.8) {
+        legacySaeHours = 0;
+        legacyPaeHours = 24;
+      } else if (legacyPaeHours <= 0.2 && legacySaeHours >= 23.8) {
+        legacyPaeHours = 0;
+        legacySaeHours = 24;
+      }
+    }
+
+    const auxSummary: ScGlory1AuxSummaryRow[] = completedDaily
+      ? [
+          { key: 'port', label: 'Port A/E', runningHours: legacyPaeHours, fuelUsed: paeFuelTotal },
+          { key: 'starboard', label: 'Stb. A/E', runningHours: legacySaeHours, fuelUsed: saeFuelTotal },
+        ]
+      : [
+          this.buildAuxSummary('port', 'Port A/E', paeRpm, paeFuel, paeFuelTotal),
+          this.buildAuxSummary('starboard', 'Stb. A/E', saeRpm, saeFuel, saeFuelTotal),
+        ];
 
     const mainEngineFuelTotal = engineSummary.reduce((sum, row) => sum + row.fuelUsed, 0);
     const auxiliaryFuelTotal = auxSummary.reduce((sum, row) => sum + row.fuelUsed, 0);
@@ -1024,14 +1201,28 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       });
     }
 
-    const legacyPmeFuel = this.buildLegacyFuelDeltaMap(pmeFuelInPoints, pmeFuelOutPoints, 300, 300);
-    const legacyCmeFuel = this.buildLegacyFuelDeltaMap(cmeFuelInPoints, cmeFuelOutPoints, 300, 300);
-    const legacySmeFuel = this.buildLegacyFuelDeltaMap(smeFuelInPoints, smeFuelOutPoints, 300, 300);
-    const legacyPaeFuel = this.buildLegacyFuelDeltaMap(paeFuelInPoints, paeFuelOutPoints, 300, 1000);
+    // Mode fuel must be calculated from the same exact-minute rows that exist
+    // in SCReportingService's dtRawData. Do not let non-grid records influence
+    // previous/previousAfterLost; C# never copies those records into dtRawData.
+    const legacyPmeFuelInPoints = legacyPoints(pmeFuelInPoints);
+    const legacyPmeFuelOutPoints = legacyPoints(pmeFuelOutPoints);
+    const legacyCmeFuelInPoints = legacyPoints(cmeFuelInPoints);
+    const legacyCmeFuelOutPoints = legacyPoints(cmeFuelOutPoints);
+    const legacySmeFuelInPoints = legacyPoints(smeFuelInPoints);
+    const legacySmeFuelOutPoints = legacyPoints(smeFuelOutPoints);
+    const legacyPaeFuelInPoints = legacyPoints(paeFuelInPoints);
+    const legacyPaeFuelOutPoints = legacyPoints(paeFuelOutPoints);
+    const legacySaeFuelInPoints = legacyPoints(saeFuelInPoints);
+    const legacySaeFuelOutPoints = legacyPoints(saeFuelOutPoints);
+
+    const legacyPmeFuel = this.buildLegacyFuelDeltaMap(legacyPmeFuelInPoints, legacyPmeFuelOutPoints, 300, 300);
+    const legacyCmeFuel = this.buildLegacyFuelDeltaMap(legacyCmeFuelInPoints, legacyCmeFuelOutPoints, 300, 300);
+    const legacySmeFuel = this.buildLegacyFuelDeltaMap(legacySmeFuelInPoints, legacySmeFuelOutPoints, 300, 300);
+    const legacyPaeFuel = this.buildLegacyFuelDeltaMap(legacyPaeFuelInPoints, legacyPaeFuelOutPoints, 300, 1000);
     // Passage summary uses the stricter 300-L return-delta rule from
     // GetDataPassageSummary, while the by-mode report allows 1000 L for PAE OUT.
-    const legacyPaePassageFuel = this.buildLegacyFuelDeltaMap(paeFuelInPoints, paeFuelOutPoints, 300, 300);
-    const legacySaeFuel = this.buildLegacyFuelDeltaMap(saeFuelInPoints, saeFuelOutPoints, 300, 300);
+    const legacyPaePassageFuel = this.buildLegacyFuelDeltaMap(legacyPaeFuelInPoints, legacyPaeFuelOutPoints, 300, 300);
+    const legacySaeFuel = this.buildLegacyFuelDeltaMap(legacySaeFuelInPoints, legacySaeFuelOutPoints, 300, 300);
 
     const passageMinuteKeys: number[] = [];
     let gpsAvailableMinutes = 0;
@@ -1121,124 +1312,78 @@ export class ScGlory1ReportService implements VesselReportAdapter {
 
     }
 
-    // The legacy PDF classifies every minute. Missing GPS speed is zero and therefore
-    // belongs to Standby; a full-day report also contains the next 00:00 row. This is
-    // why the PDF percentages/Standby hours differ slightly from a GPS-coverage-only UI.
-    const modeMinuteCounts = new Map<string, number>();
-    const modeSpeedSums = new Map<string, number>();
-    SC_GLORY_1_REPORT_PROFILE.modes.forEach((mode) => {
-      modeMinuteCounts.set(mode.key, 0);
-      modeSpeedSums.set(mode.key, 0);
-    });
+    // Use the same minute model and precision rules as the verified SC GLORY 3 PDF parity path.
+    const fullDayWindow = completedDaily;
+    const legacyModeEnd = legacyDataEnd;
+    const pdfParityOptions = {
+      modes: SC_GLORY_1_REPORT_PROFILE.modes,
+      minuteStart,
+      dataEnd: legacyModeEnd,
+      completedDaily: fullDayWindow,
+      minuteMs: MINUTE_MS,
+      officialTotalFuel: totalFuelUsed,
+      gpsSpeed: legacyGpsSpeed,
+      minuteFuelAt: (minute: number) =>
+        (legacyPmeFuel.get(minute) || 0) +
+        (legacyCmeFuel.get(minute) || 0) +
+        (legacySmeFuel.get(minute) || 0) +
+        (legacyPaeFuel.get(minute) || 0) +
+        (legacySaeFuel.get(minute) || 0),
+      resolveModeLabel: (speed: number) => this.resolveModeFromGpsSpeed(speed),
+      resolveModeKey: (label: string) => this.resolveModeProfileKey(label),
+      standbyLabel: 'Standby',
+      legacySinglePrecision: true,
+    };
 
-    const fullDayWindow = elapsedHours >= 23.99;
-    const legacyModeEnd = fullDayWindow ? minuteStart + 24 * 60 * MINUTE_MS : minuteEnd;
-    for (let bucket = minuteStart; bucket <= legacyModeEnd; bucket += MINUTE_MS) {
-      const rawSpeed = gpsSpeed.get(bucket);
-      const speed = rawSpeed !== undefined && Number.isFinite(rawSpeed) ? Math.max(0, rawSpeed) : 0;
-      const modeLabel = this.resolveModeFromGpsSpeed(speed) || 'Standby';
-      const modeKey = this.resolveModeProfileKey(modeLabel);
-      const mode = modeMap.get(modeKey);
-      if (!mode) continue;
-
-      const minuteFuel =
-        (legacyPmeFuel.get(bucket) || 0) +
-        (legacyCmeFuel.get(bucket) || 0) +
-        (legacySmeFuel.get(bucket) || 0) +
-        (legacyPaeFuel.get(bucket) || 0) +
-        (legacySaeFuel.get(bucket) || 0);
-      mode.fuelUsed += minuteFuel;
-      modeMinuteCounts.set(modeKey, (modeMinuteCounts.get(modeKey) || 0) + 1);
-      modeSpeedSums.set(modeKey, (modeSpeedSums.get(modeKey) || 0) + speed);
-      if (modeLabel === 'Passage' && bucket <= minuteEnd) passageMinuteKeys.push(bucket);
-    }
-
-    const rawModeFuelTotal = Array.from(modeMap.values()).reduce((sum, row) => sum + row.fuelUsed, 0);
-    const modeFuelScale = rawModeFuelTotal !== 0 && totalFuelUsed > 0 ? totalFuelUsed / rawModeFuelTotal : 1;
-    const totalModeMinutes = Array.from(modeMinuteCounts.values()).reduce((sum, value) => sum + value, 0);
-    const standbyKey = this.resolveModeProfileKey('Standby');
-    const roundedHours = new Map<string, number>();
-    let nonStandbyHours = 0;
-    let nonStandbyRunningPercent = 0;
-    let nonStandbyFuelPercent = 0;
-
-    for (const profileMode of SC_GLORY_1_REPORT_PROFILE.modes) {
-      if (profileMode.key === standbyKey) continue;
-      const count = modeMinuteCounts.get(profileMode.key) || 0;
-      const hours = this.roundLegacy2(count / 60);
-      roundedHours.set(profileMode.key, hours);
-      nonStandbyHours += hours;
-    }
-    roundedHours.set(standbyKey, this.roundLegacy2(Math.max(0, elapsedHours - nonStandbyHours)));
-
-    const preliminary = SC_GLORY_1_REPORT_PROFILE.modes.map((profileMode) => {
-      const row = modeMap.get(profileMode.key)!;
-      const count = modeMinuteCounts.get(profileMode.key) || 0;
-      const hours = roundedHours.get(profileMode.key) || 0;
-      const averageModeSpeed = count > 0 ? (modeSpeedSums.get(profileMode.key) || 0) / count : 0;
-      const distanceNm = this.roundLegacy2(averageModeSpeed * hours);
-      const fuelUsed = this.roundLegacy2(row.fuelUsed * modeFuelScale);
-      const directFuelPercent =
-        rawModeFuelTotal !== 0 ? this.roundLegacy2((row.fuelUsed / rawModeFuelTotal) * 100) : 0;
-      const directRunningPercent =
-        totalModeMinutes > 0 ? this.roundLegacy2((count / totalModeMinutes) * 100) : 0;
-
-      if (profileMode.key !== standbyKey) {
-        nonStandbyFuelPercent += directFuelPercent;
-        nonStandbyRunningPercent += directRunningPercent;
-      }
-
-      return {
-        ...row,
-        fuelUsed,
-        fuelPercent: directFuelPercent,
-        runningHours: hours,
-        runningPercent: directRunningPercent,
-        distanceNm,
-        litresPerNm: distanceNm > 0 ? this.roundLegacy2(fuelUsed / distanceNm) : null,
-        litresPerHour: hours > 0 ? this.roundLegacy2(fuelUsed / hours) : null,
-      };
-    });
-
-    const modeSummary = preliminary.map((row) =>
-      row.key === standbyKey
-        ? {
-            ...row,
-            fuelPercent: this.roundLegacy2(Math.max(0, 100 - nonStandbyFuelPercent)),
-            runningPercent: this.roundLegacy2(Math.max(0, 100 - nonStandbyRunningPercent)),
-          }
-        : row,
-    );
-
+    // Production rule: always calculate Mode from the real 1,441-row historian
+    // minute model. Do not apply a date-specific Excel/PDF calibration. Excel's
+    // SUMIF is equivalent to this grouping step when MINUTE_MODEL!D is Mode and
+    // MINUTE_MODEL!E is the real per-minute net fuel delta.
+    const pdfParityMode = buildGpsPdfParityModeSummary(pdfParityOptions);
+    const modeSummary = pdfParityMode.modeSummary as ScGlory1ModeSummaryRow[];
     const passageModeKey = this.resolveModeProfileKey('Passage');
-    const passageFuelTotal = (modeMap.get(passageModeKey)?.fuelUsed || 0) * modeFuelScale;
+    passageMinuteKeys.push(
+      ...(pdfParityMode.minuteKeysByMode.get(passageModeKey) || []).filter(
+        (minute) => minute <= minuteEnd,
+      ),
+    );
+    const passageFuelTotal = pdfParityMode.scaledFuelByMode.get(passageModeKey) || 0;
+
     const passageSummary = this.buildLegacyPassageSummary(
       passageMinuteKeys,
-      series.get(this.tagKey(TAGS.pmeSpeed)) || [],
-      series.get(this.tagKey(TAGS.cmeSpeed)) || [],
-      series.get(this.tagKey(TAGS.smeSpeed)) || [],
-      series.get(this.tagKey(TAGS.ppsSpeed)) || [],
-      series.get(this.tagKey(TAGS.cpsSpeed)) || [],
-      series.get(this.tagKey(TAGS.spsSpeed)) || [],
+      legacyPoints(series.get(this.tagKey(TAGS.pmeSpeed)) || []),
+      legacyPoints(series.get(this.tagKey(TAGS.cmeSpeed)) || []),
+      legacyPoints(series.get(this.tagKey(TAGS.smeSpeed)) || []),
+      legacyPoints(series.get(this.tagKey(TAGS.ppsSpeed)) || []),
+      legacyPoints(series.get(this.tagKey(TAGS.cpsSpeed)) || []),
+      legacyPoints(series.get(this.tagKey(TAGS.spsSpeed)) || []),
       legacyPmeFuel,
       legacyCmeFuel,
       legacySmeFuel,
       legacyPaePassageFuel,
       legacySaeFuel,
-      gpsSpeed,
+      legacyGpsSpeed,
       passageFuelTotal,
     );
 
     const tracking = this.buildTrackingSummary(
       minuteStart,
-      minuteEnd,
-      gpsLat,
-      gpsLong,
-      gpsSpeed,
-      gpsHead,
+      completedDaily ? legacyDataEnd : minuteEnd,
+      completedDaily ? legacyGpsLat : gpsLat,
+      completedDaily ? legacyGpsLong : gpsLong,
+      completedDaily ? legacyGpsSpeed : gpsSpeed,
+      completedDaily ? legacyGpsHead : gpsHead,
     );
+    if (completedDaily) {
+      // GenerateReportTracking receives TotalDis from GenerateReportFuelConsumtion.
+      // That value is the sum of each displayed mode distance after 2-decimal
+      // conversion, not a second independent GPS integration.
+      tracking.distanceNm = this.roundLegacy2(
+        modeSummary.reduce((sum, row) => sum + row.distanceNm, 0),
+      );
+    }
 
-    const hourly = hourlyAccumulators.map((item, hour): ScGlory1HourlyRow => {
+    const interpolatedHourly = hourlyAccumulators.map((item, hour): ScGlory1HourlyRow => {
       if (!item.active) {
         return {
           hour,
@@ -1294,19 +1439,48 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       };
     });
 
-    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 260);
-    const validSpeedValues = Array.from(gpsSpeed.entries())
+    const hourly = completedDaily
+      ? this.buildLegacyPdfHourlyRows(
+          interpolatedHourly,
+          minuteStart,
+          legacyGpsSpeedPoints,
+          legacySmeFuelInPoints, legacySmeFuelOutPoints,
+          legacyCmeFuelInPoints, legacyCmeFuelOutPoints,
+          legacyPmeFuelInPoints, legacyPmeFuelOutPoints,
+          legacySaeFuelInPoints, legacySaeFuelOutPoints,
+          legacyPaeFuelInPoints, legacyPaeFuelOutPoints,
+        )
+      : interpolatedHourly;
+
+    // Keep every exact-minute, non-zero GPS sample for the daily chart. The
+    // shared report renderer applies the legacy RptAverageSpd2 display window
+    // for every vessel, so SC GLORY 1 follows the same path as the rest of the fleet.
+    const speedSeries = completedDaily
+      ? legacyGpsSpeedPoints
+          .filter((point) => Number.isFinite(point.value) && point.value !== 0)
+          .map((point) => ({ timestamp: new Date(point.timestamp.getTime()), speed: Math.fround(point.value) }))
+      : this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 1600);
+    const speedForSummary = completedDaily ? legacyGpsSpeed : gpsSpeed;
+    const validSpeedValues = Array.from(speedForSummary.entries())
       .filter(
         ([bucket, value]) =>
           bucket >= minuteStart && bucket <= minuteEnd && value >= 0 && Number.isFinite(value),
       )
       .map(([, value]) => value);
 
+    const coverageAvailableMinutes = completedDaily
+      ? legacyGpsSpeedPoints.filter((point) => Number.isFinite(point.value)).length
+      : gpsAvailableMinutes;
+    const coverageMinuteCount = completedDaily ? 1441 : minuteCount;
+
     return {
       periodStart: new Date(minuteStart),
       periodEnd: new Date(minuteEnd),
       loadedAt: new Date(),
-      coveragePercent: Math.max(0, Math.min(100, (gpsAvailableMinutes / minuteCount) * 100)),
+      coveragePercent: Math.max(
+        0,
+        Math.min(100, (coverageAvailableMinutes / Math.max(1, coverageMinuteCount)) * 100),
+      ),
       averageSpeed: this.average(validSpeedValues),
       maximumSpeed: this.maximum(validSpeedValues),
       engineSummary,
@@ -1485,7 +1659,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       runningHours: runningCount / 60,
     };
   }
-
+  
   private buildLegacyCounterSamples(points: readonly NumericPoint[]): Map<number, LegacyCounterSample> {
     const result = new Map<number, LegacyCounterSample>();
     const sorted = [...points].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
@@ -1515,6 +1689,195 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return result;
   }
 
+  private calculateLegacySpeedSummary(
+    points: readonly NumericPoint[],
+    start: number,
+    end: number,
+    pulse: number,
+    maxRpm: number,
+  ): { averageRpm: number | null; maximumRpm: number | null; runningHours: number } {
+    const values = this.buildExactValueMap(points);
+    let initialized = false;
+    let lost = 1;
+    let previous = 0;
+    let previousRunStatus = false;
+    let deltaSum = 0;
+    let averageCount = 0;
+    let maxRawDelta = 0;
+    let runningMinutes = 0;
+
+    for (let minute = start; minute <= end; minute += MINUTE_MS) {
+      const value = values.get(minute) || 0;
+      if (value !== 0) {
+        if (!initialized) {
+          previous = value;
+          initialized = true;
+          continue;
+        }
+
+        previousRunStatus = false;
+        if (value > previous) {
+          const delta = value - previous;
+          if (delta / pulse <= maxRpm) {
+            if (lost > 1) {
+              maxRawDelta = Math.max(maxRawDelta, delta / lost);
+              lost = 1;
+            } else {
+              maxRawDelta = Math.max(maxRawDelta, delta);
+            }
+            deltaSum += delta;
+            averageCount += 1;
+          }
+
+          // CalSpeedSummary counts a running minute from the unadjusted delta.
+          if (delta / pulse >= 100) {
+            runningMinutes += 1;
+          }
+          previousRunStatus = true;
+        }
+        previous = value;
+      } else if (previousRunStatus) {
+        // Legacy behavior assumes the engine keeps running while a counter sample
+        // is temporarily missing after a running sample.
+        runningMinutes += 1;
+        lost += 1;
+      }
+    }
+
+    return {
+      averageRpm: averageCount > 0 ? (deltaSum / pulse) / averageCount : 0,
+      maximumRpm: maxRawDelta > 0 ? maxRawDelta / pulse : 0,
+      runningHours: runningMinutes / 60,
+    };
+  }
+
+  private calculateLegacyShaftSpeedSummary(
+    points: readonly NumericPoint[],
+    start: number,
+    end: number,
+    pulse: number,
+    maxRpm: number,
+  ): { averageRpm: number | null; maximumRpm: number | null; runningHours: number } {
+    const values = this.buildExactValueMap(points);
+    let initialized = false;
+    let lost = 1;
+    let previous = 0;
+    let previousRunStatus = false;
+    let deltaSum = 0;
+    let averageCount = 0;
+    let maxRawDelta = 0;
+    let runningMinutes = 0;
+
+    for (let minute = start; minute <= end; minute += MINUTE_MS) {
+      const value = values.get(minute) || 0;
+      if (value !== 0) {
+        if (!initialized) {
+          previous = value;
+          initialized = true;
+          continue;
+        }
+
+        previousRunStatus = false;
+        if (value > previous) {
+          const delta = value - previous;
+          if (delta / pulse <= maxRpm) {
+            if (lost > 1) {
+              maxRawDelta = Math.max(maxRawDelta, delta / lost);
+              lost = 1;
+            } else {
+              maxRawDelta = Math.max(maxRawDelta, delta);
+            }
+            deltaSum += delta;
+            averageCount += 1;
+          }
+
+          // CalSpeedShaftSummary increments running hour for every positive
+          // counter movement, even when that movement is rejected for RPM stats.
+          runningMinutes += 1;
+          previousRunStatus = true;
+        }
+        previous = value;
+      } else if (previousRunStatus) {
+        runningMinutes += 1;
+        lost += 1;
+      }
+    }
+
+    return {
+      averageRpm: averageCount > 0 ? (deltaSum / pulse) / averageCount : 0,
+      maximumRpm: maxRawDelta > 0 ? maxRawDelta / pulse : 0,
+      runningHours: runningMinutes / 60,
+    };
+  }
+
+  private calculateLegacyShaftRunningHours(
+    mainEnginePoints: readonly NumericPoint[],
+    shaftPoints: readonly NumericPoint[],
+    start: number,
+    end: number,
+  ): number {
+    const mainValues = this.buildExactValueMap(mainEnginePoints);
+    const shaftValues = this.buildExactValueMap(shaftPoints);
+    const mainRunningMinutes = new Set<number>();
+
+    let mainInitialized = false;
+    let mainPrevious = 0;
+    let mainPreviousRunStatus = false;
+    for (let minute = start; minute <= end; minute += MINUTE_MS) {
+      const value = mainValues.get(minute) || 0;
+      if (value !== 0) {
+        if (!mainInitialized) {
+          mainPrevious = value;
+          mainInitialized = true;
+          continue;
+        }
+        mainPreviousRunStatus = false;
+        if (value > mainPrevious) {
+          mainRunningMinutes.add(minute);
+          mainPreviousRunStatus = true;
+        }
+        mainPrevious = value;
+      } else if (mainPreviousRunStatus) {
+        mainRunningMinutes.add(minute);
+      }
+    }
+
+    let shaftInitialized = false;
+    let shaftPrevious = 0;
+    let shaftPreviousRunStatus = false;
+    let runningMinutes = 0;
+    for (let minute = start; minute <= end; minute += MINUTE_MS) {
+      const value = shaftValues.get(minute) || 0;
+      if (value !== 0) {
+        if (!shaftInitialized) {
+          shaftPrevious = value;
+          shaftInitialized = true;
+          continue;
+        }
+        shaftPreviousRunStatus = false;
+        if (value > shaftPrevious && mainRunningMinutes.has(minute)) {
+          runningMinutes += 1;
+          shaftPreviousRunStatus = true;
+        }
+        shaftPrevious = value;
+      } else if (shaftPreviousRunStatus) {
+        runningMinutes += 1;
+      }
+    }
+
+    return runningMinutes / 60;
+  }
+
+  private buildExactValueMap(points: readonly NumericPoint[]): Map<number, number> {
+    const result = new Map<number, number>();
+    for (const point of points) {
+      const time = point.timestamp.getTime();
+      if (!Number.isFinite(time) || time % MINUTE_MS !== 0) continue;
+      result.set(time, point.value);
+    }
+    return result;
+  }
+
   private legacyEngineSummary(
     key: ScGlory1EngineSummaryRow['key'],
     label: string,
@@ -1538,6 +1901,209 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       sum += map.get(bucket) || 0;
     });
     return sum;
+  }
+
+  private buildLegacyPdfSpeedPerformanceSeries(
+    gpsPoints: readonly NumericPoint[],
+  ): ScGlory1SpeedPoint[] {
+    return [...gpsPoints]
+      .filter((point) => Number.isFinite(point.value) && point.value !== 0)
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+      .map((point) => {
+        const date = point.timestamp;
+        const hour = date.getHours();
+        const minute = date.getMinutes();
+        const visibleWindow =
+          (hour >= 5 && hour < 9) ||
+          (hour === 9 && minute === 0) ||
+          (hour >= 15 && hour < 19) ||
+          (hour === 19 && minute === 0);
+        return {
+          timestamp: new Date(date.getTime()),
+          speed: visibleWindow ? point.value : 0,
+        };
+      });
+  }
+
+  private buildLegacyPdfHourlyRows(
+    fallback: readonly ScGlory1HourlyRow[],
+    reportStart: number,
+    gpsPoints: readonly NumericPoint[],
+    smeIn: readonly NumericPoint[],
+    smeOut: readonly NumericPoint[],
+    cmeIn: readonly NumericPoint[],
+    cmeOut: readonly NumericPoint[],
+    pmeIn: readonly NumericPoint[],
+    pmeOut: readonly NumericPoint[],
+    saeIn: readonly NumericPoint[],
+    saeOut: readonly NumericPoint[],
+    paeIn: readonly NumericPoint[],
+    paeOut: readonly NumericPoint[],
+  ): ScGlory1HourlyRow[] {
+    const speedSum = Array.from({ length: 24 }, () => 0);
+    const speedCount = Array.from({ length: 24 }, () => 0);
+
+    for (const point of gpsPoints) {
+      if (!Number.isFinite(point.value) || point.value === 0) continue;
+      const timestamp = point.timestamp.getTime();
+      const hour = timestamp === reportStart
+        ? 0
+        : new Date(timestamp - MINUTE_MS).getHours();
+      speedSum[hour] += point.value;
+      speedCount[hour] += 1;
+    }
+
+    const smeInDelta = this.buildLegacyHourlyTotalizerDeltaMap(smeIn, 3000, true, 50);
+    const smeOutDelta = this.buildLegacyHourlyTotalizerDeltaMap(smeOut, 3000, true, 50);
+    const cmeInDelta = this.buildLegacyHourlyTotalizerDeltaMap(cmeIn, 3000, false, 0);
+    const cmeOutDelta = this.buildLegacyHourlyTotalizerDeltaMap(cmeOut, 3000, false, 0);
+    const pmeInDelta = this.buildLegacyHourlyTotalizerDeltaMap(pmeIn, 3000, false, 0);
+    const pmeOutDelta = this.buildLegacyHourlyTotalizerDeltaMap(pmeOut, 3000, false, 0);
+    const saeInDelta = this.buildLegacyHourlyTotalizerDeltaMap(saeIn, 1000, false, 0);
+    const saeOutDelta = this.buildLegacyHourlyTotalizerDeltaMap(saeOut, 1000, false, 0);
+    const paeInDelta = this.buildLegacyHourlyTotalizerDeltaMap(paeIn, 1000, false, 0);
+    const paeOutDelta = this.buildLegacyHourlyTotalizerDeltaMap(paeOut, 1000, false, 0);
+
+    const sumByHour = (values: ReadonlyMap<number, number>): number[] => {
+      const result = Array.from({ length: 24 }, () => 0);
+      values.forEach((value, timestamp) => {
+        const hour = new Date(timestamp - MINUTE_MS).getHours();
+        result[hour] += value;
+      });
+      return result;
+    };
+
+    const smeInHour = sumByHour(smeInDelta);
+    const smeOutHour = sumByHour(smeOutDelta);
+    const cmeInHour = sumByHour(cmeInDelta);
+    const cmeOutHour = sumByHour(cmeOutDelta);
+    const pmeInHour = sumByHour(pmeInDelta);
+    const pmeOutHour = sumByHour(pmeOutDelta);
+    const saeInHour = sumByHour(saeInDelta);
+    const saeOutHour = sumByHour(saeOutDelta);
+    const paeInHour = sumByHour(paeInDelta);
+    const paeOutHour = sumByHour(paeOutDelta);
+
+    return Array.from({ length: 24 }, (_, hour) => {
+      const base = fallback[hour];
+      const speed = speedCount[hour] > 0 ? speedSum[hour] / speedCount[hour] : 0;
+      const distance = speed * (speedCount[hour] / 60);
+      const starboardMain = smeInHour[hour] > smeOutHour[hour]
+        ? smeInHour[hour] - smeOutHour[hour]
+        : 0;
+      const centerMain = cmeInHour[hour] > cmeOutHour[hour]
+        ? cmeInHour[hour] - cmeOutHour[hour]
+        : 0;
+      const portMain = pmeInHour[hour] > pmeOutHour[hour]
+        ? pmeInHour[hour] - pmeOutHour[hour]
+        : 0;
+      const starboardAux = saeInHour[hour] > saeOutHour[hour]
+        ? saeInHour[hour] - saeOutHour[hour]
+        : 0;
+      const portAux = paeInHour[hour] > paeOutHour[hour]
+        ? paeInHour[hour] - paeOutHour[hour]
+        : 0;
+      const mainFuel = starboardMain + centerMain + portMain;
+      const auxFuel = starboardAux + portAux;
+      const active =
+        speedCount[hour] > 0 ||
+        mainFuel !== 0 ||
+        auxFuel !== 0 ||
+        Boolean(base?.active);
+
+      return {
+        ...(base || {
+          hour,
+          active: false,
+          distanceNm: null,
+          speedKnots: null,
+          mainFuel: null,
+          auxFuel: null,
+          portMainFuel: null,
+          centerMainFuel: null,
+          starboardMainFuel: null,
+          portAuxFuel: null,
+          starboardAuxFuel: null,
+          portMainRunningHours: null,
+          centerMainRunningHours: null,
+          starboardMainRunningHours: null,
+          portAuxRunningHours: null,
+          starboardAuxRunningHours: null,
+          portShaftRunningHours: null,
+          centerShaftRunningHours: null,
+          starboardShaftRunningHours: null,
+          portShaftRpm: null,
+          centerShaftRpm: null,
+          starboardShaftRpm: null,
+          totalFuel: null,
+        }),
+        hour,
+        active,
+        distanceNm: distance,
+        speedKnots: speed,
+        mainFuel,
+        auxFuel,
+        portMainFuel: portMain,
+        centerMainFuel: centerMain,
+        starboardMainFuel: starboardMain,
+        portAuxFuel: portAux,
+        starboardAuxFuel: starboardAux,
+        totalFuel: mainFuel + auxFuel,
+      };
+    });
+  }
+
+  private buildLegacyHourlyTotalizerDeltaMap(
+    points: readonly NumericPoint[],
+    maximumDelta: number,
+    recoverAfterRejectedJump: boolean,
+    recoveryMaximumDelta: number,
+  ): Map<number, number> {
+    const result = new Map<number, number>();
+    const sorted = [...points].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    let index = 0;
+    let previous = 0;
+    let previousAfterLost = 0;
+
+    for (const point of sorted) {
+      const value = point.value;
+      if (!Number.isFinite(value) || value === 0) continue;
+
+      if (index === 0) {
+        previous = value;
+        index += 1;
+        continue;
+      }
+
+      if (value > previous) {
+        const delta = value - previous;
+        if (delta <= maximumDelta) {
+          result.set(point.timestamp.getTime(), delta);
+          previous = value;
+          previousAfterLost = 0;
+        } else if (recoverAfterRejectedJump) {
+          if (previousAfterLost !== 0 && previousAfterLost < value) {
+            const recoveredDelta = value - previousAfterLost;
+            if (recoveredDelta <= recoveryMaximumDelta) {
+              result.set(point.timestamp.getTime(), recoveredDelta);
+              previous = value;
+              previousAfterLost = 0;
+            } else {
+              previousAfterLost = value;
+            }
+          }
+          // Mirrors the final assignment in the C# rejected-jump branch.
+          previousAfterLost = value;
+        }
+      } else if (index === 1) {
+        previous = value;
+      } else if (value >= 500 && value <= 20_000) {
+        previous = value;
+      }
+      index += 1;
+    }
+
+    return result;
   }
 
   private buildTrackingSummary(
@@ -1585,6 +2151,56 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     };
   }
 
+  /**
+   * Reproduces SCReportingService.GetRawData's exact DataTable timestamp join.
+   * Completed Daily PDF has only whole-minute rows. Non-grid records must be
+   * discarded BEFORE any totalizer delta calculation, otherwise they can move
+   * fuel from one speed Mode to another while leaving the daily total unchanged.
+   */
+  private filterLegacyExactMinutePoints(
+    points: readonly NumericPoint[],
+    start: number,
+    end: number,
+  ): NumericPoint[] {
+    const exactByMinute = new Map<number, NumericPoint>();
+
+    for (const point of points) {
+      const timestamp = point?.timestamp;
+      if (!(timestamp instanceof Date)) continue;
+      const time = timestamp.getTime();
+      if (!Number.isFinite(time)) continue;
+
+      // C# uses: DataTable.Select("TimeStamp = '" + DateTime + "'").
+      // DateTime.ToString() keeps seconds but does not include fractional seconds.
+      // Therefore xx:xx:00.123 is compared as xx:xx:00 and can hit the minute
+      // grid row, while xx:xx:23.xxx cannot. Reproduce that instead of requiring
+      // epoch % 60000 === 0, which incorrectly discarded valid PDF samples.
+      if (timestamp.getSeconds() !== 0) continue;
+      const normalized = new Date(time);
+      normalized.setMilliseconds(0);
+      const minute = normalized.getTime();
+      if (minute < start || minute > end) continue;
+
+      // Multiple records that stringify to the same legacy second overwrite the
+      // same DataRow. With the sorted historian stream, the final record wins.
+      exactByMinute.set(minute, { timestamp: normalized, value: point.value });
+    }
+
+    return Array.from(exactByMinute.values()).sort(
+      (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+    );
+  }
+
+  private buildLegacySingleInstantMap(points: readonly NumericPoint[]): Map<number, number> {
+    const result = new Map<number, number>();
+    for (const point of points) {
+      const time = point.timestamp.getTime();
+      if (!Number.isFinite(time) || !Number.isFinite(point.value)) continue;
+      result.set(time, Math.fround(point.value));
+    }
+    return result;
+  }
+
   private buildInstantMap(points: readonly NumericPoint[]): Map<number, number> {
     const result = new Map<number, number>();
     for (const point of points) {
@@ -1628,14 +2244,28 @@ export class ScGlory1ReportService implements VesselReportAdapter {
   private buildLegacyDailyFuelTotal(
     supplyPoints: readonly NumericPoint[],
     returnPoints: readonly NumericPoint[],
+    spanLimit = 8000,
+    stepLimit = 300,
   ): number {
-    const supply = this.buildLegacyTotalizerSpan(supplyPoints, false);
-    const returned = this.buildLegacyTotalizerSpan(returnPoints, true);
+    // CalFLowTotalSME/SME3 use a strict step for FIN and an inclusive step
+    // for FOUT. Keep that asymmetry because values exactly at the threshold
+    // are handled differently by the original report service.
+    const supply = this.buildLegacyTotalizerSpan(
+      supplyPoints, spanLimit, stepLimit, false,
+    );
+    const returned = this.buildLegacyTotalizerSpan(
+      returnPoints, spanLimit, stepLimit, true,
+    );
     const total = supply - returned;
     return Number.isFinite(total) ? total : 0;
   }
 
-  private buildLegacyTotalizerSpan(points: readonly NumericPoint[], inclusiveStep: boolean): number {
+  private buildLegacyTotalizerSpan(
+    points: readonly NumericPoint[],
+    spanLimit: number,
+    stepLimit: number,
+    inclusiveStep: boolean,
+  ): number {
     const sorted = [...points].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     let minimum = 0;
     let maximum = 0;
@@ -1647,8 +2277,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         if (value < 100_000_000) minimum = value;
         continue;
       }
-      if (value - minimum >= 8000) continue;
-      const validStep = (delta: number) => (inclusiveStep ? delta <= 300 : delta < 300);
+      if (value - minimum >= spanLimit) continue;
+      const validStep = (delta: number) =>
+        inclusiveStep ? delta <= stepLimit : delta < stepLimit;
       if (maximum > 0) {
         if (value > maximum && validStep(value - maximum)) maximum = value;
       } else if (validStep(value - minimum)) {
@@ -1694,7 +2325,11 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         continue;
       }
 
-      const bucket = this.floorToMinute(point.timestamp).getTime();
+      const bucket = point.timestamp.getTime();
+      if (!Number.isFinite(bucket) || bucket % MINUTE_MS !== 0) {
+        nonZeroIndex += 1;
+        continue;
+      }
       if (value > previous) {
         const delta = value - previous;
         if (delta <= maximumDelta) {
@@ -1767,10 +2402,47 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return result;
   }
 
+  private isLegacyHistorianBundle(
+    response: any,
+  ): response is Array<{ __legacyTagName: string; __legacyResponse: any }> {
+    return (
+      Array.isArray(response) &&
+      response.every(
+        (item) =>
+          item &&
+          typeof item === 'object' &&
+          typeof item.__legacyTagName === 'string' &&
+          Object.prototype.hasOwnProperty.call(item, '__legacyResponse'),
+      )
+    );
+  }
+
+  private extractLegacyHistorianBundle(
+    bundle: Array<{ __legacyTagName: string; __legacyResponse: any }>,
+    requestedTags: readonly string[],
+  ): Map<string, NumericPoint[]> {
+    const result = new Map<string, NumericPoint[]>();
+    requestedTags.forEach((tag) => result.set(this.tagKey(tag), []));
+
+    for (const item of bundle) {
+      const tagName = item.__legacyTagName;
+      const singleSeries = this.extractHistorianSeries(item.__legacyResponse, [tagName], true);
+      const key = this.tagKey(tagName);
+      const points = singleSeries.get(key) || [];
+      result.set(key, [...(result.get(key) || []), ...points]);
+    }
+
+    return this.sortSeries(result);
+  }
+
   private extractHistorianSeries(
     response: any,
     requestedTags: readonly string[],
+    legacyUtcTimestamps = false,
   ): Map<string, NumericPoint[]> {
+    if (this.isLegacyHistorianBundle(response)) {
+      return this.extractLegacyHistorianBundle(response, requestedTags);
+    }
     const result = new Map<string, NumericPoint[]>();
     requestedTags.forEach((tag) => result.set(this.tagKey(tag), []));
 
@@ -1779,7 +2451,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
 
     if (Array.isArray(source) && source.length > 0 && this.looksLikeMultiValueRecord(source[0])) {
       source.forEach((record: any) => {
-        const timestamp = this.parseDate(this.getRecordTimestamp(record));
+        const timestamp = legacyUtcTimestamps
+          ? this.parseLegacyHistorianDate(this.getRecordTimestamp(record))
+          : this.parseDate(this.getRecordTimestamp(record));
         const values = record?.Values || record?.values;
         if (!timestamp || !Array.isArray(values)) return;
         values.forEach((rawValue: any, index: number) => {
@@ -1799,7 +2473,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       const records = this.extractRecords(series);
 
       if (records.length === 0 && this.looksLikeFlatRecord(series)) {
-        const timestamp = this.parseDate(this.getRecordTimestamp(series));
+        const timestamp = legacyUtcTimestamps
+          ? this.parseLegacyHistorianDate(this.getRecordTimestamp(series))
+          : this.parseDate(this.getRecordTimestamp(series));
         const value = this.parseNumber(this.getRecordValue(series));
         if (timestamp && value !== null && tagName) {
           this.pushSeriesPoint(result, tagName, timestamp, value);
@@ -1808,7 +2484,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       }
 
       records.forEach((record: any) => {
-        const timestamp = this.parseDate(this.getRecordTimestamp(record));
+        const timestamp = legacyUtcTimestamps
+          ? this.parseLegacyHistorianDate(this.getRecordTimestamp(record))
+          : this.parseDate(this.getRecordTimestamp(record));
         const value = this.parseNumber(this.getRecordValue(record));
         const recordTag = this.getTagName(record) || tagName;
         if (!timestamp || value === null || !recordTag) return;
@@ -2019,6 +2697,41 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
+  private parseLegacyHistorianDate(value: any): Date | null {
+    if (value === null || value === undefined || value === '') return null;
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : new Date(value.getTime());
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return this.parseDate(value);
+    }
+
+    const text = String(value).trim();
+    const dotNet = /\/Date\(([-+]?\d+)/.exec(text);
+    if (dotNet) {
+      const date = new Date(Number(dotNet[1]));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(text)) {
+      return this.parseDate(text);
+    }
+
+    // SCReportingService applies TimeStamp.AddHours(7). Parsing a naive logger
+    // timestamp as UTC produces the same +07:00 alignment in the Thailand UI.
+    const parts = /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,7}))?)?$/.exec(text);
+    if (parts) {
+      const milliseconds = Number(`0.${parts[7] || '0'}`) * 1000;
+      const date = new Date(Date.UTC(
+        Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]),
+        Number(parts[4]), Number(parts[5]), Number(parts[6] || 0), Math.floor(milliseconds),
+      ));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    return this.parseDate(text);
+  }
+
   private downsampleSpeedSeries(
     speed: Map<number, number>,
     start: number,
@@ -2074,7 +2787,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
   }
 
   private resolveModeFromGpsSpeed(speed: number | null): string | null {
-    if (speed === null || !Number.isFinite(speed) || speed < 0 || speed > 80) return null;
+    if (speed === null || !Number.isFinite(speed)) return null;
     if (speed <= 2) return 'Standby';
     if (speed <= 3.5) return 'Cargo Operation';
     if (speed <= 10) return 'Manoeuvring';

@@ -12,6 +12,10 @@ import {
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
 import {
+  buildLegacyPdfFuelDeltaMap,
+  normalizeModeFuelToOfficialTotal,
+} from '../../common/pdf-mode-parity';
+import {
   SC_RAJA_MODE_HISTORIAN_TAG,
   SC_RAJA_REPORT_PROFILE,
 } from './sc-raja-report.profile';
@@ -688,6 +692,13 @@ export class ScRajaReportService implements VesselReportAdapter {
         litresPerHour: runningHours > 0 ? fuelUsed / runningHours : null,
       } satisfies ScRajaModeSummaryRow;
     });
+    // A one-day UI report must preserve the already verified daily values exactly.
+    // Re-aggregating the same row can introduce small percentage/LPH rounding drift.
+    const pdfParityModeSummary =
+      reports.length === 1
+        ? reports[0].modeSummary.map((row) => ({ ...row }))
+        : modeSummary;
+
 
     const passageReports = reports.map((report) => report.passageSummary);
     const passageMainEngines = (['port', 'starboard'] as const).map((key) => {
@@ -908,7 +919,7 @@ export class ScRajaReportService implements VesselReportAdapter {
       mainEngineFuelTotal,
       auxiliaryFuelTotal,
       totalFuelUsed,
-      modeSummary,
+      modeSummary: pdfParityModeSummary,
       passageSummary,
       tracking,
       hourly,
@@ -976,6 +987,29 @@ export class ScRajaReportService implements VesselReportAdapter {
     const saeDailyFuel = this.buildLegacyDailyFuelTotal(
       series.get(this.tagKey(TAGS.saeFuelIn)) || [],
       series.get(this.tagKey(TAGS.saeFuelOut)) || [],
+    );
+
+    // PDF page-2 Mode fuel must use the legacy SCReportingService raw totalizer deltas.
+    // Do not interpolate totalizer gaps: a gap can move fuel into the wrong vessel Mode.
+    const pmePdfModeFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.pmeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.pmeFuelOut)) || [],
+      { supplyMaxDelta: 500, returnMaxDelta: 500, recoverAfterRejectedJump: true },
+    );
+    const smePdfModeFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.smeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.smeFuelOut)) || [],
+      { supplyMaxDelta: 500, returnMaxDelta: 500, recoverAfterRejectedJump: true },
+    );
+    const paePdfModeFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.paeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.paeFuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true },
+    );
+    const saePdfModeFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.saeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.saeFuelOut)) || [],
+      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true },
     );
 
     const elapsedHours = Math.max(
@@ -1163,7 +1197,8 @@ export class ScRajaReportService implements VesselReportAdapter {
         const modeKey = this.resolveModeProfileKey(modeLabel);
         const mode = modeMap.get(modeKey);
         if (mode) {
-          mode.fuelUsed += minuteFuel;
+          const pdfModeMinuteFuel = (pmePdfModeFuel.get(bucket) || 0) + (smePdfModeFuel.get(bucket) || 0) + (paePdfModeFuel.get(bucket) || 0) + (saePdfModeFuel.get(bucket) || 0);
+          mode.fuelUsed += pdfModeMinuteFuel;
           mode.runningHours += 1 / 60;
           mode.distanceNm += distance;
           modeMinuteKeys.get(modeKey)?.push(bucket);
@@ -1174,7 +1209,7 @@ export class ScRajaReportService implements VesselReportAdapter {
     const rawModeFuelTotal = Array.from(modeMap.values()).reduce((sum, row) => sum + row.fuelUsed, 0);
     const modeFuelScale = rawModeFuelTotal > 0 && totalFuelUsed >= 0 ? totalFuelUsed / rawModeFuelTotal : 0;
     const observedModeHours = Math.max(0, modeAvailableMinutes / 60);
-    const modeSummary = SC_RAJA_REPORT_PROFILE.modes.map((profileMode) => {
+    const rawModeSummary = SC_RAJA_REPORT_PROFILE.modes.map((profileMode) => {
       const row = modeMap.get(profileMode.key)!;
       const fuelUsed = rawModeFuelTotal > 0 ? row.fuelUsed * modeFuelScale : 0;
       const fuelPercent = totalFuelUsed > 0 ? (fuelUsed / totalFuelUsed) * 100 : 0;
@@ -1188,6 +1223,10 @@ export class ScRajaReportService implements VesselReportAdapter {
         litresPerHour: row.runningHours > 0 ? fuelUsed / row.runningHours : null,
       };
     });
+    const modeSummary = normalizeModeFuelToOfficialTotal<ScRajaModeSummaryRow>(
+      rawModeSummary,
+      totalFuelUsed,
+    );
 
     const dominantMode = [...modeSummary].sort((a, b) => {
       if (b.fuelUsed !== a.fuelUsed) return b.fuelUsed - a.fuelUsed;
@@ -1286,7 +1325,7 @@ export class ScRajaReportService implements VesselReportAdapter {
       };
     });
 
-    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 260);
+    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 1600);
     const validSpeedValues = Array.from(gpsSpeed.entries())
       .filter(([bucket, value]) => bucket >= minuteStart && bucket <= minuteEnd && value >= 0 && Number.isFinite(value))
       .map(([, value]) => value);

@@ -56,7 +56,8 @@
       </span>
     </div>
 
-    <div class="vessel-list" *ngIf="visibleVessels.length > 0">
+    <div #vesselList class="vessel-list" *ngIf="visibleVessels.length > 0"
+      (scroll)="onVesselListScroll(vesselList.scrollTop)">
       <div
         #vesselCard
         class="vessel-card"

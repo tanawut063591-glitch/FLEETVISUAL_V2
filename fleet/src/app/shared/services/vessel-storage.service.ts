@@ -5,10 +5,12 @@ import { Injectable } from '@angular/core';
 })
 export class VesselStorageService {
   private readonly storageKeys = [
+    // Report-specific selection comes first so a browser refresh restores the exact
+    // vessel that was open on Report instead of an older selection from another page.
+    'reportVessel',
     'selectedVessel',
     'realtimeVessel',
     'pastTrackVessel',
-    'reportVessel',
     'activeVessel',
   ];
 

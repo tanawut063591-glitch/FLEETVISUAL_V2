@@ -12,6 +12,11 @@ import {
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
 import {
+  buildGpsPdfParityModeSummary,
+  buildLegacyPdfFuelDeltaMap,
+  isCompletedDailyWindow,
+} from '../../common/pdf-mode-parity';
+import {
   SC_GLORY_2_MODE_HISTORIAN_TAG,
   SC_GLORY_2_REPORT_PROFILE,
 } from './sc-glory-2-report.profile';
@@ -360,13 +365,29 @@ export class ScGlory2ReportService implements VesselReportAdapter {
     }
 
     const requestTags = ALL_TAGS.map((tagName) => ({ name: tagName, tagName }));
-    const request$ = this.newHttp
-      .getHistorianValues(
-        this.formatHistorianRequestTime(start),
-        this.formatHistorianRequestTime(end),
-        requestTags,
-      )
-      .pipe(
+    const completedDaily = isCompletedDailyWindow(start, end, MINUTE_MS);
+    const historianEnd = completedDaily
+      ? new Date(start.getTime() + 24 * 60 * MINUTE_MS)
+      : end;
+    const requestStartText = this.formatHistorianRequestTime(start);
+    const requestEndText = this.formatHistorianRequestTime(historianEnd);
+
+    // Completed Daily UI must read the historian exactly like SCReportingService/PDF:
+    // one tag per loggergethistorianvalues request, including next-day 00:00.
+    const historianRequest$: Observable<any> = completedDaily
+      ? from(ALL_TAGS).pipe(
+          mergeMap(
+            (tagName) =>
+              this.newHttp.getRawData(requestStartText, requestEndText, [{ name: tagName, tagName }]).pipe(
+                map((response) => ({ __legacyTagName: tagName, __legacyResponse: response })),
+              ),
+            1,
+          ),
+          toArray(),
+        )
+      : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
+
+    const request$ = historianRequest$.pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
           this.detailedReportCache.set(key, {
@@ -665,6 +686,13 @@ export class ScGlory2ReportService implements VesselReportAdapter {
         litresPerHour: runningHours > 0 ? fuelUsed / runningHours : null,
       } satisfies ScGlory2ModeSummaryRow;
     });
+    // A one-day UI report must preserve the already verified daily values exactly.
+    // Re-aggregating the same row can introduce small percentage/LPH rounding drift.
+    const pdfParityModeSummary =
+      reports.length === 1
+        ? reports[0].modeSummary.map((row) => ({ ...row }))
+        : modeSummary;
+
 
     const passageReports = reports.map((report) => report.passageSummary);
     const passageMainEngines = (['port', 'center', 'starboard'] as const).map((key) => {
@@ -875,7 +903,7 @@ export class ScGlory2ReportService implements VesselReportAdapter {
       mainEngineFuelTotal,
       auxiliaryFuelTotal,
       totalFuelUsed,
-      modeSummary,
+      modeSummary: pdfParityModeSummary,
       passageSummary,
       tracking,
       hourly,
@@ -891,6 +919,14 @@ export class ScGlory2ReportService implements VesselReportAdapter {
     const series = this.extractHistorianSeries(response, ALL_TAGS);
     const minuteStart = this.floorToMinute(periodStart).getTime();
     const minuteEnd = Math.max(minuteStart + MINUTE_MS, this.floorToMinute(periodEnd).getTime());
+    const completedDaily = isCompletedDailyWindow(
+      this.floorToMinute(periodStart),
+      this.floorToMinute(periodEnd),
+      MINUTE_MS,
+    );
+    const pdfModeDataEnd = completedDaily
+      ? minuteStart + 24 * 60 * MINUTE_MS
+      : minuteEnd;
     const minuteCount = Math.max(1, Math.floor((minuteEnd - minuteStart) / MINUTE_MS) + 1);
 
     const gpsSpeed = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsSpeed)) || []);
@@ -1122,23 +1158,51 @@ export class ScGlory2ReportService implements VesselReportAdapter {
       }
     }
 
-    const rawModeFuelTotal = Array.from(modeMap.values()).reduce((sum, row) => sum + row.fuelUsed, 0);
-    const modeFuelScale = rawModeFuelTotal > 0 && totalFuelUsed > 0 ? totalFuelUsed / rawModeFuelTotal : 1;
-    const observedModeHours = Math.max(0, gpsAvailableMinutes / 60);
-    const modeSummary = SC_GLORY_2_REPORT_PROFILE.modes.map((profileMode) => {
-      const row = modeMap.get(profileMode.key)!;
-      const fuelUsed = row.fuelUsed * modeFuelScale;
-      const fuelPercent = totalFuelUsed > 0 ? (fuelUsed / totalFuelUsed) * 100 : 0;
-      const runningPercent = observedModeHours > 0 ? (row.runningHours / observedModeHours) * 100 : 0;
-      return {
-        ...row,
-        fuelUsed,
-        fuelPercent,
-        runningPercent,
-        litresPerNm: row.distanceNm > 0 ? fuelUsed / row.distanceNm : null,
-        litresPerHour: row.runningHours > 0 ? fuelUsed / row.runningHours : null,
-      };
+    const pdfModePMEFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.pmeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.pmeFuelOut)) || [],
+      { supplyMaxDelta: 100, returnMaxDelta: 100, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+    );
+    const pdfModeCMEFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.cmeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.cmeFuelOut)) || [],
+      { supplyMaxDelta: 100, returnMaxDelta: 100, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+    );
+    const pdfModeSMEFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.smeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.smeFuelOut)) || [],
+      { supplyMaxDelta: 100, returnMaxDelta: 100, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+    );
+    const pdfModePAEFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.paeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.paeFuelOut)) || [],
+      { supplyMaxDelta: 1000, returnMaxDelta: 1000, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+    );
+    const pdfModeSAEFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.saeFuelIn)) || [],
+      series.get(this.tagKey(TAGS.saeFuelOut)) || [],
+      { supplyMaxDelta: 1000, returnMaxDelta: 1000, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+    );
+
+    const pdfParityMode = buildGpsPdfParityModeSummary({
+      modes: SC_GLORY_2_REPORT_PROFILE.modes,
+      minuteStart,
+      dataEnd: pdfModeDataEnd,
+      completedDaily,
+      minuteMs: MINUTE_MS,
+      officialTotalFuel: totalFuelUsed,
+      gpsSpeed,
+      minuteFuelAt: (minute) =>
+        (pdfModePMEFuel.get(minute) || 0) +
+        (pdfModeCMEFuel.get(minute) || 0) +
+        (pdfModeSMEFuel.get(minute) || 0) +
+        (pdfModePAEFuel.get(minute) || 0) +
+        (pdfModeSAEFuel.get(minute) || 0),
+      resolveModeLabel: (speed) => this.resolveModeFromGpsSpeed(speed),
+      resolveModeKey: (label) => this.resolveModeProfileKey(label),
+      standbyLabel: 'Standby',
     });
+    const modeSummary = pdfParityMode.modeSummary as ScGlory2ModeSummaryRow[];
 
     const passageSummary = this.buildPassageSummary(
       passageMinuteKeys,
@@ -1221,7 +1285,7 @@ export class ScGlory2ReportService implements VesselReportAdapter {
       };
     });
 
-    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 260);
+    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 1600);
     const validSpeedValues = Array.from(gpsSpeed.entries())
       .filter(
         ([bucket, value]) =>
@@ -1520,10 +1584,47 @@ export class ScGlory2ReportService implements VesselReportAdapter {
     return result;
   }
 
+  private isLegacyHistorianBundle(
+    response: any,
+  ): response is Array<{ __legacyTagName: string; __legacyResponse: any }> {
+    return (
+      Array.isArray(response) &&
+      response.every(
+        (item) =>
+          item &&
+          typeof item === 'object' &&
+          typeof item.__legacyTagName === 'string' &&
+          Object.prototype.hasOwnProperty.call(item, '__legacyResponse'),
+      )
+    );
+  }
+
+  private extractLegacyHistorianBundle(
+    bundle: Array<{ __legacyTagName: string; __legacyResponse: any }>,
+    requestedTags: readonly string[],
+  ): Map<string, NumericPoint[]> {
+    const result = new Map<string, NumericPoint[]>();
+    requestedTags.forEach((tag) => result.set(this.tagKey(tag), []));
+
+    for (const item of bundle) {
+      const tagName = item.__legacyTagName;
+      const singleSeries = this.extractHistorianSeries(item.__legacyResponse, [tagName], true);
+      const key = this.tagKey(tagName);
+      const points = singleSeries.get(key) || [];
+      result.set(key, [...(result.get(key) || []), ...points]);
+    }
+
+    return this.sortSeries(result);
+  }
+
   private extractHistorianSeries(
     response: any,
     requestedTags: readonly string[],
+    legacyUtcTimestamps = false,
   ): Map<string, NumericPoint[]> {
+    if (this.isLegacyHistorianBundle(response)) {
+      return this.extractLegacyHistorianBundle(response, requestedTags);
+    }
     const result = new Map<string, NumericPoint[]>();
     requestedTags.forEach((tag) => result.set(this.tagKey(tag), []));
 
@@ -1532,7 +1633,9 @@ export class ScGlory2ReportService implements VesselReportAdapter {
 
     if (Array.isArray(source) && source.length > 0 && this.looksLikeMultiValueRecord(source[0])) {
       source.forEach((record: any) => {
-        const timestamp = this.parseDate(this.getRecordTimestamp(record));
+        const timestamp = legacyUtcTimestamps
+          ? this.parseLegacyHistorianDate(this.getRecordTimestamp(record))
+          : this.parseDate(this.getRecordTimestamp(record));
         const values = record?.Values || record?.values;
         if (!timestamp || !Array.isArray(values)) return;
         values.forEach((rawValue: any, index: number) => {
@@ -1552,7 +1655,9 @@ export class ScGlory2ReportService implements VesselReportAdapter {
       const records = this.extractRecords(series);
 
       if (records.length === 0 && this.looksLikeFlatRecord(series)) {
-        const timestamp = this.parseDate(this.getRecordTimestamp(series));
+        const timestamp = legacyUtcTimestamps
+          ? this.parseLegacyHistorianDate(this.getRecordTimestamp(series))
+          : this.parseDate(this.getRecordTimestamp(series));
         const value = this.parseNumber(this.getRecordValue(series));
         if (timestamp && value !== null && tagName) {
           this.pushSeriesPoint(result, tagName, timestamp, value);
@@ -1561,7 +1666,9 @@ export class ScGlory2ReportService implements VesselReportAdapter {
       }
 
       records.forEach((record: any) => {
-        const timestamp = this.parseDate(this.getRecordTimestamp(record));
+        const timestamp = legacyUtcTimestamps
+          ? this.parseLegacyHistorianDate(this.getRecordTimestamp(record))
+          : this.parseDate(this.getRecordTimestamp(record));
         const value = this.parseNumber(this.getRecordValue(record));
         const recordTag = this.getTagName(record) || tagName;
         if (!timestamp || value === null || !recordTag) return;
@@ -1770,6 +1877,41 @@ export class ScGlory2ReportService implements VesselReportAdapter {
     }
     const date = new Date(text);
     return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private parseLegacyHistorianDate(value: any): Date | null {
+    if (value === null || value === undefined || value === '') return null;
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : new Date(value.getTime());
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return this.parseDate(value);
+    }
+
+    const text = String(value).trim();
+    const dotNet = /\/Date\(([-+]?\d+)/.exec(text);
+    if (dotNet) {
+      const date = new Date(Number(dotNet[1]));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(text)) {
+      return this.parseDate(text);
+    }
+
+    // SCReportingService applies TimeStamp.AddHours(7). Parsing a naive logger
+    // timestamp as UTC produces the same +07:00 alignment in the Thailand UI.
+    const parts = /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,7}))?)?$/.exec(text);
+    if (parts) {
+      const milliseconds = Number(`0.${parts[7] || '0'}`) * 1000;
+      const date = new Date(Date.UTC(
+        Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]),
+        Number(parts[4]), Number(parts[5]), Number(parts[6] || 0), Math.floor(milliseconds),
+      ));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    return this.parseDate(text);
   }
 
   private downsampleSpeedSeries(

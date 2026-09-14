@@ -375,6 +375,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   historicalPdfDownloading = false;
   speedPerformancePolyline = '';
   speedPerformancePoints: ReportSpeedChartPoint[] = [];
+  speedHoverPoint: ReportSpeedChartPoint | null = null;
   hourlySpeedPolyline = '';
   hourlyMainFuelPolyline = '';
   hourlyAuxFuelPolyline = '';
@@ -487,6 +488,8 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   private selectedVessel: any = null;
   private readonly selectedVesselSource = new BehaviorSubject<any>(null);
+  private readonly historicalAutoLoadRequest$ = new Subject<void>();
+  private readonly historicalUiStateStorageKey = 'fleet.report.historical-ui-state.v1';
   private readonly reportRequestCancel$ = new Subject<void>();
   private readonly destroy$ = new Subject<void>();
   private readonly archiveLookupRequest$ = new Subject<ArchiveLookupRequest>();
@@ -532,9 +535,11 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.historicalRangeStart = this.dateFormat.formatDateInput(this.dateFormat.addDays(defaultDate, -6));
     this.historicalRangeEnd = this.dateFormat.formatDateInput(defaultDate);
     this.historicalMonth = this.dateFormat.formatMonthInput(lastCompletedMonth);
+    this.restoreHistoricalUiState();
   }
 
   ngOnInit(): void {
+    this.watchHistoricalAutoLoad();
     this.loadStoredVessel();
     this.watchActiveVessel();
     // Realtime report rendering/polling is intentionally not started on the Report page.
@@ -542,6 +547,11 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.watchLocalArchiveAvailability();
     this.syncRealtimePolling();
     this.refreshLocalArchiveAvailability();
+
+    // Report behaves like Realtime on entry/refresh: restore the last vessel and render
+    // the completed web report automatically. The debounce below coalesces startup/store
+    // emissions so a browser refresh never fans out duplicate historian requests.
+    this.requestHistoricalAutoLoad();
   }
 
   ngOnDestroy(): void {
@@ -553,6 +563,7 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.revokePdfUrl();
     
     this.selectedVesselSource.complete();
+    this.historicalAutoLoadRequest$.complete();
     this.archiveLookupRequest$.complete();
     this.reportRequestCancel$.complete();
     this.destroy$.next();
@@ -771,8 +782,8 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   get historicalReportDescription(): string {
     return this.historicalUiPeriodMode === 'month'
-      ? 'Defaults to the previous completed month. Select an older month when you need a historical summary.'
-      : 'Defaults to yesterday, 00:00–23:59. Select an older completed day when you need to review history.';
+      ? 'Defaults to the previous completed month. Vessel and period changes load automatically.'
+      : 'Defaults to yesterday, 00:00–23:59. Vessel and date changes load automatically.';
   }
 
   get historicalQuickPeriodLabel(): string {
@@ -1357,6 +1368,7 @@ export class ReportComponent implements OnInit, OnDestroy {
       if (this.dedicatedReportServiceActive) {
         this.fileReportView = 'history';
         this.resetScGlory1DailyReport();
+        this.requestHistoricalAutoLoad();
       } else {
         this.refreshLocalArchiveAvailability(true);
       }
@@ -1384,6 +1396,7 @@ export class ReportComponent implements OnInit, OnDestroy {
         this.historicalDate = this.selectedDate;
       }
       this.historicalValidationError = '';
+      this.persistHistoricalUiState();
     }
 
     const alreadyOpen = this.isHistoricalUiView;
@@ -1391,9 +1404,8 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.activeTab = 'files';
     this.syncRealtimePolling();
 
-    if (!alreadyOpen) {
-      // Preserve the already loaded historian report when returning from the PDF viewer.
-      // A new server request is made only when the user explicitly presses Load report.
+    if (!alreadyOpen || !this.scGlory1DailyReport) {
+      this.requestHistoricalAutoLoad();
     }
 
     this.changeDetector.markForCheck();
@@ -1469,7 +1481,9 @@ export class ReportComponent implements OnInit, OnDestroy {
 
     this.historicalUiPeriodMode = nextMode;
     this.historicalValidationError = '';
+    this.persistHistoricalUiState();
     this.resetScGlory1DailyReport();
+    this.requestHistoricalAutoLoad();
     this.changeDetector.markForCheck();
   }
 
@@ -1479,7 +1493,8 @@ export class ReportComponent implements OnInit, OnDestroy {
       const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       this.historicalMonth = this.dateFormat.formatMonthInput(previousMonth);
       this.historicalValidationError = '';
-      this.loadHistoricalUiReport(false);
+      this.persistHistoricalUiState();
+      this.requestHistoricalAutoLoad();
       return;
     }
 
@@ -1587,6 +1602,9 @@ export class ReportComponent implements OnInit, OnDestroy {
     }
     this.historicalUiPeriodMode = mode;
     this.historicalValidationError = '';
+    this.persistHistoricalUiState();
+    this.resetScGlory1DailyReport();
+    this.requestHistoricalAutoLoad();
     this.changeDetector.markForCheck();
   }
 
@@ -1605,12 +1623,13 @@ export class ReportComponent implements OnInit, OnDestroy {
     if (field === 'end') this.historicalRangeEnd = value;
     if (field === 'month') this.historicalMonth = value;
     this.historicalValidationError = '';
+    this.persistHistoricalUiState();
 
-    // Never leave data from the previously loaded period under a newly selected
-    // date/month. The user explicitly loads the new period, which keeps server
-    // traffic controlled and prevents a visual/report-period mismatch.
-    if (value !== previousValue && this.scGlory1DailyReport) {
+    // Never leave data from the previous period under a newly selected date/month.
+    // Auto-load is debounced so date-picker/store emissions cannot fan out requests.
+    if (value !== previousValue) {
       this.resetScGlory1DailyReport();
+      this.requestHistoricalAutoLoad();
     }
 
     this.changeDetector.markForCheck();
@@ -1621,7 +1640,8 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.historicalUiPeriodMode = 'day';
     this.historicalDate = this.dateFormat.formatDateInput(yesterday);
     this.historicalValidationError = '';
-    this.loadHistoricalUiReport(false);
+    this.persistHistoricalUiState();
+    this.requestHistoricalAutoLoad();
   }
 
   useHistoricalLast7Days(): void {
@@ -1631,7 +1651,8 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.historicalRangeStart = this.dateFormat.formatDateInput(start);
     this.historicalRangeEnd = this.dateFormat.formatDateInput(end);
     this.historicalValidationError = '';
-    this.loadHistoricalUiReport(false);
+    this.persistHistoricalUiState();
+    this.requestHistoricalAutoLoad();
   }
 
   useHistoricalCurrentMonth(): void {
@@ -1641,7 +1662,16 @@ export class ReportComponent implements OnInit, OnDestroy {
       new Date(now.getFullYear(), now.getMonth() - 1, 1),
     );
     this.historicalValidationError = '';
-    this.loadHistoricalUiReport(false);
+    this.persistHistoricalUiState();
+    this.requestHistoricalAutoLoad();
+  }
+
+  refreshHistoricalUiReport(): void {
+    if (this.scGlory1DailyLoading || !this.selectedVesselName || !this.isHistoricalUiView) {
+      return;
+    }
+
+    this.loadHistoricalUiReport(true);
   }
 
   loadHistoricalUiReport(force = false): void {
@@ -1655,6 +1685,9 @@ export class ReportComponent implements OnInit, OnDestroy {
       this.changeDetector.markForCheck();
       return;
     }
+
+    const requestVesselIdentity = this.getVesselIdentity(this.selectedVessel);
+    const requestPeriodKey = this.buildHistoricalPeriodKey(period.start, period.end, period.kind);
 
     this.scGlory1DailySubscription?.unsubscribe();
     this.scGlory1DailyLoading = true;
@@ -1683,6 +1716,21 @@ export class ReportComponent implements OnInit, OnDestroy {
       )
       .subscribe((report) => {
         if (!report || !this.isHistoricalUiView) return;
+
+        const currentPeriod = this.resolveHistoricalUiPeriod();
+        const currentPeriodKey = currentPeriod
+          ? this.buildHistoricalPeriodKey(currentPeriod.start, currentPeriod.end, currentPeriod.kind)
+          : '';
+
+        // Ignore late responses from a vessel/date that is no longer selected.
+        // This is especially important when operators click through the sidebar quickly.
+        if (
+          requestVesselIdentity !== this.getVesselIdentity(this.selectedVessel) ||
+          requestPeriodKey !== currentPeriodKey
+        ) {
+          return;
+        }
+
         this.scGlory1DailyReport = report;
         this.scGlory1DailySyncedAt = report.loadedAt;
         this.updateScGlory1DailyChartState(report);
@@ -1825,10 +1873,75 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.openChartTooltip(event, `Total Fuel · ${this.padHour(row.hour)}:00`, row.active ? lines : ['No historian data for this hour']);
   }
 
-  showSpeedPointTooltip(event: MouseEvent, point: ReportSpeedChartPoint): void {
-    this.openChartTooltip(event, this.formatChartDateTime(point.timestamp), [
-      `Speed: ${this.formatDailyValue(point.speed, 2)} kn`,
-    ]);
+  /**
+   * Stable Speed Performance hover.
+   *
+   * The chart can contain up to 1,441 minute points.  The old implementation
+   * placed a large invisible hover circle on every point, so those hit areas
+   * overlapped and the browser continuously switched between neighbouring
+   * circles while the pointer barely moved.  That made the timestamp/speed
+   * value appear to shake.
+   *
+   * Use one transparent plot overlay instead and resolve exactly one nearest
+   * X point.  The tooltip position still follows the pointer, while the value
+   * changes only when the nearest minute really changes.
+   */
+  showSpeedChartTooltip(event: MouseEvent): void {
+    const target = event.currentTarget as SVGGraphicsElement | null;
+    const svg = target?.ownerSVGElement;
+    if (!svg || this.speedPerformancePoints.length === 0) {
+      this.hideSpeedChartTooltip();
+      return;
+    }
+
+    const bounds = svg.getBoundingClientRect();
+    if (!(bounds.width > 0)) {
+      this.hideSpeedChartTooltip();
+      return;
+    }
+
+    // SVG viewBox is fixed at 0..680. The actual plot occupies X 10..670.
+    const chartX = Math.max(10, Math.min(670, ((event.clientX - bounds.left) / bounds.width) * 680));
+    const point = this.findNearestSpeedPoint(chartX);
+    if (!point) {
+      this.hideSpeedChartTooltip();
+      return;
+    }
+
+    if (this.speedHoverPoint !== point || !this.chartTooltipVisible) {
+      this.speedHoverPoint = point;
+      this.chartTooltipTitle = this.formatChartDateTime(point.timestamp);
+      this.chartTooltipLines = [`Speed: ${this.formatDailyValue(point.speed, 2)} kn`];
+      this.chartTooltipVisible = true;
+    }
+
+    this.positionChartTooltip(event);
+  }
+
+  hideSpeedChartTooltip(): void {
+    this.speedHoverPoint = null;
+    this.hideChartTooltip();
+  }
+
+  private findNearestSpeedPoint(chartX: number): ReportSpeedChartPoint | null {
+    const points = this.speedPerformancePoints;
+    if (points.length === 0) return null;
+    if (points.length === 1) return points[0];
+
+    let low = 0;
+    let high = points.length - 1;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (points[middle].x < chartX) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+
+    const right = points[low];
+    const left = points[Math.max(0, low - 1)];
+    return Math.abs(left.x - chartX) <= Math.abs(right.x - chartX) ? left : right;
   }
 
   showRoutePointTooltip(event: MouseEvent, point: ReportRouteChartPoint): void {
@@ -2659,10 +2772,8 @@ export class ReportComponent implements OnInit, OnDestroy {
 
         this.updateDerivedLiveState();
         if (this.dedicatedReportServiceActive) {
-          // Historical report data is request-on-demand only. Even if live
-          // observation is re-enabled later, it must never trigger a historian
-          // query in the background. This keeps Report predictable and light on
-          // the historian/API server.
+          // Historical Web Report auto-load is coordinated by the dedicated debounced
+          // loader. Live telemetry emissions must never trigger extra historian work.
           if (this.activeTab === 'live') {
             this.maybeLoadScGlory1DailyReport(false);
           }
@@ -2687,9 +2798,9 @@ export class ReportComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Selecting a vessel is intentionally cheap: cancel stale report work, update
-    // context only, and wait for the operator to press Load report. This prevents
-    // rapid sidebar browsing from fanning out historian/PDF requests.
+    // Cancel stale viewer work first so a late response can never paint data for
+    // the previously selected vessel. The dedicated historian service itself keeps
+    // a short cache, while the auto-load request below is debounced for fast browsing.
     this.reportRequestCancel$.next();
     this.selectedVessel = vessel;
     this.selectedVesselName = name;
@@ -2698,16 +2809,23 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.showAllModes = false;
     this.engineView = 'all';
     this.resetModeHistory();
-    // Resolve the vessel-specific report service immediately. Historical UI
-    // must remain available even when current realtime telemetry is offline.
+
+    // Resolve the vessel-specific report service immediately. Historical UI must
+    // remain available even when current realtime telemetry is offline. Selecting
+    // a supported vessel always returns to Web Report, even if the PDF view was open.
     this.activeVesselReportAdapter = this.vesselReportResolver.resolve(vessel);
+    if (this.activeVesselReportAdapter) {
+      this.activeTab = 'files';
+      this.fileReportView = 'history';
+    }
+
     this.resetScGlory1DailyReport();
     this.resetPreviewState();
+    this.syncRealtimePolling();
     this.refreshLocalArchiveAvailability(this.isOfficialPdfView);
 
-    // Vessel changes never auto-query historian data. The Report page is intentionally
-    // request-on-demand so browsing the vessel list stays light on the historian/server.
     if (this.isHistoricalUiView) {
+      this.requestHistoricalAutoLoad();
     }
 
     this.changeDetector.markForCheck();
@@ -2775,6 +2893,7 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.scGlory1DailySyncedAt = null;
     this.speedPerformancePolyline = '';
     this.speedPerformancePoints = [];
+    this.speedHoverPoint = null;
     this.hourlySpeedPolyline = '';
     this.hourlyMainFuelPolyline = '';
     this.hourlyAuxFuelPolyline = '';
@@ -2859,10 +2978,17 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.hourlyMaxStarboardAuxFuel = maxOf((row) => row.starboardAuxFuel);
     const hourlyMaxFourthAuxFuel = maxOf((row) => (row as any).fourthAuxFuel ?? null);
 
+    // Legacy PDFs (RptAverageSpd2) do not render the raw 24-hour GPS line
+    // directly. For a completed one-day report they retain non-zero GPS samples
+    // and show the real value only in the PDF display windows; outside those
+    // windows the retained samples are plotted on zero. Apply that display rule
+    // centrally so every vessel uses the same graph semantics.
+    const speedChartSeries = report.dayCount === 1
+      ? this.buildLegacyPdfSpeedDisplaySeries(report.speedSeries)
+      : [...report.speedSeries];
     const maximumSpeed = Math.max(
       1,
-      Number(report.maximumSpeed) || 0,
-      ...report.speedSeries.map((point) => Number(point.speed) || 0),
+      ...speedChartSeries.map((point) => Math.max(0, Number(point.speed) || 0)),
     );
     const dailyTrendMaximum = Math.max(
       1,
@@ -2881,7 +3007,12 @@ export class ReportComponent implements OnInit, OnDestroy {
       centerAuxFuel: this.buildChartAxis(this.hourlyMaxCenterAuxFuel),
       starboardAuxFuel: this.buildChartAxis(this.hourlyMaxStarboardAuxFuel),
       fourthAuxFuel: this.buildChartAxis(hourlyMaxFourthAuxFuel),
-      speed: this.buildChartAxis(maximumSpeed),
+      // DevExpress daily PDFs keep the speed axis tight to the plotted maximum
+      // (for example 11.04 kn => a 12 kn chart ceiling) instead of expanding
+      // to a generic dashboard nice-number ceiling such as 20 kn.
+      speed: report.dayCount === 1
+        ? this.buildLegacyPdfSpeedAxis(maximumSpeed)
+        : this.buildChartAxis(maximumSpeed),
       dailyTrend: this.buildChartAxis(dailyTrendMaximum),
     };
 
@@ -2956,9 +3087,9 @@ export class ReportComponent implements OnInit, OnDestroy {
       fourthAuxFuel: buildStats('fourthAuxFuel'),
     };
 
-    this.speedAxisLabels = this.buildSpeedAxisLabels(report, 7);
+    this.speedAxisLabels = this.buildSpeedAxisLabels(report, 13);
     this.speedPerformancePoints = this.buildSpeedChartPoints(
-      report.speedSeries,
+      speedChartSeries,
       680,
       180,
       10,
@@ -3284,6 +3415,46 @@ export class ReportComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Match SCReportingService RptAverageSpd2 / GetDataAverageSpeed2.
+   *
+   * The legacy PDF first ignores GPS rows whose value is exactly zero. It then
+   * plots the retained row at its real speed only during 05:00-09:00 and
+   * 15:00-19:00; 09:00 and 19:00 are included only at minute 00. Every other
+   * retained row is deliberately plotted at zero. This unusual rule exists in
+   * the archived SC GLORY / SC BRAVE report services and is why a normal raw
+   * historian line looks different from the generated PDF.
+   */
+  private buildLegacyPdfSpeedDisplaySeries(
+    points: readonly ScGlory1SpeedPoint[],
+  ): ScGlory1SpeedPoint[] {
+    return [...points]
+      .filter(
+        (point) =>
+          point?.timestamp instanceof Date &&
+          Number.isFinite(point.timestamp.getTime()) &&
+          Number.isFinite(point.speed) &&
+          point.speed !== 0,
+      )
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+      .map((point) => {
+        const date = point.timestamp;
+        const hour = date.getHours();
+        const minute = date.getMinutes();
+        const visibleWindow =
+          (hour >= 5 && hour < 9) ||
+          (hour === 9 && minute === 0) ||
+          (hour >= 15 && hour < 19) ||
+          (hour === 19 && minute === 0);
+
+        return {
+          timestamp: new Date(date.getTime()),
+          // GPSSpd is System.Single in the legacy DataTable.
+          speed: visibleWindow ? Math.fround(point.speed) : 0,
+        };
+      });
+  }
+
   private buildSpeedChartPoints(
     points: readonly ScGlory1SpeedPoint[],
     width: number,
@@ -3329,6 +3500,16 @@ export class ReportComponent implements OnInit, OnDestroy {
     }));
   }
 
+  private buildLegacyPdfSpeedAxis(maxValue: number): ReportChartAxis {
+    // DevExpress daily PDFs keep the speed axis tight to the observed maximum
+    // and use 1-knot tick spacing (e.g. 11.04 kn => 0..12). The generic UI
+    // axis used to expand the same data to 0..20, which visibly changed the graph.
+    const safeMax = Number.isFinite(maxValue) && maxValue > 0 ? maxValue : 1;
+    const axisMax = Math.max(1, Math.ceil(safeMax));
+    const ticks = Array.from({ length: axisMax + 1 }, (_, index) => axisMax - index);
+    return { max: axisMax, ticks };
+  }
+
   private buildChartAxis(maxValue: number, tickCount = 4): ReportChartAxis {
     const safeMax = Number.isFinite(maxValue) && maxValue > 0 ? maxValue : 1;
     const rawStep = safeMax / Math.max(1, tickCount);
@@ -3356,30 +3537,31 @@ export class ReportComponent implements OnInit, OnDestroy {
 
     const daySpan = Math.max(1, report.dayCount || 1);
     if (daySpan <= 1) {
-      const labels: ReportAxisLabel[] = [];
-      const dayStart = new Date(start);
-      dayStart.setHours(0, 0, 0, 0);
-      for (let hour = 0; hour <= 20; hour += 4) {
-        const timestamp = new Date(dayStart);
-        timestamp.setHours(hour, 0, 0, 0);
-        const timestampMs = timestamp.getTime();
-        if (timestampMs < startMs || timestampMs > endMs) continue;
-        labels.push({
-          label: `${String(hour).padStart(2, '0')}:00`,
-          position: Math.max(0, Math.min(1, (timestampMs - startMs) / (endMs - startMs))),
-        });
-      }
-
-      const lastLabelMs = labels.length
-        ? startMs + labels[labels.length - 1].position * (endMs - startMs)
-        : Number.NaN;
-      if (!Number.isFinite(lastLabelMs) || endMs - lastLabelMs > 30 * 60 * 1000) {
-        labels.push({
-          label: end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }),
-          position: 1,
-        });
-      }
-      return labels;
+      // Keep the full minute-resolution speed series, but render only a small
+      // number of X-axis labels. The previous 31-label PDF emulation caused
+      // labels to overlap badly in the responsive web chart. The report date
+      // is already shown in the header, so time-only labels are clearer here.
+      const labelCount = Math.max(2, Math.floor(count));
+      const spanMs = endMs - startMs;
+      return Array.from({ length: labelCount }, (_, index) => {
+        const position = index / (labelCount - 1);
+        // Snap interior labels to the nearest whole hour so a completed daily
+        // report reads 00:00 / 04:00 / 08:00 / ... / 23:59 instead of
+        // 03:59 / 07:59 caused by interpolating across a 23:59 end time.
+        const interpolatedMs = startMs + spanMs * position;
+        const snappedMs = index === 0
+          ? startMs
+          : index === labelCount - 1
+            ? endMs
+            : Math.round(interpolatedMs / 3_600_000) * 3_600_000;
+        const timestamp = new Date(snappedMs);
+        const hour = String(timestamp.getHours()).padStart(2, '0');
+        const minute = String(timestamp.getMinutes()).padStart(2, '0');
+        return {
+          label: `${hour}:${minute}`,
+          position,
+        };
+      });
     }
 
     const labelCount = Math.max(2, Math.floor(count));
@@ -4031,6 +4213,99 @@ export class ReportComponent implements OnInit, OnDestroy {
     });
 
     this.fuelDonutBackground = `conic-gradient(${segments.join(', ')})`;
+  }
+
+  private restoreHistoricalUiState(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const raw = window.sessionStorage.getItem(this.historicalUiStateStorageKey);
+      if (!raw) {
+        return;
+      }
+
+      const state = JSON.parse(raw) as Partial<{
+        mode: HistoricalUiPeriodMode;
+        date: string;
+        month: string;
+        rangeStart: string;
+        rangeEnd: string;
+      }>;
+
+      if (state.mode === 'day' || state.mode === 'month' || state.mode === 'range') {
+        this.historicalUiPeriodMode = state.mode;
+      }
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(state.date || '')) && String(state.date) <= this.maxHistoricalDate) {
+        this.historicalDate = String(state.date);
+      }
+
+      if (/^\d{4}-\d{2}$/.test(String(state.month || '')) && String(state.month) <= this.maxHistoricalMonth) {
+        this.historicalMonth = String(state.month);
+      }
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(state.rangeStart || ''))) {
+        this.historicalRangeStart = String(state.rangeStart);
+      }
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(state.rangeEnd || ''))) {
+        this.historicalRangeEnd = String(state.rangeEnd);
+      }
+    } catch {
+      // Invalid browser state falls back to the safe completed-period defaults.
+    }
+  }
+
+  private persistHistoricalUiState(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      window.sessionStorage.setItem(
+        this.historicalUiStateStorageKey,
+        JSON.stringify({
+          mode: this.historicalUiPeriodMode,
+          date: this.historicalDate,
+          month: this.historicalMonth,
+          rangeStart: this.historicalRangeStart,
+          rangeEnd: this.historicalRangeEnd,
+        }),
+      );
+    } catch {}
+  }
+
+  private watchHistoricalAutoLoad(): void {
+    this.historicalAutoLoadRequest$
+      .pipe(
+        debounceTime(180),
+        takeUntil(this.destroy$),
+      )
+      .subscribe(() => {
+        if (!this.isHistoricalUiView || !this.selectedVesselName || !this.activeHistoricalReportService) {
+          return;
+        }
+
+        this.loadHistoricalUiReport(false);
+      });
+  }
+
+  private requestHistoricalAutoLoad(): void {
+    if (!this.isHistoricalUiView || !this.selectedVesselName || !this.activeHistoricalReportService) {
+      return;
+    }
+
+    this.historicalAutoLoadRequest$.next();
+  }
+
+  private buildHistoricalPeriodKey(
+    start: Date,
+    end: Date,
+    kind: ScGlory1UiPeriodKind,
+  ): string {
+    return `${kind}|${start.getTime()}|${end.getTime()}`;
   }
 
   private syncRealtimePolling(): void {

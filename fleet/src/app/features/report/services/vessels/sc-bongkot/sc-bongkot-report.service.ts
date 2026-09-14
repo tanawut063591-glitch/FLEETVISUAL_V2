@@ -12,6 +12,10 @@ import {
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
 import {
+  buildLegacyPdfFuelDeltaMap,
+  normalizeModeFuelToOfficialTotal,
+} from '../../common/pdf-mode-parity';
+import {
   SC_BONGKOT_MODE_HISTORIAN_TAG,
   SC_BONGKOT_REPORT_PROFILE,
 } from './sc-bongkot-report.profile';
@@ -649,6 +653,13 @@ export class ScBongkotReportService implements VesselReportAdapter {
         litresPerHour: runningHours > 0 ? fuelUsed / runningHours : null,
       } satisfies ScBongkotModeSummaryRow;
     });
+    // A one-day UI report must preserve the already verified daily values exactly.
+    // Re-aggregating the same row can introduce small percentage/LPH rounding drift.
+    const pdfParityModeSummary =
+      reports.length === 1
+        ? reports[0].modeSummary.map((row) => ({ ...row }))
+        : modeSummary;
+
 
     const passageReports = reports.map((report) => report.passageSummary);
     const passageMainEngines = (['port', 'starboard'] as const).map((key) => {
@@ -846,7 +857,7 @@ export class ScBongkotReportService implements VesselReportAdapter {
       mainEngineFuelTotal,
       auxiliaryFuelTotal,
       totalFuelUsed,
-      modeSummary,
+      modeSummary: pdfParityModeSummary,
       passageSummary,
       tracking,
       hourly,
@@ -897,6 +908,29 @@ export class ScBongkotReportService implements VesselReportAdapter {
       series.get(this.tagKey(TAGS.ae4FuelIn)) || [],
       series.get(this.tagKey(TAGS.ae4FuelOut)) || [],
       300,
+    );
+
+    // PDF page-2 Mode fuel must use the legacy SCReportingService raw totalizer deltas.
+    // Do not interpolate totalizer gaps: a gap can move fuel into the wrong vessel Mode.
+    const ae1PdfModeFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.ae1FuelIn)) || [],
+      series.get(this.tagKey(TAGS.ae1FuelOut)) || [],
+      { supplyMaxDelta: 550, returnMaxDelta: 550, recoverAfterRejectedJump: true },
+    );
+    const ae2PdfModeFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.ae2FuelIn)) || [],
+      series.get(this.tagKey(TAGS.ae2FuelOut)) || [],
+      { supplyMaxDelta: 550, returnMaxDelta: 550, recoverAfterRejectedJump: true },
+    );
+    const ae3PdfModeFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.ae3FuelIn)) || [],
+      series.get(this.tagKey(TAGS.ae3FuelOut)) || [],
+      { supplyMaxDelta: 550, returnMaxDelta: 550, recoverAfterRejectedJump: true },
+    );
+    const ae4PdfModeFuel = buildLegacyPdfFuelDeltaMap(
+      series.get(this.tagKey(TAGS.ae4FuelIn)) || [],
+      series.get(this.tagKey(TAGS.ae4FuelOut)) || [],
+      { supplyMaxDelta: 550, returnMaxDelta: 550, recoverAfterRejectedJump: true },
     );
 
     this.foldCompletedDayBoundary(portMainRpm, minuteEnd, boundaryBucket);
@@ -1043,7 +1077,8 @@ export class ScBongkotReportService implements VesselReportAdapter {
         const modeKey = this.resolveModeProfileKey(modeLabel);
         const mode = modeMap.get(modeKey);
         if (mode) {
-          mode.fuelUsed += auxFuel;
+          const pdfModeMinuteFuel = (ae1PdfModeFuel.get(bucket) || 0) + (ae2PdfModeFuel.get(bucket) || 0) + (ae3PdfModeFuel.get(bucket) || 0) + (ae4PdfModeFuel.get(bucket) || 0);
+          mode.fuelUsed += pdfModeMinuteFuel;
           mode.runningHours += 1 / 60;
           mode.distanceNm += distance;
         }
@@ -1062,7 +1097,7 @@ export class ScBongkotReportService implements VesselReportAdapter {
       standby.runningHours = Math.max(0, elapsedHours - nonStandbyHours);
     }
 
-    const modeSummary = SC_BONGKOT_REPORT_PROFILE.modes.map((profileMode) => {
+    const rawModeSummary = SC_BONGKOT_REPORT_PROFILE.modes.map((profileMode) => {
       const row = modeMap.get(profileMode.key)!;
       const fuelUsed = rawModeFuelTotal > 0 ? row.fuelUsed * modeFuelScale : 0;
       const runningHours = row.runningHours;
@@ -1076,6 +1111,10 @@ export class ScBongkotReportService implements VesselReportAdapter {
         litresPerHour: runningHours > 0 ? fuelUsed / runningHours : null,
       };
     });
+    const modeSummary = normalizeModeFuelToOfficialTotal<ScBongkotModeSummaryRow>(
+      rawModeSummary,
+      totalFuelUsed,
+    );
 
     const dominantMode = modeSummary.reduce<ScBongkotModeSummaryRow | null>(
       (best, row) => !best || row.fuelUsed > best.fuelUsed ? row : best,
@@ -1141,7 +1180,7 @@ export class ScBongkotReportService implements VesselReportAdapter {
       };
     });
 
-    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 260);
+    const speedSeries = this.downsampleSpeedSeries(gpsSpeed, minuteStart, minuteEnd, 1600);
     const validSpeedValues = Array.from(gpsSpeed.entries())
       .filter(([bucket, value]) => bucket >= minuteStart && bucket <= minuteEnd && value >= 0 && Number.isFinite(value))
       .map(([, value]) => value);

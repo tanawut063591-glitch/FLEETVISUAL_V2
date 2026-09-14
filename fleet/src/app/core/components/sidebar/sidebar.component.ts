@@ -12,6 +12,7 @@ import {
   HostListener,
   ElementRef,
   QueryList,
+  ViewChild,
   ViewChildren,
 } from '@angular/core';
 
@@ -57,6 +58,9 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
 
   @Output() selectedVessel = new EventEmitter<any>();
 
+  @ViewChild('vesselList', { read: ElementRef })
+  private vesselListElement?: ElementRef<HTMLElement>;
+
   @ViewChildren('vesselCard', { read: ElementRef })
   vesselCardElements?: QueryList<ElementRef<HTMLElement>>;
 
@@ -72,6 +76,8 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
   private breakpointSub: Subscription | null = null;
   private realtimeTimer: ReturnType<typeof setInterval> | null = null;
   private lastAutoScrolledVesselKey = '';
+  private sidebarScrollRestored = false;
+  private readonly sidebarScrollStorageKey = 'fleet.sidebar.scrollTop';
 
   constructor(
     private coordinatesService: CoordinatesService,
@@ -142,6 +148,16 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
   onSearch(value: string): void {
     this.keyword = value || '';
     this.buildVisibleVessels();
+  }
+
+  onVesselListScroll(scrollTop: number): void {
+    if (typeof window === 'undefined' || this.keyword.trim()) {
+      return;
+    }
+
+    try {
+      window.sessionStorage.setItem(this.sidebarScrollStorageKey, String(Math.max(0, scrollTop)));
+    } catch {}
   }
 
   selectVessel(item: VesselViewItem): void {
@@ -387,11 +403,41 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
     this.lastAutoScrolledVesselKey = vesselKey;
 
     setTimeout(() => {
+      const list = this.vesselListElement?.nativeElement;
+
+      if (!this.sidebarScrollRestored && list && !this.keyword.trim()) {
+        const storedScrollTop = this.readStoredSidebarScrollTop();
+        if (storedScrollTop !== null) {
+          list.scrollTop = storedScrollTop;
+        }
+        this.sidebarScrollRestored = true;
+      }
+
       const index = this.visibleVessels.findIndex((item) => item.key === vesselKey);
       const element = index >= 0 ? this.vesselCardElements?.get(index)?.nativeElement : null;
 
-      element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      // Use an instant nearest scroll on hydration/refresh. This prevents the sidebar
+      // from visibly jumping from vessel #1 down to the previously selected vessel.
+      element?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
     }, 0);
+  }
+
+  private readStoredSidebarScrollTop(): number | null {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    try {
+      const raw = window.sessionStorage.getItem(this.sidebarScrollStorageKey);
+      if (raw === null) {
+        return null;
+      }
+
+      const value = Number(raw);
+      return Number.isFinite(value) && value >= 0 ? value : null;
+    } catch {
+      return null;
+    }
   }
 
   private normalizeVessel(vessel: any): any {
