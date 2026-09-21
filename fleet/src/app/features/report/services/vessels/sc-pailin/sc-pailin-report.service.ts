@@ -377,15 +377,10 @@ export class ScPailinReportService implements VesselReportAdapter {
     // Completed Daily UI must read the historian exactly like SCReportingService/PDF:
     // one tag per loggergethistorianvalues request, including next-day 00:00.
     const historianRequest$: Observable<any> = completedDaily
-      ? from(ALL_TAGS).pipe(
-          mergeMap(
-            (tagName) =>
-              this.newHttp.getRawData(requestStartText, requestEndText, [{ name: tagName, tagName }]).pipe(
-                map((response) => ({ __legacyTagName: tagName, __legacyResponse: response })),
-              ),
-            1,
-          ),
-          toArray(),
+      ? this.newHttp.getConsistentPdfParityHistorianValues(
+          requestStartText,
+          requestEndText,
+          requestTags,
         )
       : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
 
@@ -399,7 +394,7 @@ export class ScPailinReportService implements VesselReportAdapter {
         }),
         catchError((error) => throwError(() => error)),
         finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: false }),
+        shareReplay({ bufferSize: 1, refCount: true }),
       );
 
     this.detailedReportInFlight.set(key, request$);
@@ -459,7 +454,7 @@ export class ScPailinReportService implements VesselReportAdapter {
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.periodReportInFlight.set(key, request$);
@@ -1010,7 +1005,7 @@ export class ScPailinReportService implements VesselReportAdapter {
 
     const auxSummary: ScPailinAuxSummaryRow[] = [
       this.buildAuxSummary('port', 'Port A/E', paeRpm, paeFuel),
-      this.buildAuxSummary('center', 'Thruster A/E', caeRpm, caeFuel),
+      this.buildAuxSummary('center', 'Ctr. A/E', caeRpm, caeFuel),
       this.buildAuxSummary('starboard', 'Stb. A/E', saeRpm, saeFuel),
     ];
 
@@ -1498,6 +1493,7 @@ export class ScPailinReportService implements VesselReportAdapter {
           pmeFuelValue,
           50,
         ),
+        { key: 'center', label: 'Ctr. M/E', averageRpm: 0, maximumRpm: 0, runningHours: 0, fuelUsed: 0 },
         this.buildFilteredEngineSummary(
           'starboard',
           'Stb. M/E',
@@ -1512,6 +1508,7 @@ export class ScPailinReportService implements VesselReportAdapter {
           'Port Shaft',
           selectCoupledShaftValues(ppsRpm, pmeRpm),
         ),
+        { key: 'center', label: 'Ctr. Shaft', averageRpm: 0, maximumRpm: 0, runningHours: 0 },
         this.buildFilteredShaftSummary(
           'starboard',
           'Stb. Shaft',
@@ -1527,7 +1524,7 @@ export class ScPailinReportService implements VesselReportAdapter {
         },
         {
           key: 'center',
-          label: 'Thruster A/E',
+          label: 'Ctr. A/E',
           runningHours: runningHoursForAux(caeRpm),
           fuelUsed: caeFuelValue,
         },
@@ -1624,9 +1621,14 @@ export class ScPailinReportService implements VesselReportAdapter {
   private buildExactMinuteInstantMap(points: readonly NumericPoint[]): Map<number, number> {
     const result = new Map<number, number>();
     for (const point of points) {
-      const time = point.timestamp.getTime();
-      if (!Number.isFinite(time) || time % MINUTE_MS !== 0) continue;
-      result.set(time, point.value);
+      const timestamp = point?.timestamp;
+      if (!(timestamp instanceof Date)) continue;
+      const time = timestamp.getTime();
+      if (!Number.isFinite(time) || !Number.isFinite(point.value)) continue;
+      if (timestamp.getSeconds() !== 0) continue;
+      const normalized = new Date(time);
+      normalized.setMilliseconds(0);
+      result.set(normalized.getTime(), point.value);
     }
     return result;
   }
@@ -2150,7 +2152,7 @@ export class ScPailinReportService implements VesselReportAdapter {
   }
 
   private resolveModeFromGpsSpeed(speed: number | null): string | null {
-    if (speed === null || !Number.isFinite(speed) || speed < 0) return null;
+    if (speed === null || !Number.isFinite(speed)) return null;
     if (speed < 1) return 'Standby';
     if (speed < 3) return 'Cargo Operation';
     if (speed < 7) return 'Manoeuvring';

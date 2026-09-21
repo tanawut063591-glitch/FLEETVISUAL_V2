@@ -334,7 +334,7 @@
             <div class="engine-pro-heading-copy">
               <span class="engine-pro-kicker"><i class="fa fa-cogs"></i> Machinery configuration</span>
               <h3 id="engine-profile-heading">Engine Setup</h3>
-              <p>Configure each physical engine once, then optionally link a reusable profile for specification and telemetry mapping.</p>
+              <p>Configure each physical engine once, then optionally link a reusable profile for model and specification details.</p>
             </div>
             <div class="engine-heading-actions engine-pro-actions">
               <span class="engine-count-chip" [class.unassigned]="assignedEngineCount === 0">
@@ -346,8 +346,8 @@
                 [disabled]="!form.prefix.trim() || isSavingVessel" title="Import machinery positions from Realtime">
                 <i class="fa fa-refresh"></i> Import Realtime
               </button>
-              <button type="button" class="engine-library-btn compact" (click)="openEngineLibrary()" title="Manage reusable engine profiles">
-                <i class="fa fa-sliders"></i> Profiles
+              <button type="button" class="engine-library-btn compact" (click)="engineLibraryOpen ? closeEngineLibrary() : openEngineLibrary()" title="Manage reusable engine profiles on this page" [class.active]="engineLibraryOpen">
+                <i class="fa fa-sliders"></i> {{ engineLibraryOpen ? 'Profiles Open' : 'Profiles' }}
               </button>
             </div>
           </div>
@@ -386,6 +386,98 @@
               <span class="engine-profile-helper"><i class="fa fa-link"></i> Profiles are reusable across vessels</span>
             </div>
           </div>
+
+      <div class="engine-library-panel engine-library-inline" *ngIf="engineLibraryOpen" aria-label="Engine Profile Library">
+        <div class="engine-library-header">
+          <div class="engine-library-title">
+            <span class="engine-library-title-icon"><i class="fa fa-cogs"></i></span>
+            <div>
+              <strong>Engine Profile Library</strong>
+              <p>Create and manage reusable engine profiles here without leaving the vessel setup. A profile can be linked to multiple vessels.</p>
+            </div>
+          </div>
+          <button type="button" title="Close engine library" (click)="closeEngineLibrary()"
+            [disabled]="engineProfileSaving"><i class="fa fa-times"></i></button>
+        </div>
+
+        <div class="engine-library-tools">
+          <label class="engine-profile-search">
+            <i class="fa fa-search"></i>
+            <input type="search" [(ngModel)]="engineProfileSearchTerm" placeholder="Search engine profile..." />
+          </label>
+          <button type="button" class="new-engine-profile-btn" (click)="startNewEngineProfile()"
+            [disabled]="engineProfileSaving"><i class="fa fa-plus"></i> New Profile</button>
+        </div>
+
+        <div class="engine-library-list">
+          <article *ngFor="let profile of filteredEngineProfiles; trackBy: trackByEngineProfile"
+            [class.active]="editingEngineProfileId === profile.id">
+            <button type="button" class="engine-library-select" (click)="editEngineProfile(profile)">
+              <span class="engine-profile-icon" [attr.data-category]="profile.category"><i
+                  class="fa fa-cog"></i></span>
+              <span>
+                <strong>{{ profile.name }}</strong>
+                <small>{{ profile.manufacturer || 'Unspecified' }}{{ profile.model ? ' · ' + profile.model : ''
+                  }}</small>
+                <em>{{ engineProfileTypeLabel(profile) }} · {{ engineProfileUsageCount(profile.id) }} vessel(s)</em>
+              </span>
+            </button>
+            <div class="engine-library-actions">
+              <button type="button" title="Duplicate safely" (click)="duplicateEngineProfile(profile)"
+                [disabled]="engineProfileSaving"><i class="fa fa-copy"></i></button>
+              <button type="button" class="danger" title="Delete profile" (click)="deleteEngineProfile(profile)"
+                [disabled]="engineProfileSaving"><i class="fa fa-trash-o"></i></button>
+            </div>
+          </article>
+          <div class="engine-library-empty" *ngIf="filteredEngineProfiles.length === 0">No engine profiles match this
+            search.</div>
+        </div>
+
+        <div class="engine-profile-editor">
+          <div class="engine-profile-editor-heading">
+            <div>
+              <strong>{{ editingEngineProfileId ? 'Edit Engine Profile' : 'Create Engine Profile' }}</strong>
+              <p>{{ editingEngineProfileId ? 'Changes are shared by every assigned vessel.' : 'Create a reusable
+                profile for vessels with the same engine model.' }}</p>
+            </div>
+            <span *ngIf="editingEngineProfileId">{{ engineProfileUsageCount(editingEngineProfileId) }}
+              vessel(s)</span>
+          </div>
+
+          <div class="engine-profile-form-grid">
+            <label class="full"><span>Profile Name <em>*</em></span><input type="text"
+                [(ngModel)]="engineProfileForm.name" placeholder="e.g. CAT 3512C Main Engine" /></label>
+            <label><span>Manufacturer</span><input type="text" [(ngModel)]="engineProfileForm.manufacturer"
+                placeholder="e.g. Caterpillar" /></label>
+            <label><span>Model</span><input type="text" [(ngModel)]="engineProfileForm.model"
+                placeholder="e.g. 3512C" /></label>
+            <label class="full engine-type-field"><span>Engine Type <small>Custom</small></span>
+              <input type="text" [(ngModel)]="engineProfileForm.engineType" list="engine-type-suggestions"
+                placeholder="e.g. Main Engine, Generator, Bow Thruster" />
+              <datalist id="engine-type-suggestions">
+                <option *ngFor="let option of engineCategoryOptions" [value]="option.label"></option>
+              </datalist>
+              <small class="field-help">Type any engine or machinery class. Standard types are suggested, not enforced.</small>
+            </label>
+            <label class="full"><span>Description</span><textarea rows="2" [(ngModel)]="engineProfileForm.description"
+                placeholder="Operational notes or engine specification source"></textarea></label>
+          </div>
+
+
+          <div class="engine-profile-save-notice" *ngIf="engineProfileSaveNotice"><i class="fa fa-info-circle"></i>{{
+            engineProfileSaveNotice }}</div>
+          <div class="engine-profile-editor-actions">
+            <button type="button" class="cancel-btn" (click)="startNewEngineProfile()"
+              [disabled]="engineProfileSaving">Clear</button>
+            <button type="button" class="primary-btn" (click)="saveEngineProfile()"
+              [disabled]="engineProfileSaving || isSavingVessel">
+              <i class="fa" [ngClass]="engineProfileSaving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+              {{ engineProfileSaving ? 'Saving...' : 'Save Profile' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
 
           <div class="realtime-detection-preview" *ngIf="realtimeDetectionPending">
             <div class="realtime-detection-preview-head">
@@ -512,7 +604,7 @@
                     <i class="fa fa-check-circle"></i>
                     <span>
                       <strong>{{ profile.name }}</strong>
-                      <small>{{ engineProfileCategoryLabel(profile.category) }} · Shared profile linked</small>
+                      <small>{{ engineProfileTypeLabel(profile) }} · Shared profile linked</small>
                     </span>
                   </div>
                   <ng-template #noProfileContext>
@@ -520,7 +612,7 @@
                       <i class="fa" [ngClass]="isRealtimeAssignment(assignment) ? 'fa-exclamation-triangle' : 'fa-pencil'"></i>
                       <span>
                         <strong>{{ isRealtimeAssignment(assignment) ? 'Profile required' : 'Manual engine' }}</strong>
-                        <small>{{ isRealtimeAssignment(assignment) ? 'Select a profile for complete Realtime mapping.' : 'Engine name is saved. Linking a shared profile is optional.' }}</small>
+                        <small>{{ isRealtimeAssignment(assignment) ? 'Select a profile to identify this Realtime machinery position.' : 'Engine name is saved. Linking a shared profile is optional.' }}</small>
                       </span>
                     </div>
                   </ng-template>
@@ -549,130 +641,6 @@
         <div class="save-message" *ngIf="saveNotice">{{ saveNotice }}</div>
       </div>
 
-
-      <div class="engine-library-panel" *ngIf="engineLibraryOpen" role="dialog" aria-modal="true" aria-label="Engine Profile Library">
-        <div class="engine-library-header">
-          <div class="engine-library-title">
-            <span class="engine-library-title-icon"><i class="fa fa-cogs"></i></span>
-            <div>
-              <strong>Engine Profile Library</strong>
-              <p>Maintain reusable engine specifications separately from vessel positions. A profile can be linked to multiple vessels.</p>
-            </div>
-          </div>
-          <button type="button" title="Close engine library" (click)="closeEngineLibrary()"
-            [disabled]="engineProfileSaving"><i class="fa fa-times"></i></button>
-        </div>
-
-        <div class="engine-library-tools">
-          <label class="engine-profile-search">
-            <i class="fa fa-search"></i>
-            <input type="search" [(ngModel)]="engineProfileSearchTerm" placeholder="Search engine profile..." />
-          </label>
-          <button type="button" class="new-engine-profile-btn" (click)="startNewEngineProfile()"
-            [disabled]="engineProfileSaving"><i class="fa fa-plus"></i> New Profile</button>
-        </div>
-
-        <div class="engine-library-list">
-          <article *ngFor="let profile of filteredEngineProfiles; trackBy: trackByEngineProfile"
-            [class.active]="editingEngineProfileId === profile.id">
-            <button type="button" class="engine-library-select" (click)="editEngineProfile(profile)">
-              <span class="engine-profile-icon" [attr.data-category]="profile.category"><i
-                  class="fa fa-cog"></i></span>
-              <span>
-                <strong>{{ profile.name }}</strong>
-                <small>{{ profile.manufacturer || 'Unspecified' }}{{ profile.model ? ' · ' + profile.model : ''
-                  }}</small>
-                <em>{{ engineProfileCategoryLabel(profile.category) }} · {{ engineProfileUsageCount(profile.id) }} vessel(s)</em>
-              </span>
-            </button>
-            <div class="engine-library-actions">
-              <button type="button" title="Duplicate safely" (click)="duplicateEngineProfile(profile)"
-                [disabled]="engineProfileSaving"><i class="fa fa-copy"></i></button>
-              <button type="button" class="danger" title="Delete profile" (click)="deleteEngineProfile(profile)"
-                [disabled]="engineProfileSaving"><i class="fa fa-trash-o"></i></button>
-            </div>
-          </article>
-          <div class="engine-library-empty" *ngIf="filteredEngineProfiles.length === 0">No engine profiles match this
-            search.</div>
-        </div>
-
-        <div class="engine-profile-editor">
-          <div class="engine-profile-editor-heading">
-            <div>
-              <strong>{{ editingEngineProfileId ? 'Edit Engine Profile' : 'Create Engine Profile' }}</strong>
-              <p>{{ editingEngineProfileId ? 'Changes are shared by every assigned vessel.' : 'Create a reusable
-                profile for vessels with the same engine model.' }}</p>
-            </div>
-            <span *ngIf="editingEngineProfileId">{{ engineProfileUsageCount(editingEngineProfileId) }}
-              vessel(s)</span>
-          </div>
-
-          <div class="engine-profile-form-grid">
-            <label class="full"><span>Profile Name <em>*</em></span><input type="text"
-                [(ngModel)]="engineProfileForm.name" placeholder="e.g. CAT 3512C Main Engine" /></label>
-            <label><span>Manufacturer</span><input type="text" [(ngModel)]="engineProfileForm.manufacturer"
-                placeholder="e.g. Caterpillar" /></label>
-            <label><span>Model</span><input type="text" [(ngModel)]="engineProfileForm.model"
-                placeholder="e.g. 3512C" /></label>
-            <label><span>Engine Type</span><select [(ngModel)]="engineProfileForm.category">
-                <option *ngFor="let option of engineCategoryOptions" [value]="option.value">{{ option.label }}
-                </option>
-              </select></label>
-            <label><span>Fuel Type</span><select [(ngModel)]="engineProfileForm.fuelType">
-                <option *ngFor="let fuel of engineFuelOptions" [value]="fuel">{{ fuel }}</option>
-              </select></label>
-            <label><span>Rated Power (kW)</span><input type="number" min="1"
-                [(ngModel)]="engineProfileForm.ratedPowerKw" placeholder="Optional" /></label>
-            <label><span>Rated RPM</span><input type="number" min="1" [(ngModel)]="engineProfileForm.ratedRpm"
-                placeholder="Optional" /></label>
-            <label><span>Cylinders</span><input type="number" min="1" max="32"
-                [(ngModel)]="engineProfileForm.cylinders" placeholder="Optional" /></label>
-            <label class="full"><span>Description</span><textarea rows="2" [(ngModel)]="engineProfileForm.description"
-                placeholder="Operational notes or engine specification source"></textarea></label>
-          </div>
-
-
-          <button type="button" class="telemetry-toggle"
-            (click)="engineTelemetryMappingOpen = !engineTelemetryMappingOpen"
-            [attr.aria-expanded]="engineTelemetryMappingOpen">
-            <span><i class="fa fa-database"></i> Advanced Telemetry Mapping <small>Optional — configure backend tags only when needed</small></span>
-            <i class="fa" [class.fa-chevron-down]="!engineTelemetryMappingOpen"
-              [class.fa-chevron-up]="engineTelemetryMappingOpen"></i>
-          </button>
-
-          <div class="telemetry-template-note" *ngIf="engineTelemetryMappingOpen"><i class="fa fa-lightbulb-o"></i>
-            Use <code>{{ '{' }}prefix{{ '}' }}</code>, <code>{{ '{' }}vesselId{{ '}' }}</code> and
-            <code>{{ '{' }}index{{ '}' }}</code> as reusable placeholders for each vessel and engine position.</div>
-          <div class="telemetry-mapping-grid" *ngIf="engineTelemetryMappingOpen">
-            <label><span>Power kW Tag</span><input type="text"
-                [(ngModel)]="engineProfileForm.telemetryMapping.powerKwTag"
-                placeholder="e.g. {prefix}_ME{index}_POWER_KW" /></label>
-            <label><span>RPM Tag</span><input type="text" [(ngModel)]="engineProfileForm.telemetryMapping.rpmTag"
-                placeholder="e.g. {prefix}_ME{index}_RPM" /></label>
-            <label><span>Fuel Rate kg/h Tag</span><input type="text"
-                [(ngModel)]="engineProfileForm.telemetryMapping.fuelRateKgPerHourTag"
-                placeholder="e.g. {prefix}_ME{index}_FUEL_KGH" /></label>
-            <label><span>Running Hours Tag</span><input type="text"
-                [(ngModel)]="engineProfileForm.telemetryMapping.runningHoursTag"
-                placeholder="e.g. {prefix}_ME{index}_RUN_HOURS" /></label>
-            <label class="full"><span>Status Tag</span><input type="text"
-                [(ngModel)]="engineProfileForm.telemetryMapping.statusTag"
-                placeholder="e.g. {prefix}_ME{index}_RUNNING" /></label>
-          </div>
-
-          <div class="engine-profile-save-notice" *ngIf="engineProfileSaveNotice"><i class="fa fa-info-circle"></i>{{
-            engineProfileSaveNotice }}</div>
-          <div class="engine-profile-editor-actions">
-            <button type="button" class="cancel-btn" (click)="startNewEngineProfile()"
-              [disabled]="engineProfileSaving">Clear</button>
-            <button type="button" class="primary-btn" (click)="saveEngineProfile()"
-              [disabled]="engineProfileSaving || isSavingVessel">
-              <i class="fa" [ngClass]="engineProfileSaving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
-              {{ engineProfileSaving ? 'Saving...' : 'Save Profile' }}
-            </button>
-          </div>
-        </div>
-      </div>
 
       <footer>
         <button type="button" class="cancel-btn" (click)="closeDrawer()">Cancel</button>

@@ -12,8 +12,12 @@ import {
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
 import {
+  buildExactMinuteValueMap,
   buildLegacyPdfFuelDeltaMap,
+  legacyConvertToInt32,
   normalizeModeFuelToOfficialTotal,
+  scaleModeDetailFuelToTarget,
+  roundPdf2,
 } from '../../common/pdf-mode-parity';
 import {
   SC_SULTAN_MODE_HISTORIAN_TAG,
@@ -72,6 +76,12 @@ export interface ScSultanPassageSummary {
   auxiliaryFuelTotal: number;
   averageSpeed: number | null;
   distanceNm: number;
+}
+
+export interface ScSultanModeDetail {
+  key: string;
+  label: string;
+  summary: ScSultanPassageSummary;
 }
 
 export interface ScSultanTrackingPoint {
@@ -141,6 +151,7 @@ export interface ScSultanDailyUiReport {
   totalFuelUsed: number;
   modeSummary: ScSultanModeSummaryRow[];
   passageSummary: ScSultanPassageSummary;
+  modeDetails?: ScSultanModeDetail[];
   tracking: ScSultanTrackingSummary;
   hourly: ScSultanHourlyRow[];
   speedSeries: ScSultanSpeedPoint[];
@@ -385,13 +396,16 @@ export class ScSultanReportService implements VesselReportAdapter {
     const historianEnd = completedDaily
       ? new Date(start.getTime() + 24 * 60 * MINUTE_MS)
       : end;
-    const request$ = this.newHttp
-      .getHistorianValues(
-        this.formatHistorianRequestTime(start),
-        this.formatHistorianRequestTime(historianEnd),
-        requestTags,
-      )
-      .pipe(
+    const requestStartText = this.formatHistorianRequestTime(start);
+    const requestEndText = this.formatHistorianRequestTime(historianEnd);
+    const historianRequest$: Observable<any> = completedDaily
+      ? this.newHttp.getConsistentPdfParityHistorianValues(
+          requestStartText,
+          requestEndText,
+          requestTags,
+        )
+      : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
+    const request$ = historianRequest$.pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
           this.detailedReportCache.set(key, {
@@ -401,7 +415,7 @@ export class ScSultanReportService implements VesselReportAdapter {
         }),
         catchError((error) => throwError(() => error)),
         finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: false }),
+        shareReplay({ bufferSize: 1, refCount: true }),
       );
 
     this.detailedReportInFlight.set(key, request$);
@@ -461,7 +475,7 @@ export class ScSultanReportService implements VesselReportAdapter {
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.periodReportInFlight.set(key, request$);
@@ -948,19 +962,35 @@ export class ScSultanReportService implements VesselReportAdapter {
     const minuteStart = this.floorToMinute(periodStart).getTime();
     const minuteEnd = Math.max(minuteStart + MINUTE_MS, this.floorToMinute(periodEnd).getTime());
     const minuteCount = Math.max(1, Math.floor((minuteEnd - minuteStart) / MINUTE_MS) + 1);
+    // Keep the same completed-Daily test used by loadDetailedDailyReport().
+    // This local flag is required because buildDetailedDailyReport() has its own scope.
+    const completedDaily =
+      periodStart.getHours() === 0 &&
+      periodStart.getMinutes() === 0 &&
+      periodEnd.getHours() === 23 &&
+      periodEnd.getMinutes() === 59 &&
+      minuteEnd - minuteStart >= 23 * 60 * 60 * 1000;
 
     const gpsSpeed = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsSpeed)) || []);
     const gpsLat = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLat)) || []);
     const gpsLong = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLong)) || []);
     const gpsHead = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsHead)) || []);
-    const modeCode = this.buildInstantMap(series.get(this.tagKey(TAGS.mode)) || []);
-    const pmeRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.pmeSpeed)) || []);
-    const smeRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.smeSpeed)) || []);
-    const ppsRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.ppsSpeed)) || []);
-    const spsRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.spsSpeed)) || []);
-    const paeRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.paeSpeed)) || []);
-    const caeRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.caeSpeed)) || []);
-    const saeRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.saeSpeed)) || []);
+    const modeCodePoints = series.get(this.tagKey(TAGS.mode)) || [];
+    const modeCode = completedDaily
+      ? buildExactMinuteValueMap(modeCodePoints, MINUTE_MS)
+      : this.buildInstantMap(modeCodePoints);
+    // SC SULTAN historian stores every engine/shaft speed tag in 0.1 RPM units
+    // (for example 4724 means 472.4 RPM). The legacy PDF divides these tags by 10
+    // before calculating Average/Max and running hours. Keeping the raw values here
+    // made M/E Average/Max disappear (> 1200 RPM filter) and made shaft/A-E running
+    // hours become 0 because their raw x10 values exceeded the valid RPM ranges.
+    const pmeRpm = this.buildScaledInstantMap(series.get(this.tagKey(TAGS.pmeSpeed)) || [], 0.1);
+    const smeRpm = this.buildScaledInstantMap(series.get(this.tagKey(TAGS.smeSpeed)) || [], 0.1);
+    const ppsRpm = this.buildScaledInstantMap(series.get(this.tagKey(TAGS.ppsSpeed)) || [], 0.1);
+    const spsRpm = this.buildScaledInstantMap(series.get(this.tagKey(TAGS.spsSpeed)) || [], 0.1);
+    const paeRpm = this.buildScaledInstantMap(series.get(this.tagKey(TAGS.paeSpeed)) || [], 0.1);
+    const caeRpm = this.buildScaledInstantMap(series.get(this.tagKey(TAGS.caeSpeed)) || [], 0.1);
+    const saeRpm = this.buildScaledInstantMap(series.get(this.tagKey(TAGS.saeSpeed)) || [], 0.1);
     const pmeEngineLoad = this.buildInstantMap(series.get(this.tagKey(TAGS.pmeEngineLoad)) || []);
     const smeEngineLoad = this.buildInstantMap(series.get(this.tagKey(TAGS.smeEngineLoad)) || []);
 
@@ -1257,34 +1287,57 @@ export class ScSultanReportService implements VesselReportAdapter {
         litresPerHour: row.runningHours > 0 ? fuelUsed / row.runningHours : null,
       };
     });
-    const modeSummary = normalizeModeFuelToOfficialTotal<ScSultanModeSummaryRow>(
+    const normalizedModeSummary = normalizeModeFuelToOfficialTotal<ScSultanModeSummaryRow>(
       rawModeSummary,
       totalFuelUsed,
     );
+    // SCSultan.cs has one vessel-specific display correction after proportional
+    // fuel scaling: Mode code 9 / standby-2me subtracts 72.44 L. Fuel % remains
+    // based on the pre-adjustment raw Mode fuel, matching the legacy PDF.
+    const modeSummary = normalizedModeSummary.map((row) => {
+      if (row.key !== 'standby-2me' || rawModeFuelTotal === 0) return row;
+      const adjustedFuel = row.fuelUsed - 72.44;
+      return {
+        ...row,
+        fuelUsed: roundPdf2(adjustedFuel),
+        litresPerNm: row.distanceNm >= 0.01 ? roundPdf2(adjustedFuel / row.distanceNm) : null,
+        litresPerHour: row.runningHours > 0 ? roundPdf2(adjustedFuel / row.runningHours) : null,
+      };
+    });
+
+    const modeDetails: ScSultanModeDetail[] = modeSummary.map((mode) => {
+      const rawSummary = this.buildPassageSummary(
+        modeMinuteKeys.get(mode.key) || [],
+        pmeRpm,
+        smeRpm,
+        ppsRpm,
+        spsRpm,
+        paeRpm,
+        caeRpm,
+        saeRpm,
+        pmePdfModeFuel,
+        smePdfModeFuel,
+        paePdfModeFuel,
+        caePdfModeFuel,
+        saePdfModeFuel,
+        pmeEngineLoad,
+        smeEngineLoad,
+        gpsSpeed,
+      );
+      return {
+        key: mode.key,
+        label: mode.label,
+        summary: scaleModeDetailFuelToTarget(rawSummary, mode.fuelUsed),
+      };
+    });
 
     const dominantMode = [...modeSummary].sort((a, b) => {
-      if (b.fuelUsed !== a.fuelUsed) return b.fuelUsed - a.fuelUsed;
+      if (Math.abs(b.fuelUsed) !== Math.abs(a.fuelUsed)) return Math.abs(b.fuelUsed) - Math.abs(a.fuelUsed);
       return b.runningHours - a.runningHours;
     })[0];
-    const dominantMinuteKeys = dominantMode ? modeMinuteKeys.get(dominantMode.key) || [] : [];
-    const passageSummary = this.buildPassageSummary(
-      dominantMinuteKeys,
-      pmeRpm,
-      smeRpm,
-      ppsRpm,
-      spsRpm,
-      paeRpm,
-      caeRpm,
-      saeRpm,
-      pmeFuel,
-      smeFuel,
-      paeFuel,
-      caeFuel,
-      saeFuel,
-      pmeEngineLoad,
-      smeEngineLoad,
-      gpsSpeed,
-    );
+    const passageSummary =
+      modeDetails.find((detail) => detail.key === dominantMode?.key)?.summary ||
+      this.buildPassageSummary([], pmeRpm, smeRpm, ppsRpm, spsRpm, paeRpm, caeRpm, saeRpm, pmePdfModeFuel, smePdfModeFuel, paePdfModeFuel, caePdfModeFuel, saePdfModeFuel, pmeEngineLoad, smeEngineLoad, gpsSpeed);
 
     const tracking = this.buildTrackingSummary(
       minuteStart,
@@ -1382,10 +1435,22 @@ export class ScSultanReportService implements VesselReportAdapter {
       totalFuelUsed,
       modeSummary,
       passageSummary,
+      modeDetails,
       tracking,
       hourly,
       speedSeries,
     };
+  }
+
+  private buildScaledInstantMap(points: readonly NumericPoint[], scale: number): Map<number, number> {
+    const raw = this.buildInstantMap(points);
+    if (scale === 1) return raw;
+
+    const scaled = new Map<number, number>();
+    raw.forEach((value, bucket) => {
+      if (Number.isFinite(value)) scaled.set(bucket, value * scale);
+    });
+    return scaled;
   }
 
   private buildEngineSummary(
@@ -2010,8 +2075,8 @@ export class ScSultanReportService implements VesselReportAdapter {
   private resolveModeFromCode(rawValue: unknown): string | null {
     const numeric = this.parseNumber(rawValue);
     if (numeric === null) return null;
-    const code = Math.trunc(numeric);
-    if (code !== numeric || code < 1 || code > 10) return null;
+    const code = legacyConvertToInt32(numeric);
+    if (code === null || code < 1 || code > 10) return null;
     const mode = SC_SULTAN_REPORT_PROFILE.modes.find((item) =>
       (item.codes || []).some((candidate) => Number(candidate) === code),
     );

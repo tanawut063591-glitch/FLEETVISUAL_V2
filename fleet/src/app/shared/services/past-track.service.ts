@@ -1211,6 +1211,22 @@ export class PastTrackService {
   }
 
   private getVesselImage(vessel: any): string {
+    const identity = [
+      vessel?.name,
+      vessel?.prefix,
+      vessel?.id,
+      vessel?.fv?.name,
+      vessel?.fv?.prefix,
+      vessel?.fvInfo?.name,
+      vessel?.fvInfo?.prefix,
+    ]
+      .map((value) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, ''))
+      .join(' ');
+
+    if (identity.includes('mvgemia')) {
+      return 'assets/images/vessel/mv_gemia.jpg';
+    }
+
     return String(
       vessel?.img ||
         vessel?.image ||

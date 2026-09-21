@@ -135,3 +135,16 @@ textarea:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+/* ========================================================================== */
+/* REPORT MODE DETAIL HEADER CONTRAST FIX — 2026-09-21                        */
+/* Keep the original compact typography. Only force text inside the blue      */
+/* table headers to white so Measured Value / Summary / DG1..EG stay legible. */
+/* This intentionally sits after Light/Dark theme imports so it wins against   */
+/* generic body-cell color rules without increasing any font size or spacing.  */
+/* ========================================================================== */
+app-report .pdf-mode-detail-page .report-book-table thead th {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  text-shadow: none !important;
+}

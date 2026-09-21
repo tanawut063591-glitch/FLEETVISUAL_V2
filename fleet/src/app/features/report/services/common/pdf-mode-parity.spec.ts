@@ -1,4 +1,4 @@
-import { buildGpsPdfParityModeSummary } from './pdf-mode-parity';
+import { buildGpsPdfParityModeSummary, scaleModeDetailFuelToTarget } from './pdf-mode-parity';
 
 describe('SC GLORY 1 PDF/Excel mode parity', () => {
   it('reproduces the 13-Sep-2026 verified PDF aggregate formula', () => {
@@ -185,6 +185,40 @@ describe('SC GLORY 1 PDF/Excel mode parity', () => {
       fuelUsed: 44.75, fuelPercent: 1.03, runningHours: 0.15, runningPercent: 0.62,
       distanceNm: 1.82, litresPerNm: 24.59, litresPerHour: 298.32,
     }));
+  });
+
+  it('keeps per-mode equipment fuel aligned with the normalized page-2 mode total', () => {
+    const summary = {
+      mainEngines: [
+        { fuelUsed: 60, label: 'Port M/E' },
+        { fuelUsed: 40, label: 'Stb. M/E' },
+      ],
+      auxFuel: [{ fuelUsed: 20, label: 'Port A/E' }],
+      mainEngineFuelTotal: 100,
+      auxiliaryFuelTotal: 20,
+      averageSpeed: 6.5,
+      distanceNm: 12,
+    };
+
+    const scaled = scaleModeDetailFuelToTarget(summary, 240);
+    expect(scaled.mainEngines.map((row) => row.fuelUsed)).toEqual([120, 80]);
+    expect(scaled.auxFuel[0].fuelUsed).toBe(40);
+    expect(scaled.mainEngineFuelTotal).toBe(200);
+    expect(scaled.auxiliaryFuelTotal).toBe(40);
+  });
+
+  it('preserves signed legacy mode totals when scaling SC EMERALD-style detail', () => {
+    const summary = {
+      mainEngines: [{ fuelUsed: -30 }],
+      auxFuel: [{ fuelUsed: -10 }],
+      mainEngineFuelTotal: -30,
+      auxiliaryFuelTotal: -10,
+    };
+
+    const scaled = scaleModeDetailFuelToTarget(summary, -100);
+    expect(scaled.mainEngines[0].fuelUsed).toBe(-75);
+    expect(scaled.auxFuel[0].fuelUsed).toBe(-25);
+    expect(scaled.mainEngineFuelTotal + scaled.auxiliaryFuelTotal).toBe(-100);
   });
 
 });

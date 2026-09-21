@@ -34,6 +34,7 @@ export class SettingsVesselsComponent {
   declare engineFuelOptions: any;
   declare engineLibraryOpen: any;
   declare engineProfileCategoryLabel: any;
+  declare engineProfileTypeLabel: any;
   declare engineProfileDisplayName: any;
   declare engineProfileForAssignment: any;
   declare engineProfileForm: any;

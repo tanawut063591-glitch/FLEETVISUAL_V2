@@ -2195,3 +2195,34 @@
 .settings-dropdown .dropdown-icon {
   border-radius: 6px !important;
 }
+
+/* =========================================================
+   DESKTOP HEADER ACTION CARDS — SOFT-SQUARE
+   Keep Theme and User controls visually consistent with the
+   square Settings control while preserving the round icon/avatar.
+   ========================================================= */
+@media screen and (min-width: 1101px) {
+  .dark-mode-pill,
+  .user-profile-pill {
+    height: 48px !important;
+    border-radius: 10px !important;
+  }
+
+  .dark-mode-pill {
+    min-width: 142px;
+    padding: 5px 14px 5px 6px;
+  }
+
+  .user-profile-pill {
+    padding: 5px 14px 5px 6px;
+  }
+
+  .dark-mode-pill:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.2);
+    outline-offset: 2px;
+  }
+
+  :host-context([data-theme='dark']) .dark-mode-pill:focus-visible {
+    outline-color: rgba(96, 165, 250, 0.28);
+  }
+}

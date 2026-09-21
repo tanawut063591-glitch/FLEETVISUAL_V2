@@ -498,7 +498,9 @@ export class FleetVesselDataService {
         item?.type ||
         'AHTS',
       prefix,
-      img: fv.img || fv.image || item?.img || item?.image || this.resolveFallbackImage(name),
+      img: this.isMvGemiaIdentity(name, prefix, fv.id, item?.id)
+        ? 'assets/images/vessel/mv_gemia.jpg'
+        : fv.img || fv.image || item?.img || item?.image || this.resolveFallbackImage(name),
       lat: this.pickNumber(
         fv.lat,
         fv.latitude,
@@ -614,6 +616,15 @@ export class FleetVesselDataService {
       .toUpperCase()
       .replace(/[^A-Z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '');
+  }
+
+  private isMvGemiaIdentity(...values: unknown[]): boolean {
+    return values.some((value) =>
+      String(value ?? '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .includes('mvgemia'),
+    );
   }
 
   private resolveFallbackImage(name: string): string {

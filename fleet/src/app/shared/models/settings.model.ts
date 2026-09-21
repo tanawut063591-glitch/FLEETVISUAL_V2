@@ -126,6 +126,8 @@ export interface EngineProfileRecord {
   name: string;
   manufacturer: string;
   model: string;
+  /** User-facing engine type. Kept separate from category so custom labels are preserved. */
+  engineType: string;
   category: EngineProfileCategory;
   fuelType: string;
   ratedPowerKw: number | null;

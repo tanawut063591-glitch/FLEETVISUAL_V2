@@ -1,0 +1,14 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+/*
+ * PDF Mode Detail layout/theme is centralized in:
+ *   src/styles/report/_report-layout.scss
+ *   src/styles/themes/report/_report-light-overrides.scss
+ *   src/styles/themes/report/_report-dark-overrides.scss
+ *
+ * Keeping this component stylesheet intentionally minimal prevents the new
+ * report pages from bypassing the global Light/Dark theme switch.
+ */

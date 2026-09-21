@@ -374,26 +374,12 @@ export class ScGlory3ReportService implements VesselReportAdapter {
     const requestEndText = this.formatHistorianRequestTime(historianEnd);
 
     const historianRequest$: Observable<any> = completedDaily
-      ? from(ALL_TAGS).pipe(
-          mergeMap(
-            (tagName) =>
-              this.newHttp
-                .getRawData(requestStartText, requestEndText, [{ name: tagName, tagName }])
-                .pipe(
-                  map((response) => ({
-                    __legacyTagName: tagName,
-                    __legacyResponse: response,
-                  })),
-                ),
-            1,
-          ),
-          toArray(),
-        )
-      : this.newHttp.getHistorianValues(
+      ? this.newHttp.getConsistentPdfParityHistorianValues(
           requestStartText,
           requestEndText,
           requestTags,
-        );
+        )
+      : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
 
     const request$ = historianRequest$.pipe(
       map((response) => this.buildDetailedDailyReport(response, start, end)),
@@ -405,7 +391,7 @@ export class ScGlory3ReportService implements VesselReportAdapter {
       }),
       catchError((error) => throwError(() => error)),
       finalize(() => this.detailedReportInFlight.delete(key)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.detailedReportInFlight.set(key, request$);
@@ -463,7 +449,7 @@ export class ScGlory3ReportService implements VesselReportAdapter {
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.periodReportInFlight.set(key, request$);
@@ -1897,12 +1883,14 @@ export class ScGlory3ReportService implements VesselReportAdapter {
     for (const point of points) {
       const timestamp = point?.timestamp;
       if (!(timestamp instanceof Date) || !Number.isFinite(timestamp.getTime())) continue;
-      if (timestamp.getSeconds() !== 0 || timestamp.getMilliseconds() !== 0) continue;
+      if (timestamp.getSeconds() !== 0) continue;
 
-      const minute = timestamp.getTime();
+      const normalized = new Date(timestamp.getTime());
+      normalized.setMilliseconds(0);
+      const minute = normalized.getTime();
       if (minute < start || minute > end) continue;
 
-      exactByMinute.set(minute, point);
+      exactByMinute.set(minute, { timestamp: normalized, value: point.value });
     }
 
     return Array.from(exactByMinute.values()).sort(

@@ -917,6 +917,23 @@ export class MapsAllComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getVesselImage(vessel: any): string {
+    const identity = [
+      this.getVesselName(vessel),
+      vessel?.fv?.prefix,
+      vessel?.fvInfo?.prefix,
+      vessel?.prefix,
+      vessel?.id,
+      vessel?._id,
+    ]
+      .map((value) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, ''))
+      .join(' ');
+
+    // MV GEMIA uses one canonical local asset everywhere so an old backend image
+    // cannot override the approved vessel photo in Overview/map popups.
+    if (identity.includes('mvgemia')) {
+      return 'assets/images/vessel/mv_gemia.jpg';
+    }
+
     const image = vessel?.fv?.img || vessel?.fvInfo?.img || vessel?.img || vessel?.image;
     return image || this.resolveFallbackImage(this.getVesselName(vessel));
   }

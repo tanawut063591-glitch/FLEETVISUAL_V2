@@ -618,7 +618,9 @@ export class SettingsDataService {
       });
     }
 
-    return Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(merged.values())
+      .map((row) => this.applyCanonicalVesselImage(row))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   private vesselKeys(row: VesselSettingsRecord): string[] {
@@ -632,7 +634,24 @@ export class SettingsDataService {
       .filter((row) => !store.deletedIds.includes(row.id))
       .forEach((row) => merged.set(row.id, row));
     store.records.forEach((row) => merged.set(row.id, row));
-    return Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(merged.values())
+      .map((row) => this.applyCanonicalVesselImage(row))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  private applyCanonicalVesselImage(row: VesselSettingsRecord): VesselSettingsRecord {
+    const identity = [row.id, row.name, row.prefix]
+      .map((value) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, ''))
+      .join(' ');
+
+    if (!identity.includes('mvgemia')) {
+      return row;
+    }
+
+    return {
+      ...row,
+      image: 'assets/images/vessel/mv_gemia.jpg',
+    };
   }
 
   private normalizeVessel(row: any, index: number): VesselSettingsRecord {
@@ -689,7 +708,12 @@ export class SettingsDataService {
       id: id || `vessel-${index + 1}`,
       name,
       prefix: prefix || id,
-      image: String(row?.image ?? row?.Image ?? row?.imageUrl ?? row?.picture ?? ''),
+      image: [id, name, prefix]
+        .map((value) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, ''))
+        .join(' ')
+        .includes('mvgemia')
+        ? 'assets/images/vessel/mv_gemia.jpg'
+        : String(row?.image ?? row?.Image ?? row?.imageUrl ?? row?.picture ?? ''),
       description: String(row?.description ?? row?.Description ?? ''),
       nationality: String(row?.nationality ?? row?.Nationality ?? row?.country ?? ''),
       customer: String(row?.customer ?? row?.Customer ?? row?.clientName ?? ''),

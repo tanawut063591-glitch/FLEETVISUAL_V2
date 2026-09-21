@@ -2,3 +2,21 @@
    Layout: src/styles/report/_report-layout.scss
    Theme/appearance: src/styles/themes/report/
 */
+
+/* Official PDF mode-detail pages. Keep this block visually consistent with the
+   existing engineering tables: compact spacing, square corners, no nested
+   dashboard-card look. */
+.daily-all-mode-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+}
+
+.daily-report-section--all-modes {
+  border-radius: 6px !important;
+}
+
+.daily-report-section--all-modes .report-table-panel__header {
+  border-bottom: 1px solid rgba(38, 92, 165, 0.12);
+}

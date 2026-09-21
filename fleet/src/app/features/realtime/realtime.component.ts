@@ -578,6 +578,15 @@ export class RealtimeComponent implements OnInit, OnDestroy {
 
   getRealtimeVesselImage(active: any): string {
     const fv = this.getActiveVesselInfo(active);
+    const identity = [fv?.name, fv?.prefix, fv?.id, active?.name, active?.prefix, active?.id]
+      .map((value) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, ''))
+      .join(' ');
+
+    // Always use the approved MV GEMIA asset even when the backend still returns
+    // a legacy image URL.
+    if (identity.includes('mvgemia')) {
+      return 'assets/images/vessel/mv_gemia.jpg';
+    }
 
     if (fv && fv.img) {
       return fv.img;

@@ -12,8 +12,11 @@ import {
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
 import {
+  buildExactMinuteValueMap,
   buildLegacyPdfFuelDeltaMap,
+  legacyConvertToInt32,
   normalizeModeFuelToOfficialTotal,
+  scaleModeDetailFuelToTarget,
 } from '../../common/pdf-mode-parity';
 import {
   SC_RAJA_MODE_HISTORIAN_TAG,
@@ -72,6 +75,12 @@ export interface ScRajaPassageSummary {
   auxiliaryFuelTotal: number;
   averageSpeed: number | null;
   distanceNm: number;
+}
+
+export interface ScRajaModeDetail {
+  key: string;
+  label: string;
+  summary: ScRajaPassageSummary;
 }
 
 export interface ScRajaTrackingPoint {
@@ -141,6 +150,7 @@ export interface ScRajaDailyUiReport {
   totalFuelUsed: number;
   modeSummary: ScRajaModeSummaryRow[];
   passageSummary: ScRajaPassageSummary;
+  modeDetails?: ScRajaModeDetail[];
   tracking: ScRajaTrackingSummary;
   hourly: ScRajaHourlyRow[];
   speedSeries: ScRajaSpeedPoint[];
@@ -373,13 +383,25 @@ export class ScRajaReportService implements VesselReportAdapter {
     }
 
     const requestTags = ALL_TAGS.map((tagName) => ({ name: tagName, tagName }));
-    const request$ = this.newHttp
-      .getHistorianValues(
-        this.formatHistorianRequestTime(start),
-        this.formatHistorianRequestTime(end),
-        requestTags,
-      )
-      .pipe(
+    const completedDaily =
+      start.getHours() === 0 &&
+      start.getMinutes() === 0 &&
+      end.getHours() === 23 &&
+      end.getMinutes() === 59 &&
+      start.getFullYear() === end.getFullYear() &&
+      start.getMonth() === end.getMonth() &&
+      start.getDate() === end.getDate();
+    const historianEnd = completedDaily ? new Date(start.getTime() + 24 * 60 * MINUTE_MS) : end;
+    const requestStartText = this.formatHistorianRequestTime(start);
+    const requestEndText = this.formatHistorianRequestTime(historianEnd);
+    const historianRequest$: Observable<any> = completedDaily
+      ? this.newHttp.getConsistentPdfParityHistorianValues(
+          requestStartText,
+          requestEndText,
+          requestTags,
+        )
+      : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
+    const request$ = historianRequest$.pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
           this.detailedReportCache.set(key, {
@@ -389,7 +411,7 @@ export class ScRajaReportService implements VesselReportAdapter {
         }),
         catchError((error) => throwError(() => error)),
         finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: false }),
+        shareReplay({ bufferSize: 1, refCount: true }),
       );
 
     this.detailedReportInFlight.set(key, request$);
@@ -449,7 +471,7 @@ export class ScRajaReportService implements VesselReportAdapter {
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.periodReportInFlight.set(key, request$);
@@ -936,12 +958,25 @@ export class ScRajaReportService implements VesselReportAdapter {
     const minuteStart = this.floorToMinute(periodStart).getTime();
     const minuteEnd = Math.max(minuteStart + MINUTE_MS, this.floorToMinute(periodEnd).getTime());
     const minuteCount = Math.max(1, Math.floor((minuteEnd - minuteStart) / MINUTE_MS) + 1);
+    // Keep the same completed-Daily test used by loadDetailedDailyReport().
+    // buildDetailedDailyReport() is a separate method scope, so the flag must be declared here too.
+    const completedDaily =
+      periodStart.getHours() === 0 &&
+      periodStart.getMinutes() === 0 &&
+      periodEnd.getHours() === 23 &&
+      periodEnd.getMinutes() === 59 &&
+      periodStart.getFullYear() === periodEnd.getFullYear() &&
+      periodStart.getMonth() === periodEnd.getMonth() &&
+      periodStart.getDate() === periodEnd.getDate();
 
     const gpsSpeed = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsSpeed)) || []);
     const gpsLat = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLat)) || []);
     const gpsLong = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLong)) || []);
     const gpsHead = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsHead)) || []);
-    const modeCode = this.buildInstantMap(series.get(this.tagKey(TAGS.mode)) || []);
+    const modeCodePoints = series.get(this.tagKey(TAGS.mode)) || [];
+    const modeCode = completedDaily
+      ? buildExactMinuteValueMap(modeCodePoints, MINUTE_MS)
+      : this.buildInstantMap(modeCodePoints);
     const pmeRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.pmeSpeed)) || []);
     const smeRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.smeSpeed)) || []);
     const ppsRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.ppsSpeed)) || []);
@@ -1228,27 +1263,37 @@ export class ScRajaReportService implements VesselReportAdapter {
       totalFuelUsed,
     );
 
+    const modeDetails: ScRajaModeDetail[] = modeSummary.map((mode) => {
+      const rawSummary = this.buildPassageSummary(
+        modeMinuteKeys.get(mode.key) || [],
+        pmeRpm,
+        smeRpm,
+        ppsRpm,
+        spsRpm,
+        paeRpm,
+        saeRpm,
+        pmePdfModeFuel,
+        smePdfModeFuel,
+        paePdfModeFuel,
+        saePdfModeFuel,
+        pmeEngineLoad,
+        smeEngineLoad,
+        gpsSpeed,
+      );
+      return {
+        key: mode.key,
+        label: mode.label,
+        summary: scaleModeDetailFuelToTarget(rawSummary, mode.fuelUsed),
+      };
+    });
+
     const dominantMode = [...modeSummary].sort((a, b) => {
-      if (b.fuelUsed !== a.fuelUsed) return b.fuelUsed - a.fuelUsed;
+      if (Math.abs(b.fuelUsed) !== Math.abs(a.fuelUsed)) return Math.abs(b.fuelUsed) - Math.abs(a.fuelUsed);
       return b.runningHours - a.runningHours;
     })[0];
-    const dominantMinuteKeys = dominantMode ? modeMinuteKeys.get(dominantMode.key) || [] : [];
-    const passageSummary = this.buildPassageSummary(
-      dominantMinuteKeys,
-      pmeRpm,
-      smeRpm,
-      ppsRpm,
-      spsRpm,
-      paeRpm,
-      saeRpm,
-      pmeFuel,
-      smeFuel,
-      paeFuel,
-      saeFuel,
-      pmeEngineLoad,
-      smeEngineLoad,
-      gpsSpeed,
-    );
+    const passageSummary =
+      modeDetails.find((detail) => detail.key === dominantMode?.key)?.summary ||
+      this.buildPassageSummary([], pmeRpm, smeRpm, ppsRpm, spsRpm, paeRpm, saeRpm, pmePdfModeFuel, smePdfModeFuel, paePdfModeFuel, saePdfModeFuel, pmeEngineLoad, smeEngineLoad, gpsSpeed);
 
     const tracking = this.buildTrackingSummary(
       minuteStart,
@@ -1346,6 +1391,7 @@ export class ScRajaReportService implements VesselReportAdapter {
       totalFuelUsed,
       modeSummary,
       passageSummary,
+      modeDetails,
       tracking,
       hourly,
       speedSeries,
@@ -1491,6 +1537,11 @@ export class ScRajaReportService implements VesselReportAdapter {
       ],
       auxFuel: [
         { key: 'port', label: 'Port A/E', runningHours: runningHoursForAux(paeRpm), fuelUsed: paeFuelValue },
+        // The legacy SC RAJA Mode-detail PDF always renders a Center A/E row,
+        // even though the vessel has no Center A/E historian channel on Page 1.
+        // Keep the structural zero so Web UI field coverage matches the PDF
+        // without inventing a historian tag or date-specific value.
+        { key: 'center', label: 'Ctr. A/E', runningHours: 0, fuelUsed: 0 },
         { key: 'starboard', label: 'Stb. A/E', runningHours: runningHoursForAux(saeRpm), fuelUsed: saeFuelValue },
       ],
       mainEngineFuelTotal: pmeFuelValue + smeFuelValue,
@@ -1970,8 +2021,8 @@ export class ScRajaReportService implements VesselReportAdapter {
   private resolveModeFromCode(rawValue: unknown): string | null {
     const numeric = this.parseNumber(rawValue);
     if (numeric === null) return null;
-    const code = Math.trunc(numeric);
-    if (code !== numeric || code < 1 || code > 10) return null;
+    const code = legacyConvertToInt32(numeric);
+    if (code === null || code < 1 || code > 10) return null;
     const mode = SC_RAJA_REPORT_PROFILE.modes.find((item) =>
       (item.codes || []).some((candidate) => Number(candidate) === code),
     );

@@ -11,9 +11,14 @@ import {
   VesselModeHistoryConfig,
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
+import { calculateLegacyDailyFuelTotal, exactMinutePoints } from '../../common/legacy-daily-fuel';
 import {
+  buildExactMinuteValueMap,
   buildLegacyPdfFuelDeltaMap,
+  legacyConvertToInt32,
+  isCompletedDailyWindow,
   normalizeModeFuelToOfficialTotal,
+  scaleModeDetailFuelToTarget,
 } from '../../common/pdf-mode-parity';
 import {
   SC_EMERALD_MODE_HISTORIAN_TAG,
@@ -71,6 +76,12 @@ export interface ScEmeraldPassageSummary {
   auxiliaryFuelTotal: number;
   averageSpeed: number | null;
   distanceNm: number;
+}
+
+export interface ScEmeraldModeDetail {
+  key: string;
+  label: string;
+  summary: ScEmeraldPassageSummary;
 }
 
 export interface ScEmeraldTrackingPoint {
@@ -137,6 +148,7 @@ export interface ScEmeraldDailyUiReport {
   totalFuelUsed: number;
   modeSummary: ScEmeraldModeSummaryRow[];
   passageSummary: ScEmeraldPassageSummary;
+  modeDetails?: ScEmeraldModeDetail[];
   tracking: ScEmeraldTrackingSummary;
   hourly: ScEmeraldHourlyRow[];
   speedSeries: ScEmeraldSpeedPoint[];
@@ -363,13 +375,25 @@ export class ScEmeraldReportService implements VesselReportAdapter {
     }
 
     const requestTags = ALL_TAGS.map((tagName) => ({ name: tagName, tagName }));
-    const request$ = this.newHttp
-      .getHistorianValues(
-        this.formatHistorianRequestTime(start),
-        this.formatHistorianRequestTime(end),
-        requestTags,
-      )
-      .pipe(
+    const completedDaily =
+      start.getHours() === 0 &&
+      start.getMinutes() === 0 &&
+      end.getHours() === 23 &&
+      end.getMinutes() === 59 &&
+      start.getFullYear() === end.getFullYear() &&
+      start.getMonth() === end.getMonth() &&
+      start.getDate() === end.getDate();
+    const historianEnd = completedDaily ? new Date(start.getTime() + 24 * 60 * MINUTE_MS) : end;
+    const requestStartText = this.formatHistorianRequestTime(start);
+    const requestEndText = this.formatHistorianRequestTime(historianEnd);
+    const historianRequest$: Observable<any> = completedDaily
+      ? this.newHttp.getConsistentPdfParityHistorianValues(
+          requestStartText,
+          requestEndText,
+          requestTags,
+        )
+      : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
+    const request$ = historianRequest$      .pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
           this.detailedReportCache.set(key, {
@@ -379,7 +403,7 @@ export class ScEmeraldReportService implements VesselReportAdapter {
         }),
         catchError((error) => throwError(() => error)),
         finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: false }),
+        shareReplay({ bufferSize: 1, refCount: true }),
       );
 
     this.detailedReportInFlight.set(key, request$);
@@ -439,7 +463,7 @@ export class ScEmeraldReportService implements VesselReportAdapter {
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.periodReportInFlight.set(key, request$);
@@ -914,13 +938,22 @@ export class ScEmeraldReportService implements VesselReportAdapter {
     const series = this.extractHistorianSeries(response, ALL_TAGS);
     const minuteStart = this.floorToMinute(periodStart).getTime();
     const minuteEnd = Math.max(minuteStart + MINUTE_MS, this.floorToMinute(periodEnd).getTime());
+    const completedDaily = isCompletedDailyWindow(
+      this.floorToMinute(periodStart),
+      this.floorToMinute(periodEnd),
+      MINUTE_MS,
+    );
+    const pdfDataEnd = completedDaily ? minuteStart + 24 * 60 * MINUTE_MS : minuteEnd;
     const minuteCount = Math.max(1, Math.floor((minuteEnd - minuteStart) / MINUTE_MS) + 1);
 
     const gpsSpeed = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsSpeed)) || []);
     const gpsLat = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLat)) || []);
     const gpsLong = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLong)) || []);
     const gpsHead = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsHead)) || []);
-    const modeCode = this.buildInstantMap(series.get(this.tagKey(TAGS.mode)) || []);
+    const modeCodePoints = series.get(this.tagKey(TAGS.mode)) || [];
+    const modeCode = completedDaily
+      ? buildExactMinuteValueMap(modeCodePoints, MINUTE_MS)
+      : this.buildInstantMap(modeCodePoints);
 
     // SC EMERALD legacy report rules:
     // M/E counter pulse = 30, shaft counter pulse = 10, A/E counter pulse = 2.
@@ -959,6 +992,22 @@ export class ScEmeraldReportService implements VesselReportAdapter {
       300,
     );
 
+    // Page-1 totals follow SCEmerald.CalFLowTotalSME over exact-minute dtRawData.
+    // Preserve negative totals exactly because the legacy PDF can expose a bad/reset
+    // totalizer instead of silently replacing it with zero.
+    const pdfFuelPoints = (tag: string) => exactMinutePoints(
+      series.get(this.tagKey(tag)) || [], minuteStart, pdfDataEnd,
+    );
+    const emeraldFuelRule = {
+      input: { totalRangeLimit: 21_000, stepLimit: 300, stepInclusive: false, initialValueLimit: 100_000_000 },
+      output: { totalRangeLimit: 20_000, stepLimit: 300, stepInclusive: true, initialValueLimit: 100_000_000 },
+    } as const;
+    const pmeDailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.pmeFuelIn), pdfFuelPoints(TAGS.pmeFuelOut), emeraldFuelRule);
+    const smeDailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.smeFuelIn), pdfFuelPoints(TAGS.smeFuelOut), emeraldFuelRule);
+    const paeDailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.paeFuelIn), pdfFuelPoints(TAGS.paeFuelOut), emeraldFuelRule);
+    const caeDailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.caeFuelIn), pdfFuelPoints(TAGS.caeFuelOut), emeraldFuelRule);
+    const saeDailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.saeFuelIn), pdfFuelPoints(TAGS.saeFuelOut), emeraldFuelRule);
+
     // PDF page-2 Mode fuel must use the legacy SCReportingService raw totalizer deltas.
     // Do not interpolate totalizer gaps: a gap can move fuel into the wrong vessel Mode.
     const pmePdfModeFuel = buildLegacyPdfFuelDeltaMap(
@@ -992,8 +1041,8 @@ export class ScEmeraldReportService implements VesselReportAdapter {
       (minuteEnd - minuteStart + MINUTE_MS) / 3_600_000,
     );
     const engineSummary: ScEmeraldEngineSummaryRow[] = [
-      this.buildEngineSummary('port', 'Port M/E', pmeRpm, pmeFuel, elapsedHours),
-      this.buildEngineSummary('starboard', 'Stb. M/E', smeRpm, smeFuel, elapsedHours),
+      { ...this.buildEngineSummary('port', 'Port M/E', pmeRpm, pmeFuel, elapsedHours), fuelUsed: pmeDailyFuel },
+      { ...this.buildEngineSummary('starboard', 'Stb. M/E', smeRpm, smeFuel, elapsedHours), fuelUsed: smeDailyFuel },
     ];
 
     const shaftSummary: ScEmeraldShaftSummaryRow[] = [
@@ -1002,9 +1051,9 @@ export class ScEmeraldReportService implements VesselReportAdapter {
     ];
 
     const auxSummary: ScEmeraldAuxSummaryRow[] = [
-      this.buildAuxSummary('port', 'Port A/E', paeRpm, paeFuel),
-      this.buildAuxSummary('center', 'Thruster A/E', caeRpm, caeFuel),
-      this.buildAuxSummary('starboard', 'Stb. A/E', saeRpm, saeFuel),
+      { ...this.buildAuxSummary('port', 'Port A/E', paeRpm, paeFuel), fuelUsed: paeDailyFuel },
+      { ...this.buildAuxSummary('center', 'Thruster A/E', caeRpm, caeFuel), fuelUsed: caeDailyFuel },
+      { ...this.buildAuxSummary('starboard', 'Stb. A/E', saeRpm, saeFuel), fuelUsed: saeDailyFuel },
     ];
 
     const mainEngineFuelTotal = engineSummary.reduce((sum, row) => sum + row.fuelUsed, 0);
@@ -1081,9 +1130,11 @@ export class ScEmeraldReportService implements VesselReportAdapter {
       });
     }
 
-    // The SC GLORY 1 UI contains a "Passage Mode Summary" section. For SC EMERALD,
-    // its equivalent navigation window is the two Underway modes from A05-VES-MODE.
-    const passageMinuteKeys: number[] = [];
+    // SC EMERALD's official PDF contains one machinery-detail page for every
+    // explicit VES-MODE value (15 pages). Keep the minute membership for each
+    // mode instead of collapsing Underway modes into one web-only summary.
+    const modeMinuteKeys = new Map<string, number[]>();
+    SC_EMERALD_REPORT_PROFILE.modes.forEach((mode) => modeMinuteKeys.set(mode.key, []));
     let gpsAvailableMinutes = 0;
     let modeAvailableMinutes = 0;
 
@@ -1177,9 +1228,7 @@ export class ScEmeraldReportService implements VesselReportAdapter {
           mode.runningHours += 1 / 60;
           mode.distanceNm += distance;
         }
-        if (modeKey === 'underway-eco' || modeKey === 'underway-full') {
-          passageMinuteKeys.push(bucket);
-        }
+        modeMinuteKeys.get(modeKey)?.push(bucket);
       }
     }
 
@@ -1206,22 +1255,40 @@ export class ScEmeraldReportService implements VesselReportAdapter {
       totalFuelUsed,
     );
 
-    const passageSummary = this.buildPassageSummary(
-      passageMinuteKeys,
-      pmeRpm,
-      smeRpm,
-      ppsRpm,
-      spsRpm,
-      paeRpm,
-      caeRpm,
-      saeRpm,
-      pmeFuel,
-      smeFuel,
-      paeFuel,
-      caeFuel,
-      saeFuel,
-      gpsSpeed,
-    );
+    const modeDetails: ScEmeraldModeDetail[] = modeSummary.map((mode) => {
+      const rawSummary = this.buildPassageSummary(
+        modeMinuteKeys.get(mode.key) || [],
+        pmeRpm,
+        smeRpm,
+        ppsRpm,
+        spsRpm,
+        paeRpm,
+        caeRpm,
+        saeRpm,
+        pmePdfModeFuel,
+        smePdfModeFuel,
+        paePdfModeFuel,
+        caePdfModeFuel,
+        saePdfModeFuel,
+        gpsSpeed,
+      );
+      return {
+        key: mode.key,
+        label: mode.label,
+        summary: scaleModeDetailFuelToTarget(rawSummary, mode.fuelUsed),
+      };
+    });
+
+    const dominantMode = [...modeSummary].sort((a, b) => {
+      if (Math.abs(b.fuelUsed) !== Math.abs(a.fuelUsed)) return Math.abs(b.fuelUsed) - Math.abs(a.fuelUsed);
+      return b.runningHours - a.runningHours;
+    })[0];
+    const passageSummary =
+      modeDetails.find((detail) => detail.key === dominantMode?.key)?.summary ||
+      this.buildPassageSummary(
+        [], pmeRpm, smeRpm, ppsRpm, spsRpm, paeRpm, caeRpm, saeRpm,
+        pmePdfModeFuel, smePdfModeFuel, paePdfModeFuel, caePdfModeFuel, saePdfModeFuel, gpsSpeed,
+      );
 
     const tracking = this.buildTrackingSummary(
       minuteStart,
@@ -1320,6 +1387,7 @@ export class ScEmeraldReportService implements VesselReportAdapter {
       totalFuelUsed,
       modeSummary,
       passageSummary,
+      modeDetails,
       tracking,
       hourly,
       speedSeries,
@@ -1464,7 +1532,7 @@ export class ScEmeraldReportService implements VesselReportAdapter {
         },
         {
           key: 'center',
-          label: 'Ctr. A/E',
+          label: 'Thruster A/E',
           runningHours: runningHoursForAux(caeRpm),
           fuelUsed: caeFuelValue,
         },
@@ -1954,8 +2022,8 @@ export class ScEmeraldReportService implements VesselReportAdapter {
   private resolveModeFromCode(rawValue: unknown): string | null {
     const numeric = this.parseNumber(rawValue);
     if (numeric === null) return null;
-    const code = Math.trunc(numeric);
-    if (code !== numeric || code < 1 || code > 15) return null;
+    const code = legacyConvertToInt32(numeric);
+    if (code === null || code < 1 || code > 15) return null;
     const mode = SC_EMERALD_REPORT_PROFILE.modes.find((item) =>
       (item.codes || []).some((candidate) => Number(candidate) === code),
     );

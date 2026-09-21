@@ -35,6 +35,62 @@ export interface GpsPdfParityOptions {
   standbyLabel?: string;
   /** Reproduce System.Single arithmetic used by the legacy C# mode DataTable. */
   legacySinglePrecision?: boolean;
+  /**
+   * Legacy vessels are not all normalized back to the Page-1 official fuel total.
+   * Keep the default true; SC WINTER explicitly uses raw by-Mode fuel in the legacy PDF.
+   */
+  scaleFuelToOfficialTotal?: boolean;
+}
+
+/**
+ * Equivalent to C# Convert.ToInt32(double): round to the nearest Int32,
+ * with midpoint values rounded to the nearest even integer.
+ *
+ * This is intentionally used for explicit VES-MODE historian tags only.
+ * GPS-speed-derived modes must keep the raw speed precision used by the PDF.
+ */
+export function legacyConvertToInt32(value: number): number | null {
+  if (!Number.isFinite(value)) return null;
+
+  const lower = Math.floor(value);
+  const fraction = value - lower;
+  let rounded: number;
+
+  if (fraction < 0.5) {
+    rounded = lower;
+  } else if (fraction > 0.5) {
+    rounded = lower + 1;
+  } else {
+    rounded = lower % 2 === 0 ? lower : lower + 1;
+  }
+
+  return rounded >= -2_147_483_648 && rounded <= 2_147_483_647 ? rounded : null;
+}
+
+/**
+ * Builds the same sparse exact-minute lookup used by SCReportingService's
+ * fixed minute DataTable. A sample such as 10:15:23 must not be floored into 10:15.
+ */
+export function buildExactMinuteValueMap(
+  points: readonly LegacyFuelPoint[],
+  minuteMs = 60_000,
+): Map<number, number> {
+  const result = new Map<number, number>();
+  for (const point of points) {
+    const timestamp = point?.timestamp;
+    if (!(timestamp instanceof Date) || !Number.isFinite(point.value)) continue;
+    const time = timestamp.getTime();
+    if (!Number.isFinite(time) || timestamp.getSeconds() !== 0) continue;
+
+    // Legacy DataTable.Select compares at whole-second precision. A :00.xxx
+    // logger sample belongs to the :00 row; an off-second sample does not.
+    const normalized = new Date(time);
+    normalized.setMilliseconds(0);
+    const bucket = normalized.getTime();
+    if (bucket % minuteMs !== 0) continue;
+    result.set(bucket, point.value);
+  }
+  return result;
 }
 
 export function roundPdf2(value: number): number {
@@ -159,7 +215,12 @@ export function buildGpsPdfParityModeSummary(options: GpsPdfParityOptions): PdfP
     fuelPercent.set(standbyKey, roundPdf2(Math.max(0, 100 - otherFuelPercent)));
   }
 
-  const fuelScale = totalRawFuel !== 0 ? options.officialTotalFuel / totalRawFuel : 0;
+  const fuelScale =
+    options.scaleFuelToOfficialTotal === false
+      ? 1
+      : totalRawFuel !== 0
+        ? options.officialTotalFuel / totalRawFuel
+        : 0;
   const modeSummary = options.modes.map((mode): PdfParityModeSummaryRow => {
     const bucket = buckets.get(mode.key)!;
     const hours = runningHours.get(mode.key) ?? roundPdf2(bucket.samples / 60);
@@ -231,6 +292,70 @@ export function normalizeModeFuelToOfficialTotal<T extends PdfParityModeSummaryR
       litresPerHour: displayedHours !== 0 ? roundPdf2(fuelFull / displayedHours) : null,
     };
   });
+}
+
+
+/**
+ * Reconciles a per-mode machinery detail fuel split with the already-normalized
+ * Page-2 mode fuel total. Legacy PDFs calculate the mode headline total first,
+ * then display equipment contributions that must add back to that same total.
+ *
+ * Signed totals are preserved (SC EMERALD can legitimately report negative
+ * legacy totalizer results). No per-date calibration is involved.
+ */
+export function scaleModeDetailFuelToTarget<
+  T extends {
+    mainEngines: Array<{ fuelUsed: number }>;
+    auxFuel: Array<{ fuelUsed: number }>;
+    mainEngineFuelTotal: number;
+    auxiliaryFuelTotal: number;
+  },
+>(summary: T, targetFuelUsed: number): T {
+  if (!Number.isFinite(targetFuelUsed)) return summary;
+
+  const rawMain = summary.mainEngines.reduce(
+    (sum, row) => sum + (Number.isFinite(row.fuelUsed) ? row.fuelUsed : 0),
+    0,
+  );
+  const rawAux = summary.auxFuel.reduce(
+    (sum, row) => sum + (Number.isFinite(row.fuelUsed) ? row.fuelUsed : 0),
+    0,
+  );
+  const rawTotal = rawMain + rawAux;
+
+  if (!Number.isFinite(rawTotal) || Math.abs(rawTotal) < 1e-9) {
+    if (Math.abs(targetFuelUsed) < 1e-9) {
+      return {
+        ...summary,
+        mainEngines: summary.mainEngines.map((row) => ({ ...row, fuelUsed: 0 })),
+        auxFuel: summary.auxFuel.map((row) => ({ ...row, fuelUsed: 0 })),
+        mainEngineFuelTotal: 0,
+        auxiliaryFuelTotal: 0,
+      } as T;
+    }
+    // There is no defensible equipment split when every raw equipment delta is
+    // zero but the mode headline is non-zero. Keep the raw detail rather than
+    // inventing fuel allocation; the runtime data-quality diagnostics can flag it.
+    return summary;
+  }
+
+  const scale = targetFuelUsed / rawTotal;
+  const mainEngines = summary.mainEngines.map((row) => ({
+    ...row,
+    fuelUsed: row.fuelUsed * scale,
+  }));
+  const auxFuel = summary.auxFuel.map((row) => ({
+    ...row,
+    fuelUsed: row.fuelUsed * scale,
+  }));
+
+  return {
+    ...summary,
+    mainEngines,
+    auxFuel,
+    mainEngineFuelTotal: mainEngines.reduce((sum, row) => sum + row.fuelUsed, 0),
+    auxiliaryFuelTotal: auxFuel.reduce((sum, row) => sum + row.fuelUsed, 0),
+  } as T;
 }
 
 export interface LegacyFuelPoint {

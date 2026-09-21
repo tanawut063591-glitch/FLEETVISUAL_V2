@@ -281,7 +281,7 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    const keys = ['selectedVessel', 'realtimeVessel', 'reportVessel'];
+    const keys = this.selectionStorageKeysForCurrentRoute();
 
     for (const key of keys) {
       try {
@@ -306,12 +306,39 @@ export class MainComponent implements OnInit, AfterViewInit, OnDestroy {
 
     try {
       const serialized = JSON.stringify(vessel);
+
+      // Keep a global fallback, but preserve a page-specific selection exactly like
+      // Realtime. This prevents Report refreshes from being overwritten by the most
+      // recently visited vessel on another module.
       window.localStorage.setItem('selectedVessel', serialized);
-      window.localStorage.setItem('realtimeVessel', serialized);
-      window.localStorage.setItem('pastTrackVessel', serialized);
-      window.localStorage.setItem('reportVessel', serialized);
       window.localStorage.setItem('activeVessel', serialized);
+
+      if (/\/main\/report(?:\/|$)/.test(this.router.url)) {
+        window.localStorage.setItem('reportVessel', serialized);
+      } else if (/\/main\/(realtime|diagram)(?:\/|$)/.test(this.router.url)) {
+        window.localStorage.setItem('realtimeVessel', serialized);
+      } else if (this.router.url.includes('/main/past-track')) {
+        window.localStorage.setItem('pastTrackVessel', serialized);
+      }
     } catch {}
+  }
+
+  private selectionStorageKeysForCurrentRoute(): string[] {
+    const url = this.router.url || '';
+
+    if (/\/main\/report(?:\/|$)/.test(url)) {
+      return ['reportVessel', 'selectedVessel', 'realtimeVessel', 'activeVessel'];
+    }
+
+    if (/\/main\/(realtime|diagram)(?:\/|$)/.test(url)) {
+      return ['realtimeVessel', 'selectedVessel', 'activeVessel', 'reportVessel'];
+    }
+
+    if (url.includes('/main/past-track')) {
+      return ['pastTrackVessel', 'selectedVessel', 'activeVessel', 'realtimeVessel'];
+    }
+
+    return ['selectedVessel', 'activeVessel', 'realtimeVessel', 'reportVessel'];
   }
 
   private watchActiveVesselSelection(): void {

@@ -658,3 +658,143 @@
 :host-context([data-theme='dark']) .engine-library-list {
   background: #080d14;
 }
+
+/* =========================================================
+   V19 - Inline Engine Profile Studio
+   Keep profile management inside Add/Edit Vessel and remove
+   the full-drawer takeover. The library now behaves like a
+   first-class section of Engine Setup.
+   ========================================================= */
+.engine-library-panel.engine-library-inline {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  width: 100%;
+  margin: 10px 0 12px;
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgba(18, 100, 245, 0.18);
+  border-radius: 9px;
+  background: var(--set-surface);
+  box-shadow: 0 9px 24px rgba(15, 42, 78, 0.07);
+}
+
+.engine-library-inline .engine-library-header {
+  min-height: 62px;
+  padding: 11px 12px;
+}
+
+.engine-library-inline .engine-library-title-icon {
+  width: 32px;
+  height: 32px;
+  flex-basis: 32px;
+}
+
+.engine-library-inline .engine-library-header .engine-library-title strong {
+  font-size: 10.8px;
+}
+
+.engine-library-inline .engine-library-header .engine-library-title p {
+  max-width: 460px;
+  font-size: 7.5px;
+}
+
+.engine-library-inline .engine-library-header > button {
+  width: 30px;
+  height: 30px;
+  flex-basis: 30px;
+}
+
+.engine-library-inline .engine-library-tools {
+  padding: 8px 10px;
+}
+
+.engine-library-inline .engine-library-list {
+  width: 100%;
+  max-height: 150px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--set-border);
+}
+
+.engine-library-inline .engine-profile-editor {
+  width: 100%;
+  min-height: auto;
+  overflow: visible;
+  padding: 11px 12px 12px;
+}
+
+.engine-library-inline .engine-profile-editor-actions {
+  position: static;
+  margin: 11px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--set-border);
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.engine-library-inline .engine-profile-form-grid {
+  gap: 9px 10px;
+}
+
+.engine-library-inline .engine-type-field > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.engine-library-inline .engine-type-field > span small {
+  padding: 2px 5px;
+  border: 1px solid rgba(18, 100, 245, 0.14);
+  border-radius: 999px;
+  color: var(--set-primary);
+  background: var(--set-primary-soft);
+  font-size: 6.4px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.engine-library-inline .field-help {
+  display: block;
+  margin-top: 4px;
+  color: var(--set-muted);
+  font-size: 6.8px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.professional-engine-setup .engine-library-btn.active {
+  border-color: rgba(18, 100, 245, 0.42);
+  color: #fff;
+  background: linear-gradient(145deg, #2478f6, #0b58e7);
+  box-shadow: 0 6px 14px rgba(18, 100, 245, 0.18);
+}
+
+:host-context([data-theme='dark']) .engine-library-panel.engine-library-inline {
+  border-color: rgba(112, 154, 216, 0.24);
+  background: #0b111a;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+}
+
+@container (max-width: 620px) {
+  .engine-library-inline .engine-profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .engine-library-inline .engine-profile-form-grid label.full {
+    grid-column: auto;
+  }
+}
+
+@container (max-width: 430px) {
+  .engine-library-inline .engine-library-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .engine-library-inline .new-engine-profile-btn {
+    width: 100%;
+  }
+}

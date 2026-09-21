@@ -398,3 +398,80 @@ html[data-theme='dark'] app-report .report-page--official .official-mirrored-too
 html[data-theme='dark'] app-report .report-page--official .official-mirrored-toolbar::before {
   background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.16) 8%, rgba(148, 163, 184, 0.16) 92%, transparent) !important;
 }
+
+/* ========================================================================== */
+/* PDF MODE DETAIL — dark theme                                                */
+/* Keep the new PDF-parity tables visually identical to the main Report theme. */
+/* ========================================================================== */
+html[data-theme='dark'] app-report {
+  --report-mode-detail-surface: #0b0e12;
+  --report-mode-detail-header: #0f1319;
+  --report-mode-detail-table-surface: #0b0e12;
+  --report-mode-detail-border: rgba(148, 163, 184, 0.22);
+  --report-mode-detail-table-border: rgba(148, 163, 184, 0.20);
+  --report-mode-detail-text: #edf4ff;
+  --report-mode-detail-heading: #f8fafc;
+  --report-mode-detail-accent: #3b82f6;
+  --report-mode-detail-section: #111a27;
+  --report-mode-detail-separator: #090c10;
+  --report-mode-detail-total: #2c2415;
+  --report-mode-detail-total-text: #ffd166;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page,
+html[data-theme='dark'] app-report .pdf-mode-detail-grid,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table-wrap,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table {
+  background: #0b0e12 !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page__header {
+  border-color: rgba(148, 163, 184, 0.20) !important;
+  border-left-color: #3b82f6 !important;
+  background: #0f1319 !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page__header h3 {
+  color: #f8fafc !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table th,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table td {
+  border-color: rgba(148, 163, 184, 0.20) !important;
+  color: #edf4ff !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table tbody tr:nth-child(odd):not(.section-row):not(.separator-row):not(.total-row) th,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table tbody tr:nth-child(odd):not(.section-row):not(.separator-row):not(.total-row) td {
+  background: #0b0e12 !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) th,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) td {
+  background: #10151c !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table tbody tr:not(.section-row):not(.separator-row):not(.total-row):hover th,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table tbody tr:not(.section-row):not(.separator-row):not(.total-row):hover td {
+  background: #142238 !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table .section-row th {
+  background: #111a27 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table .separator-row td {
+  background: #090c10 !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table .total-row th,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table .total-row td {
+  background: #2c2415 !important;
+  color: #ffd166 !important;
+}

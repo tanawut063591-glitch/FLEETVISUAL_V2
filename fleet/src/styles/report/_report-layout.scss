@@ -10968,3 +10968,144 @@ app-report .report-abbreviation-note__items em {
     }
   }
 }
+
+/* Report PRO audit: explicit empty-historian state. A missing data day must never
+   masquerade as a valid 24-hour standby report or a page full of zero values. */
+app-report .daily-ui-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid rgba(91, 126, 168, .28);
+  border-radius: 12px;
+  background: var(--report-card-bg, #fff);
+  box-shadow: 0 8px 24px rgba(21, 49, 84, .06);
+}
+
+app-report .daily-ui-empty > i {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(70, 119, 180, .10);
+  font-size: 17px;
+}
+
+app-report .daily-ui-empty > div {
+  display: grid;
+  gap: 5px;
+}
+
+app-report .daily-ui-empty strong {
+  font-size: 13px;
+}
+
+app-report .daily-ui-empty span {
+  max-width: 900px;
+  font-size: 10.5px;
+  line-height: 1.55;
+  opacity: .82;
+}
+
+app-report .report-full-daily--no-data > .daily-executive-overview,
+app-report .report-full-daily--no-data > .historical-daily-trend,
+app-report .report-full-daily--no-data > .report-table-panel {
+  display: none !important;
+}
+
+/* ========================================================================== */
+/* PDF MODE DETAIL — shared layout (theme colors live in styles/themes/report) */
+/* Added 2026-09-21. Keep this section neutral so Light/Dark switch is driven   */
+/* entirely by the global theme files rather than component-local hard-codes.  */
+/* ========================================================================== */
+app-report .pdf-mode-detail-page {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--report-mode-detail-border, var(--fv-border, #dbe5f1));
+  border-radius: 3px;
+  background: var(--report-mode-detail-surface, var(--fv-surface, #ffffff));
+  color: var(--report-mode-detail-text, var(--fv-text, #0f172a));
+  box-shadow: none;
+}
+
+app-report .pdf-mode-detail-page__header {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--report-mode-detail-border, var(--fv-border, #dbe5f1));
+  border-left: 3px solid var(--report-mode-detail-accent, #2563eb);
+  background: var(--report-mode-detail-header, var(--fv-surface, #ffffff));
+}
+
+app-report .pdf-mode-detail-page__header h3 {
+  margin: 0;
+  color: var(--report-mode-detail-heading, var(--fv-text, #10213e));
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+app-report .pdf-mode-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
+  background: var(--report-mode-detail-surface, var(--fv-surface, #ffffff));
+}
+
+app-report .pdf-mode-detail-page .report-book-table-wrap {
+  min-width: 0;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid var(--report-mode-detail-table-border, var(--fv-border, #dbe5f1));
+  border-radius: 2px;
+  background: var(--report-mode-detail-table-surface, var(--fv-surface, #ffffff));
+  box-shadow: none;
+}
+
+app-report .pdf-mode-detail-page .report-book-table {
+  min-width: 430px;
+  margin: 0;
+  background: var(--report-mode-detail-table-surface, var(--fv-surface, #ffffff));
+}
+
+app-report .pdf-mode-detail-page .report-book-table th,
+app-report .pdf-mode-detail-page .report-book-table td {
+  color: var(--report-mode-detail-text, var(--fv-text, #0f172a));
+  border-color: var(--report-mode-detail-table-border, var(--fv-border, #dbe5f1));
+}
+
+app-report .pdf-mode-detail-page .report-book-table .separator-row td {
+  height: 9px;
+  padding: 0;
+  background: var(--report-mode-detail-separator, var(--fv-subtle-surface, #f8fafc));
+}
+
+app-report .pdf-mode-detail-page .report-book-table .section-row th {
+  background: var(--report-mode-detail-section, #eef4fb);
+  color: var(--report-mode-detail-heading, var(--fv-text, #0f172a));
+}
+
+app-report .pdf-mode-detail-page .report-book-table .total-row th,
+app-report .pdf-mode-detail-page .report-book-table .total-row td {
+  background: var(--report-mode-detail-total, #fff7df);
+  color: var(--report-mode-detail-total-text, var(--fv-text, #0f172a));
+  font-weight: 800;
+}
+
+app-report .pdf-mode-detail-utilization {
+  margin: 0 10px 10px !important;
+}
+
+app-report .pdf-mode-detail-utilization .report-book-table {
+  min-width: 520px;
+}
+
+@media (max-width: 960px) {
+  app-report .pdf-mode-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

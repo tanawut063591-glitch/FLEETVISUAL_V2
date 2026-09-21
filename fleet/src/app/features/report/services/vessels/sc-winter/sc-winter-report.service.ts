@@ -13,9 +13,11 @@ import {
 } from '../../common/vessel-report-adapter';
 import {
   buildGpsPdfParityModeSummary,
+  buildExactMinuteValueMap,
   buildLegacyPdfFuelDeltaMap,
   isCompletedDailyWindow,
 } from '../../common/pdf-mode-parity';
+import { calculateLegacyDailyFuelTotal, exactMinutePoints } from '../../common/legacy-daily-fuel';
 import {
   SC_WINTER_MODE_HISTORIAN_TAG,
   SC_WINTER_REPORT_PROFILE,
@@ -380,15 +382,10 @@ export class ScWinterReportService implements VesselReportAdapter {
     // Completed Daily UI must read the historian exactly like SCReportingService/PDF:
     // one tag per loggergethistorianvalues request, including next-day 00:00.
     const historianRequest$: Observable<any> = completedDaily
-      ? from(ALL_TAGS).pipe(
-          mergeMap(
-            (tagName) =>
-              this.newHttp.getRawData(requestStartText, requestEndText, [{ name: tagName, tagName }]).pipe(
-                map((response) => ({ __legacyTagName: tagName, __legacyResponse: response })),
-              ),
-            1,
-          ),
-          toArray(),
+      ? this.newHttp.getConsistentPdfParityHistorianValues(
+          requestStartText,
+          requestEndText,
+          requestTags,
         )
       : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
 
@@ -402,7 +399,7 @@ export class ScWinterReportService implements VesselReportAdapter {
         }),
         catchError((error) => throwError(() => error)),
         finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: false }),
+        shareReplay({ bufferSize: 1, refCount: true }),
       );
 
     this.detailedReportInFlight.set(key, request$);
@@ -462,7 +459,7 @@ export class ScWinterReportService implements VesselReportAdapter {
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.periodReportInFlight.set(key, request$);
@@ -896,7 +893,11 @@ export class ScWinterReportService implements VesselReportAdapter {
     const pdfModeDataEnd = completedDaily ? boundaryBucket : minuteEnd;
     const minuteCount = Math.max(1, Math.floor((minuteEnd - minuteStart) / MINUTE_MS) + 1);
 
-    const gpsSpeed = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsSpeed)) || []);
+    const gpsSpeedPoints = series.get(this.tagKey(TAGS.gpsSpeed)) || [];
+    const gpsSpeed = this.buildInstantMap(gpsSpeedPoints);
+    const pdfModeGpsSpeed = completedDaily
+      ? buildExactMinuteValueMap(gpsSpeedPoints, MINUTE_MS)
+      : gpsSpeed;
     const gpsLat = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLat)) || []);
     const gpsLong = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLong)) || []);
     const gpsHead = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsHead)) || []);
@@ -929,6 +930,23 @@ export class ScWinterReportService implements VesselReportAdapter {
       300,
     );
 
+    // Page-1 PDF fuel uses SCWinter.CalFLowTotalSME against the exact-minute
+    // dtRawData table.  Summing interpolated minute deltas can turn a valid
+    // A/E total into 0 or a smaller value when samples are sparse.
+    const winterFuelRule = {
+      input: { totalRangeLimit: 28_000, stepLimit: 300, stepInclusive: true, initialValueLimit: 90_000_000 },
+      output: { totalRangeLimit: 25_000, stepLimit: 300, stepInclusive: true, initialValueLimit: 90_000_000 },
+      ignoredValues: [999_999],
+      clampNegative: false,
+    } as const;
+    const pdfFuelPoints = (tag: string) => exactMinutePoints(
+      series.get(this.tagKey(tag)) || [], minuteStart, pdfModeDataEnd,
+    );
+    const ae1DailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.ae1FuelIn), pdfFuelPoints(TAGS.ae1FuelOut), winterFuelRule);
+    const ae2DailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.ae2FuelIn), pdfFuelPoints(TAGS.ae2FuelOut), winterFuelRule);
+    const ae3DailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.ae3FuelIn), pdfFuelPoints(TAGS.ae3FuelOut), winterFuelRule);
+    const ae4DailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.ae4FuelIn), pdfFuelPoints(TAGS.ae4FuelOut), winterFuelRule);
+
     this.foldCompletedDayBoundary(portMainRpm, minuteEnd, boundaryBucket);
     this.foldCompletedDayBoundary(starboardMainRpm, minuteEnd, boundaryBucket);
     this.foldCompletedDayBoundary(ae1Rpm, minuteEnd, boundaryBucket);
@@ -951,10 +969,10 @@ export class ScWinterReportService implements VesselReportAdapter {
     ];
     const shaftSummary: ScWinterShaftSummaryRow[] = [];
     const auxSummary: ScWinterAuxSummaryRow[] = [
-      this.buildAuxSummary('port', 'A/E1', ae1Rpm, ae1Fuel),
-      this.buildAuxSummary('center', 'A/E2', ae2Rpm, ae2Fuel),
-      this.buildAuxSummary('starboard', 'A/E3', ae3Rpm, ae3Fuel),
-      this.buildAuxSummary('fourth', 'A/E4', ae4Rpm, ae4Fuel),
+      { ...this.buildAuxSummary('port', 'A/E1', ae1Rpm, ae1Fuel), fuelUsed: ae1DailyFuel },
+      { ...this.buildAuxSummary('center', 'A/E2', ae2Rpm, ae2Fuel), fuelUsed: ae2DailyFuel },
+      { ...this.buildAuxSummary('starboard', 'A/E3', ae3Rpm, ae3Fuel), fuelUsed: ae3DailyFuel },
+      { ...this.buildAuxSummary('fourth', 'A/E4', ae4Rpm, ae4Fuel), fuelUsed: ae4DailyFuel },
     ];
 
     const mainEngineFuelTotal = 0;
@@ -1105,7 +1123,7 @@ export class ScWinterReportService implements VesselReportAdapter {
       completedDaily,
       minuteMs: MINUTE_MS,
       officialTotalFuel: totalFuelUsed,
-      gpsSpeed,
+      gpsSpeed: pdfModeGpsSpeed,
       minuteFuelAt: (minute) =>
         (pdfModeAE1Fuel.get(minute) || 0) +
         (pdfModeAE2Fuel.get(minute) || 0) +
@@ -1114,6 +1132,8 @@ export class ScWinterReportService implements VesselReportAdapter {
       resolveModeLabel: (speed) => this.resolveModeFromGpsSpeed(speed),
       resolveModeKey: (label) => this.resolveModeProfileKey(label),
       standbyLabel: 'Standby',
+      // SC WINTER legacy PDF keeps raw by-Mode fuel; it does not normalize Mode fuel to Page-1 total.
+      scaleFuelToOfficialTotal: false,
     });
     const modeSummary = pdfParityMode.modeSummary as ScWinterModeSummaryRow[];
 
@@ -1827,7 +1847,7 @@ export class ScWinterReportService implements VesselReportAdapter {
   }
 
   private resolveModeFromGpsSpeed(speed: number | null): string | null {
-    if (speed === null || !Number.isFinite(speed) || speed < 0) return null;
+    if (speed === null || !Number.isFinite(speed)) return null;
     if (speed < 1) return 'Standby';
     if (speed < 3) return 'Cargo Operation';
     if (speed < 7) return 'Manoeuvring';

@@ -11,7 +11,7 @@ import {
   ViewChildren,
 } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { BehaviorSubject, Observable, Subject, Subscription, combineLatest, from, merge, of, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, Subscription, combineLatest, from, of, throwError } from 'rxjs';
 import {
   auditTime,
   catchError,
@@ -70,8 +70,10 @@ import {
 } from './services/vessels/sc-glory-1/sc-glory-1-report.service';
 import { ScGlory2ReportService } from './services/vessels/sc-glory-2/sc-glory-2-report.service';
 import { ScGlory3ReportService } from './services/vessels/sc-glory-3/sc-glory-3-report.service';
+import { ScGlory6ReportService } from './services/vessels/sc-glory-6/sc-glory-6-report.service';
 import { ScGlory7ReportService } from './services/vessels/sc-glory-7/sc-glory-7-report.service';
 import { ScEmeraldReportService } from './services/vessels/sc-emerald/sc-emerald-report.service';
+import { MvGemiaReportService } from './services/vessels/mv-gemia/mv-gemia-report.service';
 import { ScCholuedeeReportService } from './services/vessels/sc-choluedee/sc-choluedee-report.service';
 import { ScBraveReportService } from './services/vessels/sc-brave/sc-brave-report.service';
 import { ScPailinReportService } from './services/vessels/sc-pailin/sc-pailin-report.service';
@@ -79,6 +81,11 @@ import { ScRajaReportService } from './services/vessels/sc-raja/sc-raja-report.s
 import { ScSultanReportService } from './services/vessels/sc-sultan/sc-sultan-report.service';
 import { ScWinterReportService } from './services/vessels/sc-winter/sc-winter-report.service';
 import { ScBongkotReportService } from './services/vessels/sc-bongkot/sc-bongkot-report.service';
+import { BahteraIntanReportService } from './services/vessels/bahtera-intan/bahtera-intan-report.service';
+import { BahteraLazuritReportService } from './services/vessels/bahtera-lazurit/bahtera-lazurit-report.service';
+import { BahteraZamrudReportService } from './services/vessels/bahtera-zamrud/bahtera-zamrud-report.service';
+import { BbLiberty233ReportService } from './services/vessels/bb-liberty-233/bb-liberty-233-report.service';
+import { BbTongkamReportService } from './services/vessels/bb-tongkam/bb-tongkam-report.service';
 
 declare const google: any;
 
@@ -515,8 +522,10 @@ export class ReportComponent implements OnInit, OnDestroy {
     private scGlory1ReportService: ScGlory1ReportService,
     private scGlory2ReportService: ScGlory2ReportService,
     private scGlory3ReportService: ScGlory3ReportService,
+    private scGlory6ReportService: ScGlory6ReportService,
     private scGlory7ReportService: ScGlory7ReportService,
     private scEmeraldReportService: ScEmeraldReportService,
+    private mvGemiaReportService: MvGemiaReportService,
     private scCholuedeeReportService: ScCholuedeeReportService,
     private scBraveReportService: ScBraveReportService,
     private scPailinReportService: ScPailinReportService,
@@ -524,6 +533,11 @@ export class ReportComponent implements OnInit, OnDestroy {
     private scSultanReportService: ScSultanReportService,
     private scWinterReportService: ScWinterReportService,
     private scBongkotReportService: ScBongkotReportService,
+    private bahteraIntanReportService: BahteraIntanReportService,
+    private bahteraLazuritReportService: BahteraLazuritReportService,
+    private bahteraZamrudReportService: BahteraZamrudReportService,
+    private bbLiberty233ReportService: BbLiberty233ReportService,
+    private bbTongkamReportService: BbTongkamReportService,
     private changeDetector: ChangeDetectorRef,
   ) {
     const now = new Date();
@@ -601,6 +615,21 @@ export class ReportComponent implements OnInit, OnDestroy {
   get selectedVesselImage(): string {
     const vessel = this.selectedVessel || {};
     const fvInfo = vessel?.fvInfo || vessel?.fv || vessel || {};
+    const identity = [
+      fvInfo?.name,
+      fvInfo?.prefix,
+      fvInfo?.id,
+      vessel?.name,
+      vessel?.prefix,
+      vessel?.id,
+      this.selectedVesselName,
+    ]
+      .map((value) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, ''))
+      .join(' ');
+
+    if (identity.includes('mvgemia')) {
+      return 'assets/images/vessel/mv_gemia.jpg';
+    }
 
     // Keep the report hero on the exact same vessel artwork priority as the
     // sidebar. Some vessel payloads expose more than one image field; the old
@@ -858,7 +887,7 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   get dailyActiveModeCount(): number {
     return (this.scGlory1DailyReport?.modeSummary || []).filter((row) =>
-      Math.max(0, Number(row.fuelUsed) || 0) > 0 || Math.max(0, Number(row.runningHours) || 0) > 0,
+      Math.abs(Number(row.fuelUsed) || 0) > 0 || Math.max(0, Number(row.runningHours) || 0) > 0,
     ).length;
   }
 
@@ -975,6 +1004,10 @@ export class ReportComponent implements OnInit, OnDestroy {
     return this.activeVesselReportAdapter?.id === 'sc-emerald';
   }
 
+  get isMvGemiaReport(): boolean {
+    return this.activeVesselReportAdapter?.id === 'mv-gemia';
+  }
+
   get isScPailinReport(): boolean {
     return this.activeVesselReportAdapter?.id === 'sc-pailin';
   }
@@ -995,8 +1028,32 @@ export class ReportComponent implements OnInit, OnDestroy {
     return this.activeVesselReportAdapter?.id === 'sc-bongkot';
   }
 
+  get isBahteraIntanReport(): boolean {
+    return this.activeVesselReportAdapter?.id === 'bahtera-intan';
+  }
+
+  get isBahteraLazuritReport(): boolean {
+    return this.activeVesselReportAdapter?.id === 'bahtera-lazurit';
+  }
+
+  get isBahteraZamrudReport(): boolean {
+    return this.activeVesselReportAdapter?.id === 'bahtera-zamrud';
+  }
+
+  get isBbLiberty233Report(): boolean {
+    return this.activeVesselReportAdapter?.id === 'bb-liberty-233';
+  }
+
+  get isBbTongkamReport(): boolean {
+    return this.activeVesselReportAdapter?.id === 'bb-tongkam';
+  }
+
+  get isBahteraGeneratorReport(): boolean {
+    return this.isBahteraIntanReport || this.isBahteraLazuritReport || this.isBahteraZamrudReport || this.isBbLiberty233Report || this.isBbTongkamReport;
+  }
+
   get usesNumberedAuxiliaryReport(): boolean {
-    return this.isScWinterReport || this.isScBongkotReport;
+    return this.isScWinterReport || this.isScBongkotReport || this.isBahteraGeneratorReport;
   }
 
   get hasEngineLoadReport(): boolean {
@@ -1004,11 +1061,11 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   get hasDirectOperatingModeReport(): boolean {
-    return this.isScRajaReport || this.isScSultanReport || this.isScBongkotReport;
+    return this.isMvGemiaReport || this.isScEmeraldReport || this.isScRajaReport || this.isScSultanReport || this.isScBongkotReport || this.isBahteraGeneratorReport;
   }
 
   get hasThrusterAuxiliaryReport(): boolean {
-    return this.isScEmeraldReport || this.isScPailinReport || this.isScSultanReport;
+    return this.isMvGemiaReport || this.isScEmeraldReport;
   }
 
   get dailyCenterAuxiliaryTitle(): string {
@@ -1035,7 +1092,7 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   get dailyPassageSummaryDescription(): string {
     if (this.hasDirectOperatingModeReport) {
-      const vesselLabel = this.isScBongkotReport ? 'SC BONGKOT' : this.isScSultanReport ? 'SC SULTAN' : 'SC RAJA';
+      const vesselLabel = this.isMvGemiaReport ? 'MV GEMIA' : this.isScEmeraldReport ? 'SC EMERALD' : this.isBahteraIntanReport ? 'BAHTERA INTAN' : this.isBahteraLazuritReport ? 'BAHTERA LAZURIT' : this.isBahteraZamrudReport ? 'BAHTERA ZAMRUD' : this.isBbLiberty233Report ? 'BB LIBERTY 233' : this.isBbTongkamReport ? 'BB TONGKAM' : this.isScBongkotReport ? 'SC BONGKOT' : this.isScSultanReport ? 'SC SULTAN' : 'SC RAJA';
       return `Machinery and navigation values filtered to the dominant ${vesselLabel} operating mode for the selected period.`;
     }
     return this.isScEmeraldReport
@@ -1044,6 +1101,19 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   dailyReportSourcePage(sectionKey: string, fallback: string): string {
+    if (this.isBahteraGeneratorReport) {
+      const pages: Record<string, string> = {
+        tracking: '19',
+        hourlyPerformance: '20',
+        auxiliaryFuel: '21',
+        portAuxiliary: '22',
+        centerAuxiliary: '23',
+        starboardAuxiliary: '24',
+        fourthAuxiliary: '25',
+        totalFuel: '26',
+      };
+      return pages[sectionKey] || fallback;
+    }
     if (this.isScBongkotReport) {
       const pages: Record<string, string> = {
         tracking: '18',
@@ -1118,6 +1188,21 @@ export class ReportComponent implements OnInit, OnDestroy {
       };
       return pages[sectionKey] || fallback;
     }
+    if (this.isMvGemiaReport) {
+      const pages: Record<string, string> = {
+        tracking: '18',
+        hourlyPerformance: '19',
+        mainFuel: '20',
+        portMachinery: '21',
+        starboardMachinery: '22',
+        auxiliaryFuel: '23',
+        portAuxiliary: '24',
+        starboardAuxiliary: '25',
+        centerAuxiliary: '26',
+        totalFuel: '27',
+      };
+      return pages[sectionKey] || fallback;
+    }
     if (!this.isScEmeraldReport) return fallback;
     const pages: Record<string, string> = {
       tracking: '18',
@@ -1142,10 +1227,14 @@ export class ReportComponent implements OnInit, OnDestroy {
         return this.scGlory2ReportService;
       case 'sc-glory-3':
         return this.scGlory3ReportService;
+      case 'sc-glory-6':
+        return this.scGlory6ReportService;
       case 'sc-glory-7':
         return this.scGlory7ReportService;
       case 'sc-emerald':
         return this.scEmeraldReportService;
+      case 'mv-gemia':
+        return this.mvGemiaReportService;
       case 'sc-choluedee':
         return this.scCholuedeeReportService;
       case 'sc-brave':
@@ -1160,6 +1249,16 @@ export class ReportComponent implements OnInit, OnDestroy {
         return this.scWinterReportService;
       case 'sc-bongkot':
         return this.scBongkotReportService;
+      case 'bahtera-intan':
+        return this.bahteraIntanReportService;
+      case 'bahtera-lazurit':
+        return this.bahteraLazuritReportService;
+      case 'bahtera-zamrud':
+        return this.bahteraZamrudReportService;
+      case 'bb-liberty-233':
+        return this.bbLiberty233ReportService;
+      case 'bb-tongkam':
+        return this.bbTongkamReportService;
       default:
         return null;
     }
@@ -1738,6 +1837,36 @@ export class ReportComponent implements OnInit, OnDestroy {
       });
   }
 
+  detailedReportHasHistorianData(report: ScGlory1PeriodUiReport | null | undefined): boolean {
+    if (!report) return false;
+
+    if ((Number(report.coveragePercent) || 0) > 0) return true;
+    if ((Number(report.totalFuelUsed) || 0) > 0) return true;
+    if (report.tracking?.begin || report.tracking?.end || (Number(report.tracking?.distanceNm) || 0) > 0) {
+      return true;
+    }
+    if (report.hourly?.some((row) => !!row.active)) return true;
+    if (report.modeSummary?.some((row) =>
+      (Number(row.fuelUsed) || 0) > 0 ||
+      (Number(row.runningHours) || 0) > 0 ||
+      (Number(row.distanceNm) || 0) > 0
+    )) return true;
+    if (report.engineSummary?.some((row) =>
+      row.averageRpm !== null ||
+      row.maximumRpm !== null ||
+      (Number(row.runningHours) || 0) > 0 ||
+      (Number(row.fuelUsed) || 0) > 0
+    )) return true;
+    if (report.auxSummary?.some((row) =>
+      (Number(row.runningHours) || 0) > 0 ||
+      (Number(row.fuelUsed) || 0) > 0 ||
+      (Number.isFinite(Number((row as any).engineLoadKw)) && Number((row as any).engineLoadKw) > 0) ||
+      (row.averageRpm !== null && Number.isFinite(Number(row.averageRpm)) && Number(row.averageRpm) > 0)
+    )) return true;
+
+    return false;
+  }
+
   trackByHourlyRow(_index: number, row: ScGlory1HourlyRow): number {
     return row.hour;
   }
@@ -2044,6 +2173,12 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   auxiliaryChartTitle(config: AuxiliaryChartConfig): string {
+    if (this.isBahteraGeneratorReport) {
+      if (config.key === 'port') return 'DG1 Fuel, Running Hours & Engine Load';
+      if (config.key === 'center') return 'DG2 Fuel, Running Hours & Engine Load';
+      if (config.key === 'starboard') return 'DG3 Fuel, Running Hours & Engine Load';
+      return 'EG Fuel, Running Hours & Engine Load';
+    }
     if (this.usesNumberedAuxiliaryReport) {
       if (config.key === 'port') return 'A/E1 Fuel & Running Hours';
       if (config.key === 'center') return 'A/E2 Fuel & Running Hours';
@@ -2054,6 +2189,12 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   auxiliaryDisplayName(config: AuxiliaryChartConfig): string {
+    if (this.isBahteraGeneratorReport) {
+      if (config.key === 'port') return 'DG1';
+      if (config.key === 'center') return 'DG2';
+      if (config.key === 'starboard') return 'DG3';
+      return 'EG';
+    }
     if (this.usesNumberedAuxiliaryReport) {
       if (config.key === 'port') return 'A/E1';
       if (config.key === 'center') return 'A/E2';
@@ -2064,6 +2205,22 @@ export class ReportComponent implements OnInit, OnDestroy {
     if (config.key === 'center') return this.hasThrusterAuxiliaryReport ? 'Thruster A/E' : 'Center A/E';
     if (config.key === 'starboard') return 'Stbd A/E';
     return 'A/E4';
+  }
+
+  auxiliaryFuelCode(config: AuxiliaryChartConfig): string {
+    if (!this.isBahteraGeneratorReport) return config.codeFuel;
+    if (config.key === 'port') return 'DG1..F.';
+    if (config.key === 'center') return 'DG2..F.';
+    if (config.key === 'starboard') return 'DG3..F.';
+    return 'EG..F.';
+  }
+
+  auxiliaryRunCode(config: AuxiliaryChartConfig): string {
+    if (!this.isBahteraGeneratorReport) return config.codeRun;
+    if (config.key === 'port') return 'DG1..RH';
+    if (config.key === 'center') return 'DG2..RH';
+    if (config.key === 'starboard') return 'DG3..RH';
+    return 'EG..RH';
   }
 
   modeChartColor(index: number, configuredModeCount = this.scGlory1DailyReport?.modeSummary.length || 0): string {
@@ -2078,6 +2235,20 @@ export class ReportComponent implements OnInit, OnDestroy {
       return '—';
     }
     return value.toLocaleString('en-US', {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+  }
+
+  /**
+   * Official Daily PDF tables render an empty/structural measurement as numeric zero.
+   * Keep that legacy presentation isolated from charts/tooltips, where an em dash still
+   * means "no historian sample". This gives the PDF-parity tables the same 0.0/0.00
+   * semantics without hiding data-quality state elsewhere in the Report UI.
+   */
+  formatPdfValue(value: number | null | undefined, digits = 2): string {
+    const numeric = value === null || value === undefined || !Number.isFinite(value) ? 0 : value;
+    return numeric.toLocaleString('en-US', {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
     });
@@ -2666,10 +2837,25 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   private watchActiveVessel(): void {
-    merge(
-      this.store.select(fvInfoReducer.getFvInfosActive),
-      this.realtimeService.activeVessel$,
-    )
+    // Sidebar selections are published through FvRealtimeService. Treat that stream as
+    // authoritative because it represents an explicit user action.
+    this.realtimeService.activeVessel$
+      .pipe(
+        filter((vessel: any) => !!this.vesselStorage.extractVesselName(vessel)),
+        distinctUntilChanged(
+          (previous: any, current: any) =>
+            this.getVesselIdentity(previous) === this.getVesselIdentity(current),
+        ),
+        takeUntil(this.destroy$),
+      )
+      .subscribe((vessel: any) => this.setSelectedVessel(vessel));
+
+    // NgRx can replay its default/first vessel during application bootstrap. On Report
+    // that replay must never replace the vessel restored from `reportVessel`. Use Store
+    // only as a fallback when nothing has been restored, or when it confirms the same
+    // vessel that is already selected.
+    this.store
+      .select(fvInfoReducer.getFvInfosActive)
       .pipe(
         filter((vessel: any) => !!this.vesselStorage.extractVesselName(vessel)),
         distinctUntilChanged(
@@ -2679,7 +2865,12 @@ export class ReportComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$),
       )
       .subscribe((vessel: any) => {
-        this.setSelectedVessel(vessel);
+        const currentIdentity = this.getVesselIdentity(this.selectedVessel);
+        const incomingIdentity = this.getVesselIdentity(vessel);
+
+        if (!currentIdentity || currentIdentity === incomingIdentity) {
+          this.setSelectedVessel(vessel);
+        }
       });
   }
 
@@ -3115,9 +3306,12 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.modeFuelPieData = report.modeSummary
       .map((row, index) => ({
         name: row.label,
-        value: Math.max(0, Number(row.fuelPercent) || 0),
-        displayValue: Math.max(0, Number(row.fuelUsed) || 0),
-        percentageValue: Math.max(0, Number(row.fuelPercent) || 0),
+        // Pie geometry needs a non-negative magnitude, but the legacy PDF can
+        // legitimately display signed fuel values after a totalizer reset/bad span
+        // (SC EMERALD is a real example). Keep the signed values in the tooltip/table.
+        value: Math.abs(Number(row.fuelPercent) || 0),
+        displayValue: Number(row.fuelUsed) || 0,
+        percentageValue: Number(row.fuelPercent) || 0,
         color: this.modeChartColor(index, report.modeSummary.length),
       }))
       .filter((item) => item.value > 0);
@@ -3143,9 +3337,15 @@ export class ReportComponent implements OnInit, OnDestroy {
       (sum, row) => sum + Math.max(0, Number(row.runningHours) || 0),
       0,
     );
-    this.dailyDominantModeLabel = report.modeSummary.reduce<ScGlory1ModeSummaryRow | null>(
+    const activeModeRows = report.modeSummary.filter(
+      (row) =>
+        Math.abs(Number(row.fuelUsed) || 0) > 0 ||
+        (Number(row.runningHours) || 0) > 0 ||
+        (Number(row.distanceNm) || 0) > 0,
+    );
+    this.dailyDominantModeLabel = activeModeRows.reduce<ScGlory1ModeSummaryRow | null>(
       (dominant, row) =>
-        !dominant || (Number(row.fuelUsed) || 0) > (Number(dominant.fuelUsed) || 0) ? row : dominant,
+        !dominant || Math.abs(Number(row.fuelUsed) || 0) > Math.abs(Number(dominant.fuelUsed) || 0) ? row : dominant,
       null,
     )?.label || '—';
 
@@ -3155,9 +3355,11 @@ export class ReportComponent implements OnInit, OnDestroy {
       const finite = values.filter((value) => Number.isFinite(value));
       return finite.length ? finite.reduce((sum, value) => sum + value, 0) / finite.length : 0;
     };
-    this.dailyAverageEngineUtilization = engineUtil
-      ? average([engineUtil.port, engineUtil.center, engineUtil.starboard])
-      : 0;
+    this.dailyAverageEngineUtilization = this.isBahteraGeneratorReport
+      ? average(report.auxSummary.map((row) => Number((row as any).utilizationPercent) || 0))
+      : engineUtil
+        ? average([engineUtil.port, engineUtil.center, engineUtil.starboard])
+        : 0;
     this.dailyAverageShaftUtilization = shaftUtil
       ? average([shaftUtil.port, shaftUtil.center, shaftUtil.starboard])
       : 0;
@@ -3174,14 +3376,14 @@ export class ReportComponent implements OnInit, OnDestroy {
     const passage = report.passageSummary;
     this.dailyHasPassageActivity =
       Math.max(0, Number(passage.distanceNm) || 0) > 0.001 ||
-      Math.max(0, Number(passage.mainEngineFuelTotal) || 0) > 0.001 ||
-      Math.max(0, Number(passage.auxiliaryFuelTotal) || 0) > 0.001 ||
+      Math.abs(Number(passage.mainEngineFuelTotal) || 0) > 0.001 ||
+      Math.abs(Number(passage.auxiliaryFuelTotal) || 0) > 0.001 ||
       passage.mainEngines.some(
         (row) =>
           Math.max(0, Number(row.averageRpm) || 0) > 0.001 ||
           Math.max(0, Number(row.maximumRpm) || 0) > 0.001 ||
           Math.max(0, Number(row.runningHours) || 0) > 0.001 ||
-          Math.max(0, Number(row.fuelUsed) || 0) > 0.001,
+          Math.abs(Number(row.fuelUsed) || 0) > 0.001,
       ) ||
       passage.shafts.some(
         (row) =>
@@ -3192,7 +3394,7 @@ export class ReportComponent implements OnInit, OnDestroy {
       passage.auxFuel.some(
         (row) =>
           Math.max(0, Number(row.runningHours) || 0) > 0.001 ||
-          Math.max(0, Number(row.fuelUsed) || 0) > 0.001,
+          Math.abs(Number(row.fuelUsed) || 0) > 0.001,
       );
     this.dailyEquipmentWithDataCount =
       report.engineSummary.filter(
@@ -3200,9 +3402,15 @@ export class ReportComponent implements OnInit, OnDestroy {
           row.averageRpm !== null ||
           row.maximumRpm !== null ||
           row.runningHours > 0 ||
-          row.fuelUsed > 0,
+          Math.abs(Number(row.fuelUsed) || 0) > 0,
       ).length +
-      report.auxSummary.filter((row) => row.runningHours > 0 || row.fuelUsed > 0).length;
+      report.auxSummary.filter(
+        (row) =>
+          row.runningHours > 0 ||
+          Math.abs(Number(row.fuelUsed) || 0) > 0 ||
+          (Number.isFinite(Number((row as any).engineLoadKw)) && Number((row as any).engineLoadKw) > 0) ||
+          (row.averageRpm !== null && Number.isFinite(Number(row.averageRpm)) && Number(row.averageRpm) > 0),
+      ).length;
 
     this.scheduleDailyGoogleMap(report);
   }

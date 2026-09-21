@@ -11,7 +11,10 @@ import {
   VesselModeHistoryConfig,
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
-import { buildGpsPdfParityModeSummary } from '../../common/pdf-mode-parity';
+import {
+  buildExactMinuteValueMap,
+  buildGpsPdfParityModeSummary,
+} from '../../common/pdf-mode-parity';
 import {
   SC_GLORY_7_MODE_HISTORIAN_TAG,
   SC_GLORY_7_REPORT_PROFILE,
@@ -367,16 +370,20 @@ export class ScGlory7ReportService implements VesselReportAdapter {
     }
 
     const requestTags = ALL_TAGS.map((tagName) => ({ name: tagName, tagName }));
-    const historianEnd = this.isCompletedDailyWindow(start, end)
+    const completedDaily = this.isCompletedDailyWindow(start, end);
+    const historianEnd = completedDaily
       ? new Date(start.getTime() + 24 * 60 * MINUTE_MS)
       : end;
-    const request$ = this.newHttp
-      .getHistorianValues(
-        this.formatHistorianRequestTime(start),
-        this.formatHistorianRequestTime(historianEnd),
-        requestTags,
-      )
-      .pipe(
+    const requestStartText = this.formatHistorianRequestTime(start);
+    const requestEndText = this.formatHistorianRequestTime(historianEnd);
+    const historianRequest$: Observable<any> = completedDaily
+      ? this.newHttp.getConsistentPdfParityHistorianValues(
+          requestStartText,
+          requestEndText,
+          requestTags,
+        )
+      : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
+    const request$ = historianRequest$.pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
           this.detailedReportCache.set(key, {
@@ -386,7 +393,7 @@ export class ScGlory7ReportService implements VesselReportAdapter {
         }),
         catchError((error) => throwError(() => error)),
         finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: false }),
+        shareReplay({ bufferSize: 1, refCount: true }),
       );
 
     this.detailedReportInFlight.set(key, request$);
@@ -444,7 +451,7 @@ export class ScGlory7ReportService implements VesselReportAdapter {
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.periodReportInFlight.set(key, request$);
@@ -924,6 +931,9 @@ export class ScGlory7ReportService implements VesselReportAdapter {
     const saeSpeedPoints = series.get(this.tagKey(TAGS.saeSpeed)) || [];
 
     const gpsSpeed = this.buildInstantMap(gpsSpeedPoints);
+    const pdfModeGpsSpeed = completedDaily
+      ? buildExactMinuteValueMap(gpsSpeedPoints, MINUTE_MS)
+      : gpsSpeed;
     const gpsLat = this.buildInstantMap(gpsLatPoints);
     const gpsLong = this.buildInstantMap(gpsLongPoints);
     const gpsHead = this.buildInstantMap(gpsHeadPoints);
@@ -1050,7 +1060,7 @@ export class ScGlory7ReportService implements VesselReportAdapter {
       completedDaily,
       minuteMs: MINUTE_MS,
       officialTotalFuel: totalFuelUsed,
-      gpsSpeed,
+      gpsSpeed: pdfModeGpsSpeed,
       minuteFuelAt: (minute) =>
         (legacyPmeFuel.get(minute) || 0) +
         (legacyCmeFuel.get(minute) || 0) +
@@ -2353,7 +2363,7 @@ export class ScGlory7ReportService implements VesselReportAdapter {
   }
 
   private resolveModeFromGpsSpeed(speed: number | null): string | null {
-    if (speed === null || !Number.isFinite(speed) || speed < 0 || speed > 80) return null;
+    if (speed === null || !Number.isFinite(speed)) return null;
     if (speed <= 2) return 'Standby';
     if (speed <= 3.5) return 'Cargo Operation';
     if (speed <= 10) return 'Manoeuvring';

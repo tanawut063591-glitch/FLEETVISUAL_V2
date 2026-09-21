@@ -1,0 +1,183 @@
+<section class="pdf-mode-detail-page">
+  <header class="pdf-mode-detail-page__header">
+    <h3>Engine "{{ detailModeLabel }} Mode" Summary</h3>
+  </header>
+
+  <ng-container *ngIf="generatorLayout; else standardLayout">
+    <div class="pdf-mode-detail-grid">
+      <div class="report-book-table-wrap">
+        <table class="report-book-table daily-pdf-table">
+          <thead>
+            <tr><th>Measured Value</th><th class="num">Summary</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of auxFuel">
+              <th>{{ row.label }} Total Fuel Used (L)</th>
+              <td class="num">{{ format(row.fuelUsed, 2) }}</td>
+            </tr>
+            <tr class="separator-row"><td colspan="2"></td></tr>
+            <tr class="total-row">
+              <th>Total Fuel Used (L)</th>
+              <td class="num">{{ format(summary.auxiliaryFuelTotal, 2) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="report-book-table-wrap">
+        <table class="report-book-table daily-pdf-table">
+          <thead>
+            <tr><th>Measured Value</th><th class="num">Summary</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of auxFuel">
+              <th>{{ row.label }} Engine Load (kW)</th>
+              <td class="num">{{ format(row.engineLoadKw, 2) }}</td>
+            </tr>
+            <tr class="separator-row"><td colspan="2"></td></tr>
+            <tr><th>Average Speed (Knots)</th><td class="num">{{ format(summary.averageSpeed, 2) }}</td></tr>
+            <tr><th>Travel Distance (NM)</th><td class="num">{{ format(summary.distanceNm, 2) }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="report-book-table-wrap pdf-mode-detail-utilization">
+      <table class="report-book-table daily-pdf-table">
+        <thead>
+          <tr>
+            <th>Measured Value</th>
+            <th class="num" *ngFor="let row of auxFuel">{{ row.label }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>DG/EG Engine Utilized (%)</th>
+            <td class="num" *ngFor="let row of auxFuel">{{ format(generatorUtilization(row), 1) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+
+  <ng-template #standardLayout>
+    <div class="pdf-mode-detail-grid">
+      <div class="report-book-table-wrap">
+        <table class="report-book-table daily-pdf-table">
+          <thead>
+            <tr><th>Measured Value</th><th class="num">Average</th><th class="num">Max.</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of mainEngines">
+              <th>{{ row.label }} Engine Speed (RPM)</th>
+              <td class="num">{{ format(row.averageRpm, 1) }}</td>
+              <td class="num">{{ format(row.maximumRpm, 1) }}</td>
+            </tr>
+            <tr class="section-row"><th colspan="3">Summary</th></tr>
+
+            <ng-container *ngIf="numberedAuxiliaryLayout; else standardMainFuelSummary">
+              <tr *ngFor="let row of auxFuel">
+                <th>{{ row.label }} Total Fuel Used (L)</th>
+                <td class="num" colspan="2">{{ format(row.fuelUsed, 2) }}</td>
+              </tr>
+            </ng-container>
+
+            <ng-template #standardMainFuelSummary>
+              <tr *ngFor="let row of mainEngines">
+                <th>{{ row.label }} Total Fuel Used (L)</th>
+                <td class="num" colspan="2">{{ format(row.fuelUsed, 2) }}</td>
+              </tr>
+              <ng-container *ngIf="showEngineLoad">
+                <tr *ngFor="let row of mainEngines">
+                  <th>{{ row.label }} Engine Load (%)</th>
+                  <td class="num" colspan="2">{{ format(row.engineLoad, 2) }}</td>
+                </tr>
+              </ng-container>
+              <tr class="separator-row"><td colspan="3"></td></tr>
+              <tr>
+                <th>M/E Total Fuel Used (L)</th>
+                <td class="num" colspan="2">{{ format(summary.mainEngineFuelTotal, 2) }}</td>
+              </tr>
+              <tr>
+                <th>A/E Total Fuel Used (L)</th>
+                <td class="num" colspan="2">{{ format(summary.auxiliaryFuelTotal, 2) }}</td>
+              </tr>
+            </ng-template>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="report-book-table-wrap">
+        <table class="report-book-table daily-pdf-table">
+          <thead>
+            <tr><th>Measured Value</th><th class="num">Average</th><th class="num">Max.</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of shafts">
+              <th>{{ row.label }} Engine Speed (RPM)</th>
+              <td class="num">{{ format(row.averageRpm, 1) }}</td>
+              <td class="num">{{ format(row.maximumRpm, 1) }}</td>
+            </tr>
+
+            <ng-container *ngIf="numberedAuxiliaryLayout">
+              <tr *ngFor="let row of auxFuel">
+                <th>{{ row.label }} Engine Speed (RPM)</th>
+                <td class="num">{{ format(row.averageRpm, 1) }}</td>
+                <td class="num">{{ format(row.maximumRpm, 1) }}</td>
+              </tr>
+            </ng-container>
+
+            <tr class="section-row"><th colspan="3">Summary</th></tr>
+
+            <ng-container *ngIf="numberedAuxiliaryLayout; else standardAuxFuelSummary">
+              <tr class="total-row">
+                <th>Total Fuel Used (L)</th>
+                <td class="num" colspan="2">{{ format(summary.auxiliaryFuelTotal, 2) }}</td>
+              </tr>
+            </ng-container>
+
+            <ng-template #standardAuxFuelSummary>
+              <tr *ngFor="let row of auxFuel">
+                <th>{{ row.label }} Total Fuel Used (L)</th>
+                <td class="num" colspan="2">{{ format(row.fuelUsed, 2) }}</td>
+              </tr>
+            </ng-template>
+
+            <tr class="separator-row"><td colspan="3"></td></tr>
+            <tr><th>Average Speed (Knots)</th><td class="num" colspan="2">{{ format(summary.averageSpeed, 2) }}</td></tr>
+            <tr><th>Travel Distance (NM)</th><td class="num" colspan="2">{{ format(summary.distanceNm, 2) }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="report-book-table-wrap pdf-mode-detail-utilization" *ngIf="hasMainEngines">
+      <table class="report-book-table daily-pdf-table">
+        <thead>
+          <tr>
+            <th>Measured Value</th>
+            <th class="num" *ngFor="let row of mainEngines">
+              {{ row.key === 'port' ? 'Port' : row.key === 'starboard' ? 'Starboard' : 'Center' }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>M/E Engine Utilized (%)</th>
+            <td class="num" *ngFor="let row of mainEngines">{{ format(engineUtilization(row), 1) }}</td>
+          </tr>
+          <ng-container *ngIf="hasShafts">
+            <tr>
+              <th>Shaft Utilized (%)</th>
+              <td class="num" *ngFor="let row of shafts">{{ format(shaftUtilization(row), 1) }}</td>
+            </tr>
+            <tr>
+              <th>Shaft per M/E Engine Utilized (%)</th>
+              <td class="num" *ngFor="let row of shafts; let i = index">{{ format(shaftPerEngine(i), 1) }}</td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
+  </ng-template>
+</section>

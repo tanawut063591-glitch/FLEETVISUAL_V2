@@ -12,9 +12,13 @@ import {
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
 import {
+  buildExactMinuteValueMap,
   buildLegacyPdfFuelDeltaMap,
+  legacyConvertToInt32,
+  isCompletedDailyWindow,
   normalizeModeFuelToOfficialTotal,
 } from '../../common/pdf-mode-parity';
+import { calculateLegacyDailyFuelTotal, exactMinutePoints } from '../../common/legacy-daily-fuel';
 import {
   SC_BONGKOT_MODE_HISTORIAN_TAG,
   SC_BONGKOT_REPORT_PROFILE,
@@ -73,6 +77,12 @@ export interface ScBongkotPassageSummary {
   auxiliaryFuelTotal: number;
   averageSpeed: number | null;
   distanceNm: number;
+}
+
+export interface ScBongkotModeDetail {
+  key: string;
+  label: string;
+  summary: ScBongkotPassageSummary;
 }
 
 export interface ScBongkotTrackingPoint {
@@ -141,6 +151,7 @@ export interface ScBongkotDailyUiReport {
   totalFuelUsed: number;
   modeSummary: ScBongkotModeSummaryRow[];
   passageSummary: ScBongkotPassageSummary;
+  modeDetails?: ScBongkotModeDetail[];
   tracking: ScBongkotTrackingSummary;
   hourly: ScBongkotHourlyRow[];
   speedSeries: ScBongkotSpeedPoint[];
@@ -369,16 +380,25 @@ export class ScBongkotReportService implements VesselReportAdapter {
     }
 
     const requestTags = ALL_TAGS.map((tagName) => ({ name: tagName, tagName }));
-    const completedDayBoundary = end.getHours() === 23 && end.getMinutes() === 59
-      ? new Date(end.getTime() + MINUTE_MS)
-      : end;
-    const request$ = this.newHttp
-      .getHistorianValues(
-        this.formatHistorianRequestTime(start),
-        this.formatHistorianRequestTime(completedDayBoundary),
-        requestTags,
-      )
-      .pipe(
+    const completedDaily =
+      start.getHours() === 0 &&
+      start.getMinutes() === 0 &&
+      end.getHours() === 23 &&
+      end.getMinutes() === 59 &&
+      start.getFullYear() === end.getFullYear() &&
+      start.getMonth() === end.getMonth() &&
+      start.getDate() === end.getDate();
+    const historianEnd = completedDaily ? new Date(start.getTime() + 24 * 60 * MINUTE_MS) : end;
+    const requestStartText = this.formatHistorianRequestTime(start);
+    const requestEndText = this.formatHistorianRequestTime(historianEnd);
+    const historianRequest$: Observable<any> = completedDaily
+      ? this.newHttp.getConsistentPdfParityHistorianValues(
+          requestStartText,
+          requestEndText,
+          requestTags,
+        )
+      : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
+    const request$ = historianRequest$      .pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
           this.detailedReportCache.set(key, {
@@ -388,7 +408,7 @@ export class ScBongkotReportService implements VesselReportAdapter {
         }),
         catchError((error) => throwError(() => error)),
         finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: false }),
+        shareReplay({ bufferSize: 1, refCount: true }),
       );
 
     this.detailedReportInFlight.set(key, request$);
@@ -448,7 +468,7 @@ export class ScBongkotReportService implements VesselReportAdapter {
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.periodReportInFlight.set(key, request$);
@@ -873,14 +893,23 @@ export class ScBongkotReportService implements VesselReportAdapter {
     const series = this.extractHistorianSeries(response, ALL_TAGS);
     const minuteStart = this.floorToMinute(periodStart).getTime();
     const minuteEnd = Math.max(minuteStart + MINUTE_MS, this.floorToMinute(periodEnd).getTime());
+    const completedDaily = isCompletedDailyWindow(
+      this.floorToMinute(periodStart),
+      this.floorToMinute(periodEnd),
+      MINUTE_MS,
+    );
     const boundaryBucket = minuteEnd + MINUTE_MS;
+    const pdfDataEnd = completedDaily ? boundaryBucket : minuteEnd;
     const minuteCount = Math.max(1, Math.floor((minuteEnd - minuteStart) / MINUTE_MS) + 1);
 
     const gpsSpeed = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsSpeed)) || []);
     const gpsLat = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLat)) || []);
     const gpsLong = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLong)) || []);
     const gpsHead = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsHead)) || []);
-    const modeCode = this.buildInstantMap(series.get(this.tagKey(TAGS.mode)) || []);
+    const modeCodePoints = series.get(this.tagKey(TAGS.mode)) || [];
+    const modeCode = completedDaily
+      ? buildExactMinuteValueMap(modeCodePoints, MINUTE_MS)
+      : this.buildInstantMap(modeCodePoints);
 
     const portMainRpm = this.buildCounterRateMap(series.get(this.tagKey(TAGS.portMainSpeed)) || [], 24, 1600);
     const starboardMainRpm = this.buildCounterRateMap(series.get(this.tagKey(TAGS.starboardMainSpeed)) || [], 24, 1600);
@@ -909,6 +938,23 @@ export class ScBongkotReportService implements VesselReportAdapter {
       series.get(this.tagKey(TAGS.ae4FuelOut)) || [],
       300,
     );
+
+    // Engine Summary in SCBongkot.cs uses CalFLowTotalSME, not the interpolated
+    // map above.  Preserve its very large accepted step (20,000), ignored 999999
+    // sentinel, 26,000 span and negative-total clamp exactly.
+    const bongkotFuelRule = {
+      input: { totalRangeLimit: 26_000, stepLimit: 20_000, stepInclusive: false, initialValueLimit: 100_000_000 },
+      output: { totalRangeLimit: 26_000, stepLimit: 20_000, stepInclusive: true, initialValueLimit: 100_000_000 },
+      ignoredValues: [999_999],
+      clampNegative: true,
+    } as const;
+    const pdfFuelPoints = (tag: string) => exactMinutePoints(
+      series.get(this.tagKey(tag)) || [], minuteStart, pdfDataEnd,
+    );
+    const ae1DailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.ae1FuelIn), pdfFuelPoints(TAGS.ae1FuelOut), bongkotFuelRule);
+    const ae2DailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.ae2FuelIn), pdfFuelPoints(TAGS.ae2FuelOut), bongkotFuelRule);
+    const ae3DailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.ae3FuelIn), pdfFuelPoints(TAGS.ae3FuelOut), bongkotFuelRule);
+    const ae4DailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.ae4FuelIn), pdfFuelPoints(TAGS.ae4FuelOut), bongkotFuelRule);
 
     // PDF page-2 Mode fuel must use the legacy SCReportingService raw totalizer deltas.
     // Do not interpolate totalizer gaps: a gap can move fuel into the wrong vessel Mode.
@@ -955,10 +1001,10 @@ export class ScBongkotReportService implements VesselReportAdapter {
     ];
     const shaftSummary: ScBongkotShaftSummaryRow[] = [];
     const auxSummary: ScBongkotAuxSummaryRow[] = [
-      this.buildAuxSummary('port', 'A/E1', ae1Rpm, ae1Fuel),
-      this.buildAuxSummary('center', 'A/E2', ae2Rpm, ae2Fuel),
-      this.buildAuxSummary('starboard', 'A/E3', ae3Rpm, ae3Fuel),
-      this.buildAuxSummary('fourth', 'A/E4', ae4Rpm, ae4Fuel),
+      { ...this.buildAuxSummary('port', 'A/E1', ae1Rpm, ae1Fuel), fuelUsed: ae1DailyFuel },
+      { ...this.buildAuxSummary('center', 'A/E2', ae2Rpm, ae2Fuel), fuelUsed: ae2DailyFuel },
+      { ...this.buildAuxSummary('starboard', 'A/E3', ae3Rpm, ae3Fuel), fuelUsed: ae3DailyFuel },
+      { ...this.buildAuxSummary('fourth', 'A/E4', ae4Rpm, ae4Fuel), fuelUsed: ae4DailyFuel },
     ];
 
     const mainEngineFuelTotal = 0;
@@ -1116,26 +1162,36 @@ export class ScBongkotReportService implements VesselReportAdapter {
       totalFuelUsed,
     );
 
+    const modeDetails: ScBongkotModeDetail[] = modeSummary.map((mode) => ({
+      key: mode.key,
+      label: mode.label,
+      summary: this.buildPassageSummary(
+        modeMinuteKeys.get(mode.key) || [],
+        portMainRpm,
+        starboardMainRpm,
+        ae1Rpm,
+        ae2Rpm,
+        ae3Rpm,
+        ae4Rpm,
+        ae1PdfModeFuel,
+        ae2PdfModeFuel,
+        ae3PdfModeFuel,
+        ae4PdfModeFuel,
+        gpsSpeed,
+        mode.fuelUsed,
+      ),
+    }));
+
     const dominantMode = modeSummary.reduce<ScBongkotModeSummaryRow | null>(
-      (best, row) => !best || row.fuelUsed > best.fuelUsed ? row : best,
+      (best, row) => !best || Math.abs(row.fuelUsed) > Math.abs(best.fuelUsed) ? row : best,
       null,
     );
-    const dominantMinuteKeys = dominantMode ? (modeMinuteKeys.get(dominantMode.key) || []) : [];
-    const passageSummary = this.buildPassageSummary(
-      dominantMinuteKeys,
-      portMainRpm,
-      starboardMainRpm,
-      ae1Rpm,
-      ae2Rpm,
-      ae3Rpm,
-      ae4Rpm,
-      ae1Fuel,
-      ae2Fuel,
-      ae3Fuel,
-      ae4Fuel,
-      gpsSpeed,
-      dominantMode?.fuelUsed ?? null,
-    );
+    const passageSummary =
+      modeDetails.find((detail) => detail.key === dominantMode?.key)?.summary ||
+      this.buildPassageSummary(
+        [], portMainRpm, starboardMainRpm, ae1Rpm, ae2Rpm, ae3Rpm, ae4Rpm,
+        ae1PdfModeFuel, ae2PdfModeFuel, ae3PdfModeFuel, ae4PdfModeFuel, gpsSpeed, 0,
+      );
     const tracking = this.buildTrackingSummary(minuteStart, minuteEnd, gpsLat, gpsLong, gpsSpeed, gpsHead);
 
     const hourly: ScBongkotHourlyRow[] = hourlyAccumulators.map((item, hour) => {
@@ -1191,7 +1247,7 @@ export class ScBongkotReportService implements VesselReportAdapter {
       averageSpeed: this.average(validSpeedValues), maximumSpeed: this.maximum(validSpeedValues),
       engineSummary, shaftSummary, auxSummary, utilization,
       mainEngineFuelTotal, auxiliaryFuelTotal, totalFuelUsed,
-      modeSummary, passageSummary, tracking, hourly, speedSeries,
+      modeSummary, passageSummary, modeDetails, tracking, hourly, speedSeries,
     };
   }
 
@@ -1765,8 +1821,8 @@ export class ScBongkotReportService implements VesselReportAdapter {
   private resolveModeFromCode(rawValue: unknown): string | null {
     const numeric = this.parseNumber(rawValue);
     if (numeric === null) return null;
-    const code = Math.trunc(numeric);
-    if (code !== numeric || code < 1 || code > 15) return null;
+    const code = legacyConvertToInt32(numeric);
+    if (code === null || code < 1 || code > 15) return null;
     const mode = SC_BONGKOT_REPORT_PROFILE.modes.find((item) =>
       (item.codes || []).some((candidate) => Number(candidate) === code),
     );

@@ -1305,6 +1305,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.manualEngineName = '';
     this.expandedEngineAssignmentId = '';
     this.engineLibraryOpen = false;
+    this.editingEngineProfileId = '';
+    this.engineProfileForm = this.emptyEngineProfileForm();
+    this.engineProfileSaveNotice = '';
+    this.engineTelemetryMappingOpen = false;
     this.realtimeMachinery = [];
     this.realtimeMachineryNotice =
       'Enter the vessel Telemetry Prefix to preview its Realtime machinery.';
@@ -1339,6 +1343,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.manualEngineName = '';
     this.expandedEngineAssignmentId = '';
     this.engineLibraryOpen = false;
+    this.editingEngineProfileId = '';
+    this.engineProfileForm = this.emptyEngineProfileForm();
+    this.engineProfileSaveNotice = '';
+    this.engineTelemetryMappingOpen = false;
     this.drawerOpen = true;
     this.syncSettingsDrawerDocumentState();
     this.saveNotice = '';
@@ -2014,7 +2022,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     const search = this.engineProfileSearchTerm.trim().toLowerCase();
     if (!search) return this.engineProfiles;
     return this.engineProfiles.filter((profile) =>
-      [profile.name, profile.manufacturer, profile.model, profile.fuelType]
+      [profile.name, profile.manufacturer, profile.model, profile.engineType]
         .join(' ')
         .toLowerCase()
         .includes(search),
@@ -2102,6 +2110,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.engineCategoryOptions.find((option) => option.value === category)?.label ||
       'Custom engine'
     );
+  }
+
+  engineProfileTypeLabel(profile: EngineProfileRecord): string {
+    const customType = String(profile.engineType || '').trim();
+    return customType || this.engineProfileCategoryLabel(profile.category);
   }
 
   removeEngineAssignment(id: string): void {
@@ -2196,7 +2209,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       case 'telemetry-only-engine':
         return 'Backend values · No frontend calculation';
       default:
-        return [profile.manufacturer, profile.model]
+        return [this.engineProfileTypeLabel(profile), profile.manufacturer, profile.model]
           .map((value) => String(value || '').trim())
           .filter(Boolean)
           .join(' · ');
@@ -2300,18 +2313,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.engineProfileSaveNotice = `A profile named “${duplicate.name}” with the same model already exists.`;
       return;
     }
-    if (
-      this.engineProfileForm.ratedPowerKw !== null &&
-      Number(this.engineProfileForm.ratedPowerKw) <= 0
-    ) {
-      this.engineProfileSaveNotice = 'Rated power must be greater than zero.';
-      return;
-    }
-    if (this.engineProfileForm.ratedRpm !== null && Number(this.engineProfileForm.ratedRpm) <= 0) {
-      this.engineProfileSaveNotice = 'Rated RPM must be greater than zero.';
-      return;
-    }
-
     const affectedVessels = this.editingEngineProfileId
       ? this.engineProfileUsageCount(this.editingEngineProfileId)
       : 0;
@@ -2324,12 +2325,17 @@ export class SettingsComponent implements OnInit, OnDestroy {
       return;
 
     const now = new Date().toISOString();
+    const engineType = this.engineProfileForm.engineType.trim() || 'Other / Custom';
     const record: EngineProfileRecord = {
       ...this.engineProfileForm,
       id: this.editingEngineProfileId || this.engineProfileService.createProfileId(name),
       name,
       manufacturer: this.engineProfileForm.manufacturer.trim(),
       model: this.engineProfileForm.model.trim(),
+      engineType,
+      category: this.engineCategoryFromType(engineType),
+      // These legacy specification fields remain in the persisted schema for backwards
+      // compatibility, but are intentionally no longer exposed in the simplified UI.
       fuelType: this.engineProfileForm.fuelType.trim(),
       ratedPowerKw: this.nullablePositiveNumber(this.engineProfileForm.ratedPowerKw),
       ratedRpm: this.nullablePositiveNumber(this.engineProfileForm.ratedRpm),
@@ -2371,6 +2377,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
               : [savedRecord, ...this.engineProfiles];
 
           this.editingEngineProfileId = savedRecord.id;
+          if (!this.selectedEngineProfileId) this.selectedEngineProfileId = savedRecord.id;
           this.engineProfileForm = {
             ...savedRecord,
             telemetryMapping: { ...savedRecord.telemetryMapping },
@@ -2779,6 +2786,14 @@ export class SettingsComponent implements OnInit, OnDestroy {
     return value === 'general' || value === 'users' || value === 'vessels' || value === 'groups';
   }
 
+  private engineCategoryFromType(value: string): EngineProfileCategory {
+    const normalized = value.trim().toLowerCase();
+    if (normalized.includes('aux')) return 'auxiliary';
+    if (normalized.includes('gen')) return 'generator';
+    if (normalized.includes('main') || normalized.includes('propulsion')) return 'main';
+    return 'other';
+  }
+
   private emptyEngineProfileForm(): EngineProfileRecord {
     const now = new Date().toISOString();
     return {
@@ -2786,8 +2801,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
       name: '',
       manufacturer: '',
       model: '',
+      engineType: 'Main / Propulsion Engine',
       category: 'main',
-      fuelType: 'Marine Diesel Oil',
+      fuelType: '',
       ratedPowerKw: null,
       ratedRpm: null,
       cylinders: null,

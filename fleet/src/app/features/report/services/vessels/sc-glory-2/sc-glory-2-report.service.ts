@@ -11,8 +11,10 @@ import {
   VesselModeHistoryConfig,
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
+import { calculateLegacyDailyFuelTotal, exactMinutePoints } from '../../common/legacy-daily-fuel';
 import {
   buildGpsPdfParityModeSummary,
+  buildExactMinuteValueMap,
   buildLegacyPdfFuelDeltaMap,
   isCompletedDailyWindow,
 } from '../../common/pdf-mode-parity';
@@ -39,7 +41,7 @@ export interface ScGlory2ShaftSummaryRow {
 }
 
 export interface ScGlory2AuxSummaryRow {
-  key: 'port' | 'starboard';
+  key: 'port' | 'center' | 'starboard';
   label: string;
   runningHours: number;
   fuelUsed: number;
@@ -375,15 +377,10 @@ export class ScGlory2ReportService implements VesselReportAdapter {
     // Completed Daily UI must read the historian exactly like SCReportingService/PDF:
     // one tag per loggergethistorianvalues request, including next-day 00:00.
     const historianRequest$: Observable<any> = completedDaily
-      ? from(ALL_TAGS).pipe(
-          mergeMap(
-            (tagName) =>
-              this.newHttp.getRawData(requestStartText, requestEndText, [{ name: tagName, tagName }]).pipe(
-                map((response) => ({ __legacyTagName: tagName, __legacyResponse: response })),
-              ),
-            1,
-          ),
-          toArray(),
+      ? this.newHttp.getConsistentPdfParityHistorianValues(
+          requestStartText,
+          requestEndText,
+          requestTags,
         )
       : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
 
@@ -397,7 +394,7 @@ export class ScGlory2ReportService implements VesselReportAdapter {
         }),
         catchError((error) => throwError(() => error)),
         finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: false }),
+        shareReplay({ bufferSize: 1, refCount: true }),
       );
 
     this.detailedReportInFlight.set(key, request$);
@@ -457,7 +454,7 @@ export class ScGlory2ReportService implements VesselReportAdapter {
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.periodReportInFlight.set(key, request$);
@@ -929,7 +926,11 @@ export class ScGlory2ReportService implements VesselReportAdapter {
       : minuteEnd;
     const minuteCount = Math.max(1, Math.floor((minuteEnd - minuteStart) / MINUTE_MS) + 1);
 
-    const gpsSpeed = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsSpeed)) || []);
+    const gpsSpeedPoints = series.get(this.tagKey(TAGS.gpsSpeed)) || [];
+    const gpsSpeed = this.buildInstantMap(gpsSpeedPoints);
+    const pdfModeGpsSpeed = completedDaily
+      ? buildExactMinuteValueMap(gpsSpeedPoints, MINUTE_MS)
+      : gpsSpeed;
     const gpsLat = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLat)) || []);
     const gpsLong = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLong)) || []);
     const gpsHead = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsHead)) || []);
@@ -969,11 +970,30 @@ export class ScGlory2ReportService implements VesselReportAdapter {
       100,
     );
 
+    // Page-1 PDF totals come from the legacy min/max totalizer scan over the
+    // exact-minute dtRawData grid, not from the interpolated minute fuel map.
+    const pdfFuelPoints = (tag: string) => exactMinutePoints(
+      series.get(this.tagKey(tag)) || [], minuteStart, pdfModeDataEnd,
+    );
+    const standardFuelRule = {
+      input: { totalRangeLimit: 5_000, stepLimit: 100, stepInclusive: false, initialValueLimit: 100_000_000 },
+      output: { totalRangeLimit: 5_000, stepLimit: 100, stepInclusive: true, initialValueLimit: 100_000_000 },
+    } as const;
+    const sme3FuelRule = {
+      input: { totalRangeLimit: 5_000, stepLimit: 200, stepInclusive: false, initialValueLimit: 100_000_000 },
+      output: { totalRangeLimit: 5_000, stepLimit: 200, stepInclusive: true, initialValueLimit: 100_000_000 },
+    } as const;
+    const pmeDailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.pmeFuelIn), pdfFuelPoints(TAGS.pmeFuelOut), standardFuelRule);
+    const cmeDailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.cmeFuelIn), pdfFuelPoints(TAGS.cmeFuelOut), standardFuelRule);
+    const smeDailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.smeFuelIn), pdfFuelPoints(TAGS.smeFuelOut), sme3FuelRule);
+    const paeDailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.paeFuelIn), pdfFuelPoints(TAGS.paeFuelOut), standardFuelRule);
+    const saeDailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.saeFuelIn), pdfFuelPoints(TAGS.saeFuelOut), standardFuelRule);
+
     const elapsedHours = Math.max(MINUTE_MS / 3_600_000, (minuteEnd - minuteStart + MINUTE_MS) / 3_600_000);
     const engineSummary: ScGlory2EngineSummaryRow[] = [
-      this.buildEngineSummary('port', 'Port M/E', pmeRpm, pmeFuel, elapsedHours),
-      this.buildEngineSummary('center', 'Ctr. M/E', cmeRpm, cmeFuel, elapsedHours),
-      this.buildEngineSummary('starboard', 'Stb. M/E', smeRpm, smeFuel, elapsedHours),
+      { ...this.buildEngineSummary('port', 'Port M/E', pmeRpm, pmeFuel, elapsedHours), fuelUsed: pmeDailyFuel },
+      { ...this.buildEngineSummary('center', 'Ctr. M/E', cmeRpm, cmeFuel, elapsedHours), fuelUsed: cmeDailyFuel },
+      { ...this.buildEngineSummary('starboard', 'Stb. M/E', smeRpm, smeFuel, elapsedHours), fuelUsed: smeDailyFuel },
     ];
 
     const shaftSummary: ScGlory2ShaftSummaryRow[] = [
@@ -983,8 +1003,8 @@ export class ScGlory2ReportService implements VesselReportAdapter {
     ];
 
     const auxSummary: ScGlory2AuxSummaryRow[] = [
-      this.buildAuxSummary('port', 'Port A/E', paeRpm, paeFuel),
-      this.buildAuxSummary('starboard', 'Stb. A/E', saeRpm, saeFuel),
+      { ...this.buildAuxSummary('port', 'Port A/E', paeRpm, paeFuel), fuelUsed: paeDailyFuel },
+      { ...this.buildAuxSummary('starboard', 'Stb. A/E', saeRpm, saeFuel), fuelUsed: saeDailyFuel },
     ];
 
     const mainEngineFuelTotal = engineSummary.reduce((sum, row) => sum + row.fuelUsed, 0);
@@ -1191,7 +1211,7 @@ export class ScGlory2ReportService implements VesselReportAdapter {
       completedDaily,
       minuteMs: MINUTE_MS,
       officialTotalFuel: totalFuelUsed,
-      gpsSpeed,
+      gpsSpeed: pdfModeGpsSpeed,
       minuteFuelAt: (minute) =>
         (pdfModePMEFuel.get(minute) || 0) +
         (pdfModeCMEFuel.get(minute) || 0) +
@@ -1413,6 +1433,9 @@ export class ScGlory2ReportService implements VesselReportAdapter {
       ],
       auxFuel: [
         { key: 'port', label: 'Port A/E', runningHours: 0, fuelUsed: paeFuelValue },
+        // Legacy RptPassageSummary always prints the center A/E cell; for
+        // SC GLORY 2 it is a structural zero, not a missing historian tag.
+        { key: 'center', label: 'Ctr. A/E', runningHours: 0, fuelUsed: 0 },
         { key: 'starboard', label: 'Stb. A/E', runningHours: 0, fuelUsed: saeFuelValue },
       ],
       mainEngineFuelTotal: pmeFuelValue + cmeFuelValue + smeFuelValue,
@@ -1969,7 +1992,7 @@ export class ScGlory2ReportService implements VesselReportAdapter {
   }
 
   private resolveModeFromGpsSpeed(speed: number | null): string | null {
-    if (speed === null || !Number.isFinite(speed) || speed < 0 || speed > 80) return null;
+    if (speed === null || !Number.isFinite(speed)) return null;
     if (speed <= 2) return 'Standby';
     if (speed <= 3.5) return 'Cargo Operation';
     if (speed <= 10) return 'Manoeuvring';

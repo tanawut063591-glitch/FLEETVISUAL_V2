@@ -142,6 +142,7 @@ export class EngineProfileService {
       name: '',
       manufacturer: '',
       model: '',
+      engineType: 'Main / Propulsion Engine',
       category: 'main',
       fuelType: 'Marine Diesel Oil',
       ratedPowerKw: null,
@@ -195,6 +196,8 @@ export class EngineProfileService {
     const category = this.normalizeCategory(
       row?.category ?? row?.Category ?? row?.type ?? row?.Type,
     );
+    const engineType =
+      String(row?.engineType ?? row?.EngineType ?? '').trim() || this.defaultEngineType(category);
     const formulaPresetId = this.normalizeFormulaPreset(
       row?.formulaPresetId ?? row?.FormulaPresetId ?? row?.formula ?? row?.Formula,
       category,
@@ -209,6 +212,7 @@ export class EngineProfileService {
         row?.manufacturer ?? row?.Manufacturer ?? row?.brand ?? row?.Brand ?? '',
       ).trim(),
       model: String(row?.model ?? row?.Model ?? '').trim(),
+      engineType,
       category,
       fuelType: String(row?.fuelType ?? row?.FuelType ?? row?.fuel ?? row?.Fuel ?? '').trim(),
       ratedPowerKw: this.toNullablePositiveNumber(
@@ -310,6 +314,19 @@ export class EngineProfileService {
       response?.records,
     ];
     return candidates.find(Array.isArray) || [];
+  }
+
+  private defaultEngineType(category: EngineProfileCategory): string {
+    switch (category) {
+      case 'main':
+        return 'Main / Propulsion Engine';
+      case 'auxiliary':
+        return 'Auxiliary Engine';
+      case 'generator':
+        return 'Generator Engine';
+      default:
+        return 'Other / Custom';
+    }
   }
 
   private normalizeCategory(value: unknown): EngineProfileCategory {

@@ -531,13 +531,14 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
         vessel.prefix ||
         fvInfo.name ||
         vessel.name,
-      img:
-        fvInfo.img ||
-        fvInfo.image ||
-        vessel.img ||
-        vessel.image ||
-        vessel.imageUrl ||
-        this.resolveFallbackImage(vesselName),
+      img: this.isMvGemiaVessel(vesselName, fvInfo.prefix, vessel.prefix)
+        ? 'assets/images/vessel/mv_gemia.jpg'
+        : fvInfo.img ||
+          fvInfo.image ||
+          vessel.img ||
+          vessel.image ||
+          vessel.imageUrl ||
+          this.resolveFallbackImage(vesselName),
       lat:
         tagValue(['VES_GPS_LAT', 'GPS_LAT', 'LAT', 'lat', 'latitude']) ??
         fvInfo.lat ??
@@ -694,6 +695,15 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
     const num = Number.parseFloat(String(value));
 
     return Number.isNaN(num) ? null : num;
+  }
+
+  private isMvGemiaVessel(...values: unknown[]): boolean {
+    return values.some((value) =>
+      String(value ?? '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .includes('mvgemia'),
+    );
   }
 
   private resolveFallbackImage(name: string): string {

@@ -204,11 +204,13 @@ interface HourAccumulator {
   starboardShaftRpmCount: number;
 }
 
+// 1 นาที = 60,000 ms | Cache = 5 นาที | โหลด Report สูงสุด 31 วัน
 const MINUTE_MS = 60_000;
 const CACHE_TTL_MS = 5 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
+// Historian Tags ที่ใช้: GPS, Main Engine, Shaft, Auxiliary Engine และ Fuel Totalizer
 const TAGS = {
   gpsSpeed: 'SC_GLORY1-VES-GPS-SPEED',
   gpsLat: 'SC_GLORY1-VES-GPS-LAT',
@@ -236,6 +238,7 @@ const TAGS = {
 
 const ALL_TAGS = Object.values(TAGS);
 
+// Service นี้ถูกสร้างเป็น Singleton และใช้ร่วมกันทั้ง Angular application
 @Injectable({ providedIn: 'root' })
 export class ScGlory1ReportService implements VesselReportAdapter {
   readonly id = 'sc-glory-1';
@@ -247,8 +250,12 @@ export class ScGlory1ReportService implements VesselReportAdapter {
   private readonly periodReportCache = new Map<string, { value: ScGlory1PeriodUiReport; expiresAt: number }>();
   private readonly periodReportInFlight = new Map<string, Observable<ScGlory1PeriodUiReport>>();
 
+  // รับ Service สำหรับเรียก Backend / Historian API
   constructor(private newHttp: NewHttpClientService) {}
 
+
+  // ==================== ตรวจสอบเรือ / Profile / Live Mode ====================
+  // ตรวจว่าเรือลำที่เลือกคือ SC GLORY 1 หรือไม่
   supports(vessel: any): boolean {
     const info = vessel?.fvInfo || vessel?.fv || vessel || {};
     const candidates = [
@@ -265,6 +272,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return candidates.some((value) => this.normalizeIdentity(value) === 'scglory1');
   }
 
+  // เพิ่ม Profile และกฎ Report ของ SC GLORY 1 เข้าในระบบ
   prepareProfileDocument(baseDocument: LiveReportProfileDocument): LiveReportProfileDocument {
     const profiles = (baseDocument?.profiles || []).filter(
       (profile) => !this.isScGlory1Profile(profile?.id, profile?.aliases, profile?.prefixes),
@@ -276,6 +284,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     };
   }
 
+  // คำนวณ Mode ปัจจุบันจาก GPS Speed แล้วอัปเดต Live Snapshot
   enhanceSnapshot(
     snapshot: LiveReportSnapshot,
     _currentData: Record<string, any> | null | undefined,
@@ -320,6 +329,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     };
   }
 
+  // กำหนดวิธีแสดงประวัติ Mode ของ SC GLORY 1
   getModeHistoryConfig(snapshot: LiveReportSnapshot): VesselModeHistoryConfig {
     const enabled = snapshot.tracking.currentSpeed !== null;
 
@@ -334,10 +344,14 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     };
   }
 
+  // แปลงค่าความเร็ว GPS ให้เป็นชื่อ Mode
   resolveHistorianModeLabel(rawValue: unknown): string | null {
     return this.resolveModeFromGpsSpeed(this.parseNumber(rawValue));
   }
 
+
+  // ==================== โหลดข้อมูล Report ====================
+  // โหลด Daily Report: เช็ก Cache → ดึง Historian → คำนวณ Report → เก็บ Cache
   loadDetailedDailyReport(
     periodStart: Date,
     periodEnd: Date,
@@ -376,18 +390,14 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     const requestStartText = this.formatHistorianRequestTime(start);
     const requestEndText = this.formatHistorianRequestTime(historianEnd);
 
-    // Completed Daily UI must read the historian exactly like SCReportingService/PDF:
-    // one tag per loggergethistorianvalues request, including next-day 00:00.
+    // Completed Daily PDF parity uses a source-consistent one-tag logger bundle.
+    // The shared loader prefers the same reporting historian as SCReportingService
+    // and, on failure, restarts the WHOLE report through API2 instead of mixing sources.
     const historianRequest$: Observable<any> = completedDaily
-      ? from(ALL_TAGS).pipe(
-          mergeMap(
-            (tagName) =>
-              this.newHttp.getRawData(requestStartText, requestEndText, [{ name: tagName, tagName }]).pipe(
-                map((response) => ({ __legacyTagName: tagName, __legacyResponse: response })),
-              ),
-            1,
-          ),
-          toArray(),
+      ? this.newHttp.getConsistentPdfParityHistorianValues(
+          requestStartText,
+          requestEndText,
+          requestTags,
         )
       : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
 
@@ -401,13 +411,14 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         }),
         catchError((error) => throwError(() => error)),
         finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: false }),
+        shareReplay({ bufferSize: 1, refCount: true }),
       );
 
     this.detailedReportInFlight.set(key, request$);
     return request$;
   }
 
+  // โหลด Report หลายวัน/รายเดือน โดยแยกโหลดทีละวันแล้วรวมผล
   loadPeriodReport(
     periodStart: Date,
     periodEnd: Date,
@@ -461,18 +472,22 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.periodReportInFlight.set(key, request$);
     return request$;
   }
 
+  // ล้าง Cache ของ Daily Report และ Period Report
   clearDetailedDailyReportCache(): void {
     this.detailedReportCache.clear();
     this.periodReportCache.clear();
   }
 
+
+  // ==================== Report หลายวัน / รายเดือน ====================
+  // แบ่งช่วงวันที่เป็นก้อนละ 1 วัน เพื่อไม่โหลดข้อมูลก้อนใหญ่เกินไป
   private buildDailyChunks(start: Date, end: Date): Array<{ start: Date; end: Date }> {
     const chunks: Array<{ start: Date; end: Date }> = [];
     let cursor = new Date(start);
@@ -511,6 +526,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return chunks;
   }
 
+  // รวม Daily Report หลายวันให้เป็น Period/Month Report เดียว
   private aggregatePeriodReports(
     reports: readonly ScGlory1DailyUiReport[],
     periodStart: Date,
@@ -521,6 +537,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       throw new Error('EMPTY_REPORT_PERIOD');
     }
 
+    // สูตร: เวลารวม (hr) = (เวลาสิ้นสุด - เวลาเริ่ม + 1 นาที) / 3,600,000
     const totalElapsedHours = Math.max(
       MINUTE_MS / 3_600_000,
       (periodEnd.getTime() - periodStart.getTime() + MINUTE_MS) / 3_600_000,
@@ -549,6 +566,8 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       );
       return sum + reportMinutes * Math.max(0, Math.min(100, report.coveragePercent)) / 100;
     }, 0);
+    // สูตรหลายวัน: Average Speed = Σ(AverageSpeed ของวัน × Weight) / ΣWeight
+    // โดย Weight = จำนวนนาทีของวัน × Coverage%
     const averageSpeed =
       speedWeight > 0
         ? reports.reduce((sum, report) => {
@@ -566,11 +585,12 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         .map((report) => report.maximumSpeed)
         .filter((value): value is number => value !== null && Number.isFinite(value)),
     );
-
+    
     const engineSummary = (['port', 'center', 'starboard'] as const).map((key) => {
       const rows = reports
         .map((report) => report.engineSummary.find((row) => row.key === key))
         .filter((row): row is ScGlory1EngineSummaryRow => !!row);
+      // สูตรหลายวัน: Running Hours รวม = Σ Running Hours ของทุกวัน
       const runningHours = rows.reduce((sum, row) => sum + row.runningHours, 0);
       const rpmWeight = rows.reduce(
         (sum, row) => sum + (row.averageRpm !== null ? Math.max(row.runningHours, 1 / 60) : 0),
@@ -602,6 +622,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       const rows = reports
         .map((report) => report.shaftSummary.find((row) => row.key === key))
         .filter((row): row is ScGlory1ShaftSummaryRow => !!row);
+      // สูตรหลายวัน: Running Hours รวม = Σ Running Hours ของทุกวัน
       const runningHours = rows.reduce((sum, row) => sum + row.runningHours, 0);
       const rpmWeight = rows.reduce(
         (sum, row) => sum + (row.averageRpm !== null ? Math.max(row.runningHours, 1 / 60) : 0),
@@ -640,8 +661,11 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       } satisfies ScGlory1AuxSummaryRow;
     });
 
+    // สูตร: Main Engine Fuel Total = PME + CME + SME
     const mainEngineFuelTotal = engineSummary.reduce((sum, row) => sum + row.fuelUsed, 0);
+    // สูตร: Auxiliary Fuel Total = PAE + SAE
     const auxiliaryFuelTotal = auxSummary.reduce((sum, row) => sum + row.fuelUsed, 0);
+    // สูตร: Total Fuel Used = Main Engine Fuel Total + Auxiliary Fuel Total
     const totalFuelUsed = mainEngineFuelTotal + auxiliaryFuelTotal;
 
     const utilization: ScGlory1UtilizationRow[] = [
@@ -675,18 +699,23 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         .map((report) => report.modeSummary.find((row) => row.key === profileMode.key))
         .filter((row): row is ScGlory1ModeSummaryRow => !!row);
       const fuelUsed = rows.reduce((sum, row) => sum + row.fuelUsed, 0);
+      // สูตรหลายวัน: Running Hours รวม = Σ Running Hours ของทุกวัน
       const runningHours = rows.reduce((sum, row) => sum + row.runningHours, 0);
       const distanceNm = rows.reduce((sum, row) => sum + row.distanceNm, 0);
       return {
         key: profileMode.key,
         label: profileMode.label,
         fuelUsed,
+        // สูตร: Fuel % = (Fuel ของ Mode / Total Fuel Used) × 100
         fuelPercent: totalFuelUsed > 0 ? (fuelUsed / totalFuelUsed) * 100 : 0,
         runningHours,
         runningPercent:
+          // สูตร: Running % = (Running Hours ของ Mode / Running Hours รวมทุก Mode) × 100
           totalObservedModeHours > 0 ? (runningHours / totalObservedModeHours) * 100 : 0,
         distanceNm,
+        // สูตร: L/NM = Fuel Used / Distance (NM)
         litresPerNm: distanceNm > 0 ? fuelUsed / distanceNm : null,
+        // สูตร: L/H = Fuel Used / Running Hours
         litresPerHour: runningHours > 0 ? fuelUsed / runningHours : null,
       } satisfies ScGlory1ModeSummaryRow;
     });
@@ -697,12 +726,12 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         ? reports[0].modeSummary.map((row) => ({ ...row }))
         : modeSummary;
 
-
     const passageReports = reports.map((report) => report.passageSummary);
     const passageMainEngines = (['port', 'center', 'starboard'] as const).map((key) => {
       const rows = passageReports
         .map((report) => report.mainEngines.find((row) => row.key === key))
         .filter((row): row is ScGlory1EngineSummaryRow => !!row);
+      // สูตรหลายวัน: Running Hours รวม = Σ Running Hours ของทุกวัน
       const runningHours = rows.reduce((sum, row) => sum + row.runningHours, 0);
       const weight = rows.reduce(
         (sum, row) => sum + (row.averageRpm !== null ? Math.max(row.runningHours, 1 / 60) : 0),
@@ -735,6 +764,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       const rows = passageReports
         .map((report) => report.shafts.find((row) => row.key === key))
         .filter((row): row is ScGlory1ShaftSummaryRow => !!row);
+      // สูตรหลายวัน: Running Hours รวม = Σ Running Hours ของทุกวัน
       const runningHours = rows.reduce((sum, row) => sum + row.runningHours, 0);
       const weight = rows.reduce(
         (sum, row) => sum + (row.averageRpm !== null ? Math.max(row.runningHours, 1 / 60) : 0),
@@ -915,6 +945,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     };
   }
 
+
+  // ==================== คำนวณ Daily Report หลัก ====================
+  // หัวใจหลักของไฟล์: แปลง Historian แล้วคำนวณ GPS, RPM, Fuel, Mode, Hourly และ Tracking
   private buildDetailedDailyReport(
     response: any,
     periodStart: Date,
@@ -992,7 +1025,6 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     const smeFuel = this.buildFuelMap(smeFuelInPoints, smeFuelOutPoints);
     const paeFuel = this.buildFuelMap(paeFuelInPoints, paeFuelOutPoints);
     const saeFuel = this.buildFuelMap(saeFuelInPoints, saeFuelOutPoints);
-
     // The completed Daily PDF never calculates summary fuel from arbitrary raw
     // historian timestamps. GetRawData first performs an exact timestamp join into
     // its 1,441-row minute DataTable, then CalFLowTotalSME/SME3 reads that table.
@@ -1031,6 +1063,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       dailySaeFuelInPoints, dailySaeFuelOutPoints, 8000, 300,
     );
 
+    // สูตร: Elapsed Hours = จำนวนเวลาของ Report แปลงจาก millisecond เป็นชั่วโมง
     const elapsedHours = Math.max(MINUTE_MS / 3_600_000, (minuteEnd - minuteStart + MINUTE_MS) / 3_600_000);
 
     // For a completed Daily report, reproduce CalSpeedSummary /
@@ -1133,8 +1166,11 @@ export class ScGlory1ReportService implements VesselReportAdapter {
           this.buildAuxSummary('starboard', 'Stb. A/E', saeRpm, saeFuel, saeFuelTotal),
         ];
 
+    // สูตร: Main Engine Fuel Total = PME + CME + SME
     const mainEngineFuelTotal = engineSummary.reduce((sum, row) => sum + row.fuelUsed, 0);
+    // สูตร: Auxiliary Fuel Total = PAE + SAE
     const auxiliaryFuelTotal = auxSummary.reduce((sum, row) => sum + row.fuelUsed, 0);
+    // สูตร: Total Fuel Used = Main Engine Fuel Total + Auxiliary Fuel Total
     const totalFuelUsed = mainEngineFuelTotal + auxiliaryFuelTotal;
 
     const utilization: ScGlory1UtilizationRow[] = [
@@ -1240,6 +1276,8 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         hourData.speedSum += speed;
         hourData.speedCount += 1;
       }
+      // สูตร: Distance ต่อ 1 นาที = Speed(knots) / 60
+      // เหตุผล: 1 knot = 1 NM ต่อชั่วโมง และข้อมูลถูกคำนวณทีละ 1 นาที
       const distance = speed !== null ? speed / 60 : 0;
       hourData.distanceNm += distance;
 
@@ -1248,8 +1286,11 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       const smeMinuteFuel = smeFuel.get(bucket) || 0;
       const paeMinuteFuel = paeFuel.get(bucket) || 0;
       const saeMinuteFuel = saeFuel.get(bucket) || 0;
+      // สูตรรายนาที: Main Fuel = PME + CME + SME
       const mainFuel = pmeMinuteFuel + cmeMinuteFuel + smeMinuteFuel;
+      // สูตรรายนาที: Aux Fuel = PAE + SAE
       const auxFuel = paeMinuteFuel + saeMinuteFuel;
+      // สูตรรายนาที: Total Fuel = Main Fuel + Aux Fuel
       const minuteFuel = mainFuel + auxFuel;
 
       hourData.portMainFuel += pmeMinuteFuel;
@@ -1335,10 +1376,8 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       legacySinglePrecision: true,
     };
 
-    // Production rule: always calculate Mode from the real 1,441-row historian
-    // minute model. Do not apply a date-specific Excel/PDF calibration. Excel's
-    // SUMIF is equivalent to this grouping step when MINUTE_MODEL!D is Mode and
-    // MINUTE_MODEL!E is the real per-minute net fuel delta.
+    // Use the same Historian/C# formula for every date.
+    // No date-specific calibration or PDF target value is substituted here.
     const pdfParityMode = buildGpsPdfParityModeSummary(pdfParityOptions);
     const modeSummary = pdfParityMode.modeSummary as ScGlory1ModeSummaryRow[];
     const passageModeKey = this.resolveModeProfileKey('Passage');
@@ -1498,6 +1537,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     };
   }
 
+
+  // ==================== Summary ของ Engine / Shaft / Auxiliary ====================
+  // สรุป Main Engine: Average RPM, Max RPM, Running Hours และ Fuel Used
   private buildEngineSummary(
     key: ScGlory1EngineSummaryRow['key'],
     label: string,
@@ -1507,17 +1549,23 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     fuelOverride?: number,
   ): ScGlory1EngineSummaryRow {
     const rpmValues = Array.from(rpmMap.values()).filter((value) => value >= 0 && value <= 2000);
+    // เงื่อนไข Running: RPM >= 100 ถือว่า Main Engine ทำงาน 1 นาที
     const runningMinutes = rpmValues.filter((value) => value >= 100).length;
     return {
       key,
       label,
+      // สูตร: Average RPM = ผลรวม RPM ที่ > 0 / จำนวน Sample ที่ใช้ได้
       averageRpm: this.average(rpmValues.filter((value) => value > 0)),
+      // สูตร: Maximum RPM = RPM สูงสุดของช่วง Report
       maximumRpm: this.maximum(rpmValues),
+      // สูตร: Running Hours = Running Minutes / 60
       runningHours: runningMinutes / 60,
+      // Fuel Used ใช้ค่า Official/Legacy ถ้ามี มิฉะนั้นรวม Fuel ราย minute
       fuelUsed: fuelOverride !== undefined ? fuelOverride : this.sumMap(fuelMap),
     };
   }
 
+  // สรุป Shaft: Average RPM, Max RPM และ Running Hours
   private buildShaftSummary(
     key: ScGlory1ShaftSummaryRow['key'],
     label: string,
@@ -1527,6 +1575,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     const rpmValues = Array.from(rpmMap.values()).filter((value) => value >= 0 && value <= 800);
     let runningMinutes = 0;
     rpmMap.forEach((value, bucket) => {
+      // เงื่อนไข Shaft Running: Shaft RPM > 0 และ Main Engine RPM > 0 ในเวลาเดียวกัน
       if (value > 0 && (mainEngineRpm.get(bucket) || 0) > 0) {
         runningMinutes += 1;
       }
@@ -1534,12 +1583,16 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return {
       key,
       label,
+      // สูตร: Average RPM = ผลรวม RPM ที่ > 0 / จำนวน Sample ที่ใช้ได้
       averageRpm: this.average(rpmValues.filter((value) => value > 0)),
+      // สูตร: Maximum RPM = RPM สูงสุดของช่วง Report
       maximumRpm: this.maximum(rpmValues),
+      // สูตร: Running Hours = Running Minutes / 60
       runningHours: runningMinutes / 60,
     };
   }
 
+  // สรุป Auxiliary Engine: Running Hours และ Fuel Used
   private buildAuxSummary(
     key: ScGlory1AuxSummaryRow['key'],
     label: string,
@@ -1551,11 +1604,16 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return {
       key,
       label,
+      // สูตร: Running Hours = Running Minutes / 60
       runningHours: runningMinutes / 60,
+      // Fuel Used ใช้ค่า Official/Legacy ถ้ามี มิฉะนั้นรวม Fuel ราย minute
       fuelUsed: fuelOverride !== undefined ? fuelOverride : this.sumMap(fuelMap),
     };
   }
 
+
+  // ==================== Passage Summary ====================
+  // สรุปเฉพาะช่วง Passage ให้ตรงกับสูตร PDF/C# เดิม
   private buildLegacyPassageSummary(
     minuteKeys: readonly number[],
     pmePoints: readonly NumericPoint[],
@@ -1585,7 +1643,10 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     const rawSmeFuel = this.sumSelectedMap(smeFuel, selected);
     const rawPaeFuel = this.sumSelectedMap(paeFuel, selected);
     const rawSaeFuel = this.sumSelectedMap(saeFuel, selected);
+    // สูตร: Raw Passage Fuel = PME + CME + SME + PAE + SAE เฉพาะนาที Passage
     const rawPassageFuel = rawPmeFuel + rawCmeFuel + rawSmeFuel + rawPaeFuel + rawSaeFuel;
+    // สูตร: Passage Fuel Scale = Official Passage Fuel / Raw Passage Fuel
+    // ใช้ Scale เพื่อให้ Fuel รายเครื่องรวมกันตรงกับ Fuel Passage ที่ยืนยันแล้ว
     const scale = rawPassageFuel !== 0 && totalPassageFuel > 0 ? totalPassageFuel / rawPassageFuel : 1;
 
     const pmeFuelValue = this.roundLegacy2(rawPmeFuel * scale);
@@ -1599,6 +1660,8 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       .filter((value): value is number => value !== undefined && Number.isFinite(value) && value > 12);
     const speedBandValues = speedValues.filter((value) => value >= 15 && value < 17);
     const fallbackSpeedValues = speedValues.filter((value) => value < 17);
+    // สูตรหลายวัน: Average Speed = Σ(AverageSpeed ของวัน × Weight) / ΣWeight
+    // โดย Weight = จำนวนนาทีของวัน × Coverage%
     const averageSpeed =
       speedBandValues.length > 0
         ? this.average(speedBandValues)
@@ -1606,7 +1669,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
           ? this.maximum(fallbackSpeedValues)
           : 0;
     const gpsAverage = this.average(speedValues) || 0;
+    // สูตร: Passage Hours = จำนวนนาที Passage / 60
     const passageHours = this.roundLegacy2(speedValues.length / 60);
+    // สูตร: Passage Distance = Average GPS Speed × Passage Hours
     const distanceNm = this.roundLegacy2(gpsAverage * passageHours);
 
     return {
@@ -1632,6 +1697,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     };
   }
 
+  // คำนวณ RPM และ Running Hours ของ Counter เฉพาะช่วง Passage
   private buildLegacyPassageCounterStats(
     points: readonly NumericPoint[],
     selected: ReadonlySet<number>,
@@ -1654,12 +1720,16 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     });
 
     return {
+      // สูตร Legacy: Average RPM = (ΣDelta / Pulse) / จำนวน Running Sample
       averageRpm: runningCount > 0 ? (deltaSum / pulse) / runningCount : 0,
+      // สูตร Legacy: Maximum RPM = Max Delta ที่ปรับช่วงข้อมูลหาย / Pulse
       maximumRpm: maxLostAdjustedDelta > 0 ? maxLostAdjustedDelta / pulse : 0,
+      // สูตร: Running Hours = Running Sample / 60
       runningHours: runningCount / 60,
     };
   }
   
+  // แปลง Counter ดิบเป็น Delta สำหรับใช้คำนวณ RPM แบบ Legacy
   private buildLegacyCounterSamples(points: readonly NumericPoint[]): Map<number, LegacyCounterSample> {
     const result = new Map<number, LegacyCounterSample>();
     const sorted = [...points].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
@@ -1674,6 +1744,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         if (seen === 0) {
           previous = value;
         } else if (value > previous) {
+          // สูตรพื้นฐาน Counter: Delta = Counter ปัจจุบัน - Counter ก่อนหน้า
           const delta = value - previous;
           result.set(this.floorToMinute(point.timestamp).getTime(), { delta, lost, running: true });
           previous = value;
@@ -1689,6 +1760,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return result;
   }
 
+
+  // ==================== สูตร RPM / Running Hours แบบ Legacy ====================
+  // คำนวณ Engine RPM/Running Hours แบบ Legacy ให้ตรง PDF เดิม
   private calculateLegacySpeedSummary(
     points: readonly NumericPoint[],
     start: number,
@@ -1717,6 +1791,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
 
         previousRunStatus = false;
         if (value > previous) {
+          // สูตรพื้นฐาน Counter: Delta = Counter ปัจจุบัน - Counter ก่อนหน้า
           const delta = value - previous;
           if (delta / pulse <= maxRpm) {
             if (lost > 1) {
@@ -1730,6 +1805,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
           }
 
           // CalSpeedSummary counts a running minute from the unadjusted delta.
+          // เงื่อนไข Main Engine Running: Delta / Pulse >= 100 RPM
           if (delta / pulse >= 100) {
             runningMinutes += 1;
           }
@@ -1745,12 +1821,16 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     }
 
     return {
+      // สูตร Legacy: Average RPM = (ΣDelta / Pulse) / จำนวน Sample ที่ผ่านเงื่อนไข
       averageRpm: averageCount > 0 ? (deltaSum / pulse) / averageCount : 0,
+      // สูตร Legacy: Maximum RPM = Max Delta / Pulse
       maximumRpm: maxRawDelta > 0 ? maxRawDelta / pulse : 0,
+      // สูตร: Running Hours = Running Minutes / 60
       runningHours: runningMinutes / 60,
     };
   }
 
+  // คำนวณ Shaft RPM/Running Hours แบบ Legacy ให้ตรง PDF เดิม
   private calculateLegacyShaftSpeedSummary(
     points: readonly NumericPoint[],
     start: number,
@@ -1779,6 +1859,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
 
         previousRunStatus = false;
         if (value > previous) {
+          // สูตรพื้นฐาน Counter: Delta = Counter ปัจจุบัน - Counter ก่อนหน้า
           const delta = value - previous;
           if (delta / pulse <= maxRpm) {
             if (lost > 1) {
@@ -1804,12 +1885,16 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     }
 
     return {
+      // สูตร Legacy: Average RPM = (ΣDelta / Pulse) / จำนวน Sample ที่ผ่านเงื่อนไข
       averageRpm: averageCount > 0 ? (deltaSum / pulse) / averageCount : 0,
+      // สูตร Legacy: Maximum RPM = Max Delta / Pulse
       maximumRpm: maxRawDelta > 0 ? maxRawDelta / pulse : 0,
+      // สูตร: Running Hours = Running Minutes / 60
       runningHours: runningMinutes / 60,
     };
   }
 
+  // คำนวณชั่วโมงทำงานของ Shaft โดยเทียบกับสถานะ Main Engine
   private calculateLegacyShaftRunningHours(
     mainEnginePoints: readonly NumericPoint[],
     shaftPoints: readonly NumericPoint[],
@@ -1868,6 +1953,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return runningMinutes / 60;
   }
 
+  // สร้าง Map เฉพาะค่า Timestamp ที่ใช้ในการคำนวณแบบ Exact
   private buildExactValueMap(points: readonly NumericPoint[]): Map<number, number> {
     const result = new Map<number, number>();
     for (const point of points) {
@@ -1878,6 +1964,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return result;
   }
 
+  // จัดรูปผลลัพธ์ Main Engine ที่คำนวณจากสูตร Legacy
   private legacyEngineSummary(
     key: ScGlory1EngineSummaryRow['key'],
     label: string,
@@ -1887,6 +1974,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return { key, label, ...stats, fuelUsed };
   }
 
+  // จัดรูปผลลัพธ์ Shaft ที่คำนวณจากสูตร Legacy
   private legacyShaftSummary(
     key: ScGlory1ShaftSummaryRow['key'],
     label: string,
@@ -1895,6 +1983,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return { key, label, ...stats };
   }
 
+  // รวมค่าใน Map เฉพาะนาทีที่ถูกเลือก
   private sumSelectedMap(map: Map<number, number>, selected: ReadonlySet<number>): number {
     let sum = 0;
     selected.forEach((bucket) => {
@@ -1903,6 +1992,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return sum;
   }
 
+  // สร้างชุดข้อมูล Speed Performance ให้เหมือน PDF เดิม
   private buildLegacyPdfSpeedPerformanceSeries(
     gpsPoints: readonly NumericPoint[],
   ): ScGlory1SpeedPoint[] {
@@ -1925,6 +2015,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       });
   }
 
+
+  // ==================== Hourly Report / Tracking ====================
+  // สร้างข้อมูลรายชั่วโมง 24 ชั่วโมงตามสูตร PDF เดิม
   private buildLegacyPdfHourlyRows(
     fallback: readonly ScGlory1HourlyRow[],
     reportStart: number,
@@ -1986,7 +2079,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
 
     return Array.from({ length: 24 }, (_, hour) => {
       const base = fallback[hour];
+      // สูตรรายชั่วโมง: Average Speed = ΣSpeed / จำนวน GPS Sample ในชั่วโมงนั้น
       const speed = speedCount[hour] > 0 ? speedSum[hour] / speedCount[hour] : 0;
+      // สูตรรายชั่วโมง: Distance = Average Speed × (จำนวน GPS Sample / 60)
       const distance = speed * (speedCount[hour] / 60);
       const starboardMain = smeInHour[hour] > smeOutHour[hour]
         ? smeInHour[hour] - smeOutHour[hour]
@@ -2003,7 +2098,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       const portAux = paeInHour[hour] > paeOutHour[hour]
         ? paeInHour[hour] - paeOutHour[hour]
         : 0;
+      // สูตรรายชั่วโมง: Main Fuel = PME + CME + SME
       const mainFuel = starboardMain + centerMain + portMain;
+      // สูตรรายชั่วโมง: Aux Fuel = PAE + SAE
       const auxFuel = starboardAux + portAux;
       const active =
         speedCount[hour] > 0 ||
@@ -2048,11 +2145,13 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         starboardMainFuel: starboardMain,
         portAuxFuel: portAux,
         starboardAuxFuel: starboardAux,
+        // สูตรรายชั่วโมง: Total Fuel = Main Fuel + Aux Fuel
         totalFuel: mainFuel + auxFuel,
       };
     });
   }
 
+  // คำนวณ Delta ของ Fuel Totalizer สำหรับ Hourly Report
   private buildLegacyHourlyTotalizerDeltaMap(
     points: readonly NumericPoint[],
     maximumDelta: number,
@@ -2076,6 +2175,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       }
 
       if (value > previous) {
+        // สูตรพื้นฐาน Counter: Delta = Counter ปัจจุบัน - Counter ก่อนหน้า
         const delta = value - previous;
         if (delta <= maximumDelta) {
           result.set(point.timestamp.getTime(), delta);
@@ -2106,6 +2206,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return result;
   }
 
+  // สร้างเส้นทางเรือจาก Latitude/Longitude พร้อมคำนวณระยะทาง
   private buildTrackingSummary(
     minuteStart: number,
     minuteEnd: number,
@@ -2141,6 +2242,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     const compactRoute = this.downsampleRoute(route, 300);
     const distanceNm = Array.from(speed.entries())
       .filter(([bucket, value]) => bucket >= minuteStart && bucket <= minuteEnd && value >= 0)
+      // สูตร Tracking Distance = Σ(Speed ของแต่ละนาที / 60)
       .reduce((sum, [, value]) => sum + value / 60, 0);
 
     return {
@@ -2157,6 +2259,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
    * discarded BEFORE any totalizer delta calculation, otherwise they can move
    * fuel from one speed Mode to another while leaving the daily total unchanged.
    */
+
+  // ==================== Exact-Minute / PDF Parity ====================
+  // กรองข้อมูลให้เหลือเฉพาะเวลาที่ตรงกับกริดนาทีของ PDF เดิม
   private filterLegacyExactMinutePoints(
     points: readonly NumericPoint[],
     start: number,
@@ -2191,6 +2296,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     );
   }
 
+  // สร้าง GPS Map แบบ float32 เพื่อให้ precision เหมือน C# System.Single
   private buildLegacySingleInstantMap(points: readonly NumericPoint[]): Map<number, number> {
     const result = new Map<number, number>();
     for (const point of points) {
@@ -2201,6 +2307,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return result;
   }
 
+  // จัดข้อมูล Historian เป็น Map<เวลาเป็นนาที, ค่า>
   private buildInstantMap(points: readonly NumericPoint[]): Map<number, number> {
     const result = new Map<number, number>();
     for (const point of points) {
@@ -2210,6 +2317,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return result;
   }
 
+
+  // ==================== สูตร Counter / RPM / Fuel ====================
+  // แปลง Counter ของ Engine/Shaft เป็น RPM ราย minute
   private buildCounterRateMap(
     points: readonly NumericPoint[],
     pulse: number,
@@ -2230,6 +2340,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       if (!Number.isFinite(delta) || delta <= 0) {
         continue;
       }
+      // สูตร RPM = (Counter ปัจจุบัน - Counter ก่อนหน้า) / Pulse / GapMinutes
       const rpm = delta / pulse / gapMinutes;
       if (!Number.isFinite(rpm) || rpm < 0 || rpm > maxRpm) {
         continue;
@@ -2241,6 +2352,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return result;
   }
 
+  // คำนวณ Fuel Used รวมทั้งวันจาก Fuel IN และ Fuel OUT แบบ Legacy
   private buildLegacyDailyFuelTotal(
     supplyPoints: readonly NumericPoint[],
     returnPoints: readonly NumericPoint[],
@@ -2256,10 +2368,12 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     const returned = this.buildLegacyTotalizerSpan(
       returnPoints, spanLimit, stepLimit, true,
     );
+    // สูตร Daily Fuel Used = Fuel IN Span - Fuel OUT Span
     const total = supply - returned;
     return Number.isFinite(total) ? total : 0;
   }
 
+  // หาช่วงการเพิ่มของ Totalizer พร้อมกรองค่ากระโดดผิดปกติ
   private buildLegacyTotalizerSpan(
     points: readonly NumericPoint[],
     spanLimit: number,
@@ -2287,9 +2401,11 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       }
     }
 
+    // สูตร Totalizer Span = Maximum Valid Counter - Minimum Valid Counter
     return maximum - minimum;
   }
 
+  // คำนวณ Fuel Used ราย minute จาก Delta ของ Fuel IN และ Fuel OUT
   private buildLegacyFuelDeltaMap(
     supplyPoints: readonly NumericPoint[],
     returnPoints: readonly NumericPoint[],
@@ -2301,11 +2417,13 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     const buckets = new Set<number>([...supply.keys(), ...returned.keys()]);
     const result = new Map<number, number>();
     buckets.forEach((bucket) => {
+      // สูตร Fuel ราย minute = Delta Fuel IN - Delta Fuel OUT
       result.set(bucket, (supply.get(bucket) || 0) - (returned.get(bucket) || 0));
     });
     return result;
   }
 
+  // คำนวณ Delta ของ Fuel Totalizer ตามพฤติกรรม C# เดิม
   private buildLegacyTotalizerDeltaMap(
     points: readonly NumericPoint[],
     maximumDelta: number,
@@ -2318,7 +2436,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
 
     for (const point of sorted) {
       const value = point.value;
-      if (!Number.isFinite(value) || value <= 0) continue;
+      // GetDataFuelConsumption() skips only exact zero. Other non-zero samples
+      // still advance legacy index i, which affects the special i == 1 repair.
+      if (!Number.isFinite(value) || value === 0) continue;
       if (nonZeroIndex === 0) {
         previous = value;
         nonZeroIndex += 1;
@@ -2331,6 +2451,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         continue;
       }
       if (value > previous) {
+        // สูตรพื้นฐาน Counter: Delta = Counter ปัจจุบัน - Counter ก่อนหน้า
         const delta = value - previous;
         if (delta <= maximumDelta) {
           result.set(bucket, delta);
@@ -2357,11 +2478,13 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return result;
   }
 
+  // ปัดค่าทศนิยม 2 ตำแหน่งให้เหมือนระบบเดิม
   private roundLegacy2(value: number): number {
     if (!Number.isFinite(value)) return 0;
     return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
+  // สร้าง Fuel Used ราย minute สำหรับ UI/กราฟ
   private buildFuelMap(
     supplyPoints: readonly NumericPoint[],
     returnPoints: readonly NumericPoint[],
@@ -2377,6 +2500,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return result;
   }
 
+  // คำนวณ Delta ของ Totalizer และกระจายค่าข้ามช่องว่างสั้น ๆ
   private buildTotalizerDeltaMap(points: readonly NumericPoint[]): Map<number, number> {
     const result = new Map<number, number>();
     const sorted = [...points].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
@@ -2393,6 +2517,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       if (!Number.isFinite(delta) || delta < 0 || delta > 3000) {
         continue;
       }
+      // สูตรเมื่อข้อมูลหายช่วงสั้น: Fuel ต่อ minute = Delta Totalizer / GapMinutes
       const perMinute = delta / gapMinutes;
       for (let minute = 1; minute <= gapMinutes; minute += 1) {
         const bucket = previousBucket + minute * MINUTE_MS;
@@ -2402,6 +2527,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return result;
   }
 
+  // ตรวจว่า Response เป็นรูปแบบ Legacy Historian Bundle หรือไม่
   private isLegacyHistorianBundle(
     response: any,
   ): response is Array<{ __legacyTagName: string; __legacyResponse: any }> {
@@ -2417,6 +2543,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     );
   }
 
+  // แยก Legacy Historian Bundle ออกเป็น Series ของแต่ละ Tag
   private extractLegacyHistorianBundle(
     bundle: Array<{ __legacyTagName: string; __legacyResponse: any }>,
     requestedTags: readonly string[],
@@ -2435,6 +2562,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return this.sortSeries(result);
   }
 
+
+  // ==================== แปลงข้อมูล Historian Response ====================
+  // แปลง Response จาก API หลายรูปแบบให้เป็น Series มาตรฐาน
   private extractHistorianSeries(
     response: any,
     requestedTags: readonly string[],
@@ -2497,6 +2627,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return this.sortSeries(result);
   }
 
+  // เพิ่มข้อมูล 1 จุดเข้า Series ของ Tag ที่ตรงกัน
   private pushSeriesPoint(
     result: Map<string, NumericPoint[]>,
     tagName: string,
@@ -2511,6 +2642,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     result.get(targetKey)!.push({ timestamp, value });
   }
 
+  // ลบ Timestamp ซ้ำและเรียงข้อมูลตามเวลา
   private sortSeries(series: Map<string, NumericPoint[]>): Map<string, NumericPoint[]> {
     series.forEach((points, key) => {
       const deduped = new Map<number, NumericPoint>();
@@ -2523,6 +2655,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return series;
   }
 
+  // แปลง JSON string เป็น Object อย่างปลอดภัย
   private parseJson(value: any): any {
     if (typeof value !== 'string') return value;
     const text = value.trim();
@@ -2534,6 +2667,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     }
   }
 
+  // แกะ Wrapper ของ API เพื่อดึงข้อมูลจริง
   private unwrapResponse(source: any): any {
     if (!source || Array.isArray(source) || typeof source !== 'object') return source;
     const candidates = [
@@ -2561,6 +2695,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return candidates.find((candidate) => Array.isArray(candidate)) ?? source;
   }
 
+  // แปลงข้อมูล Response ให้เป็น Array ของ Series
   private toSeriesArray(source: any): any[] {
     if (Array.isArray(source)) {
       if (source.length > 0 && this.looksLikeFlatRecord(source[0]) && this.getTagName(source[0])) {
@@ -2587,6 +2722,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return [];
   }
 
+  // ดึง Record ภายใน Series โดยรองรับชื่อ Field หลายรูปแบบ
   private extractRecords(series: any): any[] {
     const candidates = [
       series?.records,
@@ -2610,6 +2746,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return candidates.find((candidate) => Array.isArray(candidate)) || [];
   }
 
+  // อ่านชื่อ Historian Tag จาก Response
   private getTagName(item: any): string {
     if (!item) return '';
     if (typeof item === 'string') return item;
@@ -2630,6 +2767,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     ).trim();
   }
 
+  // อ่าน Timestamp จาก Record
   private getRecordTimestamp(record: any): any {
     return (
       record?.TimeStamp ??
@@ -2647,6 +2785,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     );
   }
 
+  // อ่านค่าตัวเลขจาก Record
   private getRecordValue(record: any): any {
     if (!record || typeof record !== 'object') return record;
     return (
@@ -2665,10 +2804,12 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     );
   }
 
+  // ตรวจว่า Object เป็น Historian Record แบบแถวเดียวหรือไม่
   private looksLikeFlatRecord(item: any): boolean {
     return !!item && typeof item === 'object' && this.getRecordTimestamp(item) !== null && this.getRecordValue(item) !== null;
   }
 
+  // ตรวจว่า Record มีหลายค่าใน Timestamp เดียวหรือไม่
   private looksLikeMultiValueRecord(item: any): boolean {
     return (
       !!item &&
@@ -2679,6 +2820,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     );
   }
 
+  // แปลง Timestamp หลายรูปแบบให้เป็น Date
   private parseDate(value: any): Date | null {
     if (value === null || value === undefined || value === '') return null;
     if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
@@ -2697,6 +2839,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
+  // แปลงเวลา Legacy ให้ตรงกับพฤติกรรมระบบ C# เดิม
   private parseLegacyHistorianDate(value: any): Date | null {
     if (value === null || value === undefined || value === '') return null;
     if (value instanceof Date) {
@@ -2732,6 +2875,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return this.parseDate(text);
   }
 
+
+  // ==================== กราฟ / Route / Mode / Utility ====================
+  // ลดจำนวนจุด Speed สำหรับกราฟ เพื่อให้ UI ไม่หนัก
   private downsampleSpeedSeries(
     speed: Map<number, number>,
     start: number,
@@ -2748,6 +2894,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return points.filter((_, index) => index % step === 0).map(([bucket, value]) => ({ timestamp: new Date(bucket), speed: value }));
   }
 
+  // ลดจำนวน Speed Point โดยยังเก็บจุดสุดท้าย
   private downsampleSpeedPoints(
     source: readonly ScGlory1SpeedPoint[],
     maxPoints: number,
@@ -2769,6 +2916,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return result;
   }
 
+  // ลดจำนวนจุด Route ก่อนแสดงบนแผนที่
   private downsampleRoute(route: readonly ScGlory1TrackingPoint[], maxPoints: number): ScGlory1TrackingPoint[] {
     if (route.length <= maxPoints) return [...route];
     const step = Math.max(1, Math.ceil(route.length / maxPoints));
@@ -2778,6 +2926,8 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return result;
   }
 
+
+  // หา key ของ Mode จากชื่อ Mode
   private resolveModeProfileKey(label: string): string {
     const normalized = this.normalizeIdentity(label);
     const mode = SC_GLORY_1_REPORT_PROFILE.modes.find(
@@ -2786,6 +2936,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return mode?.key || SC_GLORY_1_REPORT_PROFILE.modes[0].key;
   }
 
+  // ตัดสิน Mode ของเรือจากช่วงความเร็ว GPS
   private resolveModeFromGpsSpeed(speed: number | null): string | null {
     if (speed === null || !Number.isFinite(speed)) return null;
     if (speed <= 2) return 'Standby';
@@ -2795,17 +2946,20 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return 'Passage';
   }
 
+  // สร้างข้อความอธิบายเหตุผลของ Mode ปัจจุบัน
   private buildModeReason(speed: number | null, mode: string): string {
     if (speed === null) return 'SC GLORY 1 mode is unavailable because GPS speed is missing.';
     return `Derived from ${SC_GLORY_1_MODE_HISTORIAN_TAG}: ${speed.toFixed(2)} kn matches the SC GLORY 1 report rule for ${mode}.`;
   }
 
+  // แปลงข้อมูลให้เป็น number ถ้าใช้ไม่ได้ให้คืน null
   private parseNumber(rawValue: unknown): number | null {
     if (rawValue === null || rawValue === undefined || rawValue === '') return null;
     const value = Number(String(rawValue).replace(/,/g, '').trim());
     return Number.isFinite(value) ? value : null;
   }
 
+  // ตรวจว่า Profile/Alias/Prefix เป็นของ SC GLORY 1 หรือไม่
   private isScGlory1Profile(id: unknown, aliases: unknown, prefixes: unknown): boolean {
     const candidates = [
       id,
@@ -2815,35 +2969,43 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return candidates.some((value) => this.normalizeIdentity(value) === 'scglory1');
   }
 
+  // ปรับชื่อให้เป็นรูปแบบมาตรฐานสำหรับเปรียบเทียบ
   private normalizeIdentity(value: unknown): string {
     return String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
   }
 
+  // ปรับชื่อ Historian Tag ให้เป็น key มาตรฐาน
   private tagKey(value: string): string {
     return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '');
   }
 
+  // ตัดวินาทีและมิลลิวินาทีออก ให้เหลือระดับนาที
   private floorToMinute(value: Date): Date {
     const result = new Date(value);
     result.setSeconds(0, 0);
     return result;
   }
 
+  // จัดรูป Date เป็นข้อความสำหรับส่ง Historian API
   private formatHistorianRequestTime(value: Date): string {
     const pad = (part: number): string => String(part).padStart(2, '0');
     return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
   }
 
+  // หาค่าเฉลี่ยของข้อมูลที่ถูกต้อง
   private average(values: readonly number[]): number | null {
     const valid = values.filter((value) => Number.isFinite(value));
+    // สูตร Average = ΣValue / จำนวน Value ที่ถูกต้อง
     return valid.length > 0 ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
   }
 
+  // หาค่าสูงสุดของข้อมูลที่ถูกต้อง
   private maximum(values: readonly number[]): number | null {
     const valid = values.filter((value) => Number.isFinite(value));
     return valid.length > 0 ? Math.max(...valid) : null;
   }
 
+  // รวมค่าบวกทั้งหมดภายใน Map
   private sumMap(values: Map<number, number>): number {
     let total = 0;
     values.forEach((value) => {
@@ -2852,13 +3014,17 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return total;
   }
 
+  // คำนวณเปอร์เซ็นต์และจำกัดผลลัพธ์ไว้ 0-100%
   private percent(value: number, total: number): number {
     if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) return 0;
+    // สูตร Percent = (Value / Total) × 100 และจำกัดไว้ 0-100%
     return Math.max(0, Math.min(100, (value / total) * 100));
   }
 
+  // คำนวณเปอร์เซ็นต์ของค่าหนึ่งเทียบกับอีกค่าหนึ่ง
   private ratioPercent(value: number, total: number): number {
     if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) return 0;
+    // สูตร Ratio % = (Value / Total) × 100
     return Math.max(0, (value / total) * 100);
   }
 }
