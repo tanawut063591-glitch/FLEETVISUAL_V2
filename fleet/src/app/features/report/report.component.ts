@@ -58,6 +58,7 @@ import {
   VesselReportAdapter,
 } from './services/common/vessel-report-adapter';
 import { ReportVesselServiceResolver } from './services/report-vessel-service-resolver.service';
+import { getVesselPdfLayout, VesselPdfLayoutSpec } from './services/common/pdf-report-layout.registry';
 import { PremiumPieChartPoint } from './components/premium-pie-chart/premium-pie-chart.component';
 import {
   ScGlory1HourlyRow,
@@ -482,6 +483,8 @@ export class ReportComponent implements OnInit, OnDestroy {
   private dailyGoogleRoute: any = null;
   private dailyGoogleMarkers: any[] = [];
   private dailyMapRenderTimer: ReturnType<typeof setTimeout> | null = null;
+  private dailyMapObserver: IntersectionObserver | null = null;
+  private pendingDailyMapReport: ScGlory1PeriodUiReport | null = null;
 
   private activeVesselReportAdapter: VesselReportAdapter | null = null;
   private reportProfileDocument: LiveReportProfileDocument | null = null;
@@ -1048,24 +1051,40 @@ export class ReportComponent implements OnInit, OnDestroy {
     return this.activeVesselReportAdapter?.id === 'bb-tongkam';
   }
 
+  get currentPdfLayout(): VesselPdfLayoutSpec | null {
+    return getVesselPdfLayout(this.activeVesselReportAdapter?.id);
+  }
+
+  /**
+   * Daily historical UI is intentionally constrained by the vessel's official
+   * PDF contract.  Monthly/multi-day views may still show web-only analytics.
+   */
+  get strictPdfParityUi(): boolean {
+    return this.isHistoricalUiView && this.historicalUiPeriodMode === 'day' && !!this.currentPdfLayout;
+  }
+
   get isBahteraGeneratorReport(): boolean {
-    return this.isBahteraIntanReport || this.isBahteraLazuritReport || this.isBahteraZamrudReport || this.isBbLiberty233Report || this.isBbTongkamReport;
+    return this.currentPdfLayout?.generatorOnly ??
+      (this.isBahteraIntanReport || this.isBahteraLazuritReport || this.isBahteraZamrudReport || this.isBbLiberty233Report || this.isBbTongkamReport);
   }
 
   get usesNumberedAuxiliaryReport(): boolean {
-    return this.isScWinterReport || this.isScBongkotReport || this.isBahteraGeneratorReport;
+    return this.currentPdfLayout?.numberedAuxiliary ??
+      (this.isScWinterReport || this.isScBongkotReport || this.isBahteraGeneratorReport);
   }
 
   get hasEngineLoadReport(): boolean {
-    return this.isScRajaReport || this.isScSultanReport;
+    return this.currentPdfLayout?.engineLoad ?? (this.isScRajaReport || this.isScSultanReport);
   }
 
   get hasDirectOperatingModeReport(): boolean {
+    const modeModel = this.currentPdfLayout?.modeModel;
+    if (modeModel) return modeModel.startsWith('direct-');
     return this.isMvGemiaReport || this.isScEmeraldReport || this.isScRajaReport || this.isScSultanReport || this.isScBongkotReport || this.isBahteraGeneratorReport;
   }
 
   get hasThrusterAuxiliaryReport(): boolean {
-    return this.isMvGemiaReport || this.isScEmeraldReport;
+    return this.currentPdfLayout?.thrusterAuxiliary ?? (this.isMvGemiaReport || this.isScEmeraldReport);
   }
 
   get dailyCenterAuxiliaryTitle(): string {
@@ -1074,6 +1093,19 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   get dailyCenterAuxiliaryCodeLabel(): string {
     return this.hasThrusterAuxiliaryReport ? 'CA..F. · Thruster A/E' : 'CA..F. · Center A/E';
+  }
+
+  /**
+   * SC EMERALD is intentionally asymmetric in the legacy PDF: Page 1 says
+   * "Thruster A/E Running Hour", while fuel/mode/hourly pages use "Ctr. A/E".
+   * Keep that source quirk explicit instead of renaming the vessel data globally.
+   */
+  pdfAuxRunningLabel(row: { key?: string; label?: string } | null | undefined): string {
+    if (!row) return '';
+    if (row.key === 'center' && this.currentPdfLayout?.page1CenterAuxRunningLabel) {
+      return this.currentPdfLayout.page1CenterAuxRunningLabel;
+    }
+    return row.label || '';
   }
 
   get dailyPassageSummaryEyebrow(): string {
@@ -1101,6 +1133,11 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   dailyReportSourcePage(sectionKey: string, fallback: string): string {
+    const registeredPage = this.currentPdfLayout?.pages?.[sectionKey];
+    if (registeredPage) return registeredPage;
+
+    // Compatibility fallback for vessels that are supported by the application
+    // but were not part of the supplied PDF/C# parity audit set (for example BB TONGKAM).
     if (this.isBahteraGeneratorReport) {
       const pages: Record<string, string> = {
         tracking: '19',
@@ -1798,7 +1835,7 @@ export class ReportComponent implements OnInit, OnDestroy {
       .loadPeriodReport(period.start, period.end, period.kind, force)
       .pipe(
         take(1),
-        timeout(period.kind === 'day' ? 35000 : 120000),
+        timeout(period.kind === 'day' ? 120000 : 300000),
         catchError((error: unknown) => {
           console.warn(`[Report] Unable to load ${this.selectedVesselName || 'dedicated vessel'} historical UI report.`, error);
           const text = String((error as any)?.message || error || '');
@@ -2247,7 +2284,13 @@ export class ReportComponent implements OnInit, OnDestroy {
    * semantics without hiding data-quality state elsewhere in the Report UI.
    */
   formatPdfValue(value: number | null | undefined, digits = 2): string {
-    const numeric = value === null || value === undefined || !Number.isFinite(value) ? 0 : value;
+    // DevExpress/.NET renders a genuine divide-by-zero result in the legacy PDF
+    // as the infinity glyph. Preserve that value instead of silently turning it
+    // into 0.00 (SC EMERALD 01-Oct-26 page 2 contains a real example).
+    if (value === Number.POSITIVE_INFINITY) return '∞';
+    if (value === Number.NEGATIVE_INFINITY) return '-∞';
+    if (Number.isNaN(value)) return 'NaN';
+    const numeric = value === null || value === undefined ? 0 : value;
     return numeric.toLocaleString('en-US', {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
@@ -3436,14 +3479,68 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   private scheduleDailyGoogleMap(report: ScGlory1PeriodUiReport): void {
+    // Google Maps is one of the most expensive widgets on the Report page.
+    // Do not initialize it while the operator is still looking at the summary
+    // above the fold.  Start it shortly before the map enters the viewport.
+    // This reduces first paint / main-thread work without changing report data
+    // or issuing any additional historian requests.
     if (this.dailyMapRenderTimer !== null) {
       clearTimeout(this.dailyMapRenderTimer);
-    }
-
-    this.dailyMapRenderTimer = setTimeout(() => {
       this.dailyMapRenderTimer = null;
-      this.renderDailyGoogleMap(report);
-    }, 0);
+    }
+    this.dailyMapObserver?.disconnect();
+    this.dailyMapObserver = null;
+    this.pendingDailyMapReport = report;
+
+    const attachObserver = (): void => {
+      this.dailyMapRenderTimer = null;
+      const element = this.dailyGoogleMapElement?.nativeElement;
+      if (!element) {
+        // The map element is created by *ngIf after the report object is bound.
+        // Retry once the next render turn has had time to materialize it.
+        this.dailyMapRenderTimer = setTimeout(attachObserver, 120);
+        return;
+      }
+
+      const renderPending = (): void => {
+        const pending = this.pendingDailyMapReport;
+        this.pendingDailyMapReport = null;
+        this.dailyMapObserver?.disconnect();
+        this.dailyMapObserver = null;
+        if (!pending) return;
+
+        const idle = typeof window !== 'undefined'
+          ? (window as any).requestIdleCallback
+          : null;
+        if (typeof idle === 'function') {
+          idle(() => {
+            if (this.scGlory1DailyReport === pending) this.renderDailyGoogleMap(pending);
+          }, { timeout: 900 });
+        } else {
+          this.dailyMapRenderTimer = setTimeout(() => {
+            this.dailyMapRenderTimer = null;
+            if (this.scGlory1DailyReport === pending) this.renderDailyGoogleMap(pending);
+          }, 16);
+        }
+      };
+
+      if (typeof IntersectionObserver === 'undefined') {
+        renderPending();
+        return;
+      }
+
+      this.dailyMapObserver = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting || entry.intersectionRatio > 0)) {
+            renderPending();
+          }
+        },
+        { root: null, rootMargin: '640px 0px', threshold: 0.01 },
+      );
+      this.dailyMapObserver.observe(element);
+    };
+
+    this.dailyMapRenderTimer = setTimeout(attachObserver, 0);
   }
 
   private renderDailyGoogleMap(report: ScGlory1PeriodUiReport): void {
@@ -3606,6 +3703,9 @@ export class ReportComponent implements OnInit, OnDestroy {
       clearTimeout(this.dailyMapRenderTimer);
       this.dailyMapRenderTimer = null;
     }
+    this.dailyMapObserver?.disconnect();
+    this.dailyMapObserver = null;
+    this.pendingDailyMapReport = null;
 
     if (this.dailyGoogleRoute) {
       this.dailyGoogleRoute.halo?.setMap?.(null);
@@ -4488,7 +4588,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   private watchHistoricalAutoLoad(): void {
     this.historicalAutoLoadRequest$
       .pipe(
-        debounceTime(180),
+        debounceTime(100),
         takeUntil(this.destroy$),
       )
       .subscribe(() => {

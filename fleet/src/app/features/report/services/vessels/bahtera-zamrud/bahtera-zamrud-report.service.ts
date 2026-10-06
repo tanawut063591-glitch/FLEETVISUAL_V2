@@ -3,6 +3,7 @@ import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, switchMap, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from '../../common/report-cache.util';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -11,7 +12,7 @@ import {
   VesselModeHistoryConfig,
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
-import { legacyConvertToInt32, roundPdf2 } from '../../common/pdf-mode-parity';
+import { isCompletedDailyWindow, legacyConvertToInt32, roundPdf2 } from '../../common/pdf-mode-parity';
 import {
   BAHTERA_ZAMRUD_MODE_HISTORIAN_TAG,
   BAHTERA_ZAMRUD_REPORT_PROFILE,
@@ -217,7 +218,9 @@ interface HourAccumulator {
 }
 
 const MINUTE_MS = 60_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
+const LIVE_REPORT_CACHE_TTL_MS = 30_000;
+const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -229,12 +232,16 @@ const TAGS = {
   mode: 'BB_ZAMRUD-VES-MODE',
   dg1FuelIn: 'BB_ZAMRUD-DG1-FIN-VTOTAL',
   dg1FuelOut: 'BB_ZAMRUD-DG1-FOUT-RAW-VTOTAL',
+  dg1FuelOutCompat: 'BB_ZAMRUD-DG1-FOUT-VTOTAL',
   dg2FuelIn: 'BB_ZAMRUD-DG2-FIN-VTOTAL',
   dg2FuelOut: 'BB_ZAMRUD-DG2-FOUT-RAW-VTOTAL',
+  dg2FuelOutCompat: 'BB_ZAMRUD-DG2-FOUT-VTOTAL',
   dg3FuelIn: 'BB_ZAMRUD-DG3-FIN-VTOTAL',
   dg3FuelOut: 'BB_ZAMRUD-DG3-FOUT-RAW-VTOTAL',
+  dg3FuelOutCompat: 'BB_ZAMRUD-DG3-FOUT-VTOTAL',
   dg4FuelIn: 'BB_ZAMRUD-DG4-FIN-VTOTAL',
   dg4FuelOut: 'BB_ZAMRUD-DG4-FOUT-RAW-VTOTAL',
+  dg4FuelOutCompat: 'BB_ZAMRUD-DG4-FOUT-VTOTAL',
   dg1LoadKw: 'BB_ZAMRUD-DG1-GEN-LOAD-KW',
   dg2LoadKw: 'BB_ZAMRUD-DG2-GEN-LOAD-KW',
   dg3LoadKw: 'BB_ZAMRUD-DG3-GEN-LOAD-KW',
@@ -264,6 +271,21 @@ const ALL_TAGS: readonly string[] = [
   TAGS.dg4LoadKw,
   TAGS.mode,
 ];
+
+// API2/source-consistent fallback compatibility. BAHTERA INTAN and BAHTERA LAZURIT
+// use the normal *-FOUT-VTOTAL stream. BAHTERA ZAMRUD's original PDF Page 1 uses
+// *-FOUT-RAW-VTOTAL on the dedicated report historian, but the API2 archive can
+// expose a different RAW history. When the report historian is unavailable, request
+// both streams and prefer the normal FOUT stream for the fallback calculation.
+const FALLBACK_TAGS: readonly string[] = [
+  ...ALL_TAGS,
+  TAGS.dg1FuelOutCompat,
+  TAGS.dg2FuelOutCompat,
+  TAGS.dg3FuelOutCompat,
+  TAGS.dg4FuelOutCompat,
+];
+
+type ZamrudHistorianSource = 'report-historian' | 'source-consistent-fallback';
 
 // Fast no-data preflight.  These tags cover navigation, mode and every generator
 // supply totalizer; if all of them are empty for the selected period, the expensive
@@ -419,26 +441,103 @@ export class BahteraZamrudReportService implements VesselReportAdapter {
       }
     }
 
-    const completedDayBoundary = end;
     const requestStart = this.formatHistorianRequestTime(start);
-    const requestEnd = this.formatHistorianRequestTime(completedDayBoundary);
+    // IMPORTANT — BAHTERA ZAMRUD legacy PDF parity:
+    // BahteraZamrud.GenerateReport() calls GetRawData(start, nextDay.AddMinutes(-1)),
+    // so loggergethistorianvalues stops at the displayed 23:59 minute. GetRawData()
+    // still creates the legacy 1,441st DataTable row at next-day 00:00, but that
+    // row remains zero because it is outside the historian request.
+    //
+    // Do NOT extend a completed daily request to next-day 00:00 here. Doing so
+    // changes FIN/FOUT min/max totals, generator running minutes and load averages
+    // and is enough to make the web page disagree with the original PDF.
+    const requestEnd = this.formatHistorianRequestTime(end);
 
-    // PDF parity: load raw logger data from ONE source for the whole report.
-    // The shared loader mirrors SCReportingService's one-tag request order and
-    // restarts the full request through API2 if the report historian is unavailable.
-    const request$ = this.newHttp
-      .getConsistentPdfParityHistorianValues(
-        requestStart,
-        requestEnd,
-        ALL_TAGS.map((tagName) => ({ name: tagName, tagName })),
-      )
-      .pipe(
-        map((response) => this.extractHistorianSeries(response, ALL_TAGS)),
-        map((series) => this.buildDetailedDailyReportFromSeries(series, start, end)),
+    // FINANCIAL/PDF PARITY POLICY — BAHTERA ZAMRUD
+    //
+    // Completed Daily Reports are customer-billable fuel records.  The original
+    // SCReportingService PDF reads its FIN/FOUT totalizers from the dedicated
+    // reporting historian (192.168.14.41:8900).  API2 (14.11) can contain a
+    // different archived FOUT/raw-totalizer stream: running hours/load may still
+    // look correct while DG2/DG3 fuel totals are not the PDF totals.
+    //
+    // Therefore a completed Daily Report MUST use the same report historian and
+    // must never silently substitute API2 values.  Live/partial reports keep the
+    // resilient source-consistent fallback because there is no completed PDF to
+    // reconcile against yet.
+    const completedDaily = isCompletedDailyWindow(start, end, MINUTE_MS);
+    const reportHistorianTags = ALL_TAGS.map((tagName) => ({ name: tagName, tagName }));
+    const fallbackHistorianTags = FALLBACK_TAGS.map((tagName) => ({ name: tagName, tagName }));
+
+    // BAHTERA ZAMRUD completed-day policy:
+    // 1) Prefer the dedicated reporting historian used by SCReportingService/PDF.
+    // 2) If it is unreachable, restart the ENTIRE request from one fallback source.
+    // 3) The fallback bundle also requests the normal *-FOUT-VTOTAL tags used by
+    //    BAHTERA LAZURIT / BAHTERA INTAN.  This is deliberate: API2 can carry a
+    //    different RAW-FOUT archive for ZAMRUD, which is exactly the situation that
+    //    produced plausible running hours/load but lower billable fuel on the web.
+    // 4) Never mix report-historian and fallback records within one report.
+    const historianRequest$: Observable<{ response: any; source: ZamrudHistorianSource }> = completedDaily
+      ? this.newHttp
+          .getStrictConsistentPdfParityHistorianValues(
+            requestStart,
+            requestEnd,
+            reportHistorianTags,
+          )
+          .pipe(
+            map((response) => ({ response, source: 'report-historian' as const })),
+            catchError((reportHistorianError) => {
+              console.warn(
+                '[BAHTERA ZAMRUD] Verified report historian unavailable; retrying with the LAZURIT/INTAN-compatible FOUT fallback model.',
+                {
+                  status: reportHistorianError?.status,
+                  message:
+                    reportHistorianError?.message ||
+                    reportHistorianError?.name ||
+                    String(reportHistorianError),
+                },
+              );
+
+              return this.newHttp
+                .getConsistentPdfParityHistorianValues(
+                  requestStart,
+                  requestEnd,
+                  fallbackHistorianTags,
+                )
+                .pipe(
+                  map((response) => ({
+                    response,
+                    source: 'source-consistent-fallback' as const,
+                  })),
+                );
+            }),
+          )
+      : this.newHttp
+          .getConsistentPdfParityHistorianValues(
+            requestStart,
+            requestEnd,
+            fallbackHistorianTags,
+          )
+          .pipe(
+            map((response) => ({
+              response,
+              source: 'source-consistent-fallback' as const,
+            })),
+          );
+
+    const request$ = historianRequest$.pipe(
+        map(({ response, source }) => ({
+          source,
+          series: this.extractHistorianSeries(
+            response,
+            source === 'report-historian' ? ALL_TAGS : FALLBACK_TAGS,
+          ),
+        })),
+        map(({ series, source }) => this.buildDetailedDailyReportFromSeries(series, start, end, source)),
         tap((value) => {
-          this.detailedReportCache.set(key, {
+          setBoundedReportCache(this.detailedReportCache, key, {
             value,
-            expiresAt: Date.now() + CACHE_TTL_MS,
+            expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
           });
         }),
         catchError((error) => throwError(() => error)),
@@ -483,9 +582,12 @@ export class BahteraZamrudReportService implements VesselReportAdapter {
     const request$ = from(chunks).pipe(
       // Two concurrent day-sized historian requests keep monthly views responsive
       // without asking the backend for a very large multi-tag, 31-day payload at once.
+      // Long range/month reports are intentionally limited to one day bundle at a time.
+      // Each bundle already reads at most two historian tags concurrently, so the
+      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        2,
+        1,
       ),
       toArray(),
       map((reports) =>
@@ -497,9 +599,9 @@ export class BahteraZamrudReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        this.periodReportCache.set(key, {
+        setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + CACHE_TTL_MS,
+          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
@@ -975,16 +1077,31 @@ export class BahteraZamrudReportService implements VesselReportAdapter {
     series: Map<string, NumericPoint[]>,
     periodStart: Date,
     periodEnd: Date,
+    historianSource: ZamrudHistorianSource = 'report-historian',
   ): BahteraZamrudDailyUiReport {
     const hasAnyHistorianSamples = Array.from(series.values()).some((points) => points.length > 0);
     const minuteStart = this.floorToMinute(periodStart).getTime();
     const minuteEnd = Math.max(minuteStart, this.floorToMinute(periodEnd).getTime());
+    const completedDaily = isCompletedDailyWindow(
+      this.floorToMinute(periodStart),
+      this.floorToMinute(periodEnd),
+      MINUTE_MS,
+    );
+    // Legacy SCReportingService allocates 1,441 rows for a completed daily report:
+    // 00:00 through the following day's 00:00, inclusive. However its historian
+    // request ends at 23:59, so the final 00:00 boundary row remains zero. Keep the
+    // row shape for mode-loop parity, but never allow a historian sample after
+    // periodEnd to populate Page-1 fuel/load/running-hour calculations.
+    const legacyDataEnd = completedDaily ? minuteStart + 24 * 60 * MINUTE_MS : minuteEnd;
     const minuteCount = Math.max(1, Math.floor((minuteEnd - minuteStart) / MINUTE_MS) + 1);
 
     // SCReportingService builds a fixed one-minute DataTable and uses exact DateTime
     // equality after the logger timestamp has been converted to Thai local time.
     // Therefore records with non-zero seconds/milliseconds must not be floored into a minute.
     const exact = (tag: string): Map<number, number> =>
+      // C# queried historian only through periodEnd (23:59 for a completed day).
+      // Clamp here as a second safety net in case an API/proxy returns an extra
+      // next-day boundary sample despite the requested EndTime.
       this.buildLegacyExactMinuteMap(series.get(this.tagKey(tag)) || [], minuteStart, minuteEnd);
 
     const gpsSpeed = exact(TAGS.gpsSpeed);
@@ -994,8 +1111,25 @@ export class BahteraZamrudReportService implements VesselReportAdapter {
     const modeCode = exact(TAGS.mode);
 
     const dgFuelIn = [exact(TAGS.dg1FuelIn), exact(TAGS.dg2FuelIn), exact(TAGS.dg3FuelIn), exact(TAGS.dg4FuelIn)];
-    const dgFuelOut = [exact(TAGS.dg1FuelOut), exact(TAGS.dg2FuelOut), exact(TAGS.dg3FuelOut), exact(TAGS.dg4FuelOut)];
+    const dgFuelOutRaw = [exact(TAGS.dg1FuelOut), exact(TAGS.dg2FuelOut), exact(TAGS.dg3FuelOut), exact(TAGS.dg4FuelOut)];
+    const dgFuelOutCompat = [
+      exact(TAGS.dg1FuelOutCompat),
+      exact(TAGS.dg2FuelOutCompat),
+      exact(TAGS.dg3FuelOutCompat),
+      exact(TAGS.dg4FuelOutCompat),
+    ];
     const dgLoad = [exact(TAGS.dg1LoadKw), exact(TAGS.dg2LoadKw), exact(TAGS.dg3LoadKw), exact(TAGS.dg4LoadKw)];
+
+    // BAHTERA ZAMRUD PDF parity uses RAW FOUT on the dedicated reporting historian.
+    // When that source is unavailable, use the same normal FOUT stream/formula family
+    // as BAHTERA LAZURIT / BAHTERA INTAN *per generator*, but only when that stream
+    // actually contains enough valid totalizer samples. This keeps the verified PDF
+    // path untouched and avoids forcing an empty compatibility tag to 0.
+    const dgFuelOut = dgFuelOutRaw.map((rawMap, index) => {
+      if (historianSource === 'report-historian') return rawMap;
+      const compatMap = dgFuelOutCompat[index];
+      return this.hasUsableLegacyTotalizer(compatMap) ? compatMap : rawMap;
+    });
 
     // Page 1 uses CalFLowTotalSME, which is intentionally different from the
     // minute delta model used on page 2. Keeping the two paths separate is
@@ -1053,7 +1187,7 @@ export class BahteraZamrudReportService implements VesselReportAdapter {
     }));
 
     let modeRows = 0;
-    for (let bucket = minuteStart; bucket <= minuteEnd; bucket += MINUTE_MS) {
+    for (let bucket = minuteStart; bucket <= legacyDataEnd; bucket += MINUTE_MS) {
       const modeLabel = this.resolveModeFromCode(modeCode.get(bucket));
       if (!modeLabel) continue;
       const key = this.resolveModeProfileKey(modeLabel);
@@ -1146,8 +1280,8 @@ export class BahteraZamrudReportService implements VesselReportAdapter {
         runningHours: hours,
         runningPercent: runPercent.get(mode.key) || 0,
         distanceNm: roundPdf2(distanceFull),
-        litresPerNm: distanceFull !== 0 ? roundPdf2(fuelFull / distanceFull) : null,
-        litresPerHour: hours !== 0 ? roundPdf2(fuelFull / hours) : null,
+        litresPerNm: Math.abs(distanceFull) >= 0.01 ? roundPdf2(fuelFull / distanceFull) : 0,
+        litresPerHour: acc.samples > 0 && hours !== 0 ? roundPdf2(fuelFull / hours) : 0,
       };
     });
 
@@ -1308,6 +1442,17 @@ export class BahteraZamrudReportService implements VesselReportAdapter {
       result.set(bucket, point.value);
     }
     return result;
+  }
+
+  private hasUsableLegacyTotalizer(values: ReadonlyMap<number, number>): boolean {
+    let valid = 0;
+    for (const raw of values.values()) {
+      const value = Number(raw);
+      if (!Number.isFinite(value) || value <= 0 || value === 999999) continue;
+      valid += 1;
+      if (valid >= 2) return true;
+    }
+    return false;
   }
 
   private calculateLegacyOfficialFuel(

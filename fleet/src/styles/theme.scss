@@ -1,5 +1,11 @@
+/* Fleet Visual global theme entry.
+   - report/_report-layout.scss : Report layout + responsive rules only
+   - report/_report-visual.scss : Shared Report visuals (theme-neutral)
+   - themes/light-theme.scss    : All Light colors
+   - themes/dark-theme.scss     : All Dark colors across every page
+*/
 @use './report/report-layout';
-@use './themes/report/report-visual';
+@use './report/report-visual';
 @use './themes/light-theme' as light;
 @use './themes/dark-theme' as dark;
 

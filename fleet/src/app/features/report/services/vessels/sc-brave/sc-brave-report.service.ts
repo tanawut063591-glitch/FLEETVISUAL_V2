@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { Observable, from, of, throwError } from 'rxjs';
+import { Observable, forkJoin, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from '../../common/report-cache.util';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -12,9 +13,10 @@ import {
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
 import { calculateLegacyDailyFuelTotal, exactMinutePoints } from '../../common/legacy-daily-fuel';
+import { OfficialPdfModeParityService } from '../../common/official-pdf-mode-parity.service';
 import {
   buildGpsPdfParityModeSummary,
-  buildExactMinuteValueMap,
+  buildExactMinuteSingleValueMap,
   buildLegacyPdfFuelDeltaMap,
   isCompletedDailyWindow,
 } from '../../common/pdf-mode-parity';
@@ -200,7 +202,9 @@ interface HourAccumulator {
 }
 
 const MINUTE_MS = 60_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
+const LIVE_REPORT_CACHE_TTL_MS = 30_000;
+const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -242,7 +246,10 @@ export class ScBraveReportService implements VesselReportAdapter {
   private readonly periodReportCache = new Map<string, { value: ScBravePeriodUiReport; expiresAt: number }>();
   private readonly periodReportInFlight = new Map<string, Observable<ScBravePeriodUiReport>>();
 
-  constructor(private newHttp: NewHttpClientService) {}
+  constructor(
+    private newHttp: NewHttpClientService,
+    private officialPdfMode: OfficialPdfModeParityService,
+  ) {}
 
   supports(vessel: any): boolean {
     const info = vessel?.fvInfo || vessel?.fv || vessel || {};
@@ -384,18 +391,39 @@ export class ScBraveReportService implements VesselReportAdapter {
         )
       : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
 
-    const request$ = historianRequest$.pipe(
-        map((response) => this.buildDetailedDailyReport(response, start, end)),
-        tap((value) => {
-          this.detailedReportCache.set(key, {
-            value,
-            expiresAt: Date.now() + CACHE_TTL_MS,
-          });
-        }),
-        catchError((error) => throwError(() => error)),
-        finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: true }),
-      );
+    // Start the official PDF lookup in parallel with the historian bundle.
+    // This preserves the same final Mode values while removing the old serial wait
+    // (Historian -> PDF). It shortens completed Daily load time without adding
+    // extra requests or increasing historian concurrency.
+    const calculatedReport$ = historianRequest$.pipe(
+      map((response) => this.buildDetailedDailyReport(response, start, end)),
+    );
+    const officialModeRows$ = completedDaily
+      ? this.officialPdfMode.getDailyModeRows('SC BRAVE', start)
+      : of(null);
+
+    const request$ = forkJoin({
+      value: calculatedReport$,
+      officialRows: officialModeRows$,
+    }).pipe(
+      map(({ value, officialRows }) =>
+        completedDaily
+          ? {
+              ...value,
+              modeSummary: this.officialPdfMode.overlayModeRows(value.modeSummary, officialRows),
+            }
+          : value,
+      ),
+      tap((value) => {
+        setBoundedReportCache(this.detailedReportCache, key, {
+          value,
+          expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
+        });
+      }),
+      catchError((error) => throwError(() => error)),
+      finalize(() => this.detailedReportInFlight.delete(key)),
+      shareReplay({ bufferSize: 1, refCount: true }),
+    );
 
     this.detailedReportInFlight.set(key, request$);
     return request$;
@@ -432,11 +460,12 @@ export class ScBraveReportService implements VesselReportAdapter {
     }
 
     const request$ = from(chunks).pipe(
-      // Two concurrent day-sized historian requests keep monthly views responsive
-      // without asking the backend for a very large 25-tag, 31-day payload at once.
+      // Long range/month reports are intentionally limited to one day bundle at a time.
+      // Each bundle already reads at most two historian tags concurrently, so the
+      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        2,
+        1,
       ),
       toArray(),
       map((reports) =>
@@ -448,9 +477,9 @@ export class ScBraveReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        this.periodReportCache.set(key, {
+        setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + CACHE_TTL_MS,
+          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
@@ -929,7 +958,7 @@ export class ScBraveReportService implements VesselReportAdapter {
     const gpsSpeedPoints = series.get(this.tagKey(TAGS.gpsSpeed)) || [];
     const gpsSpeed = this.buildInstantMap(gpsSpeedPoints);
     const pdfModeGpsSpeed = completedDaily
-      ? buildExactMinuteValueMap(gpsSpeedPoints, MINUTE_MS)
+      ? buildExactMinuteSingleValueMap(gpsSpeedPoints, MINUTE_MS)
       : gpsSpeed;
     const gpsLat = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLat)) || []);
     const gpsLong = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLong)) || []);
@@ -1178,30 +1207,61 @@ export class ScBraveReportService implements VesselReportAdapter {
       }
     }
 
+    // SC BRAVE Page-2 mode fuel must reproduce SCBrave.GetDataFuelConsumption()
+    // exactly.  This is NOT the same filter used by Page-1 Engine Summary.
+    //
+    // Legacy SC BRAVE rules:
+    //   PME/CME/SME FIN + FOUT : accept increasing delta <= 100 L
+    //   PAE/SAE FIN + FOUT     : accept increasing delta <= 1,000 L
+    //   rejected positive jump : IGNORE it (the prevDataAfterLost recovery
+    //                            block in the production C# is commented out)
+    //   second non-zero reset  : accept the new value as baseline
+    //   later reset baseline   : accept only 500..20,000
+    //
+    // The signed per-minute value is FIN delta - FOUT delta and is then
+    // allocated to the GPS Mode of the SAME exact minute.  The final displayed
+    // Mode fuel is scaled once by Page-1 official Total Fuel, matching C#.
+    const legacyModeFuelCommon = {
+      recoverAfterRejectedJump: false,
+      resetFloor: 500,
+      resetCeiling: 20_000,
+      minuteMs: MINUTE_MS,
+      // SCBrave.cs checks `value != 0`, not `value > 0`. Preserve any non-zero
+      // negative glitch in the state machine exactly like the legacy service.
+      skipOnlyExactZero: true,
+    } as const;
+    // IMPORTANT: SCBrave.GetDataFuelConsumption() never scans the raw historian
+    // array directly.  The C# first copies values into dtRawData's fixed one-row-
+    // per-minute grid, where an exact :00.xxx timestamp is normalized to the
+    // minute and a later duplicate replaces the earlier value.  Feeding the raw
+    // historian rows directly into the delta state machine changes `previous` and
+    // can make sumCon collapse to the Page-1 total (e.g. 2,894) instead of the
+    // legacy pre-scale Mode total.  Reuse the exact-minute rows already built for
+    // Page 1 so Mode fuel follows the same C# dtRawData input semantics.
     const pdfModePMEFuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.pmeFuelIn)) || [],
-      series.get(this.tagKey(TAGS.pmeFuelOut)) || [],
-      { supplyMaxDelta: 100, returnMaxDelta: 100, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+      pdfFuelPoints(TAGS.pmeFuelIn),
+      pdfFuelPoints(TAGS.pmeFuelOut),
+      { ...legacyModeFuelCommon, supplyMaxDelta: 100, returnMaxDelta: 100 },
     );
     const pdfModeCMEFuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.cmeFuelIn)) || [],
-      series.get(this.tagKey(TAGS.cmeFuelOut)) || [],
-      { supplyMaxDelta: 100, returnMaxDelta: 100, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+      pdfFuelPoints(TAGS.cmeFuelIn),
+      pdfFuelPoints(TAGS.cmeFuelOut),
+      { ...legacyModeFuelCommon, supplyMaxDelta: 100, returnMaxDelta: 100 },
     );
     const pdfModeSMEFuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.smeFuelIn)) || [],
-      series.get(this.tagKey(TAGS.smeFuelOut)) || [],
-      { supplyMaxDelta: 100, returnMaxDelta: 100, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+      pdfFuelPoints(TAGS.smeFuelIn),
+      pdfFuelPoints(TAGS.smeFuelOut),
+      { ...legacyModeFuelCommon, supplyMaxDelta: 100, returnMaxDelta: 100 },
     );
     const pdfModePAEFuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.paeFuelIn)) || [],
-      series.get(this.tagKey(TAGS.paeFuelOut)) || [],
-      { supplyMaxDelta: 1000, returnMaxDelta: 1000, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+      pdfFuelPoints(TAGS.paeFuelIn),
+      pdfFuelPoints(TAGS.paeFuelOut),
+      { ...legacyModeFuelCommon, supplyMaxDelta: 1_000, returnMaxDelta: 1_000 },
     );
     const pdfModeSAEFuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.saeFuelIn)) || [],
-      series.get(this.tagKey(TAGS.saeFuelOut)) || [],
-      { supplyMaxDelta: 1000, returnMaxDelta: 1000, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+      pdfFuelPoints(TAGS.saeFuelIn),
+      pdfFuelPoints(TAGS.saeFuelOut),
+      { ...legacyModeFuelCommon, supplyMaxDelta: 1_000, returnMaxDelta: 1_000 },
     );
 
     const pdfParityMode = buildGpsPdfParityModeSummary({
@@ -1221,11 +1281,21 @@ export class ScBraveReportService implements VesselReportAdapter {
       resolveModeLabel: (speed) => this.resolveModeFromGpsSpeed(speed),
       resolveModeKey: (label) => this.resolveModeProfileKey(label),
       standbyLabel: 'Standby',
+      // The legacy report casts the Mode fuel percentages / speed arithmetic
+      // through System.Single before formatting to 2 decimals.
+      legacySinglePrecision: true,
     });
     const modeSummary = pdfParityMode.modeSummary as ScBraveModeSummaryRow[];
 
+    // Keep Page 3 on the exact same Passage-minute ownership used by Page 2.
+    // Using the generic/floored UI map here can make Passage Summary disagree
+    // with the PDF even when the Page-2 table is already correct.
+    const passageModeKey = this.resolveModeProfileKey('Passage');
+    const pdfPassageMinuteKeys = (pdfParityMode.minuteKeysByMode.get(passageModeKey) || [])
+      .filter((minute) => minute <= minuteEnd);
+
     const passageSummary = this.buildPassageSummary(
-      passageMinuteKeys,
+      pdfPassageMinuteKeys,
       pmeRpm,
       cmeRpm,
       smeRpm,

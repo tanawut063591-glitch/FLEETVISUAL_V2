@@ -3,6 +3,7 @@ import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from '../../common/report-cache.util';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -11,7 +12,7 @@ import {
   VesselModeHistoryConfig,
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
-import { legacyConvertToInt32, roundPdf2 } from '../../common/pdf-mode-parity';
+import { isCompletedDailyWindow, legacyConvertToInt32, roundPdf2 } from '../../common/pdf-mode-parity';
 import {
   BAHTERA_LAZURIT_MODE_HISTORIAN_TAG,
   BAHTERA_LAZURIT_REPORT_PROFILE,
@@ -217,7 +218,9 @@ interface HourAccumulator {
 }
 
 const MINUTE_MS = 60_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
+const LIVE_REPORT_CACHE_TTL_MS = 30_000;
+const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -391,9 +394,13 @@ export class BahteraLazuritReportService implements VesselReportAdapter {
       start.getFullYear() === end.getFullYear() &&
       start.getMonth() === end.getMonth() &&
       start.getDate() === end.getDate();
-    const historianEnd = end;
+    // Legacy C# parity: Bahtera*.GenerateReport() requests completed daily
+    // historian data only through 23:59 (endD.AddMinutes(-1)). GetRawData still
+    // creates a 1,441st 00:00 row internally, but that row remains zero-filled.
+    // Pulling the real next-day 00:00 sample changes FIN/FOUT totals, running
+    // hours and average load, so never extend a completed Daily request here.
     const requestStartText = this.formatHistorianRequestTime(start);
-    const requestEndText = this.formatHistorianRequestTime(historianEnd);
+    const requestEndText = this.formatHistorianRequestTime(end);
     const historianRequest$: Observable<any> = completedDaily
       ? this.newHttp.getConsistentPdfParityHistorianValues(
           requestStartText,
@@ -404,9 +411,9 @@ export class BahteraLazuritReportService implements VesselReportAdapter {
     const request$ = historianRequest$      .pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
-          this.detailedReportCache.set(key, {
+          setBoundedReportCache(this.detailedReportCache, key, {
             value,
-            expiresAt: Date.now() + CACHE_TTL_MS,
+            expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
           });
         }),
         catchError((error) => throwError(() => error)),
@@ -451,9 +458,12 @@ export class BahteraLazuritReportService implements VesselReportAdapter {
     const request$ = from(chunks).pipe(
       // Two concurrent day-sized historian requests keep monthly views responsive
       // without asking the backend for a very large multi-tag, 31-day payload at once.
+      // Long range/month reports are intentionally limited to one day bundle at a time.
+      // Each bundle already reads at most two historian tags concurrently, so the
+      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        2,
+        1,
       ),
       toArray(),
       map((reports) =>
@@ -465,9 +475,9 @@ export class BahteraLazuritReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        this.periodReportCache.set(key, {
+        setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + CACHE_TTL_MS,
+          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
@@ -941,13 +951,23 @@ export class BahteraLazuritReportService implements VesselReportAdapter {
     const hasAnyHistorianSamples = Array.from(series.values()).some((points) => points.length > 0);
     const minuteStart = this.floorToMinute(periodStart).getTime();
     const minuteEnd = Math.max(minuteStart, this.floorToMinute(periodEnd).getTime());
+    const completedDaily = isCompletedDailyWindow(
+      this.floorToMinute(periodStart),
+      this.floorToMinute(periodEnd),
+      MINUTE_MS,
+    );
+    // Legacy SCReportingService builds 1,441 rows for a completed daily report:
+    // 00:00 through the following day's 00:00, inclusive. For these generator
+    // vessels the logger request itself ends at 23:59, so the final boundary row
+    // intentionally remains zero-filled; keep it only to reproduce DataTable shape.
+    const legacyDataEnd = completedDaily ? minuteStart + 24 * 60 * MINUTE_MS : minuteEnd;
     const minuteCount = Math.max(1, Math.floor((minuteEnd - minuteStart) / MINUTE_MS) + 1);
 
     // SCReportingService builds a fixed one-minute DataTable and uses exact DateTime
     // equality after the logger timestamp has been converted to Thai local time.
     // Therefore records with non-zero seconds/milliseconds must not be floored into a minute.
     const exact = (tag: string): Map<number, number> =>
-      this.buildLegacyExactMinuteMap(series.get(this.tagKey(tag)) || [], minuteStart, minuteEnd);
+      this.buildLegacyExactMinuteMap(series.get(this.tagKey(tag)) || [], minuteStart, legacyDataEnd);
 
     const gpsSpeed = exact(TAGS.gpsSpeed);
     const gpsLat = exact(TAGS.gpsLat);
@@ -1015,7 +1035,7 @@ export class BahteraLazuritReportService implements VesselReportAdapter {
     }));
 
     let modeRows = 0;
-    for (let bucket = minuteStart; bucket <= minuteEnd; bucket += MINUTE_MS) {
+    for (let bucket = minuteStart; bucket <= legacyDataEnd; bucket += MINUTE_MS) {
       const modeLabel = this.resolveModeFromCode(modeCode.get(bucket));
       if (!modeLabel) continue;
       const key = this.resolveModeProfileKey(modeLabel);
@@ -1105,8 +1125,8 @@ export class BahteraLazuritReportService implements VesselReportAdapter {
         runningHours: hours,
         runningPercent: runPercent.get(mode.key) || 0,
         distanceNm: roundPdf2(distanceFull),
-        litresPerNm: distanceFull !== 0 ? roundPdf2(fuelFull / distanceFull) : null,
-        litresPerHour: hours !== 0 ? roundPdf2(fuelFull / hours) : null,
+        litresPerNm: Math.abs(distanceFull) >= 0.01 ? roundPdf2(fuelFull / distanceFull) : 0,
+        litresPerHour: acc.samples > 0 && hours !== 0 ? roundPdf2(fuelFull / hours) : 0,
       };
     });
 

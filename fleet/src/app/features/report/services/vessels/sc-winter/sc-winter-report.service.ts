@@ -3,6 +3,7 @@ import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from '../../common/report-cache.util';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -14,7 +15,6 @@ import {
 import {
   buildGpsPdfParityModeSummary,
   buildExactMinuteValueMap,
-  buildLegacyPdfFuelDeltaMap,
   isCompletedDailyWindow,
 } from '../../common/pdf-mode-parity';
 import { calculateLegacyDailyFuelTotal, exactMinutePoints } from '../../common/legacy-daily-fuel';
@@ -128,6 +128,15 @@ export interface ScWinterSpeedPoint {
   speed: number;
 }
 
+export type ScWinterHistorianSource = 'report' | 'api2' | 'live' | 'mixed';
+
+export interface ScWinterReportQuality {
+  historianSource: ScWinterHistorianSource;
+  pdfParityVerified: boolean;
+  fuelRecoveryUsed: boolean;
+  warnings: string[];
+}
+
 export interface ScWinterDailyUiReport {
   periodStart: Date;
   periodEnd: Date;
@@ -147,6 +156,7 @@ export interface ScWinterDailyUiReport {
   tracking: ScWinterTrackingSummary;
   hourly: ScWinterHourlyRow[];
   speedSeries: ScWinterSpeedPoint[];
+  quality: ScWinterReportQuality;
 }
 
 export type ScWinterUiPeriodKind = 'day' | 'range' | 'month';
@@ -170,6 +180,19 @@ export interface ScWinterPeriodUiReport extends ScWinterDailyUiReport {
 interface NumericPoint {
   timestamp: Date;
   value: number;
+}
+
+interface ScWinterBuildContext {
+  source: Exclude<ScWinterHistorianSource, 'mixed'>;
+  sourceError?: string;
+}
+
+interface ScWinterFuelResolution {
+  value: number;
+  legacyTotal: number;
+  acceptedMinuteFuel: number;
+  method: 'legacy' | 'gap-safe-recovery' | 'accepted-minute-fallback';
+  warning?: string;
 }
 
 interface ReportCacheEntry {
@@ -210,7 +233,9 @@ interface HourAccumulator {
 }
 
 const MINUTE_MS = 60_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
+const LIVE_REPORT_CACHE_TTL_MS = 30_000;
+const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -379,22 +404,61 @@ export class ScWinterReportService implements VesselReportAdapter {
     const requestStartText = this.formatHistorianRequestTime(start);
     const requestEndText = this.formatHistorianRequestTime(historianEnd);
 
-    // Completed Daily UI must read the historian exactly like SCReportingService/PDF:
-    // one tag per loggergethistorianvalues request, including next-day 00:00.
-    const historianRequest$: Observable<any> = completedDaily
-      ? this.newHttp.getConsistentPdfParityHistorianValues(
-          requestStartText,
-          requestEndText,
-          requestTags,
-        )
-      : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
+    // Completed Daily parity strategy:
+    // 1) Prefer the exact reporting historian used by SCReportingService/PDF.
+    // 2) If that source is unavailable, restart the WHOLE request through the
+    //    source-consistent API2 logger. Never mix report/API2 tag-by-tag.
+    // 3) The report remains usable, but a visible data-quality warning is attached
+    //    whenever the verified PDF source was not used or a fuel recovery was needed.
+    //
+    // This keeps the page operational for real work while still making the
+    // financial/parity status explicit instead of silently presenting fallback
+    // values as verified PDF data.
+    const historianRequest$: Observable<{ response: any; context: ScWinterBuildContext }> = completedDaily
+      ? this.newHttp
+          .getStrictConsistentPdfParityHistorianValues(
+            requestStartText,
+            requestEndText,
+            requestTags,
+          )
+          .pipe(
+            map((response) => ({
+              response,
+              context: { source: 'report' as const },
+            })),
+            catchError((error: any) => {
+              const reason = String(error?.message || error?.name || error || 'unknown error');
+              console.warn(
+                '[SC WINTER] verified reporting historian unavailable; restarting the complete request via source-consistent API2 logger.',
+                error,
+              );
+              return this.newHttp
+                .getConsistentPdfParityHistorianValues(
+                  requestStartText,
+                  requestEndText,
+                  requestTags,
+                )
+                .pipe(
+                  map((response) => ({
+                    response,
+                    context: { source: 'api2' as const, sourceError: reason },
+                  })),
+                );
+            }),
+          )
+      : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags).pipe(
+          map((response) => ({
+            response,
+            context: { source: 'live' as const },
+          })),
+        );
 
     const request$ = historianRequest$.pipe(
-        map((response) => this.buildDetailedDailyReport(response, start, end)),
+        map(({ response, context }) => this.buildDetailedDailyReport(response, start, end, context)),
         tap((value) => {
-          this.detailedReportCache.set(key, {
+          setBoundedReportCache(this.detailedReportCache, key, {
             value,
-            expiresAt: Date.now() + CACHE_TTL_MS,
+            expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
           });
         }),
         catchError((error) => throwError(() => error)),
@@ -439,9 +503,12 @@ export class ScWinterReportService implements VesselReportAdapter {
     const request$ = from(chunks).pipe(
       // Two concurrent day-sized historian requests keep monthly views responsive
       // without asking the backend for a very large multi-tag, 31-day payload at once.
+      // Long range/month reports are intentionally limited to one day bundle at a time.
+      // Each bundle already reads at most two historian tags concurrently, so the
+      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        2,
+        1,
       ),
       toArray(),
       map((reports) =>
@@ -453,9 +520,9 @@ export class ScWinterReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        this.periodReportCache.set(key, {
+        setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + CACHE_TTL_MS,
+          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
@@ -850,6 +917,21 @@ export class ScWinterReportService implements VesselReportAdapter {
       modeRunningHours: report.modeSummary.reduce((sum, row) => sum + row.runningHours, 0),
     }));
 
+    const historianSources = Array.from(
+      new Set(reports.map((report) => report.quality?.historianSource || 'live')),
+    );
+    const quality: ScWinterReportQuality = {
+      historianSource:
+        historianSources.length === 1
+          ? historianSources[0] as ScWinterHistorianSource
+          : 'mixed',
+      pdfParityVerified: reports.every((report) => !!report.quality?.pdfParityVerified),
+      fuelRecoveryUsed: reports.some((report) => !!report.quality?.fuelRecoveryUsed),
+      warnings: Array.from(
+        new Set(reports.flatMap((report) => report.quality?.warnings || [])),
+      ),
+    };
+
     return {
       periodKind,
       dayCount: reports.length,
@@ -873,6 +955,7 @@ export class ScWinterReportService implements VesselReportAdapter {
       tracking,
       hourly,
       speedSeries,
+      quality,
     };
   }
 
@@ -880,8 +963,12 @@ export class ScWinterReportService implements VesselReportAdapter {
     response: any,
     periodStart: Date,
     periodEnd: Date,
+    context: ScWinterBuildContext = { source: 'live' },
   ): ScWinterDailyUiReport {
     const series = this.extractHistorianSeries(response, ALL_TAGS);
+    const missingHistorianTags = ALL_TAGS.filter(
+      (tag) => (series.get(this.tagKey(tag)) || []).length === 0,
+    );
     const minuteStart = this.floorToMinute(periodStart).getTime();
     const minuteEnd = Math.max(minuteStart + MINUTE_MS, this.floorToMinute(periodEnd).getTime());
     const completedDaily = isCompletedDailyWindow(
@@ -896,7 +983,11 @@ export class ScWinterReportService implements VesselReportAdapter {
     const gpsSpeedPoints = series.get(this.tagKey(TAGS.gpsSpeed)) || [];
     const gpsSpeed = this.buildInstantMap(gpsSpeedPoints);
     const pdfModeGpsSpeed = completedDaily
-      ? buildExactMinuteValueMap(gpsSpeedPoints, MINUTE_MS)
+      ? new Map(
+          Array.from(buildExactMinuteValueMap(gpsSpeedPoints, MINUTE_MS).entries()).map(
+            ([minute, value]) => [minute, Math.fround(value)] as const,
+          ),
+        )
       : gpsSpeed;
     const gpsLat = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLat)) || []);
     const gpsLong = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLong)) || []);
@@ -942,10 +1033,130 @@ export class ScWinterReportService implements VesselReportAdapter {
     const pdfFuelPoints = (tag: string) => exactMinutePoints(
       series.get(this.tagKey(tag)) || [], minuteStart, pdfModeDataEnd,
     );
-    const ae1DailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.ae1FuelIn), pdfFuelPoints(TAGS.ae1FuelOut), winterFuelRule);
-    const ae2DailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.ae2FuelIn), pdfFuelPoints(TAGS.ae2FuelOut), winterFuelRule);
-    const ae3DailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.ae3FuelIn), pdfFuelPoints(TAGS.ae3FuelOut), winterFuelRule);
-    const ae4DailyFuel = calculateLegacyDailyFuelTotal(pdfFuelPoints(TAGS.ae4FuelIn), pdfFuelPoints(TAGS.ae4FuelOut), winterFuelRule);
+    const ae1FuelInExact = pdfFuelPoints(TAGS.ae1FuelIn);
+    const ae1FuelOutExact = pdfFuelPoints(TAGS.ae1FuelOut);
+    const ae2FuelInExact = pdfFuelPoints(TAGS.ae2FuelIn);
+    const ae2FuelOutExact = pdfFuelPoints(TAGS.ae2FuelOut);
+    const ae3FuelInExact = pdfFuelPoints(TAGS.ae3FuelIn);
+    const ae3FuelOutExact = pdfFuelPoints(TAGS.ae3FuelOut);
+    const ae4FuelInExact = pdfFuelPoints(TAGS.ae4FuelIn);
+    const ae4FuelOutExact = pdfFuelPoints(TAGS.ae4FuelOut);
+    const missingExactFuelPairs = [
+      ['A/E1', ae1FuelInExact.length, ae1FuelOutExact.length] as const,
+      ['A/E2', ae2FuelInExact.length, ae2FuelOutExact.length] as const,
+      ['A/E3', ae3FuelInExact.length, ae3FuelOutExact.length] as const,
+      ['A/E4', ae4FuelInExact.length, ae4FuelOutExact.length] as const,
+    ].filter(([, inputCount, outputCount]) => inputCount === 0 || outputCount === 0);
+
+    const ae1FuelResolution = this.resolveScWinterDailyFuel(
+      calculateLegacyDailyFuelTotal(ae1FuelInExact, ae1FuelOutExact, winterFuelRule),
+      ae1FuelInExact,
+      ae1FuelOutExact,
+      ae1Fuel,
+      'A/E1',
+    );
+    const ae2FuelResolution = this.resolveScWinterDailyFuel(
+      calculateLegacyDailyFuelTotal(ae2FuelInExact, ae2FuelOutExact, winterFuelRule),
+      ae2FuelInExact,
+      ae2FuelOutExact,
+      ae2Fuel,
+      'A/E2',
+    );
+    const ae3FuelResolution = this.resolveScWinterDailyFuel(
+      calculateLegacyDailyFuelTotal(ae3FuelInExact, ae3FuelOutExact, winterFuelRule),
+      ae3FuelInExact,
+      ae3FuelOutExact,
+      ae3Fuel,
+      'A/E3',
+    );
+    const ae4FuelResolution = this.resolveScWinterDailyFuel(
+      calculateLegacyDailyFuelTotal(ae4FuelInExact, ae4FuelOutExact, winterFuelRule),
+      ae4FuelInExact,
+      ae4FuelOutExact,
+      ae4Fuel,
+      'A/E4',
+    );
+
+    const ae1DailyFuel = ae1FuelResolution.value;
+    const ae2DailyFuel = ae2FuelResolution.value;
+    const ae3DailyFuel = ae3FuelResolution.value;
+    const ae4DailyFuel = ae4FuelResolution.value;
+
+    const fuelResolutions = [
+      ae1FuelResolution,
+      ae2FuelResolution,
+      ae3FuelResolution,
+      ae4FuelResolution,
+    ];
+    const qualityWarnings: string[] = [];
+    if (missingHistorianTags.length > 0) {
+      qualityWarnings.push(
+        `Historian returned no records for ${missingHistorianTags.length} SC WINTER tag(s): ${missingHistorianTags.join(', ')}.`,
+      );
+    }
+    if (missingExactFuelPairs.length > 0) {
+      qualityWarnings.push(
+        `Exact-minute FIN/FOUT evidence is incomplete for ${missingExactFuelPairs.map(([label]) => label).join(', ')}.`,
+      );
+    }
+    if (completedDaily && context.source !== 'report') {
+      qualityWarnings.push(
+        'SC WINTER PDF source is unavailable, so this view is using one source-consistent API2 historian bundle. Values are usable for diagnostics, but completed-day PDF parity is not marked as verified until the reporting historian is reachable.',
+      );
+    }
+    if (context.sourceError) {
+      console.warn('[SC WINTER] reporting-historian fallback reason:', context.sourceError);
+    }
+    for (const resolution of fuelResolutions) {
+      if (resolution.warning) qualityWarnings.push(resolution.warning);
+    }
+    const fuelRecoveryUsed = fuelResolutions.some((item) => item.method !== 'legacy');
+    const quality: ScWinterReportQuality = {
+      historianSource: context.source,
+      pdfParityVerified:
+        completedDaily &&
+        context.source === 'report' &&
+        !fuelRecoveryUsed &&
+        missingHistorianTags.length === 0 &&
+        missingExactFuelPairs.length === 0,
+      fuelRecoveryUsed,
+      warnings: Array.from(new Set(qualityWarnings)),
+    };
+
+    // Page-1 RPM / Running Hours use the original SCWinter CalSpeedSummary /
+    // CalSpeedAESummary state machine, not the generic interpolated RPM map.
+    // This preserves the legacy lost-minute behavior and removes the 0.01-0.02 h
+    // drift that was visible on Port/Stb. M/E and A/E4.
+    const portMainLegacy = this.buildLegacyCounterSummary(
+      series.get(this.tagKey(TAGS.portMainSpeed)) || [],
+      minuteStart,
+      pdfModeDataEnd,
+      24,
+      1600,
+      500,
+      false,
+    );
+    const starboardMainLegacy = this.buildLegacyCounterSummary(
+      series.get(this.tagKey(TAGS.starboardMainSpeed)) || [],
+      minuteStart,
+      pdfModeDataEnd,
+      24,
+      1600,
+      500,
+      false,
+    );
+    const ae1Legacy = this.buildLegacyCounterSummary(
+      series.get(this.tagKey(TAGS.ae1Speed)) || [], minuteStart, pdfModeDataEnd, 6, 1200, 0, true,
+    );
+    const ae2Legacy = this.buildLegacyCounterSummary(
+      series.get(this.tagKey(TAGS.ae2Speed)) || [], minuteStart, pdfModeDataEnd, 12, 1200, 0, true,
+    );
+    const ae3Legacy = this.buildLegacyCounterSummary(
+      series.get(this.tagKey(TAGS.ae3Speed)) || [], minuteStart, pdfModeDataEnd, 12, 1200, 0, true,
+    );
+    const ae4Legacy = this.buildLegacyCounterSummary(
+      series.get(this.tagKey(TAGS.ae4Speed)) || [], minuteStart, pdfModeDataEnd, 6, 1200, 0, true,
+    );
 
     this.foldCompletedDayBoundary(portMainRpm, minuteEnd, boundaryBucket);
     this.foldCompletedDayBoundary(starboardMainRpm, minuteEnd, boundaryBucket);
@@ -964,15 +1175,33 @@ export class ScWinterReportService implements VesselReportAdapter {
     );
 
     const engineSummary: ScWinterEngineSummaryRow[] = [
-      this.buildEngineSummary('port', 'Port M/E', portMainRpm, new Map<number, number>(), elapsedHours, 500),
-      this.buildEngineSummary('starboard', 'Stb. M/E', starboardMainRpm, new Map<number, number>(), elapsedHours, 500),
+      {
+        key: 'port', label: 'Port M/E', averageRpm: portMainLegacy.averageRpm,
+        maximumRpm: portMainLegacy.maximumRpm, runningHours: portMainLegacy.runningHours, fuelUsed: 0,
+      },
+      {
+        key: 'starboard', label: 'Stb. M/E', averageRpm: starboardMainLegacy.averageRpm,
+        maximumRpm: starboardMainLegacy.maximumRpm, runningHours: starboardMainLegacy.runningHours, fuelUsed: 0,
+      },
     ];
     const shaftSummary: ScWinterShaftSummaryRow[] = [];
     const auxSummary: ScWinterAuxSummaryRow[] = [
-      { ...this.buildAuxSummary('port', 'A/E1', ae1Rpm, ae1Fuel), fuelUsed: ae1DailyFuel },
-      { ...this.buildAuxSummary('center', 'A/E2', ae2Rpm, ae2Fuel), fuelUsed: ae2DailyFuel },
-      { ...this.buildAuxSummary('starboard', 'A/E3', ae3Rpm, ae3Fuel), fuelUsed: ae3DailyFuel },
-      { ...this.buildAuxSummary('fourth', 'A/E4', ae4Rpm, ae4Fuel), fuelUsed: ae4DailyFuel },
+      {
+        key: 'port', label: 'A/E1', runningHours: ae1Legacy.runningHours, fuelUsed: ae1DailyFuel,
+        averageRpm: ae1Legacy.averageRpm, maximumRpm: ae1Legacy.maximumRpm,
+      },
+      {
+        key: 'center', label: 'A/E2', runningHours: ae2Legacy.runningHours, fuelUsed: ae2DailyFuel,
+        averageRpm: ae2Legacy.averageRpm, maximumRpm: ae2Legacy.maximumRpm,
+      },
+      {
+        key: 'starboard', label: 'A/E3', runningHours: ae3Legacy.runningHours, fuelUsed: ae3DailyFuel,
+        averageRpm: ae3Legacy.averageRpm, maximumRpm: ae3Legacy.maximumRpm,
+      },
+      {
+        key: 'fourth', label: 'A/E4', runningHours: ae4Legacy.runningHours, fuelUsed: ae4DailyFuel,
+        averageRpm: ae4Legacy.averageRpm, maximumRpm: ae4Legacy.maximumRpm,
+      },
     ];
 
     const mainEngineFuelTotal = 0;
@@ -1095,25 +1324,32 @@ export class ScWinterReportService implements VesselReportAdapter {
       if (speed !== null && speed >= 7) passageMinuteKeys.push(bucket);
     }
 
-    const pdfModeAE1Fuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.ae1FuelIn)) || [],
-      series.get(this.tagKey(TAGS.ae1FuelOut)) || [],
-      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
+    // Page 2 uses GetDataFuelConsumption(), whose FIN/FOUT recovery differs
+    // subtly from several other vessel families (no i==1 reset special-case and
+    // no 500..20000 reset window). Use the SC WINTER-specific signed maps.
+    const pdfModeAE1In = this.buildLegacyPassageTotalizerDelta(
+      series.get(this.tagKey(TAGS.ae1FuelIn)) || [], minuteStart, pdfModeDataEnd,
     );
-    const pdfModeAE2Fuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.ae2FuelIn)) || [],
-      series.get(this.tagKey(TAGS.ae2FuelOut)) || [],
-      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
+    const pdfModeAE1Out = this.buildLegacyPassageTotalizerDelta(
+      series.get(this.tagKey(TAGS.ae1FuelOut)) || [], minuteStart, pdfModeDataEnd,
     );
-    const pdfModeAE3Fuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.ae3FuelIn)) || [],
-      series.get(this.tagKey(TAGS.ae3FuelOut)) || [],
-      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
+    const pdfModeAE2In = this.buildLegacyPassageTotalizerDelta(
+      series.get(this.tagKey(TAGS.ae2FuelIn)) || [], minuteStart, pdfModeDataEnd,
     );
-    const pdfModeAE4Fuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.ae4FuelIn)) || [],
-      series.get(this.tagKey(TAGS.ae4FuelOut)) || [],
-      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
+    const pdfModeAE2Out = this.buildLegacyPassageTotalizerDelta(
+      series.get(this.tagKey(TAGS.ae2FuelOut)) || [], minuteStart, pdfModeDataEnd,
+    );
+    const pdfModeAE3In = this.buildLegacyPassageTotalizerDelta(
+      series.get(this.tagKey(TAGS.ae3FuelIn)) || [], minuteStart, pdfModeDataEnd,
+    );
+    const pdfModeAE3Out = this.buildLegacyPassageTotalizerDelta(
+      series.get(this.tagKey(TAGS.ae3FuelOut)) || [], minuteStart, pdfModeDataEnd,
+    );
+    const pdfModeAE4In = this.buildLegacyPassageTotalizerDelta(
+      series.get(this.tagKey(TAGS.ae4FuelIn)) || [], minuteStart, pdfModeDataEnd,
+    );
+    const pdfModeAE4Out = this.buildLegacyPassageTotalizerDelta(
+      series.get(this.tagKey(TAGS.ae4FuelOut)) || [], minuteStart, pdfModeDataEnd,
     );
 
     const pdfParityMode = buildGpsPdfParityModeSummary({
@@ -1125,36 +1361,128 @@ export class ScWinterReportService implements VesselReportAdapter {
       officialTotalFuel: totalFuelUsed,
       gpsSpeed: pdfModeGpsSpeed,
       minuteFuelAt: (minute) =>
-        (pdfModeAE1Fuel.get(minute) || 0) +
-        (pdfModeAE2Fuel.get(minute) || 0) +
-        (pdfModeAE3Fuel.get(minute) || 0) +
-        (pdfModeAE4Fuel.get(minute) || 0),
+        ((pdfModeAE1In.get(minute) || 0) - (pdfModeAE1Out.get(minute) || 0)) +
+        ((pdfModeAE2In.get(minute) || 0) - (pdfModeAE2Out.get(minute) || 0)) +
+        ((pdfModeAE3In.get(minute) || 0) - (pdfModeAE3Out.get(minute) || 0)) +
+        ((pdfModeAE4In.get(minute) || 0) - (pdfModeAE4Out.get(minute) || 0)),
       resolveModeLabel: (speed) => this.resolveModeFromGpsSpeed(speed),
       resolveModeKey: (label) => this.resolveModeProfileKey(label),
       standbyLabel: 'Standby',
+      // SC WINTER stores mode speed sums / running counters in Single columns.
+      legacySinglePrecision: true,
       // SC WINTER legacy PDF keeps raw by-Mode fuel; it does not normalize Mode fuel to Page-1 total.
       scaleFuelToOfficialTotal: false,
+      // The original report calculates Standby fuel % as 100 minus the already
+      // rounded percentages of the other modes. It can legitimately be negative
+      // (for 04-Oct-2026 the PDF shows -78.28%). Preserve that legacy result.
+      allowNegativeResidualFuelPercent: true,
     });
     const modeSummary = pdfParityMode.modeSummary as ScWinterModeSummaryRow[];
 
-    const passageSummary = this.buildPassageSummary(
-      passageMinuteKeys,
-      portMainRpm,
-      starboardMainRpm,
-      ae1Rpm,
-      ae2Rpm,
-      ae3Rpm,
-      ae4Rpm,
-      ae1Fuel,
-      ae2Fuel,
-      ae3Fuel,
-      ae4Fuel,
-      gpsSpeed,
-    );
-    const tracking = this.buildTrackingSummary(minuteStart, minuteEnd, gpsLat, gpsLong, gpsSpeed, gpsHead);
+    // Page 3 of the legacy SC WINTER PDF uses a separate minute-by-minute
+    // calculation path from Page 1 and the hourly pages. Reproduce that path
+    // for completed daily reports instead of reusing the generic UI maps.
+    const passageSummary = completedDaily
+      ? this.buildLegacyPassageSummary(series, minuteStart, pdfModeDataEnd)
+      : this.buildPassageSummary(
+          passageMinuteKeys,
+          portMainRpm,
+          starboardMainRpm,
+          ae1Rpm,
+          ae2Rpm,
+          ae3Rpm,
+          ae4Rpm,
+          ae1Fuel,
+          ae2Fuel,
+          ae3Fuel,
+          ae4Fuel,
+          gpsSpeed,
+        );
+    // Page 4 tracking also follows the legacy completed-daily path. The PDF
+    // receives Total Distance from the already rounded Mode Summary, and its
+    // final position is the next-day 00:00 historian endpoint displayed as
+    // 23:59. Do not recompute this page from the generic speed integral.
+    const tracking = completedDaily
+      ? this.buildLegacyTrackingSummary(
+          series,
+          minuteStart,
+          pdfModeDataEnd,
+          modeSummary,
+        )
+      : this.buildTrackingSummary(minuteStart, minuteEnd, gpsLat, gpsLong, gpsSpeed, gpsHead);
+
+    // Pages 5-13 are NOT built by summing the generic interpolated maps.
+    // SCReportingService has dedicated hourly state machines that attribute each
+    // accepted transition to Timestamp-1 minute, recover short rejected jumps,
+    // and count running minutes with vessel-specific missing-sample behaviour.
+    // Using those exact rules removes the visible 0.98/0.93 h and 189/183 L
+    // drift seen in the web UI versus the official PDF.
+    const legacyHourly = completedDaily
+      ? {
+          navigation: this.buildLegacyHourlyNavigation(
+            series.get(this.tagKey(TAGS.gpsSpeed)) || [],
+            minuteStart,
+            pdfModeDataEnd,
+          ),
+          ae1Fuel: this.buildLegacyHourlyFuel(
+            ae1FuelInExact, ae1FuelOutExact, minuteStart, pdfModeDataEnd,
+          ),
+          ae2Fuel: this.buildLegacyHourlyFuel(
+            ae2FuelInExact, ae2FuelOutExact, minuteStart, pdfModeDataEnd,
+          ),
+          ae3Fuel: this.buildLegacyHourlyFuel(
+            ae3FuelInExact, ae3FuelOutExact, minuteStart, pdfModeDataEnd,
+          ),
+          ae4Fuel: this.buildLegacyHourlyFuel(
+            ae4FuelInExact, ae4FuelOutExact, minuteStart, pdfModeDataEnd,
+          ),
+          portMainRunning: this.buildLegacyHourlyRunningHours(
+            series.get(this.tagKey(TAGS.portMainSpeed)) || [],
+            minuteStart,
+            pdfModeDataEnd,
+            24,
+            false,
+          ),
+          starboardMainRunning: this.buildLegacyHourlyRunningHours(
+            series.get(this.tagKey(TAGS.starboardMainSpeed)) || [],
+            minuteStart,
+            pdfModeDataEnd,
+            24,
+            false,
+          ),
+          ae1Running: this.buildLegacyHourlyRunningHours(
+            series.get(this.tagKey(TAGS.ae1Speed)) || [],
+            minuteStart,
+            pdfModeDataEnd,
+            6,
+            true,
+          ),
+          ae2Running: this.buildLegacyHourlyRunningHours(
+            series.get(this.tagKey(TAGS.ae2Speed)) || [],
+            minuteStart,
+            pdfModeDataEnd,
+            12,
+            true,
+          ),
+          ae3Running: this.buildLegacyHourlyRunningHours(
+            series.get(this.tagKey(TAGS.ae3Speed)) || [],
+            minuteStart,
+            pdfModeDataEnd,
+            12,
+            true,
+          ),
+          ae4Running: this.buildLegacyHourlyRunningHours(
+            series.get(this.tagKey(TAGS.ae4Speed)) || [],
+            minuteStart,
+            pdfModeDataEnd,
+            6,
+            true,
+          ),
+        }
+      : null;
 
     const hourly: ScWinterHourlyRow[] = hourlyAccumulators.map((item, hour) => {
-      if (!item.active) {
+      if (!completedDaily && !item.active) {
         return {
           hour, active: false, distanceNm: null, speedKnots: null, mainFuel: null, auxFuel: null,
           portMainFuel: null, centerMainFuel: null, starboardMainFuel: null,
@@ -1165,33 +1493,47 @@ export class ScWinterReportService implements VesselReportAdapter {
           portShaftRpm: null, centerShaftRpm: null, starboardShaftRpm: null, totalFuel: null,
         };
       }
+      const portAuxFuel = legacyHourly?.ae1Fuel[hour] ?? item.portAuxFuel;
+      const centerAuxFuel = legacyHourly?.ae2Fuel[hour] ?? item.centerAuxFuel;
+      const starboardAuxFuel = legacyHourly?.ae3Fuel[hour] ?? item.starboardAuxFuel;
+      const fourthAuxFuel = legacyHourly?.ae4Fuel[hour] ?? item.fourthAuxFuel;
+      const hourlyAuxFuel = portAuxFuel + centerAuxFuel + starboardAuxFuel + fourthAuxFuel;
+
       return {
         hour, active: true,
-        distanceNm: item.distanceNm,
-        speedKnots: item.speedCount > 0 ? item.speedSum / item.speedCount : null,
+        distanceNm: legacyHourly?.navigation.distanceNm[hour] ?? item.distanceNm,
+        speedKnots:
+          legacyHourly?.navigation.speedKnots[hour] ??
+          (item.speedCount > 0 ? item.speedSum / item.speedCount : null),
         mainFuel: 0,
-        auxFuel: item.auxFuel,
+        auxFuel: hourlyAuxFuel,
         portMainFuel: 0,
         centerMainFuel: 0,
         starboardMainFuel: 0,
-        portAuxFuel: item.portAuxFuel,
-        centerAuxFuel: item.centerAuxFuel,
-        starboardAuxFuel: item.starboardAuxFuel,
-        fourthAuxFuel: item.fourthAuxFuel,
-        portMainRunningHours: item.portMainRunMinutes / 60,
+        portAuxFuel,
+        centerAuxFuel,
+        starboardAuxFuel,
+        fourthAuxFuel,
+        portMainRunningHours:
+          legacyHourly?.portMainRunning[hour] ?? item.portMainRunMinutes / 60,
         centerMainRunningHours: 0,
-        starboardMainRunningHours: item.starboardMainRunMinutes / 60,
-        portAuxRunningHours: item.portAuxRunMinutes / 60,
-        centerAuxRunningHours: item.centerAuxRunMinutes / 60,
-        starboardAuxRunningHours: item.starboardAuxRunMinutes / 60,
-        fourthAuxRunningHours: item.fourthAuxRunMinutes / 60,
+        starboardMainRunningHours:
+          legacyHourly?.starboardMainRunning[hour] ?? item.starboardMainRunMinutes / 60,
+        portAuxRunningHours:
+          legacyHourly?.ae1Running[hour] ?? item.portAuxRunMinutes / 60,
+        centerAuxRunningHours:
+          legacyHourly?.ae2Running[hour] ?? item.centerAuxRunMinutes / 60,
+        starboardAuxRunningHours:
+          legacyHourly?.ae3Running[hour] ?? item.starboardAuxRunMinutes / 60,
+        fourthAuxRunningHours:
+          legacyHourly?.ae4Running[hour] ?? item.fourthAuxRunMinutes / 60,
         portShaftRunningHours: 0,
         centerShaftRunningHours: 0,
         starboardShaftRunningHours: 0,
         portShaftRpm: 0,
         centerShaftRpm: 0,
         starboardShaftRpm: 0,
-        totalFuel: item.auxFuel,
+        totalFuel: hourlyAuxFuel,
       };
     });
 
@@ -1206,7 +1548,7 @@ export class ScWinterReportService implements VesselReportAdapter {
       averageSpeed: this.average(validSpeedValues), maximumSpeed: this.maximum(validSpeedValues),
       engineSummary, shaftSummary, auxSummary, utilization,
       mainEngineFuelTotal, auxiliaryFuelTotal, totalFuelUsed,
-      modeSummary, passageSummary, tracking, hourly, speedSeries,
+      modeSummary, passageSummary, tracking, hourly, speedSeries, quality,
     };
   }
 
@@ -1362,6 +1704,76 @@ export class ScWinterReportService implements VesselReportAdapter {
     };
   }
 
+  /**
+   * Exact completed-daily Page 4 tracking behavior from SCReportingService.
+   *
+   * Legacy rules that matter for PDF parity:
+   * - Latitude is the driver row; longitude/speed/heading are exact-minute joins.
+   * - Only positive latitude/longitude positions become Begin/End positions.
+   * - The 1,441st row (next-day 00:00) is retained as the closing endpoint, but
+   *   the report labels that End Position as Timestamp-1 minute (23:59).
+   * - Total Distance is NOT recalculated here. GenerateReportTracking receives
+   *   the sum of the already displayed 2dp mode distances from Page 2.
+   */
+  private buildLegacyTrackingSummary(
+    series: Map<string, NumericPoint[]>,
+    startMs: number,
+    endMs: number,
+    modeSummary: readonly ScWinterModeSummaryRow[],
+  ): ScWinterTrackingSummary {
+    const points = (tag: string): readonly NumericPoint[] =>
+      series.get(this.tagKey(tag)) || [];
+
+    const latitude = this.buildLegacyExactMinuteLookup(points(TAGS.gpsLat), startMs, endMs);
+    const longitude = this.buildLegacyExactMinuteLookup(points(TAGS.gpsLong), startMs, endMs);
+    const speed = this.buildLegacyExactMinuteLookup(points(TAGS.gpsSpeed), startMs, endMs);
+    const heading = this.buildLegacyExactMinuteLookup(points(TAGS.gpsHead), startMs, endMs);
+
+    const exactRoute: ScWinterTrackingPoint[] = [];
+    for (let minute = startMs; minute <= endMs; minute += MINUTE_MS) {
+      const lat = latitude.get(minute) || 0;
+      if (lat === 0) continue;
+
+      const lng = longitude.get(minute) || 0;
+      // The original SC WINTER report explicitly requires positive N/E
+      // coordinates before accepting a Begin/End position.
+      if (lat <= 0 || lng <= 0 || lat > 90 || lng > 180) continue;
+
+      exactRoute.push({
+        timestamp: new Date(minute),
+        latitude: lat,
+        longitude: lng,
+        speed: Math.fround(speed.get(minute) ?? 0),
+        heading: heading.get(minute) ?? 0,
+      });
+    }
+
+    const begin = exactRoute.length > 0 ? { ...exactRoute[0] } : null;
+    const last = exactRoute.length > 0 ? exactRoute[exactRoute.length - 1] : null;
+    const end = last
+      ? {
+          ...last,
+          // GenerateReportTracking labels End Position with AddMinutes(-1).
+          timestamp: new Date(last.timestamp.getTime() - MINUTE_MS),
+        }
+      : null;
+
+    // C# stores each Mode distance in a Single, formats it to n2, parses it
+    // back to float, then accumulates TotalDistance. Reproduce that ordering.
+    let legacyDistance = Math.fround(0);
+    for (const row of modeSummary) {
+      const displayedDistance = Math.fround(Number(row.distanceNm.toFixed(2)));
+      legacyDistance = Math.fround(legacyDistance + displayedDistance);
+    }
+
+    return {
+      begin,
+      end,
+      distanceNm: legacyDistance,
+      route: this.downsampleRoute(exactRoute, 300),
+    };
+  }
+
   private buildInstantMap(points: readonly NumericPoint[]): Map<number, number> {
     const result = new Map<number, number>();
     for (const point of points) {
@@ -1369,6 +1781,642 @@ export class ScWinterReportService implements VesselReportAdapter {
       result.set(bucket, point.value);
     }
     return result;
+  }
+
+  /**
+   * Rebuild the legacy fixed-minute DataTable lookup used by SCReportingService.
+   * Only exact :00 second samples are allowed into the row, matching DataTable.Select.
+   */
+  private buildLegacyExactMinuteLookup(
+    points: readonly NumericPoint[],
+    startMs: number,
+    endMs: number,
+  ): Map<number, number> {
+    const result = new Map<number, number>();
+    for (const point of exactMinutePoints(points, startMs, endMs)) {
+      if (Number.isFinite(point.value)) result.set(point.timestamp.getTime(), point.value);
+    }
+    return result;
+  }
+
+  private legacyPreviousMinuteHour(minute: number): number {
+    return new Date(minute - MINUTE_MS).getHours();
+  }
+
+  /**
+   * Exact hourly FIN/FOUT side scan used by GetDataAEFuelConsumption and the
+   * individual A/E hourly pages. This intentionally preserves the legacy
+   * reset/lost-sample rules instead of interpolating historian gaps.
+   */
+  private buildLegacyHourlyTotalizerSide(
+    points: readonly NumericPoint[],
+    startMs: number,
+    endMs: number,
+  ): number[] {
+    const values = this.buildLegacyExactMinuteLookup(points, startMs, endMs);
+    const hourly = Array.from({ length: 24 }, () => 0);
+    let i = 0;
+    let previous = 0;
+    let previousAfterLost = 0;
+
+    for (let minute = startMs; minute <= endMs; minute += MINUTE_MS) {
+      const value = values.get(minute) || 0;
+      if (value === 0) continue;
+
+      if (i === 0) {
+        previous = value;
+      } else if (value > previous) {
+        const delta = value - previous;
+        if (delta <= 300) {
+          hourly[this.legacyPreviousMinuteHour(minute)] += delta;
+          previous = value;
+          previousAfterLost = 0;
+        } else {
+          if (previousAfterLost !== 0 && previousAfterLost < value) {
+            const recovered = value - previousAfterLost;
+            if (recovered <= 50) {
+              hourly[this.legacyPreviousMinuteHour(minute)] += recovered;
+              previous = value;
+              previousAfterLost = 0;
+            } else {
+              previousAfterLost = value;
+            }
+          }
+          // The original C# writes this again after the recovery branch.
+          previousAfterLost = value;
+        }
+      } else if (i === 1) {
+        // Legacy special-case for a bad/reset value around 00:00.
+        previous = value;
+      } else if (value >= 0 && value <= 20_000 && value >= 500) {
+        previous = value;
+      }
+
+      i += 1;
+    }
+
+    return hourly;
+  }
+
+  private buildLegacyHourlyFuel(
+    supplyPoints: readonly NumericPoint[],
+    returnPoints: readonly NumericPoint[],
+    startMs: number,
+    endMs: number,
+  ): number[] {
+    const input = this.buildLegacyHourlyTotalizerSide(supplyPoints, startMs, endMs);
+    const output = this.buildLegacyHourlyTotalizerSide(returnPoints, startMs, endMs);
+    return input.map((value, hour) => (value > output[hour] ? value - output[hour] : 0));
+  }
+
+  /**
+   * Exact Page 6/7 and A/E hourly running-hour state machine.
+   * Main-engine pages have the legacy /24 > 500 gate on non-increasing samples;
+   * A/E pages do not. Missing samples immediately after a running sample are
+   * carried as running minutes exactly like the C# service.
+   */
+  private buildLegacyHourlyRunningHours(
+    points: readonly NumericPoint[],
+    startMs: number,
+    endMs: number,
+    pulse: number,
+    auxiliary: boolean,
+  ): number[] {
+    const values = this.buildLegacyExactMinuteLookup(points, startMs, endMs);
+    const minutesByHour = Array.from({ length: 24 }, () => 0);
+    let i = 0;
+    let previous = 0;
+    let previousRunStatus = false;
+
+    const addMinute = (minute: number): void => {
+      minutesByHour[this.legacyPreviousMinuteHour(minute)] += 1;
+    };
+
+    for (let minute = startMs; minute <= endMs; minute += MINUTE_MS) {
+      const value = values.get(minute) || 0;
+      if (value !== 0) {
+        if (i === 0) {
+          previous = value;
+        } else {
+          previousRunStatus = false;
+          if (value > previous) {
+            addMinute(minute);
+            previousRunStatus = true;
+            previous = value;
+          } else {
+            previous = value;
+            if (auxiliary) {
+              if (previous <= 5_000 && previous !== 0) addMinute(minute);
+            } else if (previous / pulse > 500 && previous <= 5_000 && previous !== 0) {
+              addMinute(minute);
+            }
+          }
+        }
+        i += 1;
+      } else if (previousRunStatus) {
+        addMinute(minute);
+      }
+    }
+
+    return minutesByHour.map((minutes) => minutes / 60);
+  }
+
+  /** Page 5 legacy V.D. / V.S. calculation. */
+  private buildLegacyHourlyNavigation(
+    points: readonly NumericPoint[],
+    startMs: number,
+    endMs: number,
+  ): { distanceNm: number[]; speedKnots: number[] } {
+    const values = this.buildLegacyExactMinuteLookup(points, startMs, endMs);
+    const speedSum = Array.from({ length: 24 }, () => 0);
+    const speedCount = Array.from({ length: 24 }, () => 0);
+
+    for (let minute = startMs; minute <= endMs; minute += MINUTE_MS) {
+      const value = values.get(minute) || 0;
+      if (!Number.isFinite(value) || value === 0) continue;
+      const hour = minute === startMs ? 0 : this.legacyPreviousMinuteHour(minute);
+      // GPSSpd is a System.Single column in SCWinter.GetRawData(). Preserve
+      // single-precision accumulation before the hourly average is stored.
+      speedSum[hour] = Math.fround(Math.fround(speedSum[hour]) + Math.fround(value));
+      speedCount[hour] += 1;
+    }
+
+    const speedKnots = speedSum.map((sum, hour) =>
+      speedCount[hour] > 0 ? Math.fround(sum / speedCount[hour]) : 0,
+    );
+    const distanceNm = speedKnots.map((speed, hour) =>
+      speedCount[hour] > 0 ? Number(speed) * (speedCount[hour] / 60) : 0,
+    );
+
+    return { distanceNm, speedKnots };
+  }
+
+  /** Passage-page FIN/FOUT scan. It differs from the hourly-page recovery rule. */
+  private buildLegacyPassageTotalizerDelta(
+    points: readonly NumericPoint[],
+    startMs: number,
+    endMs: number,
+  ): Map<number, number> {
+    const values = this.buildLegacyExactMinuteLookup(points, startMs, endMs);
+    const result = new Map<number, number>();
+    let i = 0;
+    let previous = 0;
+    let previousAfterLost = 0;
+
+    for (let minute = startMs; minute <= endMs; minute += MINUTE_MS) {
+      const value = values.get(minute) || 0;
+      if (value === 0) continue;
+
+      if (i === 0) {
+        previous = value;
+      } else if (value > previous) {
+        const delta = value - previous;
+        if (delta <= 300) {
+          result.set(minute, delta);
+          previous = value;
+          previousAfterLost = 0;
+        } else {
+          if (previousAfterLost !== 0 && previousAfterLost < value) {
+            result.set(minute, value - previousAfterLost);
+            previous = value;
+            previousAfterLost = 0;
+          }
+          previousAfterLost = value;
+        }
+      } else if (value >= 0) {
+        previous = value;
+      }
+
+      i += 1;
+    }
+
+    return result;
+  }
+
+  private buildLegacyPassageCounter(
+    points: readonly NumericPoint[],
+    startMs: number,
+    endMs: number,
+    defaultLost: number,
+    defaultRunning: number,
+  ): { delta: Map<number, number>; lost: Map<number, number>; running: Map<number, number> } {
+    const values = this.buildLegacyExactMinuteLookup(points, startMs, endMs);
+    const delta = new Map<number, number>();
+    const lost = new Map<number, number>();
+    const running = new Map<number, number>();
+    let i = 0;
+    let previous = 0;
+    let lostCount = 1;
+
+    for (let minute = startMs; minute <= endMs; minute += MINUTE_MS) {
+      lost.set(minute, defaultLost);
+      running.set(minute, defaultRunning);
+      const value = values.get(minute) || 0;
+
+      if (value !== 0) {
+        if (i === 0) {
+          previous = value;
+        } else {
+          if (value > previous) {
+            delta.set(minute, value - previous);
+            lost.set(minute, lostCount);
+            running.set(minute, 1);
+            previous = value;
+          } else {
+            previous = value;
+          }
+          lostCount = 1;
+        }
+        i += 1;
+      } else {
+        lostCount += 1;
+      }
+    }
+
+    return { delta, lost, running };
+  }
+
+  /**
+   * Exact SCWinter GetDataPassageSummary + GenerateReportPassageSummary replica.
+   * Page 3 deliberately has different fuel/RPM arithmetic from Page 1 and from
+   * the hourly pages; sharing one generic map is therefore not PDF-parity safe.
+   */
+  private buildLegacyPassageSummary(
+    series: Map<string, NumericPoint[]>,
+    startMs: number,
+    endMs: number,
+  ): ScWinterPassageSummary {
+    const points = (tag: string): readonly NumericPoint[] =>
+      series.get(this.tagKey(tag)) || [];
+    const gps = this.buildLegacyExactMinuteLookup(points(TAGS.gpsSpeed), startMs, endMs);
+
+    const starboardMain = this.buildLegacyPassageCounter(
+      points(TAGS.starboardMainSpeed), startMs, endMs, 0, 1,
+    );
+    const portMain = this.buildLegacyPassageCounter(
+      points(TAGS.portMainSpeed), startMs, endMs, 0, 1,
+    );
+    const ae1 = this.buildLegacyPassageCounter(
+      points(TAGS.ae1Speed), startMs, endMs, 0, 1,
+    );
+    // The legacy DataTable initializes AE2/AE3/AE4 lost counters to 1 and
+    // their running flags to 0. Preserve that seemingly odd behaviour.
+    const ae2 = this.buildLegacyPassageCounter(
+      points(TAGS.ae2Speed), startMs, endMs, 1, 0,
+    );
+    const ae3 = this.buildLegacyPassageCounter(
+      points(TAGS.ae3Speed), startMs, endMs, 1, 0,
+    );
+    const ae4 = this.buildLegacyPassageCounter(
+      points(TAGS.ae4Speed), startMs, endMs, 1, 0,
+    );
+
+    const ae1In = this.buildLegacyPassageTotalizerDelta(points(TAGS.ae1FuelIn), startMs, endMs);
+    const ae1Out = this.buildLegacyPassageTotalizerDelta(points(TAGS.ae1FuelOut), startMs, endMs);
+    const ae2In = this.buildLegacyPassageTotalizerDelta(points(TAGS.ae2FuelIn), startMs, endMs);
+    const ae2Out = this.buildLegacyPassageTotalizerDelta(points(TAGS.ae2FuelOut), startMs, endMs);
+    const ae3In = this.buildLegacyPassageTotalizerDelta(points(TAGS.ae3FuelIn), startMs, endMs);
+    const ae3Out = this.buildLegacyPassageTotalizerDelta(points(TAGS.ae3FuelOut), startMs, endMs);
+    const ae4In = this.buildLegacyPassageTotalizerDelta(points(TAGS.ae4FuelIn), startMs, endMs);
+    const ae4Out = this.buildLegacyPassageTotalizerDelta(points(TAGS.ae4FuelOut), startMs, endMs);
+
+    const fadd = (left: number, right: number): number =>
+      Math.fround(Math.fround(left) + Math.fround(right));
+
+    let starboardRaw = 0;
+    let portRaw = 0;
+    let ae1Raw = 0;
+    let ae2Raw = 0;
+    let ae3Raw = 0;
+    let ae4Raw = 0;
+    let starboardMaxRaw = 0;
+    let portMaxRaw = 0;
+    let ae1MaxRaw = 0;
+    let ae2MaxRaw = 0;
+    let ae3MaxRaw = 0;
+    let ae4MaxRaw = 0;
+    let starboardRun = 0;
+    let portRun = 0;
+    let ae1Run = 0;
+    let ae2Run = 0;
+    let ae3Run = 0;
+    let ae4Run = 0;
+    let ae1Fuel = 0;
+    let ae2Fuel = 0;
+    let ae3Fuel = 0;
+    let ae4Fuel = 0;
+    let speedSum = 0;
+    let rowCount = 0;
+
+    const updateMax = (
+      rawDelta: number,
+      lostCount: number,
+      pulse: number,
+      rpmLimit: number,
+      current: number,
+    ): number => {
+      const singleDelta = Math.fround(rawDelta);
+      if (Math.fround(singleDelta / pulse) > rpmLimit || lostCount <= 0) return current;
+      const candidate = Math.fround(singleDelta / lostCount);
+      return candidate > current ? candidate : current;
+    };
+
+    for (let minute = startMs; minute <= endMs; minute += MINUTE_MS) {
+      const speed = Math.fround(gps.get(minute) || 0);
+      if (speed < 7) continue;
+
+      const starboardDelta = Math.fround(starboardMain.delta.get(minute) || 0);
+      const portDelta = Math.fround(portMain.delta.get(minute) || 0);
+      const ae1Delta = Math.fround(ae1.delta.get(minute) || 0);
+      const ae2Delta = Math.fround(ae2.delta.get(minute) || 0);
+      const ae3Delta = Math.fround(ae3.delta.get(minute) || 0);
+      const ae4Delta = Math.fround(ae4.delta.get(minute) || 0);
+
+      starboardRaw = fadd(starboardRaw, starboardDelta);
+      portRaw = fadd(portRaw, portDelta);
+      ae1Raw = fadd(ae1Raw, ae1Delta);
+      ae2Raw = fadd(ae2Raw, ae2Delta);
+      ae3Raw = fadd(ae3Raw, ae3Delta);
+      ae4Raw = fadd(ae4Raw, ae4Delta);
+
+      starboardMaxRaw = updateMax(
+        starboardDelta, starboardMain.lost.get(minute) || 0, 24, 1500, starboardMaxRaw,
+      );
+      portMaxRaw = updateMax(
+        portDelta, portMain.lost.get(minute) || 0, 24, 1500, portMaxRaw,
+      );
+      ae1MaxRaw = updateMax(ae1Delta, ae1.lost.get(minute) || 0, 6, 1200, ae1MaxRaw);
+      ae2MaxRaw = updateMax(ae2Delta, ae2.lost.get(minute) || 0, 12, 1200, ae2MaxRaw);
+      ae3MaxRaw = updateMax(ae3Delta, ae3.lost.get(minute) || 0, 12, 1200, ae3MaxRaw);
+      ae4MaxRaw = updateMax(ae4Delta, ae4.lost.get(minute) || 0, 6, 1200, ae4MaxRaw);
+
+      starboardRun = fadd(starboardRun, starboardMain.running.get(minute) || 0);
+      portRun = fadd(portRun, portMain.running.get(minute) || 0);
+      ae1Run = fadd(ae1Run, ae1.running.get(minute) || 0);
+      ae2Run = fadd(ae2Run, ae2.running.get(minute) || 0);
+      ae3Run = fadd(ae3Run, ae3.running.get(minute) || 0);
+      ae4Run = fadd(ae4Run, ae4.running.get(minute) || 0);
+
+      const ae1Net = (ae1In.get(minute) || 0) - (ae1Out.get(minute) || 0);
+      const ae2Candidate = (ae2In.get(minute) || 0) - (ae2Out.get(minute) || 0);
+      const ae2Net = ae2Candidate < 9 ? ae2Candidate : 0;
+      const ae3Net = (ae3In.get(minute) || 0) - (ae3Out.get(minute) || 0);
+      const ae4Net = (ae4In.get(minute) || 0) - (ae4Out.get(minute) || 0);
+
+      ae1Fuel += ae1Net;
+      ae2Fuel += ae2Net;
+      ae3Fuel += ae3Net;
+      ae4Fuel += ae4Net;
+      speedSum = fadd(speedSum, speed);
+      rowCount += 1;
+    }
+
+    const legacyAverage = (raw: number, pulse: number, run: number): number =>
+      run > 0 ? Math.fround(Math.fround(raw / pulse) / run) : 0;
+    const legacyMax = (raw: number, pulse: number): number => Math.fround(raw / pulse);
+    const averageSpeed = rowCount > 0 ? Math.fround(speedSum / rowCount) : null;
+    const displayedPassageHours = Math.fround(Number((rowCount / 60).toFixed(2)));
+    const distanceNm = averageSpeed === null
+      ? 0
+      : Math.fround(Math.fround(averageSpeed) * displayedPassageHours);
+    const totalFuel = ae1Fuel + ae2Fuel + ae3Fuel + ae4Fuel;
+
+    return {
+      mainEngines: [
+        {
+          key: 'port',
+          label: 'Port M/E',
+          averageRpm: legacyAverage(portRaw, 24, portRun),
+          maximumRpm: legacyMax(portMaxRaw, 24),
+          runningHours: portRun / 60,
+          fuelUsed: 0,
+        },
+        {
+          key: 'starboard',
+          label: 'Stb. M/E',
+          averageRpm: legacyAverage(starboardRaw, 24, starboardRun),
+          maximumRpm: legacyMax(starboardMaxRaw, 24),
+          runningHours: starboardRun / 60,
+          fuelUsed: 0,
+        },
+      ],
+      shafts: [],
+      auxFuel: [
+        {
+          key: 'port', label: 'A/E1', runningHours: ae1Run / 60, fuelUsed: ae1Fuel,
+          averageRpm: legacyAverage(ae1Raw, 6, ae1Run), maximumRpm: legacyMax(ae1MaxRaw, 6),
+        },
+        {
+          key: 'center', label: 'A/E2', runningHours: ae2Run / 60, fuelUsed: ae2Fuel,
+          averageRpm: legacyAverage(ae2Raw, 12, ae2Run), maximumRpm: legacyMax(ae2MaxRaw, 12),
+        },
+        {
+          key: 'starboard', label: 'A/E3', runningHours: ae3Run / 60, fuelUsed: ae3Fuel,
+          averageRpm: legacyAverage(ae3Raw, 12, ae3Run), maximumRpm: legacyMax(ae3MaxRaw, 12),
+        },
+        {
+          key: 'fourth', label: 'A/E4', runningHours: ae4Run / 60, fuelUsed: ae4Fuel,
+          averageRpm: legacyAverage(ae4Raw, 6, ae4Run), maximumRpm: legacyMax(ae4MaxRaw, 6),
+        },
+      ],
+      mainEngineFuelTotal: 0,
+      auxiliaryFuelTotal: totalFuel,
+      averageSpeed,
+      distanceNm,
+    };
+  }
+
+  /**
+   * Exact SCWinter CalSpeedSummary / CalSpeedAESummary replica for Page 1.
+   *
+   * The legacy service walks a fixed 1,441-row minute table. Missing counter
+   * samples are zeros and, immediately after a running sample, are counted as
+   * running/lost minutes. The generic RPM map cannot reproduce that behavior
+   * exactly, which caused 18.38 vs 18.40 h and 23.98 vs 24.00 h drift.
+   */
+  private buildLegacyCounterSummary(
+    points: readonly NumericPoint[],
+    startMs: number,
+    endMs: number,
+    pulse: number,
+    maximumRpm: number,
+    runningThresholdRpm: number,
+    auxiliary: boolean,
+  ): { averageRpm: number; maximumRpm: number; runningHours: number } {
+    const exact = exactMinutePoints(points, startMs, endMs);
+    const valueByMinute = new Map<number, number>();
+    for (const point of exact) {
+      if (Number.isFinite(point.value)) valueByMinute.set(point.timestamp.getTime(), point.value);
+    }
+
+    let i = 0;
+    let lost = 1;
+    let numberForAverage = 0;
+    let previous = 0;
+    let previousRunStatus = false;
+    let averageRaw = 0;
+    let maximumRaw = 0;
+    let runningMinutes = 0;
+
+    for (let minute = startMs; minute <= endMs; minute += MINUTE_MS) {
+      const value = valueByMinute.get(minute) || 0;
+
+      if (value !== 0) {
+        if (i === 0) {
+          previous = value;
+        } else {
+          previousRunStatus = false;
+          if (value > previous) {
+            const delta = value - previous;
+            const rpm = delta / pulse;
+
+            if (rpm <= maximumRpm) {
+              if (lost > 1) {
+                if (delta / lost > maximumRaw) maximumRaw = delta / lost;
+                lost = 1;
+              } else if (delta > maximumRaw) {
+                maximumRaw = delta;
+              }
+              averageRaw += delta;
+              numberForAverage += 1;
+            }
+
+            if (auxiliary || rpm >= runningThresholdRpm) runningMinutes += 1;
+            previousRunStatus = true;
+            previous = value;
+          } else {
+            previous = value;
+          }
+        }
+        i += 1;
+      } else if (previousRunStatus) {
+        runningMinutes += 1;
+        i += 1;
+        lost += 1;
+      }
+    }
+
+    return {
+      averageRpm: numberForAverage > 0 ? averageRaw / pulse / numberForAverage : 0,
+      maximumRpm: maximumRaw / pulse,
+      runningHours: runningMinutes / 60,
+    };
+  }
+
+  /**
+   * Protect Page-1 fuel totals from a mismatched/reset API2 totalizer while
+   * keeping the exact legacy min/max result whenever it is physically valid.
+   *
+   * If the independent IN/OUT spans produce a negative daily fuel value, pair
+   * exact-minute IN and OUT readings into a net cumulative fuel counter and sum
+   * only physically plausible positive net growth. This also bridges historian
+   * gaps (the official SC WINTER PDF can have zero hourly fuel during a gap while
+   * its Page-1 daily total still includes the fuel consumed across that gap).
+   */
+  private resolveScWinterDailyFuel(
+    legacyTotal: number,
+    inputPoints: readonly NumericPoint[],
+    outputPoints: readonly NumericPoint[],
+    minuteFuelMap: Map<number, number>,
+    label: string,
+  ): ScWinterFuelResolution {
+    const acceptedMinuteFuel = Math.max(0, this.sumMap(minuteFuelMap));
+
+    if (Number.isFinite(legacyTotal) && legacyTotal >= 0) {
+      return {
+        value: legacyTotal,
+        legacyTotal,
+        acceptedMinuteFuel,
+        method: 'legacy',
+      };
+    }
+
+    // If the legacy independent FIN/FOUT span becomes negative because one side
+    // reset/rolled over, recover from a synchronized net cumulative counter.
+    // The recovered daily value must be at least the accepted minute-fuel lower
+    // bound and must remain inside SC WINTER's legacy FIN daily range (< 28,000 L).
+    const gapSafe = this.calculateGapSafeNetFuel(inputPoints, outputPoints, 300);
+    const recoveryIsPlausible =
+      Number.isFinite(gapSafe) &&
+      gapSafe > 0 &&
+      gapSafe + 0.01 >= acceptedMinuteFuel &&
+      gapSafe < 28_000;
+
+    if (recoveryIsPlausible) {
+      const warning =
+        `${label}: the legacy FIN/FOUT daily span was invalid (${this.formatDiagnosticNumber(legacyTotal)} L), ` +
+        `so the report used synchronized net-totalizer recovery (${this.formatDiagnosticNumber(gapSafe)} L).`;
+      console.warn(`[SC WINTER] ${warning}`, { legacyTotal, recoveredTotal: gapSafe, acceptedMinuteFuel });
+      return {
+        value: gapSafe,
+        legacyTotal,
+        acceptedMinuteFuel,
+        method: 'gap-safe-recovery',
+        warning,
+      };
+    }
+
+    // Last-resort lower-bound fallback: keep the report page open and never show
+    // a negative customer fuel value. The UI receives an explicit quality warning
+    // so this fallback cannot be mistaken for verified PDF parity.
+    const fallback = Math.max(0, acceptedMinuteFuel);
+    const warning =
+      `${label}: the daily totalizer could not be validated; showing accepted minute fuel ` +
+      `(${this.formatDiagnosticNumber(fallback)} L) as an unverified lower-bound fallback.`;
+    console.warn(`[SC WINTER] ${warning}`, { legacyTotal, acceptedMinuteFuel, gapSafe });
+    return {
+      value: fallback,
+      legacyTotal,
+      acceptedMinuteFuel,
+      method: 'accepted-minute-fallback',
+      warning,
+    };
+  }
+
+  private formatDiagnosticNumber(value: number): string {
+    return Number.isFinite(value) ? value.toFixed(2) : String(value);
+  }
+
+  private calculateGapSafeNetFuel(
+    inputPoints: readonly NumericPoint[],
+    outputPoints: readonly NumericPoint[],
+    maxFuelPerMinute: number,
+  ): number {
+    const valid = (value: number): boolean =>
+      Number.isFinite(value) && value > 0 && value !== 999_999 && value < 90_000_000;
+
+    const input = new Map<number, number>();
+    const output = new Map<number, number>();
+    for (const point of inputPoints) if (valid(point.value)) input.set(point.timestamp.getTime(), point.value);
+    for (const point of outputPoints) if (valid(point.value)) output.set(point.timestamp.getTime(), point.value);
+
+    const commonMinutes = Array.from(input.keys())
+      .filter((minute) => output.has(minute))
+      .sort((a, b) => a - b);
+
+    let total = 0;
+    let previousNet: number | null = null;
+    let previousMinute: number | null = null;
+
+    for (const minute of commonMinutes) {
+      const net = (input.get(minute) || 0) - (output.get(minute) || 0);
+      if (!Number.isFinite(net)) continue;
+
+      if (previousNet !== null && previousMinute !== null) {
+        const gapMinutes = Math.max(1, Math.round((minute - previousMinute) / MINUTE_MS));
+        const delta = net - previousNet;
+        const maximumPlausible = maxFuelPerMinute * gapMinutes;
+
+        // Positive net growth is actual fuel consumption. A negative jump means
+        // one side reset/rolled over; re-baseline instead of subtracting fuel.
+        if (delta >= 0 && delta <= maximumPlausible) total += delta;
+      }
+
+      previousNet = net;
+      previousMinute = minute;
+    }
+
+    return total;
   }
 
   private buildCounterRateMap(

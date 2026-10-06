@@ -37,10 +37,10 @@ export const BAHTERA_ZAMRUD_REPORT_PROFILE: LiveReportVesselProfile = {
     { key: 'other', label: 'Other', codes: [15, '15'] },
   ],
   engines: [
-    { key: 'dg1', label: 'DG1', kind: 'generator', flowSupplyTags: ['DG1-FIN-VTOTAL', 'BB_ZAMRUD-DG1-FIN-VTOTAL'], flowReturnTags: ['DG1-FOUT-RAW-VTOTAL', 'BB_ZAMRUD-DG1-FOUT-RAW-VTOTAL'], loadTags: ['DG1-GEN-LOAD-KW', 'BB_ZAMRUD-DG1-GEN-LOAD-KW'] },
-    { key: 'dg2', label: 'DG2', kind: 'generator', flowSupplyTags: ['DG2-FIN-VTOTAL', 'BB_ZAMRUD-DG2-FIN-VTOTAL'], flowReturnTags: ['DG2-FOUT-RAW-VTOTAL', 'BB_ZAMRUD-DG2-FOUT-RAW-VTOTAL'], loadTags: ['DG2-GEN-LOAD-KW', 'BB_ZAMRUD-DG2-GEN-LOAD-KW'] },
-    { key: 'dg3', label: 'DG3', kind: 'generator', flowSupplyTags: ['DG3-FIN-VTOTAL', 'BB_ZAMRUD-DG3-FIN-VTOTAL'], flowReturnTags: ['DG3-FOUT-RAW-VTOTAL', 'BB_ZAMRUD-DG3-FOUT-RAW-VTOTAL'], loadTags: ['DG3-GEN-LOAD-KW', 'BB_ZAMRUD-DG3-GEN-LOAD-KW'] },
-    { key: 'eg', label: 'EG', kind: 'generator', flowSupplyTags: ['DG4-FIN-VTOTAL', 'BB_ZAMRUD-DG4-FIN-VTOTAL'], flowReturnTags: ['DG4-FOUT-RAW-VTOTAL', 'BB_ZAMRUD-DG4-FOUT-RAW-VTOTAL'], loadTags: ['DG4-GEN-LOAD-KW', 'BB_ZAMRUD-DG4-GEN-LOAD-KW'] },
+    { key: 'dg1', label: 'DG1', kind: 'generator', flowSupplyTags: ['DG1-FIN-VTOTAL', 'BB_ZAMRUD-DG1-FIN-VTOTAL'], flowReturnTags: ['DG1-FOUT-RAW-VTOTAL', 'BB_ZAMRUD-DG1-FOUT-RAW-VTOTAL', 'DG1-FOUT-VTOTAL', 'BB_ZAMRUD-DG1-FOUT-VTOTAL'], loadTags: ['DG1-GEN-LOAD-KW', 'BB_ZAMRUD-DG1-GEN-LOAD-KW'] },
+    { key: 'dg2', label: 'DG2', kind: 'generator', flowSupplyTags: ['DG2-FIN-VTOTAL', 'BB_ZAMRUD-DG2-FIN-VTOTAL'], flowReturnTags: ['DG2-FOUT-RAW-VTOTAL', 'BB_ZAMRUD-DG2-FOUT-RAW-VTOTAL', 'DG2-FOUT-VTOTAL', 'BB_ZAMRUD-DG2-FOUT-VTOTAL'], loadTags: ['DG2-GEN-LOAD-KW', 'BB_ZAMRUD-DG2-GEN-LOAD-KW'] },
+    { key: 'dg3', label: 'DG3', kind: 'generator', flowSupplyTags: ['DG3-FIN-VTOTAL', 'BB_ZAMRUD-DG3-FIN-VTOTAL'], flowReturnTags: ['DG3-FOUT-RAW-VTOTAL', 'BB_ZAMRUD-DG3-FOUT-RAW-VTOTAL', 'DG3-FOUT-VTOTAL', 'BB_ZAMRUD-DG3-FOUT-VTOTAL'], loadTags: ['DG3-GEN-LOAD-KW', 'BB_ZAMRUD-DG3-GEN-LOAD-KW'] },
+    { key: 'eg', label: 'EG', kind: 'generator', flowSupplyTags: ['DG4-FIN-VTOTAL', 'BB_ZAMRUD-DG4-FIN-VTOTAL'], flowReturnTags: ['DG4-FOUT-RAW-VTOTAL', 'BB_ZAMRUD-DG4-FOUT-RAW-VTOTAL', 'DG4-FOUT-VTOTAL', 'BB_ZAMRUD-DG4-FOUT-VTOTAL'], loadTags: ['DG4-GEN-LOAD-KW', 'BB_ZAMRUD-DG4-GEN-LOAD-KW'] },
   ],
   sourceReport: 'SCReportingService / BahteraZamrud legacy Daily PDF rules',
 };

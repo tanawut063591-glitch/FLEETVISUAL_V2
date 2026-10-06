@@ -3,6 +3,7 @@ import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from '../../common/report-cache.util';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -11,9 +12,9 @@ import {
   VesselModeHistoryConfig,
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
+import { exactMinutePoints } from '../../common/legacy-daily-fuel';
 import {
   buildGpsPdfParityModeSummary,
-  buildLegacyPdfFuelDeltaMap,
   isCompletedDailyWindow,
 } from '../../common/pdf-mode-parity';
 import {
@@ -202,7 +203,9 @@ interface HourAccumulator {
 }
 
 const MINUTE_MS = 60_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
+const LIVE_REPORT_CACHE_TTL_MS = 30_000;
+const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -231,6 +234,17 @@ const TAGS = {
 } as const;
 
 const ALL_TAGS = Object.values(TAGS);
+
+
+// SC PAILIN uses the same four-band GPS minute model family as SC WINTER / SC CHOLUEDEE.
+// Keep SC PAILIN's verified Passage boundary at 7 kn: the original PDF can report Passage
+// average speed below 8 kn (for example 7.50 kn on 02-Oct-2026), so copying CHOLUEDEE's
+// final 8-kn boundary would move valid Passage minutes into Manoeuvring.
+const SC_PAILIN_MODE_SPEED = {
+  standbyUpperExclusive: 1,
+  cargoUpperExclusive: 3,
+  passageLowerInclusive: 7,
+} as const;
 
 @Injectable({ providedIn: 'root' })
 export class ScPailinReportService implements VesselReportAdapter {
@@ -387,9 +401,9 @@ export class ScPailinReportService implements VesselReportAdapter {
     const request$ = historianRequest$.pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
-          this.detailedReportCache.set(key, {
+          setBoundedReportCache(this.detailedReportCache, key, {
             value,
-            expiresAt: Date.now() + CACHE_TTL_MS,
+            expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
           });
         }),
         catchError((error) => throwError(() => error)),
@@ -434,9 +448,12 @@ export class ScPailinReportService implements VesselReportAdapter {
     const request$ = from(chunks).pipe(
       // Two concurrent day-sized historian requests keep monthly views responsive
       // without asking the backend for a very large multi-tag, 31-day payload at once.
+      // Long range/month reports are intentionally limited to one day bundle at a time.
+      // Each bundle already reads at most two historian tags concurrently, so the
+      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        2,
+        1,
       ),
       toArray(),
       map((reports) =>
@@ -448,9 +465,9 @@ export class ScPailinReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        this.periodReportCache.set(key, {
+        setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + CACHE_TTL_MS,
+          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
@@ -1211,37 +1228,109 @@ export class ScPailinReportService implements VesselReportAdapter {
           mode.runningHours += 1 / 60;
           mode.distanceNm += distance;
         }
-        if (modeKey === 'passage') {
-          passageMinuteKeys.push(bucket);
-        }
+        // Passage ownership is rebuilt below from the exact-minute PDF mode engine.
+        // Do not mix this generic/floored UI loop with the legacy minute grid.
       }
     }
 
-    const pdfModePMEFuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.pmeFuelIn)) || [],
-      series.get(this.tagKey(TAGS.pmeFuelOut)) || [],
-      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
-    );
-    const pdfModeSMEFuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.smeFuelIn)) || [],
-      series.get(this.tagKey(TAGS.smeFuelOut)) || [],
-      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
-    );
-    const pdfModePAEFuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.paeFuelIn)) || [],
-      series.get(this.tagKey(TAGS.paeFuelOut)) || [],
-      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
-    );
-    const pdfModeCAEFuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.caeFuelIn)) || [],
-      series.get(this.tagKey(TAGS.caeFuelOut)) || [],
-      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
-    );
-    const pdfModeSAEFuel = buildLegacyPdfFuelDeltaMap(
-      series.get(this.tagKey(TAGS.saeFuelIn)) || [],
-      series.get(this.tagKey(TAGS.saeFuelOut)) || [],
-      { supplyMaxDelta: 300, returnMaxDelta: 300, recoverAfterRejectedJump: true, minuteMs: MINUTE_MS },
-    );
+    // Shared with the verified 4-mode family: Page-2 Mode allocation must use the
+    // exact-minute legacy grid. The fuel state machine below, however, is SC PAILIN-
+    // specific and follows SCPailin.cs rather than copying WINTER/CHOLUEDEE blindly.
+    const pdfFuelPoints = (tag: string) =>
+      exactMinutePoints(
+        series.get(this.tagKey(tag)) || [],
+        minuteStart,
+        pdfModeDataEnd,
+      );
+
+    // SC PAILIN is NOT identical to the generic SC WINTER / SC CHOLUEDEE
+    // fuel-by-mode state machine. Reproduce SCPailin.cs GetDataFuelConsumption()
+    // literally here so Page 2 follows the original PDF source instead of a
+    // family-level approximation.
+    //
+    // Exact C# rules for every FIN/FOUT totalizer:
+    //   - ignore value == 0 (negative/bad values still advance the C# sample index)
+    //   - first non-zero sample becomes the baseline
+    //   - accepted increasing step: <= 300
+    //   - rejected jump recovery uses prevDataAfterLost exactly like C#
+    //   - reset baseline is accepted only in the 500..20,000 range
+    //   - importantly, there is NO generic "second sample becomes baseline" rule
+    //     in SCPailin.cs.
+    const buildScPailinTotalizerDelta = (
+      points: readonly { timestamp: Date; value: number }[],
+    ): Map<number, number> => {
+      const result = new Map<number, number>();
+      let sampleIndex = 0;
+      let previous = 0;
+      let previousAfterLost = 0;
+
+      for (const point of points) {
+        const value = Number(point.value);
+        if (!Number.isFinite(value) || value === 0) continue;
+
+        if (sampleIndex === 0) {
+          previous = value;
+        } else if (value > previous) {
+          const delta = value - previous;
+          if (delta <= 300) {
+            result.set(point.timestamp.getTime(), delta);
+            previous = value;
+            previousAfterLost = 0;
+          } else {
+            if (previousAfterLost !== 0 && previousAfterLost < value) {
+              result.set(point.timestamp.getTime(), value - previousAfterLost);
+              previous = value;
+              previousAfterLost = 0;
+            }
+            // The original C# assigns this even after a successful recovery.
+            previousAfterLost = value;
+          }
+        } else if (value >= 0 && value <= 20_000 && value >= 500) {
+          previous = value;
+        }
+
+        sampleIndex += 1;
+      }
+
+      return result;
+    };
+
+    const buildScPailinNetFuel = (
+      supplyTag: string,
+      returnTag: string,
+    ): Map<number, number> => {
+      const supply = buildScPailinTotalizerDelta(pdfFuelPoints(supplyTag));
+      const returned = buildScPailinTotalizerDelta(pdfFuelPoints(returnTag));
+      const minutes = new Set<number>([...supply.keys(), ...returned.keys()]);
+      const result = new Map<number, number>();
+      for (const minute of minutes) {
+        result.set(minute, (supply.get(minute) || 0) - (returned.get(minute) || 0));
+      }
+      return result;
+    };
+
+    const pdfModePMEFuel = buildScPailinNetFuel(TAGS.pmeFuelIn, TAGS.pmeFuelOut);
+    const pdfModeSMEFuel = buildScPailinNetFuel(TAGS.smeFuelIn, TAGS.smeFuelOut);
+    const pdfModePAEFuel = buildScPailinNetFuel(TAGS.paeFuelIn, TAGS.paeFuelOut);
+    const pdfModeSAEFuel = buildScPailinNetFuel(TAGS.saeFuelIn, TAGS.saeFuelOut);
+
+    // Exact SCPailin.cs minute fuel (dr2[9]):
+    //   SME: only positive FIN-FOUT
+    //   PME: only positive FIN-FOUT
+    //   CAE: deliberately 0 (the subtraction is commented out in legacy C#)
+    //   SAE: signed FIN-FOUT
+    //   PAE: signed FIN-FOUT
+    // Page-1 Total Fuel still includes CAE. The legacy report then scales the raw
+    // four-source Mode fuel by sumConsumption / sumCon, which proportionally
+    // redistributes the Page-1 total (including CAE) across the four modes.
+    const scPailinLegacyMinuteFuel = (minute: number): number => {
+      const pmeNet = pdfModePMEFuel.get(minute) || 0;
+      const smeNet = pdfModeSMEFuel.get(minute) || 0;
+      const paeNet = pdfModePAEFuel.get(minute) || 0;
+      const saeNet = pdfModeSAEFuel.get(minute) || 0;
+
+      return Math.max(0, pmeNet) + Math.max(0, smeNet) + saeNet + paeNet;
+    };
 
     const pdfParityMode = buildGpsPdfParityModeSummary({
       modes: SC_PAILIN_REPORT_PROFILE.modes,
@@ -1251,18 +1340,26 @@ export class ScPailinReportService implements VesselReportAdapter {
       minuteMs: MINUTE_MS,
       officialTotalFuel: totalFuelUsed,
       gpsSpeed: pdfModeGpsSpeed,
-      minuteFuelAt: (minute) =>
-        (pdfModePMEFuel.get(minute) || 0) +
-        (pdfModeSMEFuel.get(minute) || 0) +
-        (pdfModePAEFuel.get(minute) || 0) +
-        (pdfModeCAEFuel.get(minute) || 0) +
-        (pdfModeSAEFuel.get(minute) || 0),
+      minuteFuelAt: scPailinLegacyMinuteFuel,
       resolveModeLabel: (speed) => this.resolveModeFromGpsSpeed(speed),
       resolveModeKey: (label) => this.resolveModeProfileKey(label),
       standbyLabel: 'Standby',
+      // Match the legacy System.Single accumulation/rounding used by this report family.
       legacySinglePrecision: true,
+      // Unlike SC WINTER, SC PAILIN normalizes Mode fuel back to Page-1 official Total Fuel.
+      scaleFuelToOfficialTotal: true,
     });
     const modeSummary = pdfParityMode.modeSummary as ScPailinModeSummaryRow[];
+
+    // Page 3 must use exactly the same Passage minutes as Page 2. Reusing the generic
+    // minute loop can disagree on off-second / missing historian rows even when the
+    // displayed four Mode thresholds are identical.
+    const passageModeKey = this.resolveModeProfileKey('Passage');
+    passageMinuteKeys.push(
+      ...(pdfParityMode.minuteKeysByMode.get(passageModeKey) || []).filter(
+        (minute) => minute <= minuteEnd,
+      ),
+    );
 
     const passageSummary = this.buildPassageSummary(
       passageMinuteKeys,
@@ -2153,16 +2250,28 @@ export class ScPailinReportService implements VesselReportAdapter {
 
   private resolveModeFromGpsSpeed(speed: number | null): string | null {
     if (speed === null || !Number.isFinite(speed)) return null;
-    if (speed < 1) return 'Standby';
-    if (speed < 3) return 'Cargo Operation';
-    if (speed < 7) return 'Manoeuvring';
+
+    // SCPailin.cs stores GPSSpd in a System.Single DataColumn before applying the
+    // <1 / <3 / <7 comparisons. Keep the same 32-bit precision at the boundaries.
+    const legacySpeed = Math.fround(speed);
+    if (legacySpeed < SC_PAILIN_MODE_SPEED.standbyUpperExclusive) return 'Standby';
+    if (legacySpeed < SC_PAILIN_MODE_SPEED.cargoUpperExclusive) return 'Cargo Operation';
+    if (legacySpeed < SC_PAILIN_MODE_SPEED.passageLowerInclusive) return 'Manoeuvring';
     return 'Passage';
   }
 
   private buildModeReason(speed: number | null, modeLabel: string): string {
     if (speed === null || !Number.isFinite(speed)) return `Derived SC PAILIN mode: ${modeLabel}.`;
-    const band = speed < 1 ? '< 1 kn' : speed < 3 ? '1-<3 kn' : speed < 7 ? '3-<7 kn' : '>= 7 kn';
-    return `Derived from A07-VES-GPS-SPEED ${speed.toFixed(2)} kn (${band}) = ${modeLabel}.`;
+    const legacySpeed = Math.fround(speed);
+    const band =
+      legacySpeed < SC_PAILIN_MODE_SPEED.standbyUpperExclusive
+        ? `< ${SC_PAILIN_MODE_SPEED.standbyUpperExclusive} kn`
+        : legacySpeed < SC_PAILIN_MODE_SPEED.cargoUpperExclusive
+          ? `${SC_PAILIN_MODE_SPEED.standbyUpperExclusive}-<${SC_PAILIN_MODE_SPEED.cargoUpperExclusive} kn`
+          : legacySpeed < SC_PAILIN_MODE_SPEED.passageLowerInclusive
+            ? `${SC_PAILIN_MODE_SPEED.cargoUpperExclusive}-<${SC_PAILIN_MODE_SPEED.passageLowerInclusive} kn`
+            : `>= ${SC_PAILIN_MODE_SPEED.passageLowerInclusive} kn`;
+    return `Derived from A07-VES-GPS-SPEED ${legacySpeed.toFixed(2)} kn (${band}) = ${modeLabel}.`;
   }
 
   private parseNumber(rawValue: unknown): number | null {

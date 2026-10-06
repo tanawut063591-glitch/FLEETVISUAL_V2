@@ -1,4 +1,8 @@
-import { buildGpsPdfParityModeSummary, scaleModeDetailFuelToTarget } from './pdf-mode-parity';
+import {
+  buildGpsPdfParityModeSummary,
+  buildLegacyPdfFuelDeltaMap,
+  scaleModeDetailFuelToTarget,
+} from './pdf-mode-parity';
 
 describe('SC GLORY 1 PDF/Excel mode parity', () => {
   it('reproduces the 13-Sep-2026 verified PDF aggregate formula', () => {
@@ -187,6 +191,56 @@ describe('SC GLORY 1 PDF/Excel mode parity', () => {
     }));
   });
 
+  it('preserves SC WINTER negative Standby residual fuel percent only when explicitly enabled', () => {
+    const minuteMs = 60_000;
+    const modes = [
+      { key: 'standby', label: 'Standby' },
+      { key: 'cargo-operation', label: 'Cargo Operation' },
+      { key: 'manoeuvring', label: 'Manoeuvring' },
+      { key: 'passage', label: 'Passage' },
+    ] as const;
+
+    const gpsSpeed = new Map<number, number>([
+      [0, 0],
+      [minuteMs, 1],
+      [2 * minuteMs, 2],
+      [3 * minuteMs, 3],
+    ]);
+    const fuel = new Map<number, number>([
+      [0, -1693],
+      [minuteMs, 314],
+      [2 * minuteMs, 3477],
+      [3 * minuteMs, 65],
+    ]);
+    const labelBySpeed = ['Standby', 'Cargo Operation', 'Manoeuvring', 'Passage'];
+    const keyForLabel = (label: string): string =>
+      modes.find((mode) => mode.label === label)?.key || 'standby';
+
+    const shared = {
+      modes,
+      minuteStart: 0,
+      dataEnd: 3 * minuteMs,
+      completedDaily: false,
+      minuteMs,
+      officialTotalFuel: 2163,
+      gpsSpeed,
+      minuteFuelAt: (minute: number) => fuel.get(minute) || 0,
+      resolveModeLabel: (speed: number) => labelBySpeed[speed] || 'Standby',
+      resolveModeKey: keyForLabel,
+      standbyLabel: 'Standby',
+      scaleFuelToOfficialTotal: false,
+    } as const;
+
+    const legacy = buildGpsPdfParityModeSummary({
+      ...shared,
+      allowNegativeResidualFuelPercent: true,
+    });
+    const safeDefault = buildGpsPdfParityModeSummary(shared);
+
+    expect(legacy.modeSummary.find((row) => row.key === 'standby')?.fuelPercent).toBe(-78.28);
+    expect(safeDefault.modeSummary.find((row) => row.key === 'standby')?.fuelPercent).toBe(0);
+  });
+
   it('keeps per-mode equipment fuel aligned with the normalized page-2 mode total', () => {
     const summary = {
       mainEngines: [
@@ -219,6 +273,63 @@ describe('SC GLORY 1 PDF/Excel mode parity', () => {
     expect(scaled.mainEngines[0].fuelUsed).toBe(-75);
     expect(scaled.auxFuel[0].fuelUsed).toBe(-25);
     expect(scaled.mainEngineFuelTotal + scaled.auxiliaryFuelTotal).toBe(-100);
+  });
+
+
+  it('keeps :00.xxx logger rows on the PDF minute grid and rejects off-second rows', () => {
+    const minuteMs = 60_000;
+    const at = (minute: number, second: number, millisecond: number, value: number) => ({
+      timestamp: new Date(minute * minuteMs + second * 1000 + millisecond),
+      value,
+    });
+
+    const fuel = buildLegacyPdfFuelDeltaMap(
+      [
+        at(0, 0, 100, 1000),
+        at(1, 0, 200, 1010),
+        // Must be ignored by the legacy fixed-minute DataTable join.
+        at(2, 23, 0, 1030),
+        at(3, 0, 500, 1040),
+      ],
+      [],
+      {
+        supplyMaxDelta: 100,
+        returnMaxDelta: 100,
+        minuteMs,
+        skipOnlyExactZero: true,
+      },
+    );
+
+    expect(fuel.get(1 * minuteMs)).toBe(10);
+    expect(fuel.has(2 * minuteMs)).toBeFalse();
+    // 00:02:23 is ignored, so the next accepted delta is 1040 - 1010 = 30.
+    expect(fuel.get(3 * minuteMs)).toBe(30);
+  });
+
+  it('can preserve C# value != 0 totalizer state semantics for GLORY mode fuel', () => {
+    const minuteMs = 60_000;
+    const points = [
+      { timestamp: new Date(0), value: -5 },
+      { timestamp: new Date(minuteMs), value: 5 },
+      { timestamp: new Date(2 * minuteMs), value: 10 },
+    ];
+
+    const legacy = buildLegacyPdfFuelDeltaMap(points, [], {
+      supplyMaxDelta: 100,
+      returnMaxDelta: 100,
+      minuteMs,
+      skipOnlyExactZero: true,
+    });
+    const safeDefault = buildLegacyPdfFuelDeltaMap(points, [], {
+      supplyMaxDelta: 100,
+      returnMaxDelta: 100,
+      minuteMs,
+    });
+
+    expect(legacy.get(minuteMs)).toBe(10);
+    expect(legacy.get(2 * minuteMs)).toBe(5);
+    expect(safeDefault.has(minuteMs)).toBeFalse();
+    expect(safeDefault.get(2 * minuteMs)).toBe(5);
   });
 
 });

@@ -260,6 +260,64 @@ export class PremiumPieChartComponent implements OnInit, OnChanges, OnDestroy {
           },
         },
       },
+      responsive: {
+        rules: [
+          {
+            condition: { maxWidth: 900 },
+            chartOptions: {
+              chart: {
+                height: Math.max(285, Math.min(this.height, 310)),
+                spacingTop: 10,
+                spacingRight: 24,
+                spacingBottom: 10,
+                spacingLeft: 24,
+              },
+              plotOptions: {
+                pie: {
+                  size: denseChart ? '66%' : '72%',
+                  dataLabels: {
+                    distance: denseChart ? 10 : 14,
+                    padding: 2,
+                    style: {
+                      fontSize: denseChart ? '9px' : '10px',
+                      fontWeight: '600',
+                      textOutline: 'none',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          {
+            condition: { maxWidth: 520 },
+            chartOptions: {
+              chart: {
+                height: 292,
+                spacingTop: 8,
+                spacingRight: 16,
+                spacingBottom: 8,
+                spacingLeft: 16,
+              },
+              plotOptions: {
+                pie: {
+                  size: denseChart ? '58%' : '64%',
+                  slicedOffset: 10,
+                  dataLabels: {
+                    distance: 8,
+                    padding: 1,
+                    connectorWidth: 1,
+                    style: {
+                      fontSize: '9px',
+                      fontWeight: '600',
+                      textOutline: 'none',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
       series: this.hasData
         ? [
             {

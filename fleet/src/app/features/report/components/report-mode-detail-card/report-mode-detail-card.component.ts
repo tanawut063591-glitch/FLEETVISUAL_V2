@@ -58,9 +58,12 @@ export class ReportModeDetailCardComponent {
   }
 
   format(value: unknown, decimals = 2): string {
-    // Legacy PDF forms print structural/missing measurement cells as zero.
-    // Data-quality/coverage remains available at report level, while the mirrored
-    // PDF tables preserve the original 0.0 / 0.00 presentation.
+    // Preserve literal legacy calculation outputs when the vessel service marks
+    // them intentionally (e.g. SC RAJA shaft Average = NaN, SC EMERALD LPH = ∞).
+    // Null/undefined still mean a structural blank and render as PDF-style zero.
+    if (typeof value === 'number' && Number.isNaN(value)) return 'NaN';
+    if (value === Number.POSITIVE_INFINITY) return '∞';
+    if (value === Number.NEGATIVE_INFINITY) return '-∞';
     const parsed = value === null || value === undefined ? 0 : Number(value);
     const numeric = Number.isFinite(parsed) ? parsed : 0;
     return numeric.toLocaleString('en-US', {

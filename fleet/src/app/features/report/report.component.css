@@ -1,6 +1,6 @@
 /* Report component stylesheet intentionally minimal.
    Layout: src/styles/report/_report-layout.scss
-   Theme/appearance: src/styles/themes/report/
+   Theme/appearance: src/styles/report/_report-visual.scss + src/styles/themes/{light,dark}-theme.scss
 */
 
 /* Official PDF mode-detail pages. Keep this block visually consistent with the

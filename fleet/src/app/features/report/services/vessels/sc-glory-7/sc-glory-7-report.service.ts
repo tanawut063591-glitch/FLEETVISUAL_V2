@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Observable, from, of, throwError } from 'rxjs';
+import { Observable, forkJoin, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from '../../common/report-cache.util';
+import { OfficialPdfModeParityService } from '../../common/official-pdf-mode-parity.service';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -12,8 +14,9 @@ import {
   VesselReportAdapter,
 } from '../../common/vessel-report-adapter';
 import {
-  buildExactMinuteValueMap,
+  buildExactMinuteSingleValueMap,
   buildGpsPdfParityModeSummary,
+  buildLegacyPdfFuelDeltaMap,
 } from '../../common/pdf-mode-parity';
 import {
   SC_GLORY_7_MODE_HISTORIAN_TAG,
@@ -203,7 +206,9 @@ interface HourAccumulator {
 }
 
 const MINUTE_MS = 60_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
+const LIVE_REPORT_CACHE_TTL_MS = 30_000;
+const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -245,7 +250,10 @@ export class ScGlory7ReportService implements VesselReportAdapter {
   private readonly periodReportCache = new Map<string, { value: ScGlory7PeriodUiReport; expiresAt: number }>();
   private readonly periodReportInFlight = new Map<string, Observable<ScGlory7PeriodUiReport>>();
 
-  constructor(private newHttp: NewHttpClientService) {}
+  constructor(
+    private newHttp: NewHttpClientService,
+    private officialPdfMode: OfficialPdfModeParityService,
+  ) {}
 
   supports(vessel: any): boolean {
     const info = vessel?.fvInfo || vessel?.fv || vessel || {};
@@ -383,18 +391,39 @@ export class ScGlory7ReportService implements VesselReportAdapter {
           requestTags,
         )
       : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
-    const request$ = historianRequest$.pipe(
-        map((response) => this.buildDetailedDailyReport(response, start, end)),
-        tap((value) => {
-          this.detailedReportCache.set(key, {
-            value,
-            expiresAt: Date.now() + CACHE_TTL_MS,
-          });
-        }),
-        catchError((error) => throwError(() => error)),
-        finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: true }),
-      );
+    // Start the official PDF lookup in parallel with the historian bundle.
+    // This preserves the same final Mode values while removing the old serial wait
+    // (Historian -> PDF). It shortens completed Daily load time without adding
+    // extra requests or increasing historian concurrency.
+    const calculatedReport$ = historianRequest$.pipe(
+      map((response) => this.buildDetailedDailyReport(response, start, end)),
+    );
+    const officialModeRows$ = completedDaily
+      ? this.officialPdfMode.getDailyModeRows('SC GLORY 7', start)
+      : of(null);
+
+    const request$ = forkJoin({
+      value: calculatedReport$,
+      officialRows: officialModeRows$,
+    }).pipe(
+      map(({ value, officialRows }) =>
+        completedDaily
+          ? {
+              ...value,
+              modeSummary: this.officialPdfMode.overlayModeRows(value.modeSummary, officialRows),
+            }
+          : value,
+      ),
+      tap((value) => {
+        setBoundedReportCache(this.detailedReportCache, key, {
+          value,
+          expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
+        });
+      }),
+      catchError((error) => throwError(() => error)),
+      finalize(() => this.detailedReportInFlight.delete(key)),
+      shareReplay({ bufferSize: 1, refCount: true }),
+    );
 
     this.detailedReportInFlight.set(key, request$);
     return request$;
@@ -431,9 +460,12 @@ export class ScGlory7ReportService implements VesselReportAdapter {
     }
 
     const request$ = from(chunks).pipe(
+      // Long range/month reports are intentionally limited to one day bundle at a time.
+      // Each bundle already reads at most two historian tags concurrently, so the
+      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        2,
+        1,
       ),
       toArray(),
       map((reports) =>
@@ -445,9 +477,9 @@ export class ScGlory7ReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        this.periodReportCache.set(key, {
+        setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + CACHE_TTL_MS,
+          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
@@ -932,7 +964,7 @@ export class ScGlory7ReportService implements VesselReportAdapter {
 
     const gpsSpeed = this.buildInstantMap(gpsSpeedPoints);
     const pdfModeGpsSpeed = completedDaily
-      ? buildExactMinuteValueMap(gpsSpeedPoints, MINUTE_MS)
+      ? buildExactMinuteSingleValueMap(gpsSpeedPoints, MINUTE_MS)
       : gpsSpeed;
     const gpsLat = this.buildInstantMap(gpsLatPoints);
     const gpsLong = this.buildInstantMap(gpsLongPoints);
@@ -1039,12 +1071,45 @@ export class ScGlory7ReportService implements VesselReportAdapter {
       });
     }
 
-    const legacyPmeFuel = this.buildLegacyFuelDeltaMap(pmeFuelInPoints, pmeFuelOutPoints, 300, 300);
-    const legacyCmeFuel = this.buildLegacyFuelDeltaMap(cmeFuelInPoints, cmeFuelOutPoints, 300, 300);
-    const legacySmeFuel = this.buildLegacyFuelDeltaMap(smeFuelInPoints, smeFuelOutPoints, 300, 300);
-    const legacyPaeFuel = this.buildLegacyFuelDeltaMap(paeFuelInPoints, paeFuelOutPoints, 300, 1000);
-    const legacyPaePassageFuel = this.buildLegacyFuelDeltaMap(paeFuelInPoints, paeFuelOutPoints, 300, 300);
-    const legacySaeFuel = this.buildLegacyFuelDeltaMap(saeFuelInPoints, saeFuelOutPoints, 300, 300);
+    // PDF/C# parity: only whole-second :00.xxx rows may enter the fixed 1-minute
+    // DataTable. Never floor an off-second sample (for example 10:15:23) into 10:15.
+    const legacyFuelOptions = (supplyMaxDelta: number, returnMaxDelta: number) => ({
+      supplyMaxDelta,
+      returnMaxDelta,
+      recoverAfterRejectedJump: true,
+      minuteMs: MINUTE_MS,
+      skipOnlyExactZero: true,
+    });
+    const legacyPmeFuel = buildLegacyPdfFuelDeltaMap(
+      pmeFuelInPoints,
+      pmeFuelOutPoints,
+      legacyFuelOptions(300, 300),
+    );
+    const legacyCmeFuel = buildLegacyPdfFuelDeltaMap(
+      cmeFuelInPoints,
+      cmeFuelOutPoints,
+      legacyFuelOptions(300, 300),
+    );
+    const legacySmeFuel = buildLegacyPdfFuelDeltaMap(
+      smeFuelInPoints,
+      smeFuelOutPoints,
+      legacyFuelOptions(300, 300),
+    );
+    const legacyPaeFuel = buildLegacyPdfFuelDeltaMap(
+      paeFuelInPoints,
+      paeFuelOutPoints,
+      legacyFuelOptions(300, 1000),
+    );
+    const legacyPaePassageFuel = buildLegacyPdfFuelDeltaMap(
+      paeFuelInPoints,
+      paeFuelOutPoints,
+      legacyFuelOptions(300, 300),
+    );
+    const legacySaeFuel = buildLegacyPdfFuelDeltaMap(
+      saeFuelInPoints,
+      saeFuelOutPoints,
+      legacyFuelOptions(300, 300),
+    );
 
     const passageMinuteKeys: number[] = [];
     let gpsAvailableMinutes = 0;
@@ -1070,6 +1135,7 @@ export class ScGlory7ReportService implements VesselReportAdapter {
       resolveModeLabel: (speed) => this.resolveModeFromGpsSpeed(speed),
       resolveModeKey: (label) => this.resolveModeProfileKey(label),
       standbyLabel: 'Standby',
+      legacySinglePrecision: true,
     });
     const modeSummary = pdfParityMode.modeSummary as ScGlory7ModeSummaryRow[];
     const passageModeKey = this.resolveModeProfileKey('Passage');
@@ -1978,7 +2044,7 @@ export class ScGlory7ReportService implements VesselReportAdapter {
 
     for (const point of sorted) {
       const value = point.value;
-      if (!Number.isFinite(value) || value <= 0) continue;
+      if (!Number.isFinite(value) || value === 0) continue;
       if (nonZeroIndex === 0) {
         previous = value;
         nonZeroIndex += 1;

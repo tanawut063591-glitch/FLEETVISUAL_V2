@@ -1,6 +1,6 @@
-/* Fleet Visual Report — global feature layout/responsive rules. Theme colors live under styles/themes/report/. */
+/* Fleet Visual Report — global feature layout/responsive rules. Theme colors live in styles/themes/light-theme.scss and styles/themes/dark-theme.scss. */
 
-/* Layout-only stylesheet. Report colors/appearance are centralized in src/styles/themes/report/. */
+/* Layout-only stylesheet. Report colors/appearance are centralized in src/styles/report/_report-visual.scss and src/styles/themes/. */
 
 app-report {
 display: block;
@@ -9267,10 +9267,16 @@ width: var(--report-hour-label-col) !important;
   left: 0;
 }
 
-/* PDF-like speed axes. */
+/* PDF-like speed axes.
+   Keep the exact historian/PDF speed series and only increase the visual plot
+   height.  This makes the vertical speed scale much easier to read without
+   changing any GPS value, mode formula, PDF-parity calculation, or X-domain. */
 
 app-report .daily-speed-axis-frame {
-display: grid;
+  --report-speed-svg-height: 360px;
+  --report-speed-shell-height: 380px;
+  --report-speed-axis-height: 426px;
+  display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
   margin: 10px 10px 12px;
   overflow: hidden;
@@ -9278,19 +9284,21 @@ display: grid;
 }
 
 app-report .daily-speed-axis-frame .daily-chart-y-axis {
-height: 244px;
-  padding-bottom: 36px;
+  height: var(--report-speed-axis-height);
+  /* Align the first/last tick with SVG plot y=10..170 in viewBox 0 0 680 180. */
+  padding-top: 30px;
+  padding-bottom: 76px;
 }
 
 app-report .daily-speed-axis-frame__plot {
-min-width: 0;
+  min-width: 0;
   overflow: hidden;
 }
 
 app-report .daily-speed-axis-frame .daily-line-chart {
-width: 100% !important;
-  height: 200px !important;
-  min-height: 200px !important;
+  width: 100% !important;
+  height: var(--report-speed-shell-height) !important;
+  min-height: var(--report-speed-shell-height) !important;
   margin: 0 !important;
   padding: 10px 8px 0 !important;
   overflow: hidden !important;
@@ -9299,9 +9307,51 @@ width: 100% !important;
 }
 
 app-report .daily-speed-axis-frame .daily-line-chart svg {
-width: 100% !important;
-  height: 180px !important;
+  width: 100% !important;
+  height: var(--report-speed-svg-height) !important;
   overflow: hidden !important;
+}
+
+/* Responsive speed-chart height.  Desktop intentionally follows the taller
+   PDF-like aspect ratio; tablets and phones remain readable without consuming
+   the whole viewport. */
+@media (max-width: 1024px) {
+  app-report .daily-speed-axis-frame {
+    --report-speed-svg-height: 320px;
+    --report-speed-shell-height: 340px;
+    --report-speed-axis-height: 386px;
+  }
+
+  app-report .daily-speed-axis-frame .daily-chart-y-axis {
+    padding-top: 28px;
+    padding-bottom: 74px;
+  }
+}
+
+@media (max-width: 768px) {
+  app-report .daily-speed-axis-frame {
+    --report-speed-svg-height: 280px;
+    --report-speed-shell-height: 300px;
+    --report-speed-axis-height: 346px;
+  }
+
+  app-report .daily-speed-axis-frame .daily-chart-y-axis {
+    padding-top: 26px;
+    padding-bottom: 71px;
+  }
+}
+
+@media (max-width: 480px) {
+  app-report .daily-speed-axis-frame {
+    --report-speed-svg-height: 250px;
+    --report-speed-shell-height: 270px;
+    --report-speed-axis-height: 316px;
+  }
+
+  app-report .daily-speed-axis-frame .daily-chart-y-axis {
+    padding-top: 24px;
+    padding-bottom: 70px;
+  }
 }
 
 app-report .daily-speed-x-axis {
@@ -10332,15 +10382,13 @@ gap: 4px !important;
 }
 }
 
-app-report n
-
 /* ==========================================================================
    MODE SUMMARY COLUMN — LONG LABEL OVERFLOW FIX (2026-09-07)
    SC EMERALD has substantially longer operational-mode names than the GLORY
    vessels. Reserve a real label column and wrap inside that cell so text can
    never paint across the Fuel Consumption columns.
    ========================================================================== */
-.daily-mode-table-wrap {
+app-report .daily-mode-table-wrap {
 overflow-x: auto;
   overflow-y: hidden;
   scrollbar-gutter: stable;
@@ -11016,7 +11064,7 @@ app-report .report-full-daily--no-data > .report-table-panel {
 }
 
 /* ========================================================================== */
-/* PDF MODE DETAIL — shared layout (theme colors live in styles/themes/report) */
+/* PDF MODE DETAIL — shared layout (theme colors live in styles/themes/light-theme.scss / dark-theme.scss) */
 /* Added 2026-09-21. Keep this section neutral so Light/Dark switch is driven   */
 /* entirely by the global theme files rather than component-local hard-codes.  */
 /* ========================================================================== */
@@ -11107,5 +11155,1144 @@ app-report .pdf-mode-detail-utilization .report-book-table {
 @media (max-width: 960px) {
   app-report .pdf-mode-detail-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ========================================================================== */
+/* REPORT PRO V33 — PDF-readable charts + responsive finance-safe layout       */
+/* 2026-10-03: presentation only. No historian/calculation values are changed. */
+/* ========================================================================== */
+
+/* Speed Performance: use a taller plot similar to the legacy PDF so 1-knot
+   changes remain visually distinguishable. The SVG data/domain stay unchanged. */
+app-report .daily-speed-axis-frame {
+  --report-speed-svg-height: 440px;
+  --report-speed-shell-height: 460px;
+  --report-speed-axis-height: 506px;
+  grid-template-columns: 64px minmax(0, 1fr);
+  border: 1px solid var(--fv-border, #dbe5f1);
+  background: var(--fv-surface, #fff);
+}
+
+app-report .daily-speed-axis-frame .daily-chart-y-axis {
+  width: 64px;
+  padding-top: 31px;
+  padding-bottom: 75px;
+  font-variant-numeric: tabular-nums;
+}
+
+app-report .daily-speed-axis-frame .daily-line-chart {
+  background-image: linear-gradient(to bottom, rgba(86, 116, 153, .035), rgba(86, 116, 153, .01));
+}
+
+app-report .daily-speed-axis-frame .line-grid line {
+  stroke-opacity: .72;
+}
+
+app-report .daily-speed-axis-frame .speed-track {
+  stroke-width: 2.15 !important;
+  vector-effect: non-scaling-stroke;
+}
+
+app-report .daily-speed-x-axis span,
+app-report .daily-chart-y-axis span {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hourly bar charts: make the bars and engineering reference lines easier to
+   scan without altering the underlying values. On narrow screens the existing
+   synchronized horizontal scroller remains the interaction model. */
+app-report .daily-hourly-sync .daily-axis-chart__plot {
+  background-image:
+    linear-gradient(to top, rgba(84, 112, 148, .10) 1px, transparent 1px),
+    linear-gradient(to top, rgba(84, 112, 148, .045) 1px, transparent 1px);
+  background-size: 100% 25%, 100% 12.5%;
+  background-position: left bottom;
+}
+
+app-report .daily-hourly-sync .stack-column,
+app-report .daily-hourly-sync .single-column,
+app-report .daily-hourly-sync .daily-hour-bars {
+  min-width: 30px;
+}
+
+app-report .daily-hourly-sync .stack-bar,
+app-report .daily-hourly-sync .single-column > i,
+app-report .daily-hourly-sync .multi-bars {
+  filter: saturate(.95);
+}
+
+app-report .daily-hourly-sync .stack-column:hover,
+app-report .daily-hourly-sync .single-column:hover,
+app-report .daily-hourly-sync .daily-hour-bars:hover {
+  background: rgba(37, 99, 235, .045);
+}
+
+app-report .daily-hourly-sync .stack-column small,
+app-report .daily-hourly-sync .single-column small,
+app-report .daily-hourly-sync .daily-hour-bars small {
+  font-variant-numeric: tabular-nums;
+  font-size: 8.5px !important;
+  font-weight: 800 !important;
+}
+
+@media (max-width: 1024px) {
+  app-report .daily-speed-axis-frame {
+    --report-speed-svg-height: 360px;
+    --report-speed-shell-height: 380px;
+    --report-speed-axis-height: 426px;
+    grid-template-columns: 62px minmax(0, 1fr);
+  }
+  app-report .daily-speed-axis-frame .daily-chart-y-axis { width: 62px; }
+}
+
+@media (max-width: 768px) {
+  app-report .daily-speed-axis-frame {
+    --report-speed-svg-height: 310px;
+    --report-speed-shell-height: 330px;
+    --report-speed-axis-height: 376px;
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+  app-report .daily-speed-axis-frame .daily-chart-y-axis { width: 58px; }
+  app-report .daily-speed-x-axis span { font-size: 7.8px !important; }
+}
+
+@media (max-width: 480px) {
+  app-report .daily-speed-axis-frame {
+    --report-speed-svg-height: 280px;
+    --report-speed-shell-height: 300px;
+    --report-speed-axis-height: 346px;
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+  app-report .daily-speed-axis-frame .daily-chart-y-axis { width: 54px; }
+  app-report .daily-speed-axis-frame { margin-inline: 4px; }
+  app-report .daily-hourly-sync .stack-column,
+  app-report .daily-hourly-sync .single-column,
+  app-report .daily-hourly-sync .daily-hour-bars { min-width: 34px; }
+}
+
+/* REPORT PRO V32 — keep executive summary header on every vessel. */
+app-report .daily-util-caption--single {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  text-align: center;
+}
+
+/* ========================================================================== */
+/* REPORT PRO V38 — table frame integrity / PDF-like column proportions        */
+/* 2026-10-04: presentation-only. No historian or calculation logic changed.  */
+/* ========================================================================== */
+
+/* Every local table wrapper must stay inside the report route.  Earlier
+   responsive layers could leave some wrappers with a min-width larger than
+   the card, which made the far-right border (for example the EG column) look
+   clipped. Keep scrolling local to the wrapper instead. */
+app-report .report-book-table-wrap,
+app-report .report-book-section,
+app-report .report-book-table,
+app-report .daily-mode-table-wrap,
+app-report .hourly-table-wrap,
+app-report .daily-tracking-table-wrap {
+  box-sizing: border-box;
+}
+
+app-report .report-book-table-wrap {
+  max-width: 100%;
+}
+
+/* Standalone utilization tables do not have .report-book-section around them,
+   so give them a complete outer frame rather than relying on the last cell's
+   border. This keeps all four edges visible in light/dark themes. */
+app-report .report-table-frame {
+  min-width: 0 !important;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--report-table-frame-border, var(--fv-border, #dbe5f1));
+  border-radius: 8px;
+  background: var(--fv-surface, #ffffff);
+  background-clip: padding-box;
+  box-shadow: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-inline: contain;
+}
+
+app-report .report-table-frame .report-book-table {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  border-collapse: collapse;
+}
+
+/* PDF tables reserve roughly half of the row for the measured-value label.
+   Keeping the data columns equal after that improves scanability and prevents
+   the last generator column from being squeezed against the card edge. */
+app-report .daily-utilization-table .report-book-table th:first-child,
+app-report .daily-utilization-table .report-book-table td:first-child,
+app-report .pdf-mode-detail-utilization .report-book-table th:first-child,
+app-report .pdf-mode-detail-utilization .report-book-table td:first-child {
+  width: 50%;
+}
+
+app-report .daily-engine-grid .daily-pdf-table th:first-child,
+app-report .daily-engine-grid .daily-pdf-table td:first-child,
+app-report .pdf-mode-detail-grid .daily-pdf-table th:first-child,
+app-report .pdf-mode-detail-grid .daily-pdf-table td:first-child {
+  width: 58%;
+}
+
+app-report .daily-engine-grid--generator-only .daily-pdf-table th:first-child,
+app-report .daily-engine-grid--generator-only .daily-pdf-table td:first-child,
+app-report .pdf-mode-detail-page .pdf-mode-detail-grid .daily-pdf-table th:first-child,
+app-report .pdf-mode-detail-page .pdf-mode-detail-grid .daily-pdf-table td:first-child {
+  width: 60%;
+}
+
+/* One grid colour is used for both vertical and horizontal rules.  The outer
+   frame stays slightly stronger so a table never visually loses its right or
+   bottom edge in dark mode. */
+app-report .premium-daily-card .report-book-table th,
+app-report .premium-daily-card .report-book-table td,
+app-report .pdf-mode-detail-page .report-book-table th,
+app-report .pdf-mode-detail-page .report-book-table td {
+  border-color: var(--report-table-grid-border, var(--fv-border, #e2e8f0));
+}
+
+/* The wrapper owns the outer rectangle; last-cell borders remain suppressed to
+   avoid a double 2px edge. */
+app-report .report-table-frame .report-book-table th:last-child,
+app-report .report-table-frame .report-book-table td:last-child {
+  border-right: 0;
+}
+
+app-report .report-table-frame .report-book-table tbody tr:last-child th,
+app-report .report-table-frame .report-book-table tbody tr:last-child td,
+app-report .report-table-frame .report-book-table tfoot tr:last-child th,
+app-report .report-table-frame .report-book-table tfoot tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Standalone page-1/mode utilization strips must account for their margins in
+   their own width.  This removes the previous 100% + margin clipping case. */
+app-report .daily-utilization-table.report-table-frame {
+  width: calc(100% - 24px);
+  max-width: calc(100% - 24px);
+  margin: 0 12px 12px !important;
+}
+
+app-report .daily-utilization-table.report-table-frame .report-book-table {
+  min-width: 680px;
+}
+
+app-report .pdf-mode-detail-utilization.report-table-frame {
+  width: calc(100% - 20px);
+  max-width: calc(100% - 20px);
+  margin: 0 10px 10px !important;
+}
+
+app-report .pdf-mode-detail-utilization.report-table-frame .report-book-table {
+  min-width: 620px;
+}
+
+/* Header/data cells use tabular numbers and a small protected inset at the far
+   right so the final value never touches the card frame. */
+app-report .report-table-frame .report-book-table th:last-child,
+app-report .report-table-frame .report-book-table td:last-child {
+  padding-right: 12px;
+}
+
+@container report-dashboard (max-width: 640px) {
+  app-report .daily-utilization-table.report-table-frame {
+    width: calc(100% - 16px);
+    max-width: calc(100% - 16px);
+    margin-inline: 8px !important;
+  }
+
+  app-report .pdf-mode-detail-utilization.report-table-frame {
+    width: calc(100% - 14px);
+    max-width: calc(100% - 14px);
+    margin-inline: 7px !important;
+  }
+
+  /* Keep the wrapper fluid and the table scrollable; never make the wrapper
+     itself wider than the phone/tablet card. */
+  app-report .daily-utilization-table.report-table-frame,
+  app-report .pdf-mode-detail-utilization.report-table-frame {
+    min-width: 0 !important;
+  }
+
+  app-report .daily-utilization-table.report-table-frame .report-book-table,
+  app-report .pdf-mode-detail-utilization.report-table-frame .report-book-table {
+    min-width: 600px;
+  }
+}
+
+@container report-dashboard (max-width: 440px) {
+  app-report .daily-utilization-table.report-table-frame .report-book-table,
+  app-report .pdf-mode-detail-utilization.report-table-frame .report-book-table {
+    min-width: 560px;
+  }
+}
+
+/* PDF header cells (Average / Max. / Summary / DG1...EG) are centered even
+   though their body values are numeric.  Utilization values are also centered
+   in the legacy PDF, so do not let the generic .num rule pin EG to the edge. */
+app-report .report-book-table thead th.num,
+app-report .daily-mode-full-table thead th.num,
+app-report .daily-tracking-table thead th.num {
+  text-align: center;
+}
+
+app-report .daily-utilization-table tbody .num,
+app-report .pdf-mode-detail-utilization tbody .num {
+  text-align: center;
+}
+
+/* Passage/mode summary grids use table wrappers directly (without the
+   .report-book-section frame used on page 1). Give those direct children the
+   same complete perimeter so every PDF-like table has four visible edges. */
+app-report .daily-engine-grid > .report-book-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--report-table-frame-border, var(--fv-border, #dbe5f1));
+  border-radius: 8px;
+  background: var(--fv-surface, #ffffff);
+  background-clip: padding-box;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-inline: contain;
+}
+
+html[data-theme='dark'] app-report .daily-engine-grid > .report-book-table-wrap {
+  background: #0b0e12;
+}
+
+/* ========================================================================== */
+/* REPORT PRO V39 — complete perimeter audit for every PDF-like data surface  */
+/* 2026-10-04: visual-only. All calculations/historian requests stay intact.  */
+/* ========================================================================== */
+
+/* The base cell grid deliberately removes the last right/bottom borders.
+   Every table therefore needs an explicit owner for its outside rectangle.
+   This normalization covers page-1 sections, mode pages, hourly matrices,
+   tracking and trend tables so no edge disappears at the far right/bottom. */
+app-report .report-book-section,
+app-report .daily-engine-grid > .report-book-table-wrap,
+app-report .pdf-mode-detail-grid > .report-book-table-wrap,
+app-report .daily-mode-table-wrap,
+app-report .hourly-table-wrap,
+app-report .historical-daily-trend__table,
+app-report .daily-tracking-table-wrap {
+  border: 1px solid var(--report-table-frame-border, var(--fv-border, #dbe5f1));
+  background: var(--fv-surface, #ffffff);
+  background-clip: padding-box;
+}
+
+/* Keep the stronger perimeter separate from the lighter internal grid. */
+app-report .pdf-mode-detail-grid > .report-book-table-wrap,
+app-report .daily-mode-table-wrap,
+app-report .hourly-table-wrap,
+app-report .historical-daily-trend__table,
+app-report .daily-tracking-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-inline: contain;
+}
+
+/* In two-column mode pages each table owns its frame. This prevents the
+   Summary column on the right from visually merging into the card boundary. */
+app-report .pdf-mode-detail-grid > .report-book-table-wrap {
+  border-radius: 8px;
+}
+
+/* PDF headers are centered; row labels remain left aligned and numbers retain
+   tabular glyphs. This applies consistently to direct and component mode pages. */
+app-report .pdf-mode-detail-grid .report-book-table thead th.num,
+app-report .daily-engine-grid .report-book-table thead th.num,
+app-report .hourly-matrix thead th:not(:first-child) {
+  text-align: center;
+}
+
+/* Provide a protected inset for the final column on all report tables without
+   changing numeric values or table width calculations. */
+app-report .daily-pdf-table th:last-child,
+app-report .daily-pdf-table td:last-child,
+app-report .daily-mode-full-table th:last-child,
+app-report .daily-mode-full-table td:last-child,
+app-report .hourly-matrix th:last-child,
+app-report .hourly-matrix td:last-child,
+app-report .daily-tracking-table th:last-child,
+app-report .daily-tracking-table td:last-child {
+  padding-right: max(10px, env(safe-area-inset-right, 0px));
+}
+
+html[data-theme='dark'] app-report .report-book-section,
+html[data-theme='dark'] app-report .daily-engine-grid > .report-book-table-wrap,
+html[data-theme='dark'] app-report .pdf-mode-detail-grid > .report-book-table-wrap,
+html[data-theme='dark'] app-report .daily-mode-table-wrap,
+html[data-theme='dark'] app-report .hourly-table-wrap,
+html[data-theme='dark'] app-report .historical-daily-trend__table,
+html[data-theme='dark'] app-report .daily-tracking-table-wrap {
+  background: #0b0e12;
+}
+
+@container report-dashboard (max-width: 760px) {
+  /* On iPad/mobile, scrolling belongs to the table surface—not the page. */
+  app-report .pdf-mode-detail-grid > .report-book-table-wrap,
+  app-report .daily-mode-table-wrap,
+  app-report .hourly-table-wrap,
+  app-report .historical-daily-trend__table,
+  app-report .daily-tracking-table-wrap {
+    scrollbar-gutter: stable;
+  }
+}
+
+/* ========================================================================== */
+/* REPORT PRO V40 — final presentation polish                                  */
+/* 2026-10-06: visual/responsive only. No historian or calculation changes.    */
+/* ========================================================================== */
+
+/* A single geometry system keeps every vessel report visually consistent. */
+app-report .report-dashboard--daily {
+  --report-ui-radius-lg: 14px;
+  --report-ui-radius-md: 10px;
+  --report-ui-radius-sm: 7px;
+  --report-ui-section-gap: 12px;
+  --report-ui-cell-x: 10px;
+  --report-ui-cell-y: 8px;
+  --report-ui-touch: 44px;
+}
+
+app-report .report-full-daily,
+app-report .report-full-daily > *,
+app-report .premium-daily-card,
+app-report .premium-daily-card > *,
+app-report .daily-mode-visuals,
+app-report .daily-mode-visuals > *,
+app-report .daily-tracking-visual-grid,
+app-report .daily-tracking-visual-grid > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+app-report .report-full-daily {
+  gap: var(--report-ui-section-gap);
+}
+
+/* Section headers: stronger hierarchy, consistent spacing and no clipped copy. */
+app-report .premium-daily-card > .report-table-panel__header {
+  min-height: 68px;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px 13px;
+}
+
+app-report .premium-daily-card .report-table-panel__header > div:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+app-report .premium-daily-card .report-table-panel__header h2 {
+  margin: 0;
+  font-size: clamp(15px, 1.05vw, 17px);
+  line-height: 1.25;
+  letter-spacing: -0.018em;
+  text-wrap: balance;
+}
+
+app-report .premium-daily-card .report-table-panel__header p {
+  max-width: 92ch;
+  margin: 4px 0 0;
+  font-size: 9.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+app-report .report-table-panel__meta,
+app-report .daily-chart-header-stat {
+  align-self: center;
+  min-width: 128px;
+  max-width: 280px;
+}
+
+app-report .report-table-panel__meta strong,
+app-report .daily-chart-header-stat strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Table shell: the outer border owns the rectangle; internal rules stay crisp. */
+app-report .report-book-section,
+app-report .report-table-frame,
+app-report .daily-engine-grid > .report-book-table-wrap,
+app-report .pdf-mode-detail-grid > .report-book-table-wrap,
+app-report .daily-mode-table-wrap,
+app-report .hourly-table-wrap,
+app-report .historical-daily-trend__table,
+app-report .daily-tracking-table-wrap {
+  border-radius: var(--report-ui-radius-md);
+  background-clip: padding-box;
+}
+
+app-report .report-book-table,
+app-report .daily-mode-full-table,
+app-report .daily-tracking-table,
+app-report .hourly-matrix {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+app-report .premium-daily-card .report-book-table th,
+app-report .premium-daily-card .report-book-table td,
+app-report .pdf-mode-detail-page .report-book-table th,
+app-report .pdf-mode-detail-page .report-book-table td {
+  padding: var(--report-ui-cell-y) var(--report-ui-cell-x);
+  line-height: 1.35;
+}
+
+app-report .premium-daily-card .report-book-table thead th,
+app-report .pdf-mode-detail-page .report-book-table thead th {
+  min-height: 34px;
+  vertical-align: middle;
+  font-size: 9.5px;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+app-report .premium-daily-card .report-book-table tbody th,
+app-report .premium-daily-card .report-book-table tbody td {
+  font-size: 10px;
+}
+
+app-report .premium-daily-card .report-book-table tbody th {
+  line-height: 1.35;
+}
+
+app-report .premium-daily-card .report-book-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+app-report .daily-mode-full-table {
+  min-width: 820px;
+}
+
+app-report .daily-mode-full-table thead tr:first-child th {
+  min-height: 36px;
+  font-weight: 900;
+}
+
+app-report .daily-mode-full-table thead tr:nth-child(2) th {
+  min-height: 32px;
+  font-size: 9px;
+}
+
+app-report .daily-mode-name {
+  min-width: 178px;
+}
+
+app-report .daily-mode-name span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+app-report .daily-mode-dot {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .62);
+}
+
+/* Local scrolling only. The report page itself must never become wider than the viewport. */
+app-report .report-book-table-wrap,
+app-report .daily-mode-table-wrap,
+app-report .hourly-table-wrap,
+app-report .daily-tracking-table-wrap,
+app-report .historical-daily-trend__table {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+app-report .report-book-table-wrap::-webkit-scrollbar,
+app-report .daily-mode-table-wrap::-webkit-scrollbar,
+app-report .hourly-table-wrap::-webkit-scrollbar,
+app-report .daily-tracking-table-wrap::-webkit-scrollbar,
+app-report .historical-daily-trend__table::-webkit-scrollbar {
+  height: 7px;
+}
+
+/* Charts/maps use the same card rhythm as tables. */
+app-report .daily-mode-visuals--interactive {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px 12px 4px;
+}
+
+app-report .daily-tracking-visual-grid {
+  gap: 10px;
+  padding: 12px;
+}
+
+app-report .daily-map-card,
+app-report .premium-chart-section .daily-multi-bar-chart,
+app-report .premium-chart-section .daily-stacked-chart,
+app-report .premium-chart-section .daily-single-bar-chart,
+app-report .premium-chart-section .daily-line-chart {
+  border-radius: var(--report-ui-radius-md);
+}
+
+/* Keyboard/touch quality: clear focus without altering the report content. */
+app-report .pro-action-button:focus-visible,
+app-report .historical-ui-load:focus-visible,
+app-report .daily-details-toggle:focus-visible,
+app-report .daily-section-nav a:focus-visible,
+app-report select:focus-visible,
+app-report input:focus-visible,
+app-report button:focus-visible {
+  outline: 2px solid var(--report-blue, #2563eb);
+  outline-offset: 2px;
+}
+
+/* Compact desktop / iPad landscape. */
+@container report-dashboard (max-width: 1180px) {
+  app-report .premium-daily-card > .report-table-panel__header {
+    padding-inline: 14px;
+  }
+
+  app-report .daily-mode-visuals--interactive {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  app-report .daily-mode-full-table {
+    min-width: 780px;
+  }
+}
+
+/* iPad portrait: preserve two chart cards but make table interaction explicit. */
+@container report-dashboard (max-width: 900px) {
+  app-report .report-full-daily {
+    gap: 10px;
+  }
+
+  app-report .premium-daily-card {
+    border-radius: 12px;
+  }
+
+  app-report .premium-daily-card > .report-table-panel__header {
+    min-height: 0;
+    padding: 12px;
+  }
+
+  app-report .premium-daily-card .report-table-panel__header h2 {
+    font-size: 15px;
+  }
+
+  app-report .daily-mode-visuals--interactive {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    padding: 9px 9px 3px !important;
+  }
+
+  app-report .daily-mode-table-wrap {
+    margin: 9px !important;
+  }
+
+  app-report .daily-mode-full-table {
+    min-width: 760px;
+  }
+
+  /* Sticky row labels make wide PDF-style tables usable on tablet. */
+  app-report .daily-mode-full-table th:first-child,
+  app-report .daily-mode-full-table td:first-child,
+  app-report .daily-tracking-table th:first-child,
+  app-report .daily-tracking-table td:first-child,
+  app-report .hourly-matrix th:first-child,
+  app-report .hourly-matrix td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+  }
+
+  app-report .daily-mode-full-table thead th:first-child,
+  app-report .daily-tracking-table thead th:first-child,
+  app-report .hourly-matrix thead th:first-child {
+    z-index: 4;
+  }
+}
+
+/* Mobile: one-column reading flow, local table scroll, larger touch targets. */
+@container report-dashboard (max-width: 640px) {
+  app-report .report-dashboard--daily {
+    --report-ui-section-gap: 8px;
+    --report-ui-cell-x: 8px;
+    --report-ui-cell-y: 7px;
+  }
+
+  app-report .report-page:not(.report-page--official) {
+    padding-inline: max(6px, env(safe-area-inset-left)) max(6px, env(safe-area-inset-right));
+  }
+
+  app-report .premium-daily-card {
+    border-radius: 10px;
+  }
+
+  app-report .premium-daily-card > .report-table-panel__header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+    padding: 11px 10px 10px;
+  }
+
+  app-report .premium-daily-card .report-table-panel__header h2 {
+    font-size: 14px;
+    line-height: 1.28;
+  }
+
+  app-report .premium-daily-card .report-table-panel__header p {
+    max-width: none;
+    font-size: 8.5px;
+    line-height: 1.45;
+  }
+
+  app-report .report-table-panel__meta,
+  app-report .daily-chart-header-stat {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    text-align: left;
+  }
+
+  app-report .daily-mode-visuals--interactive {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 8px !important;
+    padding: 8px 7px 2px !important;
+  }
+
+  app-report .daily-mode-table-wrap,
+  app-report .daily-tracking-table-wrap,
+  app-report .hourly-table-wrap {
+    margin-inline: 7px !important;
+    border-radius: 8px;
+  }
+
+  app-report .daily-mode-full-table {
+    min-width: 720px;
+  }
+
+  app-report .daily-engine-grid .report-book-table {
+    min-width: 540px;
+  }
+
+  app-report .daily-utilization-table.report-table-frame .report-book-table,
+  app-report .pdf-mode-detail-utilization.report-table-frame .report-book-table {
+    min-width: 540px;
+  }
+
+  app-report .premium-daily-card .report-book-table thead th,
+  app-report .pdf-mode-detail-page .report-book-table thead th {
+    font-size: 9px;
+  }
+
+  app-report .premium-daily-card .report-book-table tbody th,
+  app-report .premium-daily-card .report-book-table tbody td {
+    font-size: 9.5px;
+  }
+
+  app-report .daily-map-card__title {
+    padding: 9px 10px;
+  }
+
+  app-report .daily-tracking-visual-grid .daily-route-plot,
+  app-report .daily-tracking-visual-grid .daily-route-plot svg,
+  app-report .daily-google-map-shell,
+  app-report .daily-google-map {
+    min-height: 240px;
+    height: 240px;
+  }
+
+  app-report .pro-action-button,
+  app-report .historical-ui-load,
+  app-report .daily-details-toggle,
+  app-report .daily-section-nav a {
+    min-height: var(--report-ui-touch);
+  }
+}
+
+/* Narrow phones: remove decorative density before reducing readable text. */
+@container report-dashboard (max-width: 440px) {
+  app-report .premium-daily-card > .report-table-panel__header {
+    padding-inline: 9px;
+  }
+
+  app-report .daily-mode-table-wrap,
+  app-report .daily-tracking-table-wrap,
+  app-report .hourly-table-wrap {
+    margin-inline: 6px !important;
+  }
+
+  app-report .daily-mode-full-table {
+    min-width: 680px;
+  }
+
+  app-report .daily-overview-card {
+    padding: 11px;
+  }
+
+  app-report .daily-overview-card__header em {
+    max-width: 42%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  app-report .premium-daily-card,
+  app-report .premium-daily-card *,
+  app-report app-premium-pie-chart * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ========================================================================== */
+/* REPORT PRO V42 — full-width desktop + edge/gutter integrity                */
+/* 2026-10-06: layout only. No historian/calculation/report values changed.   */
+/* ========================================================================== */
+
+/* The normal web report should use the full working area. A fixed 1680px cap
+   made the report look narrow on wide monitors and at browser zoom < 100%. */
+app-report .report-page:not(.report-page--official) .report-dashboard {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+}
+
+/* Horizontal-only table scrollers must not reserve a vertical scrollbar gutter.
+   That reserved strip was the dark/empty column visible at the far-right edge
+   of Engine Summary / utilization / machinery mode tables. */
+app-report .report-book-table-wrap,
+app-report .daily-mode-table-wrap,
+app-report .hourly-table-wrap,
+app-report .daily-tracking-table-wrap,
+app-report .historical-daily-trend__table,
+app-report .report-table-frame {
+  scrollbar-gutter: auto !important;
+}
+
+/* Keep the perimeter owned by the wrapper while ensuring the child reaches the
+   exact right edge when no horizontal scrolling is required. */
+app-report .report-book-section,
+app-report .daily-engine-grid > .report-book-table-wrap,
+app-report .pdf-mode-detail-grid > .report-book-table-wrap,
+app-report .daily-mode-table-wrap,
+app-report .hourly-table-wrap,
+app-report .daily-tracking-table-wrap,
+app-report .historical-daily-trend__table,
+app-report .report-table-frame {
+  max-width: 100%;
+  background-clip: padding-box;
+}
+
+app-report .report-book-table,
+app-report .daily-mode-full-table,
+app-report .daily-tracking-table,
+app-report .hourly-matrix {
+  margin-right: 0 !important;
+}
+
+/* Wide-desktop charts expand across the whole report card instead of stopping
+   after a fixed 24 x 50px canvas. The 50px/hour minimum is retained, so smaller
+   screens keep the same readable synchronized horizontal scroll. */
+@container report-dashboard (min-width: 1181px) {
+  app-report .daily-hourly-sync__content {
+    width: 100%;
+    min-width: 1256px;
+  }
+
+  app-report .daily-axis-chart {
+    width: 100%;
+    min-width: 1256px;
+    grid-template-columns:
+      var(--report-hour-label-col)
+      minmax(1200px, 1fr);
+  }
+
+  app-report .daily-axis-chart__plot {
+    width: 100%;
+    min-width: 1200px;
+  }
+
+  app-report .daily-hourly-sync .daily-multi-bar-chart,
+  app-report .daily-hourly-sync .daily-stacked-chart,
+  app-report .daily-hourly-sync .daily-single-bar-chart {
+    width: 100% !important;
+    min-width: 1200px !important;
+    grid-template-columns: repeat(
+      var(--report-visible-hour-count, 24),
+      minmax(var(--report-hour-data-col), 1fr)
+    ) !important;
+  }
+
+  app-report .daily-hourly-sync .daily-hour-bars,
+  app-report .daily-hourly-sync .stack-column,
+  app-report .daily-hourly-sync .single-column {
+    width: 100% !important;
+    min-width: var(--report-hour-data-col) !important;
+  }
+
+  app-report .hourly-engineering-overlay {
+    width: 100% !important;
+  }
+
+  app-report .daily-chart-legend--machinery,
+  app-report .daily-chart-legend--auxiliary,
+  app-report .daily-chart-legend--reference,
+  app-report .daily-chart-legend--engineering-lines {
+    width: auto;
+    margin-right: 0 !important;
+  }
+
+  app-report .daily-hourly-sync .hourly-matrix {
+    width: 100% !important;
+    min-width: 1256px !important;
+    table-layout: fixed;
+  }
+
+  app-report .daily-hourly-sync .hourly-matrix col.hourly-label-column {
+    width: var(--report-hour-label-col) !important;
+  }
+
+  app-report .daily-hourly-sync .hourly-matrix col.hourly-data-column {
+    width: auto !important;
+  }
+
+  app-report .daily-hourly-sync .hourly-matrix th:not(:first-child),
+  app-report .daily-hourly-sync .hourly-matrix td:not(:first-child) {
+    width: auto !important;
+    min-width: var(--report-hour-data-col) !important;
+    max-width: none !important;
+  }
+}
+
+/* Keep local scrolling on tablets/phones, but never reserve the blank right
+   strip that was circled in the screenshots. */
+@container report-dashboard (max-width: 1180px) {
+  app-report .report-book-table-wrap,
+  app-report .daily-mode-table-wrap,
+  app-report .hourly-table-wrap,
+  app-report .daily-tracking-table-wrap,
+  app-report .historical-daily-trend__table,
+  app-report .report-table-frame {
+    scrollbar-gutter: auto !important;
+  }
+}
+
+/* ========================================================================== */
+/* REPORT PRO V43 — zoom-safe full-width hourly geometry + edge polish         */
+/* 2026-10-06: presentation only. No historian/calculation values are changed. */
+/* ========================================================================== */
+
+/* Desktop/wide-monitor mode: distribute all 24 hours across the available
+   report width. This fixes the empty black strip on the right of Section 05
+   and remains stable when Chrome is zoomed out to 80/67/50/33%. */
+@container report-dashboard (min-width: 1181px) {
+  app-report .daily-hourly-sync {
+    overflow-x: hidden;
+  }
+
+  app-report .daily-hourly-sync__content,
+  app-report .daily-axis-chart,
+  app-report .daily-axis-chart__plot {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  app-report .daily-axis-chart {
+    grid-template-columns: var(--report-hour-label-col) minmax(0, 1fr) !important;
+  }
+
+  /* Section 05 uses a dedicated combo chart, so it must be fluid separately
+     from the single/stacked/multi chart rules. */
+  app-report #daily-page-5 .daily-combo-chart {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    grid-template-columns: repeat(
+      var(--report-visible-hour-count, 24),
+      minmax(0, 1fr)
+    ) !important;
+  }
+
+  app-report #daily-page-5 .daily-combo-hour {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  app-report #daily-page-5 .daily-chart-legend--combo,
+  app-report #daily-page-5 .daily-combo-scale-summary {
+    width: auto !important;
+    max-width: none !important;
+    margin-right: 0 !important;
+  }
+
+  app-report .daily-hourly-sync .hourly-table-wrap,
+  app-report .daily-hourly-sync .premium-daily-card .hourly-table-wrap,
+  app-report .daily-hourly-sync .hourly-matrix {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  app-report .daily-hourly-sync .hourly-matrix col.hourly-data-column {
+    width: auto !important;
+  }
+
+  app-report .daily-hourly-sync .hourly-matrix th:not(:first-child),
+  app-report .daily-hourly-sync .hourly-matrix td:not(:first-child) {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
+
+/* Keep grouped mode-table headers visually continuous across all columns.
+   The outer wrapper owns the perimeter; the header cells own only internal
+   grid lines, avoiding the clipped/double-right-border effect. */
+app-report .daily-mode-full-table thead th,
+app-report .premium-daily-card .report-book-table thead th,
+app-report .pdf-mode-detail-page .report-book-table thead th {
+  background-clip: padding-box;
+}
+
+app-report .daily-mode-full-table thead tr:first-child th,
+app-report .daily-mode-full-table thead tr:nth-child(2) th {
+  border-top-width: 0;
+}
+
+app-report .daily-mode-full-table thead tr:nth-child(2) th {
+  border-bottom-width: 1px;
+}
+
+/* Browser zoom can expose fractional-pixel seams. A tiny inset perimeter keeps
+   the right/bottom table edge visible without adding layout width. */
+app-report .report-table-frame,
+app-report .daily-mode-table-wrap,
+app-report .hourly-table-wrap,
+app-report .daily-tracking-table-wrap,
+app-report .historical-daily-trend__table {
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
+}
+
+/* At tablet/mobile sizes, keep the existing readable minimum column widths and
+   local horizontal scroll rather than shrinking 24 hours into unreadable text. */
+@container report-dashboard (max-width: 1180px) {
+  app-report .daily-hourly-sync {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+
+/* ========================================================================== */
+/* REPORT PRO V44 — fast first paint + off-screen rendering discipline          */
+/* 2026-10-06: visual/render performance only; calculations remain untouched.   */
+/* ========================================================================== */
+
+/* Long Daily reports contain many full-width tables and SVG charts. Chromium
+   can skip style/layout/paint for sections that are far below the viewport and
+   materialize them just before the operator scrolls there. This is a pure client
+   rendering optimization: no values are hidden and no historian request changes. */
+@supports (content-visibility: auto) {
+  app-report .report-full-daily > .daily-report-section,
+  app-report .report-full-daily > .historical-daily-trend,
+  app-report .daily-all-mode-details > app-report-mode-detail-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 760px;
+  }
+
+  app-report .report-full-daily > .premium-chart-section {
+    contain-intrinsic-size: auto 620px;
+  }
+}
+
+/* Premium loading state: compact, calm and GPU-cheap.  The shimmer is one
+   pseudo-element rather than dozens of animated skeleton nodes. */
+app-report .daily-ui-loading {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 72px;
+  border: 1px solid color-mix(in srgb, var(--report-accent, #2f80ed) 28%, transparent);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--report-accent, #2f80ed) 76%, transparent);
+}
+
+app-report .daily-ui-loading::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  transform: translateX(-105%);
+  background: linear-gradient(
+    100deg,
+    transparent 18%,
+    rgba(96, 165, 250, 0.055) 45%,
+    rgba(147, 197, 253, 0.09) 52%,
+    transparent 82%
+  );
+  animation: report-loading-sheen 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes report-loading-sheen {
+  to { transform: translateX(105%); }
+}
+
+/* Prevent expensive off-screen sections from creating horizontal page overflow
+   while they are being materialized at unusual browser zoom levels. */
+app-report .report-full-daily,
+app-report .report-full-daily > *,
+app-report .premium-daily-card,
+app-report .premium-chart-section {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+/* Table edges remain crisp at fractional zoom without forcing a second layout
+   layer or a large shadow. */
+app-report .report-book-table-wrap,
+app-report .daily-mode-table-wrap,
+app-report .hourly-table-wrap,
+app-report .daily-tracking-table-wrap,
+app-report .report-table-frame {
+  contain: paint;
+}
+
+/* Do not defer/contain print rendering. A printed/exported report must materialize
+   every section in document order even if it was never scrolled into view. */
+@media print {
+  app-report .report-full-daily > .daily-report-section,
+  app-report .report-full-daily > .historical-daily-trend,
+  app-report .daily-all-mode-details > app-report-mode-detail-card {
+    content-visibility: visible !important;
+    contain-intrinsic-size: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  app-report .daily-ui-loading::after {
+    animation: none;
+    display: none;
   }
 }

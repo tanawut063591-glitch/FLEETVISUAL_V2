@@ -3,6 +3,7 @@ import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from '../../common/report-cache.util';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -19,6 +20,7 @@ import {
   normalizeModeFuelToOfficialTotal,
   scaleModeDetailFuelToTarget,
 } from '../../common/pdf-mode-parity';
+import { calculateLegacyDailyFuelTotal, exactMinutePoints } from '../../common/legacy-daily-fuel';
 import {
   MV_GEMIA_MODE_HISTORIAN_TAG,
   MV_GEMIA_REPORT_PROFILE,
@@ -214,7 +216,9 @@ interface HourAccumulator {
 }
 
 const MINUTE_MS = 60_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
+const LIVE_REPORT_CACHE_TTL_MS = 30_000;
+const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -421,9 +425,9 @@ export class MvGemiaReportService implements VesselReportAdapter {
     const request$ = historianRequest$.pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
-          this.detailedReportCache.set(key, {
+          setBoundedReportCache(this.detailedReportCache, key, {
             value,
-            expiresAt: Date.now() + CACHE_TTL_MS,
+            expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
           });
         }),
         catchError((error) => throwError(() => error)),
@@ -468,9 +472,12 @@ export class MvGemiaReportService implements VesselReportAdapter {
     const request$ = from(chunks).pipe(
       // Two concurrent day-sized historian requests keep monthly views responsive
       // without asking the backend for a very large multi-tag, 31-day payload at once.
+      // Long range/month reports are intentionally limited to one day bundle at a time.
+      // Each bundle already reads at most two historian tags concurrently, so the
+      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        2,
+        1,
       ),
       toArray(),
       map((reports) =>
@@ -482,9 +489,9 @@ export class MvGemiaReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        this.periodReportCache.set(key, {
+        setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + CACHE_TTL_MS,
+          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
@@ -995,15 +1002,18 @@ export class MvGemiaReportService implements VesselReportAdapter {
       return this.buildCounterRateMap(series.get(this.tagKey(rawTag)) || [], pulse, maxRpm);
     };
 
-    // MV GEMIA has both the calculated RPM channel and the lower-scale raw M/E
-    // speed channel used by the legacy Mode detail pages. In production archives
-    // the calculated channel can miss isolated minutes while the raw channel is
-    // still present. Counting only *_SPD_CALC under-reports Running Hours and
-    // biases Average RPM upward when the calculated archive has isolated gaps.
-    // Keep calculated RPM as the authoritative value, but fill only missing M/E
-    // minutes from raw speed × 30 -- the same relationship already used below for
-    // Mode display fallback. Existing calculated samples are never overwritten.
-    const mainEngineRpmWithRawFallback = (
+    // PDF parity rule for MV GEMIA page 1 / hourly machinery:
+    // *_SPD_CALC is the authoritative M/E RPM source. The lower-scale raw
+    // *_SPD channel belongs to the legacy Mode-detail pages and is NOT a
+    // replacement for page-1 RPM. Mixing or scale-switching between the two
+    // channels is what caused historical days (for example 03-Oct) to show
+    // ~460 RPM on the UI while the PDF shows ~700 RPM.
+    //
+    // Only when the calculated channel is completely unavailable do we fall
+    // back to raw speed x30 so an old archive can still render something.
+    // We deliberately do not merge isolated raw minutes into a non-empty
+    // calculated series because that changes Average/Max RPM and Running Hours.
+    const mainEngineRpmForReport = (
       calculatedTag: string,
       rawTag: string,
       maxRpm: number,
@@ -1013,28 +1023,57 @@ export class MvGemiaReportService implements VesselReportAdapter {
         0,
         maxRpm,
       );
-      const raw = this.buildDirectValueMap(
+      if (calculated.size > 0) return calculated;
+
+      const rawDirect = this.buildDirectValueMap(
         series.get(this.tagKey(rawTag)) || [],
         0,
         Math.max(100, maxRpm / 30),
       );
-      if (raw.size === 0) return calculated;
-      const merged = new Map(calculated);
-      raw.forEach((value, bucket) => {
-        if (merged.has(bucket)) return;
+      const rawScaled = new Map<number, number>();
+      rawDirect.forEach((value, bucket) => {
         const rpm = value * 30;
-        if (Number.isFinite(rpm) && rpm >= 0 && rpm <= maxRpm) merged.set(bucket, rpm);
+        if (Number.isFinite(rpm) && rpm >= 0 && rpm <= maxRpm) rawScaled.set(bucket, rpm);
+      });
+      return rawScaled;
+    };
+
+    const auxRpmWithRawFallback = (
+      calculatedTag: string,
+      rawTag: string,
+      pulse: number,
+      maxRpm: number,
+    ): Map<number, number> => {
+      const calculated = this.buildDirectValueMap(
+        series.get(this.tagKey(calculatedTag)) || [],
+        0,
+        maxRpm,
+      );
+      const rawCounter = this.buildCounterRateMap(
+        series.get(this.tagKey(rawTag)) || [],
+        pulse,
+        maxRpm,
+      );
+      if (calculated.size === 0) return rawCounter;
+      if (rawCounter.size === 0) return calculated;
+
+      // Keep *_SPD_CALC authoritative, but close isolated archive holes from the
+      // raw counter. This matters for A/E Running Hours on days where the PDF has
+      // a complete counter trace but the calculated channel drops a few minutes.
+      const merged = new Map(calculated);
+      rawCounter.forEach((value, bucket) => {
+        if (!merged.has(bucket)) merged.set(bucket, value);
       });
       return merged;
     };
 
-    const pmeRpm = mainEngineRpmWithRawFallback(TAGS.pmeSpeedCalc, TAGS.pmeSpeed, 3000);
-    const smeRpm = mainEngineRpmWithRawFallback(TAGS.smeSpeedCalc, TAGS.smeSpeed, 3000);
+    const pmeRpm = mainEngineRpmForReport(TAGS.pmeSpeedCalc, TAGS.pmeSpeed, 3000);
+    const smeRpm = mainEngineRpmForReport(TAGS.smeSpeedCalc, TAGS.smeSpeed, 3000);
     const ppsRpm = directOrCounter(TAGS.ppsSpeedCalc, TAGS.ppsSpeed, 10, 1200);
     const spsRpm = directOrCounter(TAGS.spsSpeedCalc, TAGS.spsSpeed, 10, 1200);
-    const paeRpm = directOrCounter(TAGS.paeSpeedCalc, TAGS.paeSpeed, 2, 4000);
-    const caeRpm = directOrCounter(TAGS.caeSpeedCalc, TAGS.caeSpeed, 2, 4000);
-    const saeRpm = directOrCounter(TAGS.saeSpeedCalc, TAGS.saeSpeed, 2, 4000);
+    const paeRpm = auxRpmWithRawFallback(TAGS.paeSpeedCalc, TAGS.paeSpeed, 2, 4000);
+    const caeRpm = auxRpmWithRawFallback(TAGS.caeSpeedCalc, TAGS.caeSpeed, 2, 4000);
+    const saeRpm = auxRpmWithRawFallback(TAGS.saeSpeedCalc, TAGS.saeSpeed, 2, 4000);
 
     // The MV GEMIA legacy Mode-detail pages display the raw M/E speed channel
     // (roughly 0..30) while page 1/hourly machinery uses *_SPD_CALC in RPM.
@@ -1054,34 +1093,70 @@ export class MvGemiaReportService implements VesselReportAdapter {
       todayTag: string,
       inTag: string,
       outTag: string,
+      totalizerMaxDelta = 1000,
     ): Map<number, number> => {
       const inputPoints = series.get(this.tagKey(inTag)) || [];
       const outputPoints = series.get(this.tagKey(outTag)) || [];
       const todayPoints = series.get(this.tagKey(todayTag)) || [];
 
       // The official MV GEMIA PDF's Page-1 fuel totals and Mode fuel agree with
-      // the FIN/FOUT fuel accounting. *_CONS_TODAY is useful for live display but
-      // archived logger data can contain resets/repeated cumulative segments. The
-      // previous implementation summed every positive segment after a reset, which
-      // can double-count a completed day (and massively over-count A/E fuel).
-      // For completed Daily reports prefer the raw FIN/FOUT totalizers whenever
-      // either side is available; keep CONS_TODAY only as an archive fallback.
+      // FIN/FOUT accounting. Keep the existing 1000 L/min acceptance for the
+      // channels already matching PDF, but allow an engine-specific limit for a
+      // noisy totalizer. SC BONGKOT's minute fuel path uses 300 L/min; applying
+      // that stricter limit only to GEMIA's Thruster A/E avoids changing the four
+      // channels that already match the PDF on both 03-Oct and 04-Oct.
       if (completedDaily && (inputPoints.length > 1 || outputPoints.length > 1)) {
-        const totalizerFuel = this.buildFuelMap(inputPoints, outputPoints, 1000);
+        const totalizerFuel = this.buildFuelMap(inputPoints, outputPoints, totalizerMaxDelta);
         if (totalizerFuel.size > 0) return totalizerFuel;
       }
 
       if (todayPoints.length > 1) {
         return this.buildDailyConsumptionDeltaMap(todayPoints, 2000);
       }
-      return this.buildFuelMap(inputPoints, outputPoints, 1000);
+      return this.buildFuelMap(inputPoints, outputPoints, totalizerMaxDelta);
     };
 
     const pmeFuel = fuelForReport(TAGS.pmeFuelToday, TAGS.pmeFuelIn, TAGS.pmeFuelOut);
     const smeFuel = fuelForReport(TAGS.smeFuelToday, TAGS.smeFuelIn, TAGS.smeFuelOut);
     const paeFuel = fuelForReport(TAGS.paeFuelToday, TAGS.paeFuelIn, TAGS.paeFuelOut);
-    const caeFuel = fuelForReport(TAGS.caeFuelToday, TAGS.caeFuelIn, TAGS.caeFuelOut);
+    const caeFuel = fuelForReport(TAGS.caeFuelToday, TAGS.caeFuelIn, TAGS.caeFuelOut, 300);
     const saeFuel = fuelForReport(TAGS.saeFuelToday, TAGS.saeFuelIn, TAGS.saeFuelOut);
+
+    // Controlled SC BONGKOT compatibility trial for the one MV GEMIA channel that
+    // still differs from the supplied PDFs: Thruster A/E. BONGKOT page 1 does not
+    // sum every positive post-reset minute delta; it scans exact-minute FIN/FOUT
+    // totalizers and uses the accepted daily spans. This prevents a mid-day reset
+    // or duplicated archive segment from being counted twice. Do NOT apply this
+    // to the other GEMIA engines: their current Page-1 fuel already matches PDF.
+    const bongkotCompatibleDailyFuelRule = {
+      input: { totalRangeLimit: 26_000, stepLimit: 20_000, stepInclusive: false, initialValueLimit: 100_000_000 },
+      output: { totalRangeLimit: 26_000, stepLimit: 20_000, stepInclusive: true, initialValueLimit: 100_000_000 },
+      ignoredValues: [999_999],
+      clampNegative: true,
+    } as const;
+    const caeInputExact = exactMinutePoints(
+      series.get(this.tagKey(TAGS.caeFuelIn)) || [],
+      minuteStart,
+      dataMinuteEnd,
+    );
+    const caeOutputExact = exactMinutePoints(
+      series.get(this.tagKey(TAGS.caeFuelOut)) || [],
+      minuteStart,
+      dataMinuteEnd,
+    );
+    const caeBongkotDailyFuel = calculateLegacyDailyFuelTotal(
+      caeInputExact,
+      caeOutputExact,
+      bongkotCompatibleDailyFuelRule,
+    );
+    const caePage1Fuel =
+      completedDaily &&
+      caeInputExact.length >= 2 &&
+      caeOutputExact.length >= 2 &&
+      Number.isFinite(caeBongkotDailyFuel) &&
+      caeBongkotDailyFuel >= 0
+        ? caeBongkotDailyFuel
+        : this.sumMap(caeFuel);
 
     const pdfModeFuel = (
       todayTag: string,
@@ -1137,9 +1212,12 @@ export class MvGemiaReportService implements VesselReportAdapter {
     ];
 
     const auxSummary: MvGemiaAuxSummaryRow[] = [
-      this.buildAuxSummary('port', 'Port A/E', paeRpm, paeFuel),
-      this.buildAuxSummary('center', 'Thruster A/E', caeRpm, caeFuel),
-      this.buildAuxSummary('starboard', 'Stb. A/E', saeRpm, saeFuel),
+      this.buildAuxSummary('port', 'Port A/E', paeRpm, paeFuel, minuteStart, reportMinuteEnd),
+      {
+        ...this.buildAuxSummary('center', 'Thruster A/E', caeRpm, caeFuel, minuteStart, reportMinuteEnd),
+        fuelUsed: caePage1Fuel,
+      },
+      this.buildAuxSummary('starboard', 'Stb. A/E', saeRpm, saeFuel, minuteStart, reportMinuteEnd),
     ];
 
     const mainEngineFuelTotal = engineSummary.reduce((sum, row) => sum + row.fuelUsed, 0);
@@ -1324,7 +1402,11 @@ export class MvGemiaReportService implements VesselReportAdapter {
     const observedModeHours = Math.max(0, modeAvailableMinutes / 60);
     const rawModeSummary = MV_GEMIA_REPORT_PROFILE.modes.map((profileMode) => {
       const row = modeMap.get(profileMode.key)!;
-      // Legacy MvGemia mode percentages are calculated against fuel observed while Mode > 0.
+      // MV GEMIA and SC BONGKOT share the same direct 1..15 mode mapping, but
+      // their engine/fuel topology is different. Keep GEMIA's verified Mode-minute
+      // membership here; Page-1 total correction below is propagated through the
+      // existing normalization instead of copying BONGKOT's four-A/E engine model.
+      // Percentages are calculated against fuel observed while Mode > 0.
       const fuelUsed = row.fuelUsed;
       const fuelPercent = rawModeFuelTotal > 0 ? (fuelUsed / rawModeFuelTotal) * 100 : 0;
       const runningPercent =
@@ -1341,6 +1423,17 @@ export class MvGemiaReportService implements VesselReportAdapter {
     const modeSummary = normalizeModeFuelToOfficialTotal<MvGemiaModeSummaryRow>(
       rawModeSummary,
       totalFuelUsed,
+      {
+        // MV GEMIA uses the same 15-mode PDF table/layout as the Emerald family.
+        // The supplied legacy source archive does not contain a Gemia C# class,
+        // so the PDF remains the authority for this compatibility branch.
+        residualModeKey: 'standby',
+        residualFuelPercent: true,
+        residualRunningHours: true,
+        residualRunningPercent: true,
+        distanceFromDisplayedHours: true,
+        legacySinglePrecision: true,
+      },
     );
 
     const modeDetails: MvGemiaModeDetail[] = modeSummary.map((mode) => {
@@ -1496,18 +1589,11 @@ export class MvGemiaReportService implements VesselReportAdapter {
     _elapsedHours: number,
   ): MvGemiaEngineSummaryRow {
     const rpmValues = Array.from(rpmMap.values()).filter((value) => value >= 0 && value <= 2000);
-    // A positive accepted fuel delta proves that the engine was running even when
-    // the archived *_SPD_CALC sample for that exact minute is missing. Use fuel only
-    // as a missing-speed fallback; it never turns a known sub-100 RPM sample into a
-    // running minute. This closes historian holes without overriding real speed data.
-    const runningBuckets = new Set<number>();
-    rpmMap.forEach((value, bucket) => {
-      if (value >= 100) runningBuckets.add(bucket);
-    });
-    fuelMap.forEach((value, bucket) => {
-      if (!rpmMap.has(bucket) && value > 0) runningBuckets.add(bucket);
-    });
-    const runningMinutes = runningBuckets.size;
+    // Page-1 M/E Running Hours come from the same calculated RPM series used
+    // for Average/Max RPM. Fuel movement must not create a running minute when
+    // the RPM source is absent (02-Oct is the clearest case: Port M/E has fuel
+    // movement but the official PDF reports 0.00 running hour and 0 RPM).
+    const runningMinutes = Array.from(rpmMap.values()).filter((value) => value >= 100).length;
     return {
       key,
       label,
@@ -1545,16 +1631,22 @@ export class MvGemiaReportService implements VesselReportAdapter {
     label: string,
     rpmMap: Map<number, number>,
     fuelMap: Map<number, number>,
+    rangeStart?: number,
+    rangeEnd?: number,
   ): MvGemiaAuxSummaryRow {
     // MvGemia CalSpeedAESummary counts any positive speed/counter movement as
-    // running. If that minute's speed sample is missing but accepted fuel moved,
-    // keep the minute as running instead of silently dropping it from the PDF total.
+    // running. If that minute's calculated speed is missing, accepted raw-counter
+    // movement can close the archive hole. Page-1 A/E Running Hours are scoped to
+    // 00:00..23:59; unlike M/E/mode accounting they do not count next-day 00:00.
+    const inRange = (bucket: number) =>
+      (rangeStart === undefined || bucket >= rangeStart) &&
+      (rangeEnd === undefined || bucket <= rangeEnd);
     const runningBuckets = new Set<number>();
     rpmMap.forEach((value, bucket) => {
-      if (value > 0) runningBuckets.add(bucket);
+      if (inRange(bucket) && value > 0) runningBuckets.add(bucket);
     });
     fuelMap.forEach((value, bucket) => {
-      if (!rpmMap.has(bucket) && value > 0) runningBuckets.add(bucket);
+      if (inRange(bucket) && !rpmMap.has(bucket) && value > 0) runningBuckets.add(bucket);
     });
     const runningMinutes = runningBuckets.size;
     return {
@@ -1608,6 +1700,8 @@ export class MvGemiaReportService implements VesselReportAdapter {
     const paeFuelValue = fuelFor(paeFuel);
     const caeFuelValue = fuelFor(caeFuel);
     const saeFuelValue = fuelFor(saeFuel);
+    const pmeModeValues = selectValues(pmeModeSpeed, 0);
+    const smeModeValues = selectValues(smeModeSpeed, 0);
     const speedValues = minuteKeys.map((bucket) => {
       const value = gpsSpeed.get(bucket);
       return value !== undefined && Number.isFinite(value) && value >= 0 ? value : 0;
@@ -1615,20 +1709,14 @@ export class MvGemiaReportService implements VesselReportAdapter {
 
     return {
       mainEngines: [
-        this.buildFilteredEngineSummary(
-          'port',
-          'Port M/E',
-          selectValues(pmeModeSpeed, 0),
-          pmeFuelValue,
-          0.000001,
-        ),
-        this.buildFilteredEngineSummary(
-          'starboard',
-          'Stb. M/E',
-          selectValues(smeModeSpeed, 0),
-          smeFuelValue,
-          0.000001,
-        ),
+        {
+          ...this.buildFilteredEngineSummary('port', 'Port M/E', pmeModeValues, pmeFuelValue, 0.000001),
+          averageRpm: minuteKeys.length > 0 && pmeModeValues.length === 0 ? Number.NaN : this.average(pmeModeValues),
+        },
+        {
+          ...this.buildFilteredEngineSummary('starboard', 'Stb. M/E', smeModeValues, smeFuelValue, 0.000001),
+          averageRpm: minuteKeys.length > 0 && smeModeValues.length === 0 ? Number.NaN : this.average(smeModeValues),
+        },
       ],
       shafts: [
         this.buildFilteredShaftSummary(

@@ -3782,3 +3782,156 @@ app-report .premium-chart-section .stack-bar .segment.fourth {
   background: var(--report-series-fourth-aux, #f97316) !important;
   box-shadow: none !important;
 }
+
+/* ========================================================================== */
+/* REPORT PRO V40 — premium visual finishing                                  */
+/* 2026-10-06: appearance only; report values/formulas are untouched.          */
+/* ========================================================================== */
+
+app-report {
+  --report-v40-navy: #174f9b;
+  --report-v40-navy-deep: #123f7f;
+  --report-v40-blue: #2d6dc2;
+  --report-v40-line: #d9e3ef;
+  --report-v40-line-soft: #e8eef5;
+  --report-v40-row: #f8fbff;
+  --report-v40-row-alt: #f3f7fc;
+}
+
+app-report .premium-daily-card {
+  border: 1px solid var(--report-v40-line);
+  box-shadow: 0 8px 24px rgba(21, 55, 95, .055);
+}
+
+app-report .premium-daily-card > .report-table-panel__header {
+  border-bottom: 1px solid var(--report-v40-line);
+  background:
+    linear-gradient(90deg, rgba(37, 99, 235, .055), transparent 40%),
+    linear-gradient(180deg, #ffffff, #fbfdff);
+}
+
+app-report .premium-daily-card > .report-table-panel__header::before {
+  width: 4px;
+  background: linear-gradient(180deg, #2563eb, #60a5fa);
+}
+
+app-report .daily-report-section--mode > .report-table-panel__header::before,
+app-report #daily-page-1 > .report-table-panel__header::before {
+  background: linear-gradient(180deg, #f59e0b, #fbbf24);
+}
+
+app-report .premium-daily-card .report-table-panel__header h2 {
+  color: #142747;
+}
+
+app-report .premium-daily-card .report-table-panel__header p {
+  color: #708098;
+}
+
+app-report .report-table-panel__meta,
+app-report .daily-chart-header-stat {
+  border: 1px solid #dbe6f2;
+  background: linear-gradient(180deg, #fbfdff, #f6f9fd);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+/* One consistent professional table language across every report page. */
+app-report .premium-daily-card .report-book-table thead th,
+app-report .pdf-mode-detail-page .report-book-table thead th {
+  border-color: rgba(255, 255, 255, .18) !important;
+  color: #ffffff;
+  background: linear-gradient(180deg, var(--report-v40-blue), var(--report-v40-navy));
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .08);
+}
+
+app-report .premium-daily-card .daily-mode-full-table thead tr:first-child th {
+  background: linear-gradient(180deg, #245fae, #174f9b);
+}
+
+app-report .premium-daily-card .daily-mode-full-table thead tr:nth-child(2) th {
+  background: linear-gradient(180deg, #2d70c5, #205da8);
+}
+
+app-report .report-book-section__title {
+  border-bottom: 1px solid #e2b24a;
+  background: linear-gradient(90deg, #fff7e7, #fffdfa 70%);
+}
+
+app-report .premium-daily-card .report-book-table th,
+app-report .premium-daily-card .report-book-table td,
+app-report .pdf-mode-detail-page .report-book-table th,
+app-report .pdf-mode-detail-page .report-book-table td {
+  border-color: var(--report-v40-line-soft);
+}
+
+app-report .premium-daily-card .report-book-table tbody tr:nth-child(odd):not(.section-row):not(.separator-row):not(.total-row) th,
+app-report .premium-daily-card .report-book-table tbody tr:nth-child(odd):not(.section-row):not(.separator-row):not(.total-row) td {
+  background: #ffffff;
+}
+
+app-report .premium-daily-card .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) th,
+app-report .premium-daily-card .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) td {
+  background: var(--report-v40-row);
+}
+
+app-report .premium-daily-card .report-book-table tbody tr:not(.section-row):not(.separator-row):not(.total-row):hover th,
+app-report .premium-daily-card .report-book-table tbody tr:not(.section-row):not(.separator-row):not(.total-row):hover td {
+  background: #edf5ff;
+}
+
+app-report .premium-daily-card .report-book-table .section-row th {
+  color: #7b5200;
+  background: #fff6df;
+}
+
+app-report .premium-daily-card .report-book-table .total-row th,
+app-report .premium-daily-card .report-book-table .total-row td,
+app-report .premium-daily-card .daily-tracking-table .total-row th,
+app-report .premium-daily-card .daily-tracking-table .total-row td {
+  color: #6d4600;
+  background: #fff4d7;
+  font-weight: 900;
+}
+
+app-report .report-book-section,
+app-report .report-table-frame,
+app-report .daily-engine-grid > .report-book-table-wrap,
+app-report .pdf-mode-detail-grid > .report-book-table-wrap,
+app-report .daily-mode-table-wrap,
+app-report .hourly-table-wrap,
+app-report .historical-daily-trend__table,
+app-report .daily-tracking-table-wrap {
+  border-color: #cfdae7;
+  box-shadow: 0 1px 2px rgba(15, 31, 61, .03);
+}
+
+app-report .daily-mode-name {
+  color: #243956;
+}
+
+app-report .daily-mode-dot {
+  border: 1px solid rgba(15, 31, 61, .08);
+}
+
+app-report .daily-map-card,
+app-report app-premium-pie-chart .premium-pie-card {
+  border-color: #d8e3ef;
+  box-shadow: 0 7px 20px rgba(19, 52, 91, .05);
+}
+
+/* Tablet sticky cells need an opaque surface while the numeric columns slide underneath. */
+@container report-dashboard (max-width: 900px) {
+  app-report .daily-mode-full-table tbody th:first-child,
+  app-report .daily-tracking-table tbody th:first-child,
+  app-report .hourly-matrix tbody th:first-child,
+  app-report .hourly-matrix tbody td:first-child {
+    background: #f8fbff;
+    box-shadow: 1px 0 0 #d7e2ee, 8px 0 14px rgba(15, 31, 61, .06);
+  }
+
+  app-report .daily-mode-full-table thead th:first-child,
+  app-report .daily-tracking-table thead th:first-child,
+  app-report .hourly-matrix thead th:first-child {
+    box-shadow: 1px 0 0 rgba(255, 255, 255, .18), 8px 0 14px rgba(15, 31, 61, .12);
+  }
+}

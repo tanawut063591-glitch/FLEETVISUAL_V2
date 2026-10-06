@@ -1,4 +1,4 @@
-/* Layout-only stylesheet. Report colors/appearance are centralized in src/styles/themes/report/. */
+/* Layout-only stylesheet. Report colors/appearance are centralized in src/styles/report/_report-visual.scss and src/styles/themes/. */
 :host {
   display: block;
 }

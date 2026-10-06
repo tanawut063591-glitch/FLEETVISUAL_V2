@@ -3,6 +3,7 @@ import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from '../../common/report-cache.util';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -213,7 +214,9 @@ interface HourAccumulator {
 }
 
 const MINUTE_MS = 60_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
+const LIVE_REPORT_CACHE_TTL_MS = 30_000;
+const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -396,9 +399,9 @@ export class ScEmeraldReportService implements VesselReportAdapter {
     const request$ = historianRequest$      .pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
-          this.detailedReportCache.set(key, {
+          setBoundedReportCache(this.detailedReportCache, key, {
             value,
-            expiresAt: Date.now() + CACHE_TTL_MS,
+            expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
           });
         }),
         catchError((error) => throwError(() => error)),
@@ -443,9 +446,12 @@ export class ScEmeraldReportService implements VesselReportAdapter {
     const request$ = from(chunks).pipe(
       // Two concurrent day-sized historian requests keep monthly views responsive
       // without asking the backend for a very large multi-tag, 31-day payload at once.
+      // Long range/month reports are intentionally limited to one day bundle at a time.
+      // Each bundle already reads at most two historian tags concurrently, so the
+      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        2,
+        1,
       ),
       toArray(),
       map((reports) =>
@@ -457,9 +463,9 @@ export class ScEmeraldReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        this.periodReportCache.set(key, {
+        setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + CACHE_TTL_MS,
+          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
@@ -1052,7 +1058,7 @@ export class ScEmeraldReportService implements VesselReportAdapter {
 
     const auxSummary: ScEmeraldAuxSummaryRow[] = [
       { ...this.buildAuxSummary('port', 'Port A/E', paeRpm, paeFuel), fuelUsed: paeDailyFuel },
-      { ...this.buildAuxSummary('center', 'Thruster A/E', caeRpm, caeFuel), fuelUsed: caeDailyFuel },
+      { ...this.buildAuxSummary('center', 'Ctr. A/E', caeRpm, caeFuel), fuelUsed: caeDailyFuel },
       { ...this.buildAuxSummary('starboard', 'Stb. A/E', saeRpm, saeFuel), fuelUsed: saeDailyFuel },
     ];
 
@@ -1232,6 +1238,33 @@ export class ScEmeraldReportService implements VesselReportAdapter {
       }
     }
 
+    // The legacy C# dtRawData contains one extra 00:00 row at the next-day
+    // boundary on completed reports. It participates in Mode fuel/hours/distance,
+    // but must not be inserted into the 24 hourly UI buckets.
+    if (completedDaily && pdfDataEnd > minuteEnd) {
+      const bucket = pdfDataEnd;
+      const modeLabel = this.resolveModeFromCode(modeCode.get(bucket));
+      if (modeLabel) {
+        modeAvailableMinutes += 1;
+        const modeKey = this.resolveModeProfileKey(modeLabel);
+        const mode = modeMap.get(modeKey);
+        if (mode) {
+          const speedValue = gpsSpeed.get(bucket);
+          const speed = speedValue !== undefined && Number.isFinite(speedValue) ? Math.max(0, speedValue) : 0;
+          const pdfModeMinuteFuel =
+            (pmePdfModeFuel.get(bucket) || 0) +
+            (smePdfModeFuel.get(bucket) || 0) +
+            (paePdfModeFuel.get(bucket) || 0) +
+            (caePdfModeFuel.get(bucket) || 0) +
+            (saePdfModeFuel.get(bucket) || 0);
+          mode.fuelUsed += pdfModeMinuteFuel;
+          mode.runningHours += 1 / 60;
+          mode.distanceNm += speed / 60;
+          modeMinuteKeys.get(modeKey)?.push(bucket);
+        }
+      }
+    }
+
     const rawModeFuelTotal = Array.from(modeMap.values()).reduce((sum, row) => sum + row.fuelUsed, 0);
     const observedModeHours = Math.max(0, modeAvailableMinutes / 60);
     const rawModeSummary = SC_EMERALD_REPORT_PROFILE.modes.map((profileMode) => {
@@ -1253,6 +1286,14 @@ export class ScEmeraldReportService implements VesselReportAdapter {
     const modeSummary = normalizeModeFuelToOfficialTotal<ScEmeraldModeSummaryRow>(
       rawModeSummary,
       totalFuelUsed,
+      {
+        residualModeKey: 'standby',
+        residualFuelPercent: true,
+        residualRunningHours: true,
+        residualRunningPercent: true,
+        distanceFromDisplayedHours: true,
+        legacySinglePrecision: true,
+      },
     );
 
     const modeDetails: ScEmeraldModeDetail[] = modeSummary.map((mode) => {
@@ -1532,7 +1573,7 @@ export class ScEmeraldReportService implements VesselReportAdapter {
         },
         {
           key: 'center',
-          label: 'Thruster A/E',
+          label: 'Ctr. A/E',
           runningHours: runningHoursForAux(caeRpm),
           fuelUsed: caeFuelValue,
         },

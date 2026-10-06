@@ -41,9 +41,13 @@ export class NewHttpClientService {
   // does not make every single-tag ZAMRUD request wait for a network timeout.
   private reportHistorianState: 'unknown' | 'available' | 'unavailable' = 'unknown';
   private reportHistorianRetryAfter = 0;
-  private static readonly REPORT_HISTORIAN_PROBE_TIMEOUT_MS = 2500;
-  private static readonly REPORT_HISTORIAN_REQUEST_TIMEOUT_MS = 8000;
+  private static readonly REPORT_HISTORIAN_PROBE_TIMEOUT_MS = 8000;
+  private static readonly REPORT_HISTORIAN_REQUEST_TIMEOUT_MS = 15_000;
   private static readonly REPORT_HISTORIAN_COOLDOWN_MS = 2 * 60_000;
+  // Two tag requests at a time is a deliberate safety ceiling. A completed Daily
+  // report becomes noticeably faster than strict serial loading, while long range/
+  // month views are limited to one day bundle at a time by the vessel services.
+  private static readonly REPORT_TAG_CONCURRENCY = 2;
 
   public newVessel: string[] = ['SC_DUMMY', 'A02'];
 
@@ -359,6 +363,52 @@ export class NewHttpClientService {
 
 
   /**
+   * Strict source-consistent PDF historian request.
+   *
+   * Loads every requested tag from REPORT_URL only with a strict two-request
+   * concurrency ceiling, and never falls back to API2.  Callers such as SC WINTER use this to determine
+   * whether the verified reporting historian is reachable before explicitly
+   * restarting the complete request through the source-consistent fallback.
+   */
+  getStrictConsistentPdfParityHistorianValues(
+    start: string,
+    end: string,
+    tags: any[],
+  ): Observable<any[]> {
+    const tagNames = this.mapTagNames(tags);
+    if (!start || !end || tagNames.length === 0) return of([]);
+
+    const preferredBase = this.normalizeBaseUrl(REPORT_URL);
+    const api2Base = this.normalizeBaseUrl(URL2);
+    if (!preferredBase || preferredBase === api2Base) {
+      return throwError(() => new Error('REPORT_HISTORIAN_NOT_CONFIGURED'));
+    }
+
+    return this.loadConsistentLoggerSeries('report', start, end, tagNames).pipe(
+      mergeMap((series) => {
+        const recordCount = series.reduce((sum, item: any) => {
+          const records = Array.isArray(item?.Records) ? item.Records : [];
+          return sum + records.length;
+        }, 0);
+
+        if (recordCount <= 0) {
+          return throwError(() => new Error('REPORT_HISTORIAN_EMPTY'));
+        }
+
+        this.reportHistorianState = 'available';
+        this.reportHistorianRetryAfter = 0;
+        return of(series);
+      }),
+      catchError((error: any) => {
+        this.reportHistorianState = 'unavailable';
+        this.reportHistorianRetryAfter =
+          Date.now() + NewHttpClientService.REPORT_HISTORIAN_COOLDOWN_MS;
+        return throwError(() => error);
+      }),
+    );
+  }
+
+  /**
    * Source-consistent historian bundle for legacy PDF-parity calculations.
    *
    * Every SCReportingService vessel class reads the legacy logger endpoint from
@@ -369,7 +419,8 @@ export class NewHttpClientService {
    *
    * Policy:
    *  1) Prefer REPORT_URL for the ENTIRE request.
-   *  2) Request one tag at a time, sequentially, like GetDataLogger().
+   *  2) Request each tag independently with a hard concurrency ceiling of 2,
+   *     then restore the original tag order before calculation.
    *  3) If the preferred host fails at any point, discard the partial bundle and
    *     restart ALL tags through API2 logger. Never mix sources in one report.
    *  4) Normalize single-tag DataLogger records to a common series shape and make
@@ -385,14 +436,7 @@ export class NewHttpClientService {
     if (!start || !end || tagNames.length === 0) return of([]);
 
     const loadFrom = (source: 'report' | 'api2'): Observable<any[]> =>
-      from(tagNames).pipe(
-        concatMap((tagName) =>
-          this.requestSingleLoggerFromSource(source, start, end, tagName).pipe(
-            map((response) => this.normalizeSingleTagLoggerSeries(tagName, response)),
-          ),
-        ),
-        toArray(),
-      );
+      this.loadConsistentLoggerSeries(source, start, end, tagNames);
 
     const preferredBase = this.normalizeBaseUrl(REPORT_URL);
     const api2Base = this.normalizeBaseUrl(URL2);
@@ -429,6 +473,7 @@ export class NewHttpClientService {
         if (recordCount > 0) {
           this.reportHistorianState = 'available';
           this.reportHistorianRetryAfter = 0;
+          console.info('[Historian][PDF parity] source=legacy-report-historian');
           return of(series);
         }
 
@@ -436,7 +481,8 @@ export class NewHttpClientService {
         this.reportHistorianRetryAfter =
           Date.now() + NewHttpClientService.REPORT_HISTORIAN_COOLDOWN_MS;
         console.warn(
-          '[Historian] report source returned no records; restarting the whole PDF-parity request via API2 logger',
+          '[Historian][PDF parity] legacy report source returned no records; using API2 fallback. ' +
+            'Mode values are not guaranteed to equal the historical PDF when the stores differ.',
         );
         return loadFrom('api2');
       }),
@@ -445,7 +491,8 @@ export class NewHttpClientService {
         this.reportHistorianRetryAfter =
           Date.now() + NewHttpClientService.REPORT_HISTORIAN_COOLDOWN_MS;
         console.warn(
-          '[Historian] report source failed; restarting the whole PDF-parity request via API2 logger',
+          '[Historian][PDF parity] legacy report source failed; using API2 fallback. ' +
+            'Mode values are not guaranteed to equal the historical PDF when the stores differ.',
           {
             status: error?.status,
             message: error?.message || error?.name,
@@ -453,6 +500,42 @@ export class NewHttpClientService {
         );
         return loadFrom('api2');
       }),
+    );
+  }
+
+  /**
+   * Loads independent historian tags with a hard concurrency ceiling and restores
+   * the caller's original tag order before returning the normalized bundle.
+   *
+   * Completed historical data is immutable, so two independent tag reads can run
+   * safely in parallel.  Keeping the ceiling at 2 prevents the browser from
+   * flooding the historian while cutting the round-trip portion of Daily reports.
+   */
+  private loadConsistentLoggerSeries(
+    source: 'report' | 'api2',
+    start: string,
+    end: string,
+    tagNames: readonly string[],
+  ): Observable<any[]> {
+    const indexedTags = tagNames.map((tagName, index) => ({ tagName, index }));
+
+    return from(indexedTags).pipe(
+      mergeMap(
+        ({ tagName, index }) =>
+          this.requestSingleLoggerFromSource(source, start, end, tagName).pipe(
+            map((response) => ({
+              index,
+              series: this.normalizeSingleTagLoggerSeries(tagName, response),
+            })),
+          ),
+        NewHttpClientService.REPORT_TAG_CONCURRENCY,
+      ),
+      toArray(),
+      map((items) =>
+        items
+          .sort((a, b) => a.index - b.index)
+          .map((item) => item.series),
+      ),
     );
   }
 

@@ -3,6 +3,7 @@ import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from '../../common/report-cache.util';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -218,7 +219,9 @@ interface HourAccumulator {
 }
 
 const MINUTE_MS = 60_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
+const LIVE_REPORT_CACHE_TTL_MS = 30_000;
+const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -401,9 +404,9 @@ export class ScBongkotReportService implements VesselReportAdapter {
     const request$ = historianRequest$      .pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
-          this.detailedReportCache.set(key, {
+          setBoundedReportCache(this.detailedReportCache, key, {
             value,
-            expiresAt: Date.now() + CACHE_TTL_MS,
+            expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
           });
         }),
         catchError((error) => throwError(() => error)),
@@ -448,9 +451,12 @@ export class ScBongkotReportService implements VesselReportAdapter {
     const request$ = from(chunks).pipe(
       // Two concurrent day-sized historian requests keep monthly views responsive
       // without asking the backend for a very large multi-tag, 31-day payload at once.
+      // Long range/month reports are intentionally limited to one day bundle at a time.
+      // Each bundle already reads at most two historian tags concurrently, so the
+      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        2,
+        1,
       ),
       toArray(),
       map((reports) =>
@@ -462,9 +468,9 @@ export class ScBongkotReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        this.periodReportCache.set(key, {
+        setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + CACHE_TTL_MS,
+          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
@@ -1132,16 +1138,36 @@ export class ScBongkotReportService implements VesselReportAdapter {
       }
     }
 
+    // Completed legacy reports include the following day's 00:00 row in
+    // direct VES-MODE math. Keep it out of hourly/navigation rows, but include
+    // it here so run-hour percentages use the same 1,441-row denominator.
+    if (completedDaily && pdfDataEnd > minuteEnd) {
+      const bucket = pdfDataEnd;
+      const modeLabel = this.resolveModeFromCode(modeCode.get(bucket));
+      if (modeLabel) {
+        const modeKey = this.resolveModeProfileKey(modeLabel);
+        const mode = modeMap.get(modeKey);
+        if (mode) {
+          const speedValue = gpsSpeed.get(bucket);
+          const speed = speedValue !== undefined && Number.isFinite(speedValue) ? Math.max(0, speedValue) : 0;
+          const pdfModeMinuteFuel =
+            (ae1PdfModeFuel.get(bucket) || 0) +
+            (ae2PdfModeFuel.get(bucket) || 0) +
+            (ae3PdfModeFuel.get(bucket) || 0) +
+            (ae4PdfModeFuel.get(bucket) || 0);
+          mode.fuelUsed += pdfModeMinuteFuel;
+          mode.runningHours += 1 / 60;
+          mode.distanceNm += speed / 60;
+          modeMinuteKeys.get(modeKey)?.push(bucket);
+        }
+      }
+    }
+
     const rawModeFuelTotal = Array.from(modeMap.values()).reduce((sum, row) => sum + row.fuelUsed, 0);
     const modeFuelScale = rawModeFuelTotal > 0 && totalFuelUsed > 0 ? totalFuelUsed / rawModeFuelTotal : 1;
-    const standbyKey = 'standby';
-    const nonStandbyHours = Array.from(modeMap.values())
-      .filter((row) => row.key !== standbyKey)
-      .reduce((sum, row) => sum + row.runningHours, 0);
-    const standby = modeMap.get(standbyKey);
-    if (standby) {
-      standby.runningHours = Math.max(0, elapsedHours - nonStandbyHours);
-    }
+    // Do not overwrite Standby's raw sample count here. SCBongkot.cs first uses
+    // the real 1,441-row sample denominator for each non-Standby run %, then
+    // applies a residual 24.00 h / 100.00% only to the displayed Standby row.
 
     const rawModeSummary = SC_BONGKOT_REPORT_PROFILE.modes.map((profileMode) => {
       const row = modeMap.get(profileMode.key)!;
@@ -1160,6 +1186,14 @@ export class ScBongkotReportService implements VesselReportAdapter {
     const modeSummary = normalizeModeFuelToOfficialTotal<ScBongkotModeSummaryRow>(
       rawModeSummary,
       totalFuelUsed,
+      {
+        residualModeKey: 'standby',
+        residualFuelPercent: true,
+        residualRunningHours: true,
+        residualRunningPercent: true,
+        distanceFromDisplayedHours: true,
+        legacySinglePrecision: true,
+      },
     );
 
     const modeDetails: ScBongkotModeDetail[] = modeSummary.map((mode) => ({

@@ -3,6 +3,7 @@ import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from '../../common/report-cache.util';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -219,7 +220,9 @@ interface HourAccumulator {
 }
 
 const MINUTE_MS = 60_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
+const LIVE_REPORT_CACHE_TTL_MS = 30_000;
+const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -404,9 +407,9 @@ export class ScRajaReportService implements VesselReportAdapter {
     const request$ = historianRequest$.pipe(
         map((response) => this.buildDetailedDailyReport(response, start, end)),
         tap((value) => {
-          this.detailedReportCache.set(key, {
+          setBoundedReportCache(this.detailedReportCache, key, {
             value,
-            expiresAt: Date.now() + CACHE_TTL_MS,
+            expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
           });
         }),
         catchError((error) => throwError(() => error)),
@@ -451,9 +454,12 @@ export class ScRajaReportService implements VesselReportAdapter {
     const request$ = from(chunks).pipe(
       // Two concurrent day-sized historian requests keep monthly views responsive
       // without asking the backend for a very large multi-tag, 31-day payload at once.
+      // Long range/month reports are intentionally limited to one day bundle at a time.
+      // Each bundle already reads at most two historian tags concurrently, so the
+      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        2,
+        1,
       ),
       toArray(),
       map((reports) =>
@@ -465,9 +471,9 @@ export class ScRajaReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        this.periodReportCache.set(key, {
+        setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + CACHE_TTL_MS,
+          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
@@ -968,6 +974,7 @@ export class ScRajaReportService implements VesselReportAdapter {
       periodStart.getFullYear() === periodEnd.getFullYear() &&
       periodStart.getMonth() === periodEnd.getMonth() &&
       periodStart.getDate() === periodEnd.getDate();
+    const pdfDataEnd = completedDaily ? minuteStart + 24 * 60 * MINUTE_MS : minuteEnd;
 
     const gpsSpeed = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsSpeed)) || []);
     const gpsLat = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLat)) || []);
@@ -977,12 +984,41 @@ export class ScRajaReportService implements VesselReportAdapter {
     const modeCode = completedDaily
       ? buildExactMinuteValueMap(modeCodePoints, MINUTE_MS)
       : this.buildInstantMap(modeCodePoints);
-    const pmeRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.pmeSpeed)) || []);
-    const smeRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.smeSpeed)) || []);
-    const ppsRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.ppsSpeed)) || []);
-    const spsRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.spsSpeed)) || []);
-    const paeRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.paeSpeed)) || []);
-    const saeRpm = this.buildInstantMap(series.get(this.tagKey(TAGS.saeSpeed)) || []);
+    // SC RAJA's legacy PDF is generated from the reporting historian.  The
+    // home/API2 historian can expose the same RPM channels in a x10 engineering
+    // scale.  Detect that representation conservatively and normalize it before
+    // applying the original C# summary rules.  This is data normalization only;
+    // no PDF values are hard-coded.
+    const pmeRpm = this.normalizeLegacyRpmMap(
+      this.buildInstantMap(series.get(this.tagKey(TAGS.pmeSpeed)) || []),
+      1200,
+      8,
+    );
+    const smeRpm = this.normalizeLegacyRpmMap(
+      this.buildInstantMap(series.get(this.tagKey(TAGS.smeSpeed)) || []),
+      1200,
+      8,
+    );
+    const ppsRpm = this.normalizeLegacyRpmMap(
+      this.buildInstantMap(series.get(this.tagKey(TAGS.ppsSpeed)) || []),
+      500,
+      8,
+    );
+    const spsRpm = this.normalizeLegacyRpmMap(
+      this.buildInstantMap(series.get(this.tagKey(TAGS.spsSpeed)) || []),
+      500,
+      8,
+    );
+    const paeRpm = this.normalizeLegacyRpmMap(
+      this.buildInstantMap(series.get(this.tagKey(TAGS.paeSpeed)) || []),
+      2000,
+      6,
+    );
+    const saeRpm = this.normalizeLegacyRpmMap(
+      this.buildInstantMap(series.get(this.tagKey(TAGS.saeSpeed)) || []),
+      2000,
+      6,
+    );
     const pmeEngineLoad = this.buildInstantMap(series.get(this.tagKey(TAGS.pmeEngineLoad)) || []);
     const smeEngineLoad = this.buildInstantMap(series.get(this.tagKey(TAGS.smeEngineLoad)) || []);
 
@@ -1051,17 +1087,115 @@ export class ScRajaReportService implements VesselReportAdapter {
       MINUTE_MS / 3_600_000,
       (minuteEnd - minuteStart + MINUTE_MS) / 3_600_000,
     );
+
+    // Completed SC RAJA PDFs intentionally build a 1,441-row minute table
+    // (00:00 through next-day 00:00).  CalSpeedSummary/CalSpeedAESummary also
+    // carry a running state across zero/missing rows.  Reproduce those legacy
+    // semantics here instead of simply counting non-zero browser samples.
+    const legacySummaryEnd = completedDaily ? pdfDataEnd : minuteEnd;
+    const portMainSpeed = this.buildLegacySpeedSummary(
+      pmeRpm,
+      minuteStart,
+      legacySummaryEnd,
+      1200,
+      50,
+      Number.POSITIVE_INFINITY,
+    );
+    const starboardMainSpeed = this.buildLegacySpeedSummary(
+      smeRpm,
+      minuteStart,
+      legacySummaryEnd,
+      1200,
+      50,
+      Number.POSITIVE_INFINITY,
+    );
+    const portShaftSpeed = this.buildLegacySpeedSummary(
+      ppsRpm,
+      minuteStart,
+      legacySummaryEnd,
+      500,
+      50,
+      Number.POSITIVE_INFINITY,
+    );
+    const starboardShaftSpeed = this.buildLegacySpeedSummary(
+      spsRpm,
+      minuteStart,
+      legacySummaryEnd,
+      500,
+      50,
+      Number.POSITIVE_INFINITY,
+    );
+
+    const portMainRunningHours = Math.min(24, portMainSpeed.runningHours);
+    const starboardMainRunningHours = Math.min(24, starboardMainSpeed.runningHours);
+    const portShaftRunningHours = Math.min(
+      24,
+      this.buildLegacyShaftRunningHours(pmeRpm, ppsRpm, minuteStart, legacySummaryEnd),
+    );
+    const starboardShaftRunningHours = Math.min(
+      24,
+      this.buildLegacyShaftRunningHours(smeRpm, spsRpm, minuteStart, legacySummaryEnd),
+    );
+    const portAuxRunningHours = this.roundLegacyAuxRunningHours(
+      this.buildLegacyAuxRunningHours(paeRpm, minuteStart, legacySummaryEnd),
+    );
+    const starboardAuxRunningHours = this.roundLegacyAuxRunningHours(
+      this.buildLegacyAuxRunningHours(saeRpm, minuteStart, legacySummaryEnd),
+    );
+
     const engineSummary: ScRajaEngineSummaryRow[] = [
-      this.buildEngineSummary('port', 'Port M/E', pmeRpm, pmeDailyFuel, pmeEngineLoad),
-      this.buildEngineSummary('starboard', 'Stb. M/E', smeRpm, smeDailyFuel, smeEngineLoad),
+      {
+        key: 'port',
+        label: 'Port M/E',
+        averageRpm: portMainSpeed.averageRpm,
+        maximumRpm: portMainSpeed.maximumRpm,
+        runningHours: portMainRunningHours,
+        fuelUsed: Math.max(0, pmeDailyFuel),
+        engineLoad: this.average(
+          Array.from(pmeEngineLoad.values()).filter((value) => value > 0 && Number.isFinite(value)),
+        ),
+      },
+      {
+        key: 'starboard',
+        label: 'Stb. M/E',
+        averageRpm: starboardMainSpeed.averageRpm,
+        maximumRpm: starboardMainSpeed.maximumRpm,
+        runningHours: starboardMainRunningHours,
+        fuelUsed: Math.max(0, smeDailyFuel),
+        engineLoad: this.average(
+          Array.from(smeEngineLoad.values()).filter((value) => value > 0 && Number.isFinite(value)),
+        ),
+      },
     ];
     const shaftSummary: ScRajaShaftSummaryRow[] = [
-      this.buildShaftSummary('port', 'Port Shaft', ppsRpm, pmeRpm),
-      this.buildShaftSummary('starboard', 'Stb. Shaft', spsRpm, smeRpm),
+      {
+        key: 'port',
+        label: 'Port Shaft',
+        averageRpm: portShaftSpeed.averageRpm,
+        maximumRpm: portShaftSpeed.maximumRpm,
+        runningHours: portShaftRunningHours,
+      },
+      {
+        key: 'starboard',
+        label: 'Stb. Shaft',
+        averageRpm: starboardShaftSpeed.averageRpm,
+        maximumRpm: starboardShaftSpeed.maximumRpm,
+        runningHours: starboardShaftRunningHours,
+      },
     ];
     const auxSummary: ScRajaAuxSummaryRow[] = [
-      this.buildAuxSummary('port', 'Port A/E', paeRpm, paeDailyFuel),
-      this.buildAuxSummary('starboard', 'Stb. A/E', saeRpm, saeDailyFuel),
+      {
+        key: 'port',
+        label: 'Port A/E',
+        runningHours: portAuxRunningHours,
+        fuelUsed: Math.max(0, paeDailyFuel),
+      },
+      {
+        key: 'starboard',
+        label: 'Stb. A/E',
+        runningHours: starboardAuxRunningHours,
+        fuelUsed: Math.max(0, saeDailyFuel),
+      },
     ];
 
     const mainEngineFuelTotal = pmeDailyFuel + smeDailyFuel;
@@ -1072,24 +1206,49 @@ export class ScRajaReportService implements VesselReportAdapter {
     const starboardEngine = engineSummary.find((row) => row.key === 'starboard')!;
     const portShaft = shaftSummary.find((row) => row.key === 'port')!;
     const starboardShaft = shaftSummary.find((row) => row.key === 'starboard')!;
+    // The C# PDF formats M/E and shaft utilization to one decimal first, then
+    // computes "Shaft per M/E" from those displayed percentages.  Preserve
+    // that order of operations to avoid 0.1-level parity drift.
+    const portMainUtilized = this.roundToDecimals(
+      this.percent(portEngine.runningHours, elapsedHours),
+      1,
+    );
+    const starboardMainUtilized = this.roundToDecimals(
+      this.percent(starboardEngine.runningHours, elapsedHours),
+      1,
+    );
+    const portShaftUtilized = this.roundToDecimals(
+      this.percent(portShaft.runningHours, elapsedHours),
+      1,
+    );
+    const starboardShaftUtilized = this.roundToDecimals(
+      this.percent(starboardShaft.runningHours, elapsedHours),
+      1,
+    );
     const utilization: ScRajaUtilizationRow[] = [
       {
         label: 'M/E Engine Utilized (%)',
-        port: this.percent(portEngine.runningHours, elapsedHours),
+        port: portMainUtilized,
         center: Number.NaN,
-        starboard: this.percent(starboardEngine.runningHours, elapsedHours),
+        starboard: starboardMainUtilized,
       },
       {
         label: 'Shaft Utilized (%)',
-        port: this.percent(portShaft.runningHours, elapsedHours),
+        port: portShaftUtilized,
         center: Number.NaN,
-        starboard: this.percent(starboardShaft.runningHours, elapsedHours),
+        starboard: starboardShaftUtilized,
       },
       {
         label: 'Shaft per M/E Engine Utilized (%)',
-        port: this.ratioPercent(portShaft.runningHours, portEngine.runningHours),
+        port:
+          portMainUtilized > 0 && portShaftUtilized > 0
+            ? this.roundToDecimals((100 / portMainUtilized) * portShaftUtilized, 1)
+            : 0,
         center: Number.NaN,
-        starboard: this.ratioPercent(starboardShaft.runningHours, starboardEngine.runningHours),
+        starboard:
+          starboardMainUtilized > 0 && starboardShaftUtilized > 0
+            ? this.roundToDecimals((100 / starboardMainUtilized) * starboardShaftUtilized, 1)
+            : 0,
       },
     ];
 
@@ -1241,6 +1400,31 @@ export class ScRajaReportService implements VesselReportAdapter {
       }
     }
 
+    // Keep the legacy next-day 00:00 row in direct Mode calculations only.
+    // The PDF's 24 hourly/navigation pages still end at 23:59.
+    if (completedDaily && pdfDataEnd > minuteEnd) {
+      const bucket = pdfDataEnd;
+      const modeLabel = this.resolveModeFromCode(modeCode.get(bucket));
+      if (modeLabel) {
+        modeAvailableMinutes += 1;
+        const modeKey = this.resolveModeProfileKey(modeLabel);
+        const mode = modeMap.get(modeKey);
+        if (mode) {
+          const speedValue = gpsSpeed.get(bucket);
+          const speed = speedValue !== undefined && Number.isFinite(speedValue) ? Math.max(0, speedValue) : 0;
+          const pdfModeMinuteFuel =
+            (pmePdfModeFuel.get(bucket) || 0) +
+            (smePdfModeFuel.get(bucket) || 0) +
+            (paePdfModeFuel.get(bucket) || 0) +
+            (saePdfModeFuel.get(bucket) || 0);
+          mode.fuelUsed += pdfModeMinuteFuel;
+          mode.runningHours += 1 / 60;
+          mode.distanceNm += speed / 60;
+          modeMinuteKeys.get(modeKey)?.push(bucket);
+        }
+      }
+    }
+
     const rawModeFuelTotal = Array.from(modeMap.values()).reduce((sum, row) => sum + row.fuelUsed, 0);
     const modeFuelScale = rawModeFuelTotal > 0 && totalFuelUsed >= 0 ? totalFuelUsed / rawModeFuelTotal : 0;
     const observedModeHours = Math.max(0, modeAvailableMinutes / 60);
@@ -1261,6 +1445,16 @@ export class ScRajaReportService implements VesselReportAdapter {
     const modeSummary = normalizeModeFuelToOfficialTotal<ScRajaModeSummaryRow>(
       rawModeSummary,
       totalFuelUsed,
+      {
+        // Legacy SCRaja keeps the actual Standby-1 running-hour value but makes
+        // its fuel% and running% the residual after all other rounded rows.
+        residualModeKey: 'standby-1me',
+        residualFuelPercent: true,
+        residualRunningHours: false,
+        residualRunningPercent: true,
+        distanceFromDisplayedHours: true,
+        legacySinglePrecision: true,
+      },
     );
 
     const modeDetails: ScRajaModeDetail[] = modeSummary.map((mode) => {
@@ -1398,6 +1592,193 @@ export class ScRajaReportService implements VesselReportAdapter {
     };
   }
 
+  /**
+   * Normalize SC RAJA RPM history before applying the legacy summary rules.
+   *
+   * Depending on the historian path, the same SC_RAJA-*-SPD channels can be
+   * exposed in one of three representations:
+   *   1) engineering RPM (legacy report historian),
+   *   2) engineering RPM x10,
+   *   3) raw pulse/counter-rate values (HOME/API2 path).
+   *
+   * The old VesselSDK code documents the pulse conversion as:
+   *     rpm = (raw / 1000) * 60 * (1 / pulse)
+   *
+   * Main engines and shafts use pulse=8; A/E channels use pulse=6.  We do not
+   * blindly rescale: the representation is selected from the data by measuring
+   * which candidate puts the strongest share of positive samples inside the
+   * same 50..maximumExpectedRpm operating window used by the C# report.
+   */
+  private normalizeLegacyRpmMap(
+    source: Map<number, number>,
+    maximumExpectedRpm: number,
+    pulse: number,
+  ): Map<number, number> {
+    const positives = Array.from(source.values()).filter(
+      (value) => Number.isFinite(value) && value > 0,
+    );
+
+    if (positives.length < 3 || maximumExpectedRpm <= 0) return source;
+
+    const safePulse = Number.isFinite(pulse) && pulse > 0 ? pulse : 1;
+    const candidates = [
+      { name: 'direct', scale: 1 },
+      { name: 'x10', scale: 0.1 },
+      { name: 'pulse', scale: 60 / (1000 * safePulse) },
+    ] as const;
+
+    const score = (scale: number) =>
+      positives.filter((value) => {
+        const rpm = value * scale;
+        return rpm >= 50 && rpm <= maximumExpectedRpm;
+      }).length / positives.length;
+
+    const ranked = candidates
+      .map((candidate) => ({ ...candidate, score: score(candidate.scale) }))
+      .sort((a, b) => b.score - a.score);
+
+    const direct = ranked.find((candidate) => candidate.name === 'direct')!;
+    const best = ranked[0];
+
+    // Preserve genuine engineering-RPM data whenever it already explains the
+    // series well.  Otherwise rescale only when another representation gives a
+    // materially stronger fit.
+    if (best.name === 'direct' || direct.score >= 0.65 || best.score < 0.55 || best.score < direct.score + 0.25) {
+      return source;
+    }
+
+    const normalized = new Map<number, number>();
+    source.forEach((value, bucket) => {
+      normalized.set(bucket, Number.isFinite(value) ? value * best.scale : value);
+    });
+    return normalized;
+  }
+
+  /** Reproduce SCRaja.CalSpeedSummary(), including its zero-row carry behaviour. */
+  private buildLegacySpeedSummary(
+    rpmMap: Map<number, number>,
+    minuteStart: number,
+    minuteEndInclusive: number,
+    averageMaximumRpm: number,
+    runningMinimumRpm: number,
+    runningMaximumRpm: number,
+  ): { averageRpm: number | null; maximumRpm: number | null; runningHours: number } {
+    let sum = 0;
+    let count = 0;
+    let maximum = 0;
+    let runningMinutes = 0;
+    let previousRunning = false;
+
+    for (let bucket = minuteStart; bucket <= minuteEndInclusive; bucket += MINUTE_MS) {
+      const raw = rpmMap.get(bucket);
+      const value = raw !== undefined && Number.isFinite(raw) ? raw : 0;
+
+      if (value !== 0) {
+        previousRunning = false;
+        if (value <= averageMaximumRpm) {
+          if (value > maximum) maximum = value;
+          sum += value;
+          count += 1;
+        }
+        if (value >= runningMinimumRpm && value <= runningMaximumRpm) {
+          runningMinutes += 1;
+          previousRunning = true;
+        }
+      } else if (previousRunning) {
+        // Intentionally do not clear previousRunning.  The legacy C# continues
+        // counting consecutive zero/missing rows until a later non-zero sample
+        // explicitly changes the running state.
+        runningMinutes += 1;
+      }
+    }
+
+    return {
+      averageRpm: count > 0 ? sum / count : null,
+      maximumRpm: count > 0 ? maximum : null,
+      runningHours: runningMinutes / 60,
+    };
+  }
+
+  /** Reproduce SCRaja.CalSpeedAESummary(). */
+  private buildLegacyAuxRunningHours(
+    rpmMap: Map<number, number>,
+    minuteStart: number,
+    minuteEndInclusive: number,
+  ): number {
+    let runningMinutes = 0;
+    let previousRunning = false;
+
+    for (let bucket = minuteStart; bucket <= minuteEndInclusive; bucket += MINUTE_MS) {
+      const raw = rpmMap.get(bucket);
+      const value = raw !== undefined && Number.isFinite(raw) ? raw : 0;
+      if (value !== 0) {
+        previousRunning = false;
+        if (value >= 50 && value <= 2000) {
+          runningMinutes += 1;
+          previousRunning = true;
+        }
+      } else if (previousRunning) {
+        runningMinutes += 1;
+      }
+    }
+
+    return runningMinutes / 60;
+  }
+
+  private roundLegacyAuxRunningHours(hours: number): number {
+    if (!Number.isFinite(hours) || hours <= 0) return 0;
+    return hours >= 23.8 ? 24 : Math.min(24, hours);
+  }
+
+  /** Reproduce SCRaja.CalSpeedShaftRunningHr() exactly enough for PDF parity. */
+  private buildLegacyShaftRunningHours(
+    mainEngineRpm: Map<number, number>,
+    shaftRpm: Map<number, number>,
+    minuteStart: number,
+    minuteEndInclusive: number,
+  ): number {
+    const mainEngineRunning = new Set<number>();
+    let previousMainRunning = false;
+
+    for (let bucket = minuteStart; bucket <= minuteEndInclusive; bucket += MINUTE_MS) {
+      const raw = mainEngineRpm.get(bucket);
+      const value = raw !== undefined && Number.isFinite(raw) ? raw : 0;
+      if (value !== 0) {
+        previousMainRunning = false;
+        if (value >= 50 && value <= 1000) {
+          mainEngineRunning.add(bucket);
+          previousMainRunning = true;
+        }
+      } else if (previousMainRunning) {
+        mainEngineRunning.add(bucket);
+      }
+    }
+
+    let runningMinutes = 0;
+    let previousShaftRunning = false;
+    for (let bucket = minuteStart; bucket <= minuteEndInclusive; bucket += MINUTE_MS) {
+      const raw = shaftRpm.get(bucket);
+      const value = raw !== undefined && Number.isFinite(raw) ? raw : 0;
+      if (value !== 0) {
+        if (value >= 50 && value <= 1000 && mainEngineRunning.has(bucket)) {
+          runningMinutes += 1;
+          previousShaftRunning = true;
+        }
+      } else if (previousShaftRunning) {
+        // Legacy C# carries this state through consecutive zero rows.
+        runningMinutes += 1;
+      }
+    }
+
+    return runningMinutes / 60;
+  }
+
+  private roundToDecimals(value: number, decimals: number): number {
+    if (!Number.isFinite(value)) return 0;
+    const factor = 10 ** Math.max(0, decimals);
+    return Math.round((value + Number.EPSILON) * factor) / factor;
+  }
+
   private buildEngineSummary(
     key: ScRajaEngineSummaryRow['key'],
     label: string,
@@ -1494,6 +1875,8 @@ export class ScRajaReportService implements VesselReportAdapter {
     const saeFuelValue = fuelFor(saeFuel);
     const pmeValues = selectValues(pmeRpm, 0, 1200).filter((value) => value > 0);
     const smeValues = selectValues(smeRpm, 0, 1200).filter((value) => value > 0);
+    const portShaftValues = coupledShaftValues(ppsRpm, pmeRpm);
+    const starboardShaftValues = coupledShaftValues(spsRpm, smeRpm);
     const speedValues = selectValues(gpsSpeed, 0);
     const pmeLoadValues = selectValues(pmeEngineLoad, 0).filter((value) => value > 0);
     const smeLoadValues = selectValues(smeEngineLoad, 0).filter((value) => value > 0);
@@ -1523,16 +1906,16 @@ export class ScRajaReportService implements VesselReportAdapter {
         {
           key: 'port',
           label: 'Port Shaft',
-          averageRpm: this.average(coupledShaftValues(ppsRpm, pmeRpm)),
-          maximumRpm: this.maximum(coupledShaftValues(ppsRpm, pmeRpm)),
-          runningHours: coupledShaftValues(ppsRpm, pmeRpm).length / 60,
+          averageRpm: minuteKeys.length > 0 && portShaftValues.length === 0 ? Number.NaN : this.average(portShaftValues),
+          maximumRpm: this.maximum(portShaftValues),
+          runningHours: portShaftValues.length / 60,
         },
         {
           key: 'starboard',
           label: 'Stb. Shaft',
-          averageRpm: this.average(coupledShaftValues(spsRpm, smeRpm)),
-          maximumRpm: this.maximum(coupledShaftValues(spsRpm, smeRpm)),
-          runningHours: coupledShaftValues(spsRpm, smeRpm).length / 60,
+          averageRpm: minuteKeys.length > 0 && starboardShaftValues.length === 0 ? Number.NaN : this.average(starboardShaftValues),
+          maximumRpm: this.maximum(starboardShaftValues),
+          runningHours: starboardShaftValues.length / 60,
         },
       ],
       auxFuel: [

@@ -36,10 +36,26 @@ export interface GpsPdfParityOptions {
   /** Reproduce System.Single arithmetic used by the legacy C# mode DataTable. */
   legacySinglePrecision?: boolean;
   /**
+   * Legacy SC GLORY 1/2/3/7 calculate distance from average speed multiplied by
+   * the already displayed 2dp running hours. SC GLORY 6 is different: Service1.cs
+   * stores distance as SumSpd / 60. Keep the default for the normal GLORY family
+   * and opt in to the SC GLORY 6 rule only for that vessel.
+   */
+  distanceStrategy?: 'average-times-displayed-hours' | 'speed-sum-over-60';
+  /**
    * Legacy vessels are not all normalized back to the Page-1 official fuel total.
    * Keep the default true; SC WINTER explicitly uses raw by-Mode fuel in the legacy PDF.
    */
   scaleFuelToOfficialTotal?: boolean;
+  /** Preserve legacy DevExpress/.NET 0/0 => NaN fuel-percentage display. */
+  legacyNaNPercentWhenZeroFuelTotal?: boolean;
+  /**
+   * Some legacy PDFs calculate Standby fuel % as the residual 100 - sum(other modes)
+   * after each non-Standby percentage has already been rounded. That residual can be
+   * negative (SC WINTER is a verified example), so allow opting out of the default
+   * non-negative clamp without changing the behavior of every other vessel.
+   */
+  allowNegativeResidualFuelPercent?: boolean;
 }
 
 /**
@@ -89,6 +105,23 @@ export function buildExactMinuteValueMap(
     const bucket = normalized.getTime();
     if (bucket % minuteMs !== 0) continue;
     result.set(bucket, point.value);
+  }
+  return result;
+}
+
+/**
+ * Same exact-minute join as buildExactMinuteValueMap(), but writes the GPS value
+ * through System.Single first. The original SC GLORY C# DataTables declare
+ * GPSSpd as typeof(float), so threshold comparisons happen on float32 values.
+ */
+export function buildExactMinuteSingleValueMap(
+  points: readonly LegacyFuelPoint[],
+  minuteMs = 60_000,
+): Map<number, number> {
+  const exact = buildExactMinuteValueMap(points, minuteMs);
+  const result = new Map<number, number>();
+  for (const [minute, value] of exact) {
+    result.set(minute, Math.fround(value));
   }
   return result;
 }
@@ -199,7 +232,11 @@ export function buildGpsPdfParityModeSummary(options: GpsPdfParityOptions): PdfP
       ? Math.fround(bucket.rawFuel)
       : bucket.rawFuel;
     const modeFuelPercent =
-      totalRawFuel !== 0 ? roundPdf2((rawFuelForPercent / totalRawFuel) * 100) : 0;
+      totalRawFuel !== 0
+        ? roundPdf2((rawFuelForPercent / totalRawFuel) * 100)
+        : options.legacyNaNPercentWhenZeroFuelTotal
+          ? Number.NaN
+          : 0;
 
     runningHours.set(mode.key, hours);
     runningPercent.set(mode.key, runPercent);
@@ -212,7 +249,15 @@ export function buildGpsPdfParityModeSummary(options: GpsPdfParityOptions): PdfP
   if (buckets.has(standbyKey)) {
     runningHours.set(standbyKey, roundPdf2(Math.max(0, reportHours - otherRunningHours)));
     runningPercent.set(standbyKey, roundPdf2(Math.max(0, 100 - otherRunningPercent)));
-    fuelPercent.set(standbyKey, roundPdf2(Math.max(0, 100 - otherFuelPercent)));
+    const standbyFuelPercentResidual = 100 - otherFuelPercent;
+    fuelPercent.set(
+      standbyKey,
+      roundPdf2(
+        options.allowNegativeResidualFuelPercent
+          ? standbyFuelPercentResidual
+          : Math.max(0, standbyFuelPercentResidual),
+      ),
+    );
   }
 
   const fuelScale =
@@ -231,19 +276,28 @@ export function buildGpsPdfParityModeSummary(options: GpsPdfParityOptions): PdfP
         : 0);
     const directFuelPercent =
       fuelPercent.get(mode.key) ??
-      (totalRawFuel !== 0 ? roundPdf2((bucket.rawFuel / totalRawFuel) * 100) : 0);
+      (totalRawFuel !== 0
+        ? roundPdf2((bucket.rawFuel / totalRawFuel) * 100)
+        : options.legacyNaNPercentWhenZeroFuelTotal
+          ? Number.NaN
+          : 0);
     const fuelFull = bucket.rawFuel * fuelScale;
     const averageGpsSpeed = bucket.samples > 0
       ? options.legacySinglePrecision
         ? Math.fround(Math.fround(bucket.speedSum) / Math.fround(bucket.samples))
         : bucket.speedSum / bucket.samples
       : 0;
-    // The C# report parses the already displayed 2-decimal Run Hrs back to
-    // System.Single, multiplies by the Single average speed, and stores Distance
-    // in a Single DataColumn before calculating L/NM.
-    const distanceFull = options.legacySinglePrecision
-      ? Math.fround(Math.fround(averageGpsSpeed) * Math.fround(hours))
-      : averageGpsSpeed * hours;
+    // SC GLORY 1/2/3/7 parse the already displayed 2dp Run Hrs back to
+    // System.Single and multiply by average GPS speed. SC GLORY 6 (Service1.cs)
+    // is a genuine exception and writes Distance = SumSpd / 60.0 directly.
+    const distanceFull =
+      options.distanceStrategy === 'speed-sum-over-60'
+        ? options.legacySinglePrecision
+          ? Math.fround(Math.fround(bucket.speedSum) / Math.fround(60))
+          : bucket.speedSum / 60
+        : options.legacySinglePrecision
+          ? Math.fround(Math.fround(averageGpsSpeed) * Math.fround(hours))
+          : averageGpsSpeed * hours;
     const lphHours = options.legacySinglePrecision ? Math.fround(hours) : hours;
     scaledFuelByMode.set(mode.key, fuelFull);
 
@@ -255,8 +309,8 @@ export function buildGpsPdfParityModeSummary(options: GpsPdfParityOptions): PdfP
       runningHours: hours,
       runningPercent: runPercent,
       distanceNm: roundPdf2(distanceFull),
-      litresPerNm: distanceFull !== 0 ? roundPdf2(fuelFull / distanceFull) : null,
-      litresPerHour: lphHours !== 0 ? roundPdf2(fuelFull / lphHours) : null,
+      litresPerNm: Math.abs(distanceFull) >= 0.01 ? roundPdf2(fuelFull / distanceFull) : 0,
+      litresPerHour: lphHours !== 0 ? roundPdf2(fuelFull / lphHours) : 0,
     };
   });
 
@@ -267,29 +321,201 @@ export function buildGpsPdfParityModeSummary(options: GpsPdfParityOptions): PdfP
  * Keeps explicit mode-code vessels on their own classification logic while
  * applying the same SC GLORY 3 fuel precision rules to their completed rows.
  */
+export interface ExplicitModePdfParityOptions {
+  /**
+   * Legacy reports often force one standby row to be the residual after every
+   * other row has already been rounded for display.
+   */
+  residualModeKey?: string;
+  residualFuelPercent?: boolean;
+  residualRunningHours?: boolean;
+  residualRunningPercent?: boolean;
+  reportHours?: number;
+  /**
+   * SCEmerald/SCBongkot/SCRaja/SCSultan calculate distance as:
+   *   average GPS speed for the raw mode samples × displayed (2dp) running hours.
+   * Bahtera generator reports instead keep sum(speed)/60, so they do not use this.
+   */
+  distanceFromDisplayedHours?: boolean;
+  /** Reproduce the System.Single intermediate arithmetic in the legacy C# report. */
+  legacySinglePrecision?: boolean;
+}
+
+/**
+ * Normalize direct-mode rows to the Page-1 official total while preserving the
+ * legacy C# presentation semantics.  In particular, the old reports calculate
+ * percentages/hours in display order and some vessel families use a residual
+ * standby row.  Distance, L/NM and LPH also use the *displayed* 2dp running
+ * hours on several direct-mode reports.
+ */
 export function normalizeModeFuelToOfficialTotal<T extends PdfParityModeSummaryRow>(
   rows: readonly T[],
   officialTotalFuel: number,
+  options: ExplicitModePdfParityOptions = {},
 ): T[] {
-  const rawFuelTotal = rows.reduce((sum, row) => sum + (Number.isFinite(row.fuelUsed) ? row.fuelUsed : 0), 0);
+  const rawFuelTotal = rows.reduce(
+    (sum, row) => sum + (Number.isFinite(row.fuelUsed) ? row.fuelUsed : 0),
+    0,
+  );
+  const rawRunningHoursTotal = rows.reduce(
+    (sum, row) => sum + (Number.isFinite(row.runningHours) ? Math.max(0, row.runningHours) : 0),
+    0,
+  );
+  // Direct-mode legacy reports count one row per minute. Recover that integer
+  // sample denominator so System.Single percentage math is not polluted by the
+  // repeated JS 1/60 additions used by the UI accumulator.
+  const rawRunningMinuteTotal = Math.max(0, Math.round(rawRunningHoursTotal * 60));
   const scale = rawFuelTotal !== 0 ? officialTotalFuel / rawFuelTotal : 0;
+  const reportHours = options.reportHours ?? 24;
+  const residualKey = options.residualModeKey;
+
+  const fuelPercentByKey = new Map<string, number>();
+  const runningHoursByKey = new Map<string, number>();
+  const runningPercentByKey = new Map<string, number>();
+
+  let otherFuelPercent = 0;
+  let otherRunningHours = 0;
+  let otherRunningPercent = 0;
+
+  for (const row of rows) {
+    if (residualKey && row.key === residualKey) continue;
+    const rawFuel = Number.isFinite(row.fuelUsed) ? row.fuelUsed : 0;
+    const rawHours = Number.isFinite(row.runningHours) ? Math.max(0, row.runningHours) : 0;
+    const rawMinutes = Math.max(0, Math.round(rawHours * 60));
+    const fuelPercentSource = options.legacySinglePrecision
+      ? (Math.fround(rawFuel) / rawFuelTotal) * 100
+      : (rawFuel / rawFuelTotal) * 100;
+    const fuelPercent = rawFuelTotal !== 0 ? roundPdf2(fuelPercentSource) : 0;
+    const hoursSource = options.legacySinglePrecision
+      ? Math.fround(Math.fround(rawMinutes) / Math.fround(60))
+      : rawHours;
+    const displayedHours = roundPdf2(hoursSource);
+    let runningPercentSource = 0;
+    if (rawRunningMinuteTotal > 0) {
+      runningPercentSource = options.legacySinglePrecision
+        ? Math.fround(
+            Math.fround(Math.fround(rawMinutes) / Math.fround(rawRunningMinuteTotal)) *
+              Math.fround(100),
+          )
+        : (rawMinutes / rawRunningMinuteTotal) * 100;
+    }
+    const runningPercent = roundPdf2(runningPercentSource);
+
+    fuelPercentByKey.set(row.key, fuelPercent);
+    runningHoursByKey.set(row.key, displayedHours);
+    runningPercentByKey.set(row.key, runningPercent);
+    if (options.legacySinglePrecision) {
+      otherFuelPercent = Math.fround(Math.fround(otherFuelPercent) + Math.fround(fuelPercent));
+      otherRunningHours = Math.fround(Math.fround(otherRunningHours) + Math.fround(displayedHours));
+      otherRunningPercent = Math.fround(Math.fround(otherRunningPercent) + Math.fround(runningPercent));
+    } else {
+      otherFuelPercent += fuelPercent;
+      otherRunningHours += displayedHours;
+      otherRunningPercent += runningPercent;
+    }
+  }
+
+  if (residualKey) {
+    const residualRow = rows.find((row) => row.key === residualKey);
+    const residualRawHours = residualRow && Number.isFinite(residualRow.runningHours)
+      ? Math.max(0, residualRow.runningHours)
+      : 0;
+    const residualRawFuel = residualRow && Number.isFinite(residualRow.fuelUsed)
+      ? residualRow.fuelUsed
+      : 0;
+
+    fuelPercentByKey.set(
+      residualKey,
+      options.residualFuelPercent
+        ? rawFuelTotal !== 0 && otherFuelPercent < 100
+          ? roundPdf2(100 - otherFuelPercent)
+          : 0
+        : rawFuelTotal !== 0
+          ? roundPdf2(
+              ((options.legacySinglePrecision ? Math.fround(residualRawFuel) : residualRawFuel) / rawFuelTotal) * 100,
+            )
+          : 0,
+    );
+
+    runningHoursByKey.set(
+      residualKey,
+      options.residualRunningHours
+        ? rawRunningHoursTotal > 0 && otherRunningHours < reportHours
+          ? roundPdf2(reportHours - otherRunningHours)
+          : 0
+        : roundPdf2(residualRawHours),
+    );
+
+    runningPercentByKey.set(
+      residualKey,
+      options.residualRunningPercent
+        ? rawRunningHoursTotal > 0 && otherRunningPercent < 100
+          ? roundPdf2(100 - otherRunningPercent)
+          : 0
+        : rawRunningMinuteTotal > 0
+          ? roundPdf2(
+              options.legacySinglePrecision
+                ? Math.fround(
+                    Math.fround(
+                      Math.fround(Math.round(residualRawHours * 60)) / Math.fround(rawRunningMinuteTotal),
+                    ) * Math.fround(100),
+                  )
+                : (Math.round(residualRawHours * 60) / rawRunningMinuteTotal) * 100,
+            )
+          : 0,
+    );
+  }
 
   return rows.map((row) => {
     const rawFuel = Number.isFinite(row.fuelUsed) ? row.fuelUsed : 0;
+    const rawHours = Number.isFinite(row.runningHours) ? Math.max(0, row.runningHours) : 0;
+    const rawDistance = Number.isFinite(row.distanceNm) ? row.distanceNm : 0;
     const fuelFull = rawFuel * scale;
-    const fuelPercent = rawFuelTotal !== 0 ? roundPdf2((rawFuel / rawFuelTotal) * 100) : 0;
-    const distanceFull = Number.isFinite(row.distanceNm) ? row.distanceNm : 0;
-    const displayedHours = roundPdf2(Number.isFinite(row.runningHours) ? row.runningHours : 0);
+    const displayedHours = runningHoursByKey.get(row.key) ?? roundPdf2(rawHours);
+
+    let distanceFull = rawDistance;
+    if (options.distanceFromDisplayedHours && rawHours > 0) {
+      if (options.legacySinglePrecision) {
+        const rawMinutes = Math.max(0, Math.round(rawHours * 60));
+        // dtMode.SumSpd is a Single. rawDistance is the UI accumulator's
+        // sum(speed/60), so reconstruct the speed sum before the Single divide.
+        const speedSum = Math.fround(rawDistance * 60);
+        const averageSpeed = rawMinutes > 0
+          ? Math.fround(speedSum / Math.fround(rawMinutes))
+          : 0;
+        distanceFull = Math.fround(Math.fround(averageSpeed) * Math.fround(displayedHours));
+      } else {
+        const averageSpeed = rawDistance / rawHours;
+        distanceFull = averageSpeed * displayedHours;
+      }
+    }
+
+    // C# checks the raw mode sample count first. If a non-zero raw duration
+    // rounds to 0.00 h, dividing the fuel by the displayed value intentionally
+    // produces +Infinity; DevExpress renders that as the infinity glyph.
+    let litresPerHour = 0;
+    if (rawHours > 0) {
+      const legacyDisplayedHours = options.legacySinglePrecision ? Math.fround(displayedHours) : displayedHours;
+      litresPerHour = legacyDisplayedHours === 0
+        ? (fuelFull === 0 ? Number.NaN : Math.sign(fuelFull) * Number.POSITIVE_INFINITY)
+        : fuelFull / legacyDisplayedHours;
+    }
+
+    const litresPerNm = Math.abs(distanceFull) >= 0.01 ? fuelFull / distanceFull : 0;
+
     return {
       ...row,
       fuelUsed: roundPdf2(fuelFull),
-      fuelPercent,
+      fuelPercent:
+        fuelPercentByKey.get(row.key) ??
+        (rawFuelTotal !== 0 ? roundPdf2((rawFuel / rawFuelTotal) * 100) : 0),
       runningHours: displayedHours,
-      runningPercent: roundPdf2(row.runningPercent),
+      runningPercent:
+        runningPercentByKey.get(row.key) ??
+        (rawRunningHoursTotal > 0 ? roundPdf2((rawHours / rawRunningHoursTotal) * 100) : 0),
       distanceNm: roundPdf2(distanceFull),
-      // PDF keeps full distance precision for L/NM but uses displayed running hours for LPH.
-      litresPerNm: distanceFull !== 0 ? roundPdf2(fuelFull / distanceFull) : null,
-      litresPerHour: displayedHours !== 0 ? roundPdf2(fuelFull / displayedHours) : null,
+      litresPerNm: Number.isFinite(litresPerNm) ? roundPdf2(litresPerNm) : litresPerNm,
+      litresPerHour: Number.isFinite(litresPerHour) ? roundPdf2(litresPerHour) : litresPerHour,
     };
   });
 }
@@ -370,6 +596,11 @@ export interface LegacyFuelDeltaOptions {
   resetFloor?: number;
   resetCeiling?: number;
   minuteMs?: number;
+  /**
+   * Legacy C# checks `value != 0`; when enabled, preserve negative non-zero
+   * samples in the totalizer state machine instead of discarding every value <= 0.
+   */
+  skipOnlyExactZero?: boolean;
 }
 
 /**
@@ -392,6 +623,7 @@ export function buildLegacyPdfFuelDeltaMap(
     options.resetFloor ?? 500,
     options.resetCeiling ?? 20_000,
     minuteMs,
+    options.skipOnlyExactZero ?? false,
   );
   const returned = buildLegacyPdfTotalizerDeltaMap(
     returnPoints,
@@ -400,6 +632,7 @@ export function buildLegacyPdfFuelDeltaMap(
     options.resetFloor ?? 500,
     options.resetCeiling ?? 20_000,
     minuteMs,
+    options.skipOnlyExactZero ?? false,
   );
 
   const buckets = new Set<number>([...supply.keys(), ...returned.keys()]);
@@ -419,25 +652,36 @@ function buildLegacyPdfTotalizerDeltaMap(
   resetFloor: number,
   resetCeiling: number,
   minuteMs: number,
+  skipOnlyExactZero: boolean,
 ): Map<number, number> {
   const result = new Map<number, number>();
-  // IMPORTANT: legacy SCReportingService first joins logger rows to a 1-minute
-  // DataTable with exact DateTime equality. Rows that are not exactly on the
-  // minute never enter dtRawData and therefore must not affect `previous`.
-  // Filtering here BEFORE delta calculation is essential for day-to-day PDF parity.
-  const sorted = [...points]
-    .filter((point) => {
-      const time = point.timestamp.getTime();
-      return Number.isFinite(time) && time % minuteMs === 0;
-    })
-    .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  // IMPORTANT: legacy SCReportingService first joins logger rows to a fixed
+  // 1-minute DataTable. DateTime.ToString() keeps whole seconds but not fractional
+  // seconds, so 10:15:00.123 can hit the 10:15:00 row while 10:15:23 cannot.
+  // Normalize only :00.xxx rows and let the final record for that legacy second win.
+  const exactByMinute = new Map<number, LegacyFuelPoint>();
+  for (const point of points) {
+    const timestamp = point?.timestamp;
+    if (!(timestamp instanceof Date) || !Number.isFinite(timestamp.getTime())) continue;
+    if (timestamp.getSeconds() !== 0) continue;
+
+    const normalized = new Date(timestamp.getTime());
+    normalized.setMilliseconds(0);
+    const bucket = normalized.getTime();
+    if (!Number.isFinite(bucket) || bucket % minuteMs !== 0) continue;
+
+    exactByMinute.set(bucket, { timestamp: normalized, value: point.value });
+  }
+  const sorted = Array.from(exactByMinute.values()).sort(
+    (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+  );
   let nonZeroIndex = 0;
   let previous = 0;
   let previousAfterLost = 0;
 
   for (const point of sorted) {
     const value = point.value;
-    if (!Number.isFinite(value) || value <= 0) continue;
+    if (!Number.isFinite(value) || (skipOnlyExactZero ? value === 0 : value <= 0)) continue;
 
     if (nonZeroIndex === 0) {
       previous = value;

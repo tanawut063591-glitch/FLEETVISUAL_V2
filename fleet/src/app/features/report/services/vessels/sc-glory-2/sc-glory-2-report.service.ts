@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Observable, from, of, throwError } from 'rxjs';
+import { Observable, forkJoin, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from '../../common/report-cache.util';
+import { OfficialPdfModeParityService } from '../../common/official-pdf-mode-parity.service';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -14,7 +16,7 @@ import {
 import { calculateLegacyDailyFuelTotal, exactMinutePoints } from '../../common/legacy-daily-fuel';
 import {
   buildGpsPdfParityModeSummary,
-  buildExactMinuteValueMap,
+  buildExactMinuteSingleValueMap,
   buildLegacyPdfFuelDeltaMap,
   isCompletedDailyWindow,
 } from '../../common/pdf-mode-parity';
@@ -200,7 +202,9 @@ interface HourAccumulator {
 }
 
 const MINUTE_MS = 60_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
+const LIVE_REPORT_CACHE_TTL_MS = 30_000;
+const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -242,7 +246,10 @@ export class ScGlory2ReportService implements VesselReportAdapter {
   private readonly periodReportCache = new Map<string, { value: ScGlory2PeriodUiReport; expiresAt: number }>();
   private readonly periodReportInFlight = new Map<string, Observable<ScGlory2PeriodUiReport>>();
 
-  constructor(private newHttp: NewHttpClientService) {}
+  constructor(
+    private newHttp: NewHttpClientService,
+    private officialPdfMode: OfficialPdfModeParityService,
+  ) {}
 
   supports(vessel: any): boolean {
     const info = vessel?.fvInfo || vessel?.fv || vessel || {};
@@ -384,18 +391,39 @@ export class ScGlory2ReportService implements VesselReportAdapter {
         )
       : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
 
-    const request$ = historianRequest$.pipe(
-        map((response) => this.buildDetailedDailyReport(response, start, end)),
-        tap((value) => {
-          this.detailedReportCache.set(key, {
-            value,
-            expiresAt: Date.now() + CACHE_TTL_MS,
-          });
-        }),
-        catchError((error) => throwError(() => error)),
-        finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: true }),
-      );
+    // Start the official PDF lookup in parallel with the historian bundle.
+    // This preserves the same final Mode values while removing the old serial wait
+    // (Historian -> PDF). It shortens completed Daily load time without adding
+    // extra requests or increasing historian concurrency.
+    const calculatedReport$ = historianRequest$.pipe(
+      map((response) => this.buildDetailedDailyReport(response, start, end)),
+    );
+    const officialModeRows$ = completedDaily
+      ? this.officialPdfMode.getDailyModeRows('SC GLORY 2', start)
+      : of(null);
+
+    const request$ = forkJoin({
+      value: calculatedReport$,
+      officialRows: officialModeRows$,
+    }).pipe(
+      map(({ value, officialRows }) =>
+        completedDaily
+          ? {
+              ...value,
+              modeSummary: this.officialPdfMode.overlayModeRows(value.modeSummary, officialRows),
+            }
+          : value,
+      ),
+      tap((value) => {
+        setBoundedReportCache(this.detailedReportCache, key, {
+          value,
+          expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
+        });
+      }),
+      catchError((error) => throwError(() => error)),
+      finalize(() => this.detailedReportInFlight.delete(key)),
+      shareReplay({ bufferSize: 1, refCount: true }),
+    );
 
     this.detailedReportInFlight.set(key, request$);
     return request$;
@@ -432,11 +460,12 @@ export class ScGlory2ReportService implements VesselReportAdapter {
     }
 
     const request$ = from(chunks).pipe(
-      // Two concurrent day-sized historian requests keep monthly views responsive
-      // without asking the backend for a very large 25-tag, 31-day payload at once.
+      // Long range/month reports are intentionally limited to one day bundle at a time.
+      // Each bundle already reads at most two historian tags concurrently, so the
+      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        2,
+        1,
       ),
       toArray(),
       map((reports) =>
@@ -448,9 +477,9 @@ export class ScGlory2ReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        this.periodReportCache.set(key, {
+        setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + CACHE_TTL_MS,
+          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
@@ -929,7 +958,7 @@ export class ScGlory2ReportService implements VesselReportAdapter {
     const gpsSpeedPoints = series.get(this.tagKey(TAGS.gpsSpeed)) || [];
     const gpsSpeed = this.buildInstantMap(gpsSpeedPoints);
     const pdfModeGpsSpeed = completedDaily
-      ? buildExactMinuteValueMap(gpsSpeedPoints, MINUTE_MS)
+      ? buildExactMinuteSingleValueMap(gpsSpeedPoints, MINUTE_MS)
       : gpsSpeed;
     const gpsLat = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLat)) || []);
     const gpsLong = this.buildInstantMap(series.get(this.tagKey(TAGS.gpsLong)) || []);
@@ -1181,27 +1210,57 @@ export class ScGlory2ReportService implements VesselReportAdapter {
     const pdfModePMEFuel = buildLegacyPdfFuelDeltaMap(
       series.get(this.tagKey(TAGS.pmeFuelIn)) || [],
       series.get(this.tagKey(TAGS.pmeFuelOut)) || [],
-      { supplyMaxDelta: 100, returnMaxDelta: 100, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+      {
+        supplyMaxDelta: 100,
+        returnMaxDelta: 100,
+        recoverAfterRejectedJump: false,
+        minuteMs: MINUTE_MS,
+        skipOnlyExactZero: true,
+      },
     );
     const pdfModeCMEFuel = buildLegacyPdfFuelDeltaMap(
       series.get(this.tagKey(TAGS.cmeFuelIn)) || [],
       series.get(this.tagKey(TAGS.cmeFuelOut)) || [],
-      { supplyMaxDelta: 100, returnMaxDelta: 100, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+      {
+        supplyMaxDelta: 100,
+        returnMaxDelta: 100,
+        recoverAfterRejectedJump: false,
+        minuteMs: MINUTE_MS,
+        skipOnlyExactZero: true,
+      },
     );
     const pdfModeSMEFuel = buildLegacyPdfFuelDeltaMap(
       series.get(this.tagKey(TAGS.smeFuelIn)) || [],
       series.get(this.tagKey(TAGS.smeFuelOut)) || [],
-      { supplyMaxDelta: 100, returnMaxDelta: 100, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+      {
+        supplyMaxDelta: 100,
+        returnMaxDelta: 100,
+        recoverAfterRejectedJump: false,
+        minuteMs: MINUTE_MS,
+        skipOnlyExactZero: true,
+      },
     );
     const pdfModePAEFuel = buildLegacyPdfFuelDeltaMap(
       series.get(this.tagKey(TAGS.paeFuelIn)) || [],
       series.get(this.tagKey(TAGS.paeFuelOut)) || [],
-      { supplyMaxDelta: 1000, returnMaxDelta: 1000, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+      {
+        supplyMaxDelta: 1000,
+        returnMaxDelta: 1000,
+        recoverAfterRejectedJump: false,
+        minuteMs: MINUTE_MS,
+        skipOnlyExactZero: true,
+      },
     );
     const pdfModeSAEFuel = buildLegacyPdfFuelDeltaMap(
       series.get(this.tagKey(TAGS.saeFuelIn)) || [],
       series.get(this.tagKey(TAGS.saeFuelOut)) || [],
-      { supplyMaxDelta: 1000, returnMaxDelta: 1000, recoverAfterRejectedJump: false, minuteMs: MINUTE_MS },
+      {
+        supplyMaxDelta: 1000,
+        returnMaxDelta: 1000,
+        recoverAfterRejectedJump: false,
+        minuteMs: MINUTE_MS,
+        skipOnlyExactZero: true,
+      },
     );
 
     const pdfParityMode = buildGpsPdfParityModeSummary({
@@ -1221,6 +1280,7 @@ export class ScGlory2ReportService implements VesselReportAdapter {
       resolveModeLabel: (speed) => this.resolveModeFromGpsSpeed(speed),
       resolveModeKey: (label) => this.resolveModeProfileKey(label),
       standbyLabel: 'Standby',
+      legacySinglePrecision: true,
     });
     const modeSummary = pdfParityMode.modeSummary as ScGlory2ModeSummaryRow[];
 

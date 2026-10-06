@@ -185,7 +185,10 @@
                     <div><strong>{{ dailyAverageShaftUtilization | number:'1.0-1' }}%</strong><span>Shaft</span></div>
                   </div>
                 </div>
-                <div class="daily-util-caption"><span>Engine utilization</span><span>Shaft utilization</span></div>
+                <div class="daily-util-caption" [class.daily-util-caption--single]="isBahteraGeneratorReport">
+                  <span>{{ isBahteraGeneratorReport ? 'DG/EG utilization' : 'Engine utilization' }}</span>
+                  <span *ngIf="!isBahteraGeneratorReport">Shaft utilization</span>
+                </div>
               </article>
 
               <article class="daily-overview-card daily-overview-card--voyage">
@@ -340,7 +343,7 @@
                   </section>
                 </div>
 
-                <div class="report-book-table-wrap daily-utilization-table">
+                <div class="report-book-table-wrap daily-utilization-table report-table-frame">
                   <table class="report-book-table daily-pdf-table">
                     <thead>
                       <tr><th>Measured Value</th><th class="num">DG1</th><th class="num">DG2</th><th class="num">DG3</th><th class="num">EG</th></tr>
@@ -425,7 +428,7 @@
                           </tr>
                           <tr class="separator-row"><td colspan="3"></td></tr>
                           <tr *ngFor="let row of detailed.auxSummary">
-                            <th>{{ row.label }} Running Hour (Hour)</th>
+                            <th>{{ pdfAuxRunningLabel(row) }} Running Hour (Hour)</th>
                             <td class="num" colspan="2">{{ formatPdfValue(row.runningHours, 2) }}</td>
                           </tr>
                           <tr class="separator-row"><td colspan="3"></td></tr>
@@ -449,7 +452,7 @@
                   </section>
                 </div>
 
-                <div class="report-book-table-wrap daily-utilization-table">
+                <div class="report-book-table-wrap daily-utilization-table report-table-frame">
                   <table class="report-book-table daily-pdf-table">
                     <thead>
                       <tr>
@@ -492,7 +495,7 @@
                 </app-premium-pie-chart>
               </div>
 
-              <div class="daily-mode-chart-summary" aria-label="Mode chart totals">
+              <div class="daily-mode-chart-summary" *ngIf="!strictPdfParityUi" aria-label="Mode chart totals">
                 <div><small>TOTAL FUEL</small><strong>{{ formatPdfValue(detailed.totalFuelUsed, 1)
                     }}</strong><span>L</span></div>
                 <div><small>MODE RUNNING TIME</small><strong>{{ dailyTotalModeRunningHours | number:'1.1-1'
@@ -602,7 +605,7 @@
                       </table>
                     </div>
                   </div>
-                  <div class="report-book-table-wrap daily-utilization-table">
+                  <div class="report-book-table-wrap daily-utilization-table report-table-frame">
                     <table class="report-book-table daily-pdf-table">
                       <thead><tr><th>Measured Value</th><th class="num">DG1</th><th class="num">DG2</th><th class="num">DG3</th><th class="num">EG</th></tr></thead>
                       <tbody>
@@ -722,7 +725,7 @@
                   </table>
                 </div>
               </div>
-              <div class="report-book-table-wrap" *ngIf="isMvGemiaReport">
+              <div class="report-book-table-wrap daily-utilization-table report-table-frame" *ngIf="isMvGemiaReport">
                 <table class="report-book-table daily-pdf-table">
                   <thead>
                     <tr>
@@ -883,7 +886,7 @@
                           <polyline class="combo-line combo-line--speed" [attr.points]="hourlySpeedPolyline"></polyline>
                           <polyline *ngIf="!usesNumberedAuxiliaryReport" class="combo-line combo-line--main" [attr.points]="hourlyMainFuelPolyline"></polyline>
                           <polyline class="combo-line combo-line--aux" [attr.points]="hourlyAuxFuelPolyline"></polyline>
-                          <ng-container *ngFor="let row of dailyVisibleHourlyRows; let pointIndex = index">
+                          <ng-container *ngFor="let row of dailyVisibleHourlyRows; let pointIndex = index; trackBy: trackByHourlyRow">
                             <circle class="combo-marker combo-marker--speed" [attr.cx]="pointIndex * 100 + 50"
                               [attr.cy]="100 - hourlyBarPercent(row.speedKnots, hourlyMaxSpeed)" r="2.15"></circle>
                             <circle *ngIf="!usesNumberedAuxiliaryReport" class="combo-marker combo-marker--main" [attr.cx]="pointIndex * 100 + 50"
@@ -906,33 +909,33 @@
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
                         <col class="hourly-label-column">
-                        <col class="hourly-data-column" *ngFor="let row of dailyVisibleHourlyRows">
+                        <col class="hourly-data-column" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">
                       </colgroup>
                       <thead>
                         <tr>
                           <th>Hour</th>
-                          <th *ngFor="let row of dailyVisibleHourlyRows">{{ row.hour }}</th>
+                          <th *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.hour }}</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr class="metric-row metric-row--distance">
                           <th>V.D.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.distanceNm, 2) : '—'
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.distanceNm, 2) : '—'
                             }}</td>
                         </tr>
                         <tr class="metric-row metric-row--speed">
                           <th>V.S.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.speedKnots, 2) : '—'
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.speedKnots, 2) : '—'
                             }}</td>
                         </tr>
                         <tr *ngIf="!usesNumberedAuxiliaryReport" class="metric-row metric-row--main">
                           <th>ME..F.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.mainFuel, 2) : '—' }}
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.mainFuel, 2) : '—' }}
                           </td>
                         </tr>
                         <tr class="metric-row metric-row--aux">
                           <th>{{ isBahteraGeneratorReport ? 'DG..F.' : 'AE..F.' }}</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.auxFuel, 2) : '—' }}
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.auxFuel, 2) : '—' }}
                           </td>
                         </tr>
                       </tbody>
@@ -1052,33 +1055,33 @@
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
                         <col class="hourly-label-column">
-                        <col class="hourly-data-column" *ngFor="let row of dailyVisibleHourlyRows">
+                        <col class="hourly-data-column" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">
                       </colgroup>
                       <thead>
                         <tr>
                           <th>Hour</th>
-                          <th *ngFor="let row of dailyVisibleHourlyRows">{{ row.hour }}</th>
+                          <th *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.hour }}</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr *ngIf="!usesNumberedAuxiliaryReport">
                           <th>ME..F.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.mainFuel, 2) : '—' }}
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.mainFuel, 2) : '—' }}
                           </td>
                         </tr>
                         <tr>
                           <th>PM..F.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.portMainFuel, 2) :
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.portMainFuel, 2) :
                             '—' }}</td>
                         </tr>
                         <tr>
                           <th>SM..F.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.starboardMainFuel, 2)
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.starboardMainFuel, 2)
                             : '—' }}</td>
                         </tr>
                         <tr *ngIf="dailyHasCenterMainEngine">
                           <th>CM..F.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.centerMainFuel, 2) :
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.centerMainFuel, 2) :
                             '—' }}</td>
                         </tr>
                       </tbody>
@@ -1097,6 +1100,9 @@
               </div>
             </article>
 
+            <!-- Generator-only vessels (BAHTERA / BB Liberty family) have DG/EG pages in the official PDF,
+                 not Port/Stbd M/E machinery pages. Keep the machinery loop out of strict generator reports. -->
+            <ng-container *ngIf="!isBahteraGeneratorReport">
             <ng-container *ngFor="let machinery of machineryChartConfigs; trackBy: trackByMachineryConfig">
             <article class="report-table-panel daily-report-section premium-daily-card premium-chart-section"
               [attr.id]="'daily-page-' + machinery.page" [attr.data-page]="machinery.page"
@@ -1136,7 +1142,7 @@
                         <polyline *ngIf="!usesNumberedAuxiliaryReport" class="engineering-line engineering-line--shaft-run" [attr.points]="machineryLinePolylines[machinery.key]?.shaftRun"></polyline>
                         <polyline *ngIf="!usesNumberedAuxiliaryReport" class="engineering-line engineering-line--shaft-rpm" [attr.points]="machineryLinePolylines[machinery.key]?.shaftRpm"></polyline>
                         <polyline *ngIf="hasEngineLoadReport && machinery.engineLoad" class="engineering-line engineering-line--engine-load" [attr.points]="machineryLinePolylines[machinery.key]?.engineLoad"></polyline>
-                        <ng-container *ngFor="let row of dailyVisibleHourlyRows; let pointIndex = index">
+                        <ng-container *ngFor="let row of dailyVisibleHourlyRows; let pointIndex = index; trackBy: trackByHourlyRow">
                           <circle class="engineering-marker engineering-marker--me-run" [attr.cx]="pointIndex * 100 + 50"
                             [attr.cy]="100 - hourlyBarPercent($any(row)[machinery.meRun], machineryLineMaxima[machinery.key]?.meRun || 1)" r="1.5"></circle>
                           <circle *ngIf="!usesNumberedAuxiliaryReport" class="engineering-marker engineering-marker--shaft-run" [attr.cx]="pointIndex * 100 + 50"
@@ -1164,38 +1170,38 @@
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
                         <col class="hourly-label-column">
-                        <col class="hourly-data-column" *ngFor="let row of dailyVisibleHourlyRows">
+                        <col class="hourly-data-column" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">
                       </colgroup>
                       <thead>
                         <tr>
                           <th>Hour</th>
-                          <th *ngFor="let row of dailyVisibleHourlyRows">{{ row.hour }}</th>
+                          <th *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.hour }}</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr *ngIf="!usesNumberedAuxiliaryReport">
                           <th>{{ machinery.codeFuel }}</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ?
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ?
                             formatDailyValue($any(row)[machinery.fuel], 2) : '—' }}</td>
                         </tr>
                         <tr>
                           <th>{{ machinery.codeMe }}</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ?
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ?
                             formatDailyValue($any(row)[machinery.meRun], 2) : '—' }}</td>
                         </tr>
                         <tr *ngIf="!usesNumberedAuxiliaryReport">
                           <th>{{ machinery.codeShaftRun }}</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ?
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ?
                             formatDailyValue($any(row)[machinery.shaftRun], 2) : '—' }}</td>
                         </tr>
                         <tr *ngIf="!usesNumberedAuxiliaryReport">
                           <th>{{ machinery.codeShaftRpm }}</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ?
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ?
                             formatDailyValue($any(row)[machinery.shaftRpm], 2) : '—' }}</td>
                         </tr>
                         <tr *ngIf="hasEngineLoadReport && machinery.engineLoad && machinery.codeEngineLoad">
                           <th>{{ machinery.codeEngineLoad }}</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ?
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ?
                             formatDailyValue($any(row)[machinery.engineLoad], 2) : '—' }}</td>
                         </tr>
                       </tbody>
@@ -1214,6 +1220,9 @@
                 </div>
               </div>
             </article>
+            <!-- Machinery loop ends here; report-level sections below must render once per vessel. -->
+            </ng-container>
+            </ng-container>
 
             <article id="daily-page-11"
               class="report-table-panel daily-report-section premium-daily-card premium-chart-section">
@@ -1269,32 +1278,32 @@
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
                         <col class="hourly-label-column">
-                        <col class="hourly-data-column" *ngFor="let row of dailyVisibleHourlyRows">
+                        <col class="hourly-data-column" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">
                       </colgroup>
                       <thead>
                         <tr>
                           <th>Hour</th>
-                          <th *ngFor="let row of dailyVisibleHourlyRows">{{ row.hour }}</th>
+                          <th *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.hour }}</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
                           <th>{{ isBahteraGeneratorReport ? 'DG..F.' : 'AE..F.' }}</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.auxFuel, 2) : '—' }}
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.auxFuel, 2) : '—' }}
                           </td>
                         </tr>
                         <ng-container *ngIf="usesNumberedAuxiliaryReport; else standardAuxFuelRows">
-                          <tr><th>{{ isBahteraGeneratorReport ? 'DG1..F.' : 'AE1..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.portAuxFuel, 2) : '—' }}</td></tr>
-                          <tr><th>{{ isBahteraGeneratorReport ? 'DG2..F.' : 'AE2..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue($any(row).centerAuxFuel, 2) : '—' }}</td></tr>
-                          <tr><th>{{ isBahteraGeneratorReport ? 'DG3..F.' : 'AE3..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.starboardAuxFuel, 2) : '—' }}</td></tr>
-                          <tr><th>{{ isBahteraGeneratorReport ? 'EG..F.' : 'AE4..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue($any(row).fourthAuxFuel, 2) : '—' }}</td></tr>
+                          <tr><th>{{ isBahteraGeneratorReport ? 'DG1..F.' : 'AE1..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.portAuxFuel, 2) : '—' }}</td></tr>
+                          <tr><th>{{ isBahteraGeneratorReport ? 'DG2..F.' : 'AE2..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue($any(row).centerAuxFuel, 2) : '—' }}</td></tr>
+                          <tr><th>{{ isBahteraGeneratorReport ? 'DG3..F.' : 'AE3..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.starboardAuxFuel, 2) : '—' }}</td></tr>
+                          <tr><th>{{ isBahteraGeneratorReport ? 'EG..F.' : 'AE4..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue($any(row).fourthAuxFuel, 2) : '—' }}</td></tr>
                         </ng-container>
                         <ng-template #standardAuxFuelRows>
-                          <tr><th>PA..F.</th><td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.portAuxFuel, 2) : '—' }}</td></tr>
+                          <tr><th>PA..F.</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.portAuxFuel, 2) : '—' }}</td></tr>
                           <ng-container *ngIf="dailyHasCenterAuxiliary">
-                            <tr><th>CA..F.</th><td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue($any(row).centerAuxFuel, 2) : '—' }}</td></tr>
+                            <tr><th>CA..F.</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue($any(row).centerAuxFuel, 2) : '—' }}</td></tr>
                           </ng-container>
-                          <tr><th>SA..F.</th><td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.starboardAuxFuel, 2) : '—' }}</td></tr>
+                          <tr><th>SA..F.</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.starboardAuxFuel, 2) : '—' }}</td></tr>
                         </ng-template>
                       </tbody>
                     </table>
@@ -1356,7 +1365,7 @@
                           [attr.y1]="100 - hourlyBarPercent(hourlyReferenceStats[auxiliary.fuel]?.min, hourlyAxes[auxiliary.fuel].max)"
                           [attr.y2]="100 - hourlyBarPercent(hourlyReferenceStats[auxiliary.fuel]?.min, hourlyAxes[auxiliary.fuel].max)"></line>
                         <polyline class="engineering-line engineering-line--aux-run" [attr.points]="auxiliaryRunPolylines[auxiliary.key]"></polyline>
-                        <ng-container *ngFor="let row of dailyVisibleHourlyRows; let pointIndex = index">
+                        <ng-container *ngFor="let row of dailyVisibleHourlyRows; let pointIndex = index; trackBy: trackByHourlyRow">
                           <circle class="engineering-marker engineering-marker--aux-run" [attr.cx]="pointIndex * 100 + 50"
                             [attr.cy]="100 - hourlyBarPercent($any(row)[auxiliary.run], auxiliaryRunMaxima[auxiliary.key] || 1)" r="1.55"></circle>
                         </ng-container>
@@ -1375,23 +1384,23 @@
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
                         <col class="hourly-label-column">
-                        <col class="hourly-data-column" *ngFor="let row of dailyVisibleHourlyRows">
+                        <col class="hourly-data-column" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">
                       </colgroup>
                       <thead>
                         <tr>
                           <th>Hour</th>
-                          <th *ngFor="let row of dailyVisibleHourlyRows">{{ row.hour }}</th>
+                          <th *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.hour }}</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
                           <th>{{ auxiliaryFuelCode(auxiliary) }}</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ?
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ?
                             formatDailyValue($any(row)[auxiliary.fuel], 2) : '—' }}</td>
                         </tr>
                         <tr>
                           <th>{{ auxiliaryRunCode(auxiliary) }}</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue($any(row)[auxiliary.run],
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue($any(row)[auxiliary.run],
                             2) : '—' }}</td>
                         </tr>
                       </tbody>
@@ -1455,18 +1464,18 @@
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
                         <col class="hourly-label-column">
-                        <col class="hourly-data-column" *ngFor="let row of dailyVisibleHourlyRows">
+                        <col class="hourly-data-column" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">
                       </colgroup>
                       <thead>
                         <tr>
                           <th>Hour</th>
-                          <th *ngFor="let row of dailyVisibleHourlyRows">{{ row.hour }}</th>
+                          <th *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.hour }}</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
                           <th>T.F.U.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows">{{ row.active ? formatDailyValue(row.totalFuel, 2) : '—'
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.totalFuel, 2) : '—'
                             }}</td>
                         </tr>
                       </tbody>
@@ -1481,7 +1490,6 @@
                 </div>
               </div>
             </article>
-            </ng-container>
           </ng-container>
         </section>
 

@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Observable, from, of, throwError } from 'rxjs';
+import { Observable, forkJoin, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from '../../common/report-cache.util';
+import { OfficialPdfModeParityService } from '../../common/official-pdf-mode-parity.service';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -204,9 +206,11 @@ interface HourAccumulator {
   starboardShaftRpmCount: number;
 }
 
-// 1 นาที = 60,000 ms | Cache = 5 นาที | โหลด Report สูงสุด 31 วัน
+// 1 นาที = 60,000 ms | Completed Daily cache = 6 ชั่วโมง | โหลด Report สูงสุด 31 วัน
 const MINUTE_MS = 60_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
+const LIVE_REPORT_CACHE_TTL_MS = 30_000;
+const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -251,7 +255,10 @@ export class ScGlory1ReportService implements VesselReportAdapter {
   private readonly periodReportInFlight = new Map<string, Observable<ScGlory1PeriodUiReport>>();
 
   // รับ Service สำหรับเรียก Backend / Historian API
-  constructor(private newHttp: NewHttpClientService) {}
+  constructor(
+    private newHttp: NewHttpClientService,
+    private officialPdfMode: OfficialPdfModeParityService,
+  ) {}
 
 
   // ==================== ตรวจสอบเรือ / Profile / Live Mode ====================
@@ -349,7 +356,6 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     return this.resolveModeFromGpsSpeed(this.parseNumber(rawValue));
   }
 
-
   // ==================== โหลดข้อมูล Report ====================
   // โหลด Daily Report: เช็ก Cache → ดึง Historian → คำนวณ Report → เก็บ Cache
   loadDetailedDailyReport(
@@ -401,18 +407,39 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         )
       : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
 
-    const request$ = historianRequest$.pipe(
-        map((response) => this.buildDetailedDailyReport(response, start, end)),
-        tap((value) => {
-          this.detailedReportCache.set(key, {
-            value,
-            expiresAt: Date.now() + CACHE_TTL_MS,
-          });
-        }),
-        catchError((error) => throwError(() => error)),
-        finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: true }),
-      );
+    // Start the official PDF lookup in parallel with the historian bundle.
+    // This preserves the same final Mode values while removing the old serial wait
+    // (Historian -> PDF). It shortens completed Daily load time without adding
+    // extra requests or increasing historian concurrency.
+    const calculatedReport$ = historianRequest$.pipe(
+      map((response) => this.buildDetailedDailyReport(response, start, end)),
+    );
+    const officialModeRows$ = completedDaily
+      ? this.officialPdfMode.getDailyModeRows('SC GLORY 1', start)
+      : of(null);
+
+    const request$ = forkJoin({
+      value: calculatedReport$,
+      officialRows: officialModeRows$,
+    }).pipe(
+      map(({ value, officialRows }) =>
+        completedDaily
+          ? {
+              ...value,
+              modeSummary: this.officialPdfMode.overlayModeRows(value.modeSummary, officialRows),
+            }
+          : value,
+      ),
+      tap((value) => {
+        setBoundedReportCache(this.detailedReportCache, key, {
+          value,
+          expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
+        });
+      }),
+      catchError((error) => throwError(() => error)),
+      finalize(() => this.detailedReportInFlight.delete(key)),
+      shareReplay({ bufferSize: 1, refCount: true }),
+    );
 
     this.detailedReportInFlight.set(key, request$);
     return request$;
@@ -450,11 +477,12 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     }
 
     const request$ = from(chunks).pipe(
-      // Two concurrent day-sized historian requests keep monthly views responsive
-      // without asking the backend for a very large 25-tag, 31-day payload at once.
+      // Long range/month reports are intentionally limited to one day bundle at a time.
+      // Each bundle already reads at most two historian tags concurrently, so the
+      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        2,
+        1,
       ),
       toArray(),
       map((reports) =>
@@ -466,9 +494,9 @@ export class ScGlory1ReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        this.periodReportCache.set(key, {
+        setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + CACHE_TTL_MS,
+          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
@@ -484,7 +512,6 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     this.detailedReportCache.clear();
     this.periodReportCache.clear();
   }
-
 
   // ==================== Report หลายวัน / รายเดือน ====================
   // แบ่งช่วงวันที่เป็นก้อนละ 1 วัน เพื่อไม่โหลดข้อมูลก้อนใหญ่เกินไป
@@ -975,6 +1002,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     const gpsHeadPoints = series.get(this.tagKey(TAGS.gpsHead)) || [];
 
     const gpsSpeed = this.buildInstantMap(gpsSpeedPoints);
+    
     const gpsLat = this.buildInstantMap(gpsLatPoints);
     const gpsLong = this.buildInstantMap(gpsLongPoints);
     const gpsHead = this.buildInstantMap(gpsHeadPoints);
@@ -1537,7 +1565,6 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     };
   }
 
-
   // ==================== Summary ของ Engine / Shaft / Auxiliary ====================
   // สรุป Main Engine: Average RPM, Max RPM, Running Hours และ Fuel Used
   private buildEngineSummary(
@@ -1759,7 +1786,6 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     }
     return result;
   }
-
 
   // ==================== สูตร RPM / Running Hours แบบ Legacy ====================
   // คำนวณ Engine RPM/Running Hours แบบ Legacy ให้ตรง PDF เดิม
@@ -2015,7 +2041,6 @@ export class ScGlory1ReportService implements VesselReportAdapter {
       });
   }
 
-
   // ==================== Hourly Report / Tracking ====================
   // สร้างข้อมูลรายชั่วโมง 24 ชั่วโมงตามสูตร PDF เดิม
   private buildLegacyPdfHourlyRows(
@@ -2205,7 +2230,7 @@ export class ScGlory1ReportService implements VesselReportAdapter {
 
     return result;
   }
-
+//------------------------------------------------------------------------------------------------//
   // สร้างเส้นทางเรือจาก Latitude/Longitude พร้อมคำนวณระยะทาง
   private buildTrackingSummary(
     minuteStart: number,
@@ -2316,7 +2341,6 @@ export class ScGlory1ReportService implements VesselReportAdapter {
     }
     return result;
   }
-
 
   // ==================== สูตร Counter / RPM / Fuel ====================
   // แปลง Counter ของ Engine/Shaft เป็น RPM ราย minute
@@ -2561,7 +2585,6 @@ export class ScGlory1ReportService implements VesselReportAdapter {
 
     return this.sortSeries(result);
   }
-
 
   // ==================== แปลงข้อมูล Historian Response ====================
   // แปลง Response จาก API หลายรูปแบบให้เป็น Series มาตรฐาน
@@ -2874,7 +2897,6 @@ export class ScGlory1ReportService implements VesselReportAdapter {
 
     return this.parseDate(text);
   }
-
 
   // ==================== กราฟ / Route / Mode / Utility ====================
   // ลดจำนวนจุด Speed สำหรับกราฟ เพื่อให้ UI ไม่หนัก

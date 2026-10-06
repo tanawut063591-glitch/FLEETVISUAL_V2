@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Observable, from, of, throwError } from 'rxjs';
+import { Observable, forkJoin, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from '../../common/report-cache.util';
+import { OfficialPdfModeParityService } from '../../common/official-pdf-mode-parity.service';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -205,7 +207,9 @@ interface HourAccumulator {
 }
 
 const MINUTE_MS = 60_000;
-const CACHE_TTL_MS = 5 * 60_000;
+const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
+const LIVE_REPORT_CACHE_TTL_MS = 30_000;
+const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -247,7 +251,10 @@ export class ScGlory6ReportService implements VesselReportAdapter {
   private readonly periodReportCache = new Map<string, { value: ScGlory6PeriodUiReport; expiresAt: number }>();
   private readonly periodReportInFlight = new Map<string, Observable<ScGlory6PeriodUiReport>>();
 
-  constructor(private newHttp: NewHttpClientService) {}
+  constructor(
+    private newHttp: NewHttpClientService,
+    private officialPdfMode: OfficialPdfModeParityService,
+  ) {}
 
   supports(vessel: any): boolean {
     const info = vessel?.fvInfo || vessel?.fv || vessel || {};
@@ -386,18 +393,39 @@ export class ScGlory6ReportService implements VesselReportAdapter {
         )
       : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
 
-    const request$ = historianRequest$.pipe(
-        map((response) => this.buildDetailedDailyReport(response, start, end)),
-        tap((value) => {
-          this.detailedReportCache.set(key, {
-            value,
-            expiresAt: Date.now() + CACHE_TTL_MS,
-          });
-        }),
-        catchError((error) => throwError(() => error)),
-        finalize(() => this.detailedReportInFlight.delete(key)),
-        shareReplay({ bufferSize: 1, refCount: true }),
-      );
+    // Start the official PDF lookup in parallel with the historian bundle.
+    // This preserves the same final Mode values while removing the old serial wait
+    // (Historian -> PDF). It shortens completed Daily load time without adding
+    // extra requests or increasing historian concurrency.
+    const calculatedReport$ = historianRequest$.pipe(
+      map((response) => this.buildDetailedDailyReport(response, start, end)),
+    );
+    const officialModeRows$ = completedDaily
+      ? this.officialPdfMode.getDailyModeRows('SC GLORY 6', start)
+      : of(null);
+
+    const request$ = forkJoin({
+      value: calculatedReport$,
+      officialRows: officialModeRows$,
+    }).pipe(
+      map(({ value, officialRows }) =>
+        completedDaily
+          ? {
+              ...value,
+              modeSummary: this.officialPdfMode.overlayModeRows(value.modeSummary, officialRows),
+            }
+          : value,
+      ),
+      tap((value) => {
+        setBoundedReportCache(this.detailedReportCache, key, {
+          value,
+          expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
+        });
+      }),
+      catchError((error) => throwError(() => error)),
+      finalize(() => this.detailedReportInFlight.delete(key)),
+      shareReplay({ bufferSize: 1, refCount: true }),
+    );
 
     this.detailedReportInFlight.set(key, request$);
     return request$;
@@ -434,11 +462,12 @@ export class ScGlory6ReportService implements VesselReportAdapter {
     }
 
     const request$ = from(chunks).pipe(
-      // Two concurrent day-sized historian requests keep monthly views responsive
-      // without asking the backend for a very large 25-tag, 31-day payload at once.
+      // Long range/month reports are intentionally limited to one day bundle at a time.
+      // Each bundle already reads at most two historian tags concurrently, so the
+      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        2,
+        1,
       ),
       toArray(),
       map((reports) =>
@@ -450,9 +479,9 @@ export class ScGlory6ReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        this.periodReportCache.set(key, {
+        setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + CACHE_TTL_MS,
+          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
       finalize(() => this.periodReportInFlight.delete(key)),
@@ -1323,6 +1352,12 @@ export class ScGlory6ReportService implements VesselReportAdapter {
       resolveModeKey: (label: string) => this.resolveModeProfileKey(label),
       standbyLabel: 'Standby',
       legacySinglePrecision: true,
+      // SC GLORY 6 is the one GLORY variant whose C# report calculates Mode
+      // distance as SumSpd / 60.0 instead of AvgSpeed * displayed Run Hrs.
+      distanceStrategy: 'speed-sum-over-60' as const,
+      // Service1.cs divides each mode fuel by sumCon without a zero guard.
+      // A genuine all-zero fuel day therefore prints NaN in the official PDF.
+      legacyNaNPercentWhenZeroFuelTotal: true,
     };
 
     // Production rule: always calculate Mode from the real 1,441-row historian
@@ -2308,7 +2343,7 @@ export class ScGlory6ReportService implements VesselReportAdapter {
 
     for (const point of sorted) {
       const value = point.value;
-      if (!Number.isFinite(value) || value <= 0) continue;
+      if (!Number.isFinite(value) || value === 0) continue;
       if (nonZeroIndex === 0) {
         previous = value;
         nonZeroIndex += 1;

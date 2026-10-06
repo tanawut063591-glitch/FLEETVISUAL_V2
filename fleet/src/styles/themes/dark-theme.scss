@@ -1,4 +1,3 @@
-@use './report/report-dark-overrides';
 [data-theme='dark'] {
   color-scheme: dark;
 
@@ -5107,4 +5106,1390 @@ html[data-theme='dark'] body app-report .daily-chart-legend--reference span::bef
 html[data-theme='dark'] body app-report #daily-page-5 .daily-chart-legend--engineering span::before {
   background: currentColor !important;
   box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 18%, transparent), 0 0 8px color-mix(in srgb, currentColor 28%, transparent) !important;
+}
+
+
+/* ==========================================================================
+   REPORT DARK OVERRIDES — merged here so Dark mode has one source of truth.
+   ========================================================================== */
+/* Fleet Visual Report — dark-mode overrides moved out of component styles. */
+
+/* ===== src/app/features/report/report.component.css : dark overrides ===== */
+html[data-theme='dark'] app-report .report-table-panel,
+html[data-theme='dark'] app-report .report-book-section {
+background: #0f172a;
+  border-color: #253247;
+}
+
+html[data-theme='dark'] app-report .report-table-panel__header,
+html[data-theme='dark'] app-report .report-utilization-strip,
+html[data-theme='dark'] app-report .report-mode-meta {
+background: #111c2d;
+  border-color: #253247;
+}
+
+html[data-theme='dark'] app-report .report-book-table th,
+html[data-theme='dark'] app-report .report-book-table td {
+border-color: #253247;
+}
+
+html[data-theme='dark'] app-report .report-book-table tbody tr:nth-child(odd) td {
+background: rgba(245, 158, 11, 0.055);
+}
+
+html[data-theme='dark'] app-report .report-book-table tbody tr:hover td {
+background: rgba(37, 99, 235, 0.12);
+}
+
+html[data-theme='dark'] app-report .report-book-table tfoot th,
+html[data-theme='dark'] app-report .report-book-table tfoot td {
+background: rgba(245, 158, 11, 0.08);
+}
+
+html[data-theme='dark'] app-report .daily-ui-loading {
+border-color: #1d4ed8;
+  background: #0f1d35;
+}
+
+html[data-theme='dark'] app-report .daily-ui-error {
+border-color: #9a3412;
+  background: #2a1710;
+}
+
+html[data-theme='dark'] app-report .daily-pdf-table .section-row th,
+html[data-theme='dark'] app-report .daily-pdf-table .total-row th,
+html[data-theme='dark'] app-report .daily-pdf-table .total-row td,
+html[data-theme='dark'] app-report .daily-tracking-table .total-row th,
+html[data-theme='dark'] app-report .daily-tracking-table .total-row td,
+html[data-theme='dark'] app-report .hourly-matrix th:first-child {
+background: #2c2415;
+}
+
+html[data-theme='dark'] app-report .daily-route-plot,
+html[data-theme='dark'] app-report .daily-line-chart,
+html[data-theme='dark'] app-report .daily-multi-bar-chart,
+html[data-theme='dark'] app-report .daily-stacked-chart,
+html[data-theme='dark'] app-report .daily-single-bar-chart {
+background: #0d1728;
+}
+
+html[data-theme='dark'] app-report .route-grid line,
+html[data-theme='dark'] app-report .line-grid line {
+stroke: #24344c;
+}
+
+html[data-theme='dark'] app-report .daily-pie-card,
+html[data-theme='dark'] app-report .daily-map-card {
+background: #0d1728;
+}
+
+html[data-theme='dark'] app-report .daily-pie {
+border-color: rgba(255, 255, 255, .12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 8px 22px rgba(0, 0, 0, .24);
+}
+
+html[data-theme='dark'] app-report .daily-ui-master-header,
+html[data-theme='dark'] app-report .daily-overview-card,
+html[data-theme='dark'] app-report .daily-section-nav,
+html[data-theme='dark'] app-report .premium-daily-card,
+html[data-theme='dark'] app-report .premium-daily-card > .report-table-panel__header,
+html[data-theme='dark'] app-report .daily-pie-card,
+html[data-theme='dark'] app-report .daily-map-card {
+border-color: #24344c;
+  background: linear-gradient(145deg, #0f1a2b, #0c1625);
+  box-shadow: 0 10px 26px rgba(0,0,0,.16);
+}
+
+html[data-theme='dark'] app-report .daily-ui-sync-meta,
+html[data-theme='dark'] app-report .daily-overview-legend > div,
+html[data-theme='dark'] app-report .daily-overview-metric-grid > div,
+html[data-theme='dark'] app-report .daily-section-nav a,
+html[data-theme='dark'] app-report .daily-pie-legend > div,
+html[data-theme='dark'] app-report .daily-map-card__title,
+html[data-theme='dark'] app-report .daily-chart-header-stat {
+border-color: #26384f;
+  background: #111f32;
+}
+
+html[data-theme='dark'] app-report .daily-overview-card__header h3,
+html[data-theme='dark'] app-report .daily-overview-donut strong,
+html[data-theme='dark'] app-report .daily-util-ring strong,
+html[data-theme='dark'] app-report .daily-quality-ring strong,
+html[data-theme='dark'] app-report .daily-overview-metric-grid strong,
+html[data-theme='dark'] app-report .daily-quality-list strong,
+html[data-theme='dark'] app-report .premium-daily-card .report-table-panel__header h2,
+html[data-theme='dark'] app-report .daily-pie-center strong,
+html[data-theme='dark'] app-report .daily-map-card__title strong {
+color: #eef6ff;
+}
+
+html[data-theme='dark'] app-report .daily-overview-donut::after,
+html[data-theme='dark'] app-report .daily-util-ring::after,
+html[data-theme='dark'] app-report .daily-quality-ring::after,
+html[data-theme='dark'] app-report .daily-pie::after {
+background: #0e1a2a; box-shadow: inset 0 0 0 1px #26364c;
+}
+
+html[data-theme='dark'] app-report .premium-chart-section .daily-multi-bar-chart,
+html[data-theme='dark'] app-report .premium-chart-section .daily-stacked-chart,
+html[data-theme='dark'] app-report .premium-chart-section .daily-single-bar-chart,
+html[data-theme='dark'] app-report .premium-chart-section .daily-line-chart {
+border-color: #24364e;
+  background:
+    linear-gradient(to top, transparent 24.5%, rgba(94, 126, 166, .15) 25%, transparent 25.5%),
+    linear-gradient(to top, transparent 49.5%, rgba(94, 126, 166, .15) 50%, transparent 50.5%),
+    linear-gradient(to top, transparent 74.5%, rgba(94, 126, 166, .15) 75%, transparent 75.5%),
+    #0b1626;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row),
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix tbody tr:nth-child(even) td {
+background: #0d1929;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix th:first-child {
+color: #cbd8e8; background: #132238;
+}
+
+html[data-theme='dark'] app-report .daily-mode-chart-summary {
+border-color: #2b3b51;
+  background: linear-gradient(180deg, #121d2d, #0f1826);
+}
+
+html[data-theme='dark'] app-report .daily-mode-chart-summary > div {
+border-right-color: #26364a;
+}
+
+html[data-theme='dark'] app-report .daily-mode-chart-summary strong {
+color: #eef4ff;
+}
+
+html[data-theme='dark'] app-report .daily-details-toggle {
+border-color: #2a4261;
+  color: #cfe2ff;
+  background: #112039;
+}
+
+html[data-theme='dark'] app-report .daily-details-toggle:hover {
+background: #172a46;
+}
+
+html[data-theme='dark'] app-report .daily-compact-note {
+border-color: #263b57;
+  border-left-color: #60a5fa;
+  color: #9fb2ca;
+  background: linear-gradient(135deg, #101e31, #0d192a);
+}
+
+html[data-theme='dark'] app-report .daily-compact-note > i {
+color: #8bbcff; background: #172b48;
+}
+
+html[data-theme='dark'] app-report .daily-compact-note strong {
+color: #e5f0ff;
+}
+
+html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .daily-pdf-table .total-row th,
+html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .daily-pdf-table .total-row td,
+html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .daily-tracking-table .total-row th,
+html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .daily-tracking-table .total-row td {
+color: #ffd58a;
+  background: #2a2112;
+}
+
+html[data-theme='dark'] app-report .historical-ui-toolbar {
+border-color: rgba(115, 151, 202, 0.22);
+  border-left-color: #4b8eff;
+  background: linear-gradient(135deg, #172233 0%, #142031 100%);
+  box-shadow: none;
+}
+
+html[data-theme='dark'] app-report .historical-ui-yesterday {
+border-color: rgba(115, 151, 202, 0.28);
+  background: #1a2a3e;
+  color: #d8e7fb;
+}
+
+html[data-theme='dark'] app-report .historical-ui-yesterday:hover:not(:disabled) {
+border-color: #4b8eff;
+  background: #20334b;
+  color: #ffffff;
+}
+
+html[data-theme='dark'] app-report .historical-ui-toolbar__intro > strong,
+html[data-theme='dark'] app-report .historical-daily-trend > header h3 {
+color: #eef5ff;
+}
+
+html[data-theme='dark'] app-report .historical-ui-mode-switch,
+html[data-theme='dark'] app-report .historical-daily-trend {
+border-color: rgba(115, 151, 202, 0.22);
+  background: #162234;
+}
+
+html[data-theme='dark'] app-report .period-aggregation-note {
+border-color: rgba(96, 165, 250, 0.24);
+  background: rgba(30, 64, 175, 0.12);
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] app-report .period-aggregation-note strong {
+color: #e2e8f0;
+}
+
+html[data-theme='dark'] app-report .period-aggregation-note span {
+color: #aebed1;
+}
+
+html[data-theme='dark'] app-report .historical-report-type {
+border-color: rgba(115, 151, 202, 0.24);
+  background: #172538;
+}
+
+html[data-theme='dark'] app-report .historical-report-type > label span {
+color: #9fb2ca;
+}
+
+html[data-theme='dark'] app-report .historical-report-type > label small {
+color: #7890ab;
+}
+
+html[data-theme='dark'] app-report .historical-report-type__select select {
+border-color: rgba(115, 151, 202, 0.28);
+  background: #132033;
+  color: #f2f7ff;
+}
+
+html[data-theme='dark'] app-report .historical-report-type__select select:hover:not(:disabled) {
+border-color: #4b8eff;
+  background: #182a40;
+}
+
+html[data-theme='dark'] app-report .historical-report-type__select > i:first-child,
+html[data-theme='dark'] app-report .historical-report-type__caret {
+color: #8bbcff;
+}
+
+html[data-theme='dark'] app-report .daily-ui-selection-state {
+border-color: rgba(115, 151, 202, 0.28);
+  background: #152236;
+  color: #c5d4e8;
+}
+
+html[data-theme='dark'] app-report .daily-ui-selection-state > i {
+border-color: rgba(96, 165, 250, 0.28);
+  background: #172d4a;
+  color: #8bbcff;
+}
+
+html[data-theme='dark'] app-report .daily-ui-selection-state strong {
+color: #eef5ff;
+}
+
+html[data-theme='dark'] app-report .daily-ui-selection-state span {
+color: #9fb2ca;
+}
+
+html[data-theme='dark'] app-report .report-chart-tooltip {
+border-color: rgba(118, 153, 201, .28);
+  background: rgba(14, 24, 38, .98);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, .38);
+  color: #eef4ff;
+}
+
+html[data-theme='dark'] app-report .report-chart-tooltip strong {
+color: #f4f8ff;
+}
+
+html[data-theme='dark'] app-report .report-chart-tooltip span {
+color: #aabbd1;
+}
+
+html[data-theme='dark'] app-report .daily-hourly-sync,
+html[data-theme='dark'] app-report .daily-axis-chart,
+html[data-theme='dark'] app-report .daily-chart-y-axis,
+html[data-theme='dark'] app-report .daily-speed-axis-frame,
+html[data-theme='dark'] app-report .historical-daily-trend__axis-frame {
+border-color: #26384f;
+  background: var(--report-chart-surface);
+}
+
+html[data-theme='dark'] app-report .daily-chart-y-axis,
+html[data-theme='dark'] app-report .daily-speed-x-axis,
+html[data-theme='dark'] app-report .daily-hourly-sync .hourly-table-wrap {
+border-color: #26384f !important;
+}
+
+html[data-theme='dark'] app-report .daily-speed-axis-frame .daily-line-chart,
+html[data-theme='dark'] app-report .historical-daily-trend__axis-frame .historical-daily-trend__chart {
+background: var(--report-chart-surface) !important;
+}
+
+html[data-theme='dark'] app-report #daily-page-5 .hourly-matrix tbody td {
+color: #e7eef8;
+}
+
+html[data-theme='dark'] app-report #daily-page-5 .hourly-matrix .hourly-peak-cell {
+background: rgba(245, 158, 11, .13) !important;
+  color: #fff5d6 !important;
+}
+
+html[data-theme='dark'] app-report #daily-page-5 .daily-combo-scale-summary span strong {
+color: #f3f7fd;
+}
+
+html[data-theme='dark'] app-report #daily-page-5 .hourly-matrix tbody td {
+color: #f0f5fc !important;
+  font-weight: 800 !important;
+}
+
+html[data-theme='dark'] app-report #daily-page-5 .daily-chart-legend--engineering span strong {
+color: #f2f7fd;
+}
+
+html[data-theme='dark'] app-report .daily-chart-legend--machinery span,
+html[data-theme='dark'] app-report .daily-chart-legend--auxiliary span,
+html[data-theme='dark'] app-report .daily-chart-legend--reference span,
+html[data-theme='dark'] app-report .daily-chart-legend--engineering-lines span {
+background: color-mix(in srgb, currentColor 8%, var(--report-chart-surface)) !important;
+}
+/* ===== src/app/features/report/components/premium-pie-chart/premium-pie-chart.component.css : dark overrides ===== */
+html[data-theme='dark'] app-report app-premium-pie-chart .premium-pie-card {
+border-color: rgba(148, 163, 184, 0.18);
+  background: linear-gradient(180deg, #0c0e11 0%, #07090b 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+html[data-theme='dark'] app-report app-premium-pie-chart .premium-pie-card__header h3 {
+color: #edf4ff;
+}
+
+html[data-theme='dark'] app-report app-premium-pie-chart .premium-pie-card__hint {
+border-color: rgba(148, 163, 184, 0.17);
+  color: #aeb7c4;
+  background: rgba(9, 11, 14, 0.88);
+}
+
+html[data-theme='dark'] app-report app-premium-pie-chart .premium-pie-card__empty > span {
+border-color: rgba(148, 163, 184, 0.17);
+  background: #0c0f12;
+}
+
+html[data-theme='dark'] app-report app-premium-pie-chart .premium-pie-card__empty strong {
+color: #e9f1fb;
+}
+/* ===== src/app/features/report/components/report-date-picker/report-date-picker.component.css : dark overrides ===== */
+html[data-theme='dark'] app-report app-report-date-picker .report-date-picker--compact {
+border-color: rgba(115, 151, 202, 0.24);
+  background: #172538;
+}
+
+html[data-theme='dark'] app-report app-report-date-picker .report-date-picker--compact .field-label {
+color: #9fb2ca;
+}
+
+html[data-theme='dark'] app-report app-report-date-picker .report-date-picker--compact .field-control input {
+border-color: rgba(115, 151, 202, 0.28);
+  background: #132033;
+  color: #f2f7ff;
+}
+
+
+/* Mirrored official PDF command surface — dark */
+html[data-theme='dark'] app-report .report-page--official .pro-report-topbar--v5 {
+  border-color: rgba(148, 163, 184, 0.20) !important;
+  border-bottom: 0 !important;
+  background: linear-gradient(180deg, #0f131a 0%, #0a0d13 100%) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='dark'] app-report .report-page--official .official-mirrored-toolbar {
+  border-color: rgba(148, 163, 184, 0.20) !important;
+  background: linear-gradient(180deg, #0d1117 0%, #090c11 100%) !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24) !important;
+}
+
+html[data-theme='dark'] app-report .report-page--official .official-mirrored-toolbar::before {
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.16) 8%, rgba(148, 163, 184, 0.16) 92%, transparent) !important;
+}
+
+/* ========================================================================== */
+/* PDF MODE DETAIL — dark theme                                                */
+/* Keep the new PDF-parity tables visually identical to the main Report theme. */
+/* ========================================================================== */
+html[data-theme='dark'] app-report {
+  --report-mode-detail-surface: #0b0e12;
+  --report-mode-detail-header: #0f1319;
+  --report-mode-detail-table-surface: #0b0e12;
+  --report-mode-detail-border: rgba(148, 163, 184, 0.22);
+  --report-mode-detail-table-border: rgba(148, 163, 184, 0.20);
+  --report-mode-detail-text: #edf4ff;
+  --report-mode-detail-heading: #f8fafc;
+  --report-mode-detail-accent: #3b82f6;
+  --report-mode-detail-section: #111a27;
+  --report-mode-detail-separator: #090c10;
+  --report-mode-detail-total: #2c2415;
+  --report-mode-detail-total-text: #ffd166;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page,
+html[data-theme='dark'] app-report .pdf-mode-detail-grid,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table-wrap,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table {
+  background: #0b0e12 !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page__header {
+  border-color: rgba(148, 163, 184, 0.20) !important;
+  border-left-color: #3b82f6 !important;
+  background: #0f1319 !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page__header h3 {
+  color: #f8fafc !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table th,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table td {
+  border-color: rgba(148, 163, 184, 0.20) !important;
+  color: #edf4ff !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table tbody tr:nth-child(odd):not(.section-row):not(.separator-row):not(.total-row) th,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table tbody tr:nth-child(odd):not(.section-row):not(.separator-row):not(.total-row) td {
+  background: #0b0e12 !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) th,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) td {
+  background: #10151c !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table tbody tr:not(.section-row):not(.separator-row):not(.total-row):hover th,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table tbody tr:not(.section-row):not(.separator-row):not(.total-row):hover td {
+  background: #142238 !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table .section-row th {
+  background: #111a27 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table .separator-row td {
+  background: #090c10 !important;
+}
+
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table .total-row th,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table .total-row td {
+  background: #2c2415 !important;
+  color: #ffd166 !important;
+}
+
+/* REPORT PRO V38 — table-line contrast in dark mode.  The outer frame is
+   intentionally stronger than the internal grid so the right/bottom edges do
+   not disappear against the report card background. */
+html[data-theme='dark'] app-report {
+  --report-table-frame-border: rgba(148, 163, 184, 0.34);
+  --report-table-grid-border: rgba(148, 163, 184, 0.18);
+}
+
+html[data-theme='dark'] app-report .report-table-frame {
+  background: #0b0e12;
+}
+
+/* REPORT PRO V40 — dark presentation polish */
+html[data-theme='dark'] app-report {
+  --report-v40-line: rgba(148, 163, 184, .25);
+  --report-v40-line-soft: rgba(148, 163, 184, .16);
+  --report-v40-row: #0d1929;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card {
+  border-color: rgba(148, 163, 184, .23) !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .18) !important;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card > .report-table-panel__header {
+  border-bottom-color: rgba(148, 163, 184, .18) !important;
+  background: linear-gradient(180deg, #101b2b, #0c1624) !important;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card .report-table-panel__header h2 {
+  color: #f1f6fd !important;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card .report-table-panel__header p {
+  color: #9cadc2 !important;
+}
+
+html[data-theme='dark'] app-report .report-table-panel__meta,
+html[data-theme='dark'] app-report .daily-chart-header-stat {
+  border-color: rgba(148, 163, 184, .20) !important;
+  background: #111f32 !important;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card .report-book-table thead th,
+html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table thead th {
+  border-color: rgba(255, 255, 255, .11) !important;
+  color: #f8fbff !important;
+  background: linear-gradient(180deg, #245fae, #17477f) !important;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card .daily-mode-full-table thead tr:nth-child(2) th {
+  background: linear-gradient(180deg, #2a67b4, #1b4f8e) !important;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card .report-book-table tbody tr:nth-child(odd):not(.section-row):not(.separator-row):not(.total-row) th,
+html[data-theme='dark'] app-report .premium-daily-card .report-book-table tbody tr:nth-child(odd):not(.section-row):not(.separator-row):not(.total-row) td {
+  background: #0b1421 !important;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) th,
+html[data-theme='dark'] app-report .premium-daily-card .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) td {
+  background: #0f1b2b !important;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card .report-book-table tbody tr:not(.section-row):not(.separator-row):not(.total-row):hover th,
+html[data-theme='dark'] app-report .premium-daily-card .report-book-table tbody tr:not(.section-row):not(.separator-row):not(.total-row):hover td {
+  background: #142742 !important;
+}
+
+html[data-theme='dark'] app-report .premium-daily-card .report-book-table .section-row th {
+  color: #f6d48d !important;
+  background: #282113 !important;
+}
+
+html[data-theme='dark'] app-report .report-book-section__title {
+  border-bottom-color: #715923 !important;
+  background: linear-gradient(90deg, #282113, #141923) !important;
+}
+
+html[data-theme='dark'] app-report .daily-mode-name {
+  color: #eef5ff !important;
+}
+
+@container report-dashboard (max-width: 900px) {
+  html[data-theme='dark'] app-report .daily-mode-full-table tbody th:first-child,
+  html[data-theme='dark'] app-report .daily-tracking-table tbody th:first-child,
+  html[data-theme='dark'] app-report .hourly-matrix tbody th:first-child,
+  html[data-theme='dark'] app-report .hourly-matrix tbody td:first-child {
+    background: #101d2e !important;
+    box-shadow: 1px 0 0 rgba(148, 163, 184, .18), 8px 0 14px rgba(0, 0, 0, .22) !important;
+  }
+}
+
+
+/* ==========================================================================
+   FLEET VISUAL DARK THEME — FINAL CANONICAL SURFACE CONTRACT · 2026-10-06
+   --------------------------------------------------------------------------
+   This block is intentionally LAST in the dark theme. Older feature styles
+   contain historical one-off black/navy values; this contract normalizes the
+   shell, page background, cards, tables, controls and overlays so Overview,
+   Realtime, Data Logger, Chart, Diagram, Report, Alarm, Log and Settings all
+   read as one product. Semantic status colors (success/warning/error) and chart
+   series colors are preserved.
+   ========================================================================== */
+[data-theme='dark'] {
+  /* One premium graphite/navy palette for the entire application. */
+  --main-bg: #07111f;
+  --page-bg: #07111f;
+  --card-bg: #0d1a2b;
+  --surface-bg: #0d1a2b;
+  --surface-bg-2: #122238;
+  --primary-bg: #0b1726;
+  --primary-bg-50: rgba(11, 23, 38, 0.92);
+  --secondary-bg: #122238;
+  --secondary-bg-50: rgba(18, 34, 56, 0.88);
+
+  --primary-txt: #f3f7fd;
+  --secondary-txt: #c3d0e3;
+  --muted-txt: #8fa3bd;
+  --label-txt: #9fb2ca;
+  --row-txt: #e7eef8;
+  --value-txt: #f8fbff;
+
+  --border-color: rgba(133, 164, 201, 0.24);
+  --soft-border: rgba(133, 164, 201, 0.15);
+  --shadow-soft: 0 18px 48px rgba(0, 0, 0, 0.34);
+  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.26);
+
+  --accent: #3b82f6;
+  --accent-2: #38bdf8;
+  --accent-soft: rgba(59, 130, 246, 0.15);
+  --accent-border: rgba(96, 165, 250, 0.42);
+
+  --header-bg1: #0b1726;
+  --header-bg2: #091421;
+  --header-txt: #f3f7fd;
+
+  --thead-bg: #12345b;
+  --thead-txt: #f8fbff;
+  --thead-border: rgba(147, 197, 253, 0.22);
+  --trow-bg: #0d1a2b;
+  --trow-txt: #e7eef8;
+  --trow-border: rgba(133, 164, 201, 0.15);
+
+  --srch-bg: #0b1726;
+  --srch-txt: #d6e1ef;
+  --srch-hover-bg: #122844;
+  --srch-hover-txt: #ffffff;
+  --srch-focus-bg: #0f2035;
+  --srch-focus-txt: #ffffff;
+
+  --dropdown-bg: #0d1a2b;
+  --dropdown-hover-bg: #122844;
+  --dropdown-menu-bg: #0b1726;
+  --dropdown-menu-hover-bg: #122844;
+  --dropdown-item-bg: #0d1a2b;
+  --dropdown-item-hover-bg: #122844;
+  --dropdown-border: rgba(133, 164, 201, 0.24);
+  --dropdown-menu-border: rgba(133, 164, 201, 0.24);
+  --dropdown-txt: #f3f7fd;
+  --dropdown-menu-txt: #f3f7fd;
+  --dropdown-item-txt: #c3d0e3;
+  --dropdown-item-hover-txt: #ffffff;
+
+  --scrollbar-thumb: #314863;
+  --scrollbar-track: #091421;
+
+  /* Keep Report neutrals on the same surfaces as every other page. */
+  --report-theme-surface: #0d1a2b;
+  --report-chart-surface: #0d1a2b;
+  --report-table-frame-border: rgba(133, 164, 201, 0.28);
+  --report-table-grid-border: rgba(133, 164, 201, 0.16);
+  --report-sticky-cell-bg: #0d1a2b;
+  --report-sticky-head-bg: #12345b;
+}
+
+/* Page canvas — exactly the same dark canvas on every primary feature page. */
+html[data-theme='dark'] body :is(
+  app-overview,
+  app-realtime,
+  app-data-logger,
+  app-chart,
+  app-diagram,
+  app-report,
+  app-alarm,
+  app-activity-logs,
+  app-settings
+) {
+  color: var(--primary-txt) !important;
+  background: var(--main-bg) !important;
+}
+
+html[data-theme='dark'] body :is(
+  .overview-page,
+  .premium-dashboard,
+  .data-logger-page,
+  .chart-page,
+  .diagram-page,
+  .report-page,
+  .alarm-page,
+  .activity-page,
+  .settings-page
+) {
+  background: var(--main-bg) !important;
+  color: var(--primary-txt) !important;
+}
+
+/* Main application viewport follows the same canvas as every feature page. */
+html[data-theme='dark'] body :is(.main, .grid-content) {
+  background: var(--main-bg) !important;
+  color: var(--primary-txt) !important;
+}
+
+/* Product shell — Header + Sidebar share the exact same family of surfaces. */
+html[data-theme='dark'] body :is(
+  .fleet-header, .brand-box, .main-menu, .right-menu,
+  .grid-sidenav, .vessel-sidebar, app-sidebar
+) {
+  background: var(--primary-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+html[data-theme='dark'] body :is(
+  .settings-action-btn, .dark-mode-pill, .user-profile-pill, .logout-item,
+  .search-box, .search-box input, .vessel-card
+) {
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+/* Realtime — neutral structural cards use the shared product surface. */
+html[data-theme='dark'] body app-realtime :is(
+  .dash-header, .kpi-card, .premium-card, .dg-card, .today-summary-card,
+  .live-status-card, .map-wrapper, .map-component, .card-body
+) {
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+html[data-theme='dark'] body app-realtime :is(
+  .today-summary-pro__mini-card, .today-summary-pro__fuel, .today-summary-pro__voyage
+) {
+  background: var(--surface-bg-2) !important;
+  border-color: var(--soft-border) !important;
+}
+
+/* Data Logger — table, toolbar and footer all use one dark surface system. */
+html[data-theme='dark'] body app-data-logger :is(
+  .logger-filter, .data-table-card, .table-topbar, .table-footer,
+  .column-filter, .loading-box, .empty-state
+) {
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+/* Chart — remove the old pure-black islands and align them with the app shell. */
+html[data-theme='dark'] body app-chart :is(
+  .chart-workspace, .chart-toolbar, .chart-card, .chart-card-head,
+  .side-panel, .group-card, .meta-card, .state-card, .selected-pill
+) {
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+html[data-theme='dark'] body app-chart :is(.chart-content, .chart-instance, .group-chart) {
+  background: var(--primary-bg) !important;
+  border-color: var(--soft-border) !important;
+}
+
+/* Diagram — same frame/card palette as Chart and Realtime. */
+html[data-theme='dark'] body app-diagram :is(
+  .diagram-header, .diagram-board, .device-card, .stat-card, .group-box,
+  .diagram-mobile-tools, .diagram-pan-hint, .diagram-empty
+) {
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+html[data-theme='dark'] body app-diagram .diagram-stage {
+  background: var(--primary-bg) !important;
+}
+
+/* Report — retain chart/status series colors, normalize only neutral surfaces. */
+html[data-theme='dark'] body app-report :is(
+  .pro-report-topbar, .historical-ui-toolbar, .historical-report-type,
+  .premium-daily-card, .daily-report-section, .report-table-panel,
+  .daily-overview-card, .daily-google-map-card, .daily-map-card,
+  .historical-daily-trend, .official-pdf-card, .daily-mode-visuals,
+  .daily-executive-overview, .report-book-table-wrap
+) {
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+html[data-theme='dark'] body app-report :is(
+  .daily-axis-chart, .daily-hourly-sync, .daily-speed-axis-frame,
+  .historical-daily-trend__axis-frame, .daily-line-chart
+) {
+  background: var(--primary-bg) !important;
+  border-color: var(--soft-border) !important;
+}
+
+/* Alarm — neutral cards stay consistent; severity badges remain semantic. */
+html[data-theme='dark'] body app-alarm :is(
+  .page-toolbar, .connection-strip, .summary-card, .filter-panel,
+  .alerts-feed-card, .alert-detail-drawer, .mini-summary
+) {
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+/* Activity Log — same base surfaces as Alarm. */
+html[data-theme='dark'] body app-activity-logs :is(
+  .page-toolbar, .connection-strip, .system-map-card, .metric-card,
+  .feed-card, .status-card
+) {
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+/* Settings — normalize all four settings sections without touching status colors. */
+html[data-theme='dark'] body app-settings :is(
+  .settings-header, .settings-tabs, .settings-section-scope, .general-panel,
+  .users-panel, .vessel-panel, .groups-panel, .preference-card,
+  .user-access-drawer, .group-drawer, .vessel-drawer, .drawer-content,
+  .engine-library-panel, .engine-profile-editor, .professional-engine-setup,
+  .compact-engine-card, .group-card-actions, .vessel-mobile-card
+) {
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+html[data-theme='dark'] body app-settings :is(
+  .panel-heading, .table-tools, .engine-library-header, .engine-pro-header,
+  .account-setup-section, .access-selection-panel, .effective-access-card
+) {
+  background: var(--surface-bg-2) !important;
+  border-color: var(--soft-border) !important;
+}
+
+/* Shared tables — one header/body language across Data Logger, Alarm, Log,
+   Settings and Report. Report semantic total/section rows can override this. */
+html[data-theme='dark'] body :is(
+  app-data-logger, app-alarm, app-activity-logs, app-settings, app-report
+) table {
+  background: var(--card-bg) !important;
+  color: var(--row-txt) !important;
+  border-color: var(--border-color) !important;
+}
+
+html[data-theme='dark'] body :is(
+  app-data-logger, app-alarm, app-activity-logs, app-settings, app-report
+) table thead th {
+  background: var(--thead-bg) !important;
+  color: var(--thead-txt) !important;
+  border-color: var(--thead-border) !important;
+}
+
+html[data-theme='dark'] body :is(
+  app-data-logger, app-alarm, app-activity-logs, app-settings, app-report
+) table tbody tr:not(.section-row):not(.separator-row):not(.total-row) :is(th, td) {
+  background: var(--trow-bg) !important;
+  color: var(--trow-txt) !important;
+  border-color: var(--trow-border) !important;
+}
+
+html[data-theme='dark'] body :is(
+  app-data-logger, app-alarm, app-activity-logs, app-settings, app-report
+) table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) :is(th, td) {
+  background: var(--surface-bg-2) !important;
+}
+
+html[data-theme='dark'] body :is(
+  app-data-logger, app-alarm, app-activity-logs, app-settings, app-report
+) table tbody tr:hover:not(.section-row):not(.separator-row):not(.total-row) :is(th, td) {
+  background: #162b45 !important;
+}
+
+/* Shared controls — same fill/border/text on every page. */
+html[data-theme='dark'] body :is(
+  app-realtime, app-data-logger, app-chart, app-diagram, app-report,
+  app-alarm, app-activity-logs, app-settings
+) :is(input, select, textarea) {
+  background: var(--primary-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+  caret-color: var(--accent-2) !important;
+}
+
+html[data-theme='dark'] body :is(
+  app-realtime, app-data-logger, app-chart, app-diagram, app-report,
+  app-alarm, app-activity-logs, app-settings
+) :is(input, textarea)::placeholder {
+  color: var(--muted-txt) !important;
+  opacity: 1;
+}
+
+/* Neutral/secondary controls; primary/status buttons keep their semantic colors. */
+html[data-theme='dark'] body :is(
+  app-data-logger, app-chart, app-diagram, app-report, app-alarm,
+  app-activity-logs, app-settings
+) :is(
+  .clear-filter-btn, .logger-icon-btn, .logger-auto-btn, .interval-select,
+  .card-tool-btn, .icon-btn, .auto-btn, .mode-switch button,
+  .diagram-zoom-toggle, .diagram-mobile-tools button,
+  .historical-ui-yesterday, .secondary-action,
+  .auto-refresh-toggle, .refresh-btn, .reset-btn,
+  .ghost-btn, .cancel-btn, .filter-select, .table-search
+) {
+  background: var(--surface-bg-2) !important;
+  border-color: var(--border-color) !important;
+  color: var(--secondary-txt) !important;
+}
+
+html[data-theme='dark'] body :is(
+  app-data-logger, app-chart, app-diagram, app-report, app-alarm,
+  app-activity-logs, app-settings
+) :is(
+  .clear-filter-btn, .logger-icon-btn, .logger-auto-btn, .card-tool-btn,
+  .icon-btn, .auto-btn, .mode-switch button, .diagram-zoom-toggle,
+  .historical-ui-yesterday, .secondary-action, .auto-refresh-toggle,
+  .refresh-btn, .reset-btn, .ghost-btn, .cancel-btn
+):hover:not(:disabled) {
+  background: #162b45 !important;
+  border-color: var(--accent-border) !important;
+  color: #ffffff !important;
+}
+
+/* Unified focus language for keyboard/mouse accessibility. */
+html[data-theme='dark'] body :is(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid #60a5fa !important;
+  outline-offset: 2px;
+}
+
+/* Angular Material overlays inherit the same surfaces as feature controls. */
+html[data-theme='dark'] body :is(
+  .mat-mdc-select-panel, .mat-datepicker-content, .mat-mdc-menu-panel,
+  .mat-mdc-autocomplete-panel
+) {
+  background: var(--card-bg) !important;
+  color: var(--primary-txt) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Responsive dark canvas — prevent tablet/mobile component styles from
+   reintroducing white/black page backgrounds at narrower breakpoints. */
+@media (max-width: 1180px) {
+  html[data-theme='dark'] body :is(
+    .overview-page, .premium-dashboard, .data-logger-page, .chart-page,
+    .diagram-page, .report-page, .alarm-page, .activity-page, .settings-page
+  ) {
+    background: var(--main-bg) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  html[data-theme='dark'] body :is(
+    .fleet-header, .grid-sidenav, .vessel-sidebar, .page-toolbar,
+    .dash-header, .diagram-header, .settings-header, .pro-report-topbar
+  ) {
+    background: var(--primary-bg) !important;
+    border-color: var(--border-color) !important;
+  }
+}
+
+/* =========================================================
+   FINAL PURE BLACK THEME — 2026-10-06
+   Neutral surfaces only. Functional/status/chart colors remain semantic.
+   This final layer intentionally removes blue-tinted page/card backgrounds so
+   Overview, Realtime, Data Logger, Chart, Diagram, Report, Alarm, Log and
+   Settings share one consistent black visual system.
+   ========================================================= */
+[data-theme='dark'] {
+  --main-bg: #000000;
+  --page-bg: #000000;
+  --card-bg: #080808;
+  --surface-bg: #0a0a0a;
+  --surface-bg-2: #101010;
+  --primary-bg: #050505;
+  --primary-bg-50: rgba(5, 5, 5, 0.92);
+  --secondary-bg: #0d0d0d;
+  --secondary-bg-50: rgba(13, 13, 13, 0.88);
+
+  --border-color: rgba(255, 255, 255, 0.14);
+  --soft-border: rgba(255, 255, 255, 0.08);
+  --header-bg1: #050505;
+  --header-bg2: #000000;
+  --logo-bg: #000000;
+  --thead-bg: #0b0b0b;
+  --thead-border: rgba(255, 255, 255, 0.14);
+  --trow-bg: #080808;
+  --trow-border: rgba(255, 255, 255, 0.08);
+  --stack-bg: #080808;
+  --chart-tlp: #070707;
+  --srch-bg: #0a0a0a;
+  --srch-hover-bg: #141414;
+  --srch-focus-bg: #101010;
+  --dropdown-bg: #0a0a0a;
+  --dropdown-hover-bg: #141414;
+  --dropdown-menu-bg: #060606;
+  --dropdown-menu-hover-bg: #141414;
+  --dropdown-item-bg: #0a0a0a;
+  --dropdown-item-hover-bg: #141414;
+  --scrollbar-track: #030303;
+
+  --report-theme-surface: #080808;
+  --report-map-background: #050505;
+  --report-map-route-halo: #000000;
+  --report-route-sea-start: #080808;
+  --report-route-sea-end: #030303;
+  --report-pie-border: #050505;
+  --report-pie-tooltip-bg: rgba(5, 5, 5, 0.98);
+
+  --mdc-filled-text-field-container-color: #0a0a0a;
+  --mat-select-panel-background-color: #0a0a0a;
+  --mat-datepicker-calendar-container-background-color: #0a0a0a;
+}
+
+[data-theme='dark'] body,
+[data-theme='dark'] .main,
+[data-theme='dark'] .grid-content,
+[data-theme='dark'] .grid-sidenav,
+[data-theme='dark'] .premium-dashboard,
+[data-theme='dark'] .overview-page,
+[data-theme='dark'] .realtime-page,
+[data-theme='dark'] .data-logger-page,
+[data-theme='dark'] .chart-page,
+[data-theme='dark'] .diagram-page,
+[data-theme='dark'] .report-page,
+[data-theme='dark'] .alarm-page,
+[data-theme='dark'] .log-page,
+[data-theme='dark'] .setting-page,
+[data-theme='dark'] .settings-page,
+[data-theme='dark'] .past-track-page {
+  background: #000000 !important;
+}
+
+[data-theme='dark'] .card,
+[data-theme='dark'] .panel,
+[data-theme='dark'] .content-card,
+[data-theme='dark'] .chart-card,
+[data-theme='dark'] .report-card,
+[data-theme='dark'] .summary-card,
+[data-theme='dark'] .metric-card,
+[data-theme='dark'] .kpi-card,
+[data-theme='dark'] .table-card,
+[data-theme='dark'] .premium-card,
+[data-theme='dark'] .mat-mdc-card,
+[data-theme='dark'] .p-card {
+  background: #080808 !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+[data-theme='dark'] table,
+[data-theme='dark'] tbody,
+[data-theme='dark'] .mat-mdc-table,
+[data-theme='dark'] .p-datatable-table {
+  background: #080808 !important;
+}
+
+[data-theme='dark'] thead,
+[data-theme='dark'] thead tr,
+[data-theme='dark'] .mat-mdc-header-row,
+[data-theme='dark'] .p-datatable-thead > tr {
+  background: #0b0b0b !important;
+}
+
+[data-theme='dark'] tbody tr,
+[data-theme='dark'] .mat-mdc-row,
+[data-theme='dark'] .p-datatable-tbody > tr {
+  background: #080808 !important;
+}
+
+[data-theme='dark'] tbody tr:hover,
+[data-theme='dark'] .mat-mdc-row:hover,
+[data-theme='dark'] .p-datatable-tbody > tr:hover {
+  background: #111111 !important;
+}
+
+[data-theme='dark'] input,
+[data-theme='dark'] textarea,
+[data-theme='dark'] select,
+[data-theme='dark'] .mat-mdc-form-field,
+[data-theme='dark'] .p-inputtext,
+[data-theme='dark'] .p-select,
+[data-theme='dark'] .p-dropdown {
+  --mdc-filled-text-field-container-color: #0a0a0a;
+  --mdc-outlined-text-field-container-color: #0a0a0a;
+}
+
+[data-theme='dark'] .mat-mdc-dialog-container .mdc-dialog__surface,
+[data-theme='dark'] .cdk-overlay-pane .mat-mdc-menu-panel,
+[data-theme='dark'] .mat-mdc-select-panel,
+[data-theme='dark'] .p-overlay,
+[data-theme='dark'] .p-dialog,
+[data-theme='dark'] .p-popover {
+  background: #090909 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* ========================================================================== */
+/* FLEET VISUAL V42 — final premium pure-black contract                       */
+/* 2026-10-06: visual-only. Status/chart series colours remain semantic.      */
+/* ========================================================================== */
+html[data-theme='dark'] {
+  --main-bg: #000000;
+  --page-bg: #000000;
+  --primary-bg: #050607;
+  --card-bg: #080a0d;
+  --surface-bg: #0a0d11;
+  --surface-bg-2: #10141a;
+  --secondary-bg: #0d1116;
+  --border-color: rgba(203, 213, 225, 0.16);
+  --soft-border: rgba(203, 213, 225, 0.09);
+  --thead-bg: #10141a;
+  --thead-border: rgba(203, 213, 225, 0.18);
+  --trow-bg: #080a0d;
+  --trow-border: rgba(203, 213, 225, 0.09);
+  --scrollbar-track: #020304;
+  --scrollbar-thumb: #313844;
+
+  --report-table-frame-border: rgba(203, 213, 225, 0.24);
+  --report-table-grid-border: rgba(203, 213, 225, 0.12);
+  --report-theme-surface: #080a0d;
+  --report-chart-surface: #05070a;
+  --report-sticky-cell-bg: #0b0e12;
+  --report-sticky-head-bg: #10151c;
+}
+
+/* Remove the remaining navy islands from Report while keeping blue as a thin
+   interaction/accent colour rather than as the whole table header surface. */
+html[data-theme='dark'] body app-report .premium-daily-card,
+html[data-theme='dark'] body app-report .daily-report-section,
+html[data-theme='dark'] body app-report .report-table-panel,
+html[data-theme='dark'] body app-report .report-book-section,
+html[data-theme='dark'] body app-report .report-book-table-wrap,
+html[data-theme='dark'] body app-report .report-table-frame,
+html[data-theme='dark'] body app-report .daily-mode-table-wrap,
+html[data-theme='dark'] body app-report .hourly-table-wrap,
+html[data-theme='dark'] body app-report .daily-tracking-table-wrap {
+  background: #080a0d !important;
+  border-color: var(--report-table-frame-border) !important;
+}
+
+html[data-theme='dark'] body app-report .premium-daily-card > .report-table-panel__header,
+html[data-theme='dark'] body app-report .pdf-mode-detail-page > .report-table-panel__header {
+  background: linear-gradient(180deg, #0c0f14 0%, #07090c 100%) !important;
+  border-bottom-color: rgba(203, 213, 225, 0.14) !important;
+}
+
+html[data-theme='dark'] body app-report .premium-daily-card .report-book-table thead th,
+html[data-theme='dark'] body app-report .pdf-mode-detail-page .report-book-table thead th,
+html[data-theme='dark'] body app-report .daily-mode-full-table thead th,
+html[data-theme='dark'] body app-report .hourly-matrix thead th,
+html[data-theme='dark'] body app-report .daily-tracking-table thead th {
+  color: #f8fafc !important;
+  background: linear-gradient(180deg, #151a22 0%, #0b0e13 100%) !important;
+  border-color: rgba(203, 213, 225, 0.15) !important;
+  box-shadow: inset 0 -2px 0 rgba(59, 130, 246, 0.58);
+  text-shadow: none !important;
+}
+
+html[data-theme='dark'] body app-report .premium-daily-card .daily-mode-full-table thead tr:nth-child(2) th {
+  background: linear-gradient(180deg, #11161d 0%, #090c10 100%) !important;
+  box-shadow: inset 0 -1px 0 rgba(96, 165, 250, 0.38);
+}
+
+html[data-theme='dark'] body app-report .premium-daily-card .report-book-table tbody tr:nth-child(odd):not(.section-row):not(.separator-row):not(.total-row) :is(th, td),
+html[data-theme='dark'] body app-report .pdf-mode-detail-page .report-book-table tbody tr:nth-child(odd):not(.section-row):not(.separator-row):not(.total-row) :is(th, td) {
+  background: #080a0d !important;
+  color: #e7edf6 !important;
+  border-color: var(--report-table-grid-border) !important;
+}
+
+html[data-theme='dark'] body app-report .premium-daily-card .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) :is(th, td),
+html[data-theme='dark'] body app-report .pdf-mode-detail-page .report-book-table tbody tr:nth-child(even):not(.section-row):not(.separator-row):not(.total-row) :is(th, td) {
+  background: #0d1015 !important;
+  color: #e7edf6 !important;
+  border-color: var(--report-table-grid-border) !important;
+}
+
+html[data-theme='dark'] body app-report .premium-daily-card .report-book-table tbody tr:not(.section-row):not(.separator-row):not(.total-row):hover :is(th, td),
+html[data-theme='dark'] body app-report .pdf-mode-detail-page .report-book-table tbody tr:not(.section-row):not(.separator-row):not(.total-row):hover :is(th, td) {
+  background: #121821 !important;
+}
+
+/* Preserve semantic emphasis without introducing another theme colour family. */
+html[data-theme='dark'] body app-report .premium-daily-card .report-book-table .section-row th,
+html[data-theme='dark'] body app-report .pdf-mode-detail-page .report-book-table .section-row th {
+  color: #f7d58a !important;
+  background: #17130b !important;
+}
+
+html[data-theme='dark'] body app-report .premium-daily-card .report-book-table .total-row :is(th, td),
+html[data-theme='dark'] body app-report .premium-daily-card .daily-tracking-table .total-row :is(th, td),
+html[data-theme='dark'] body app-report .pdf-mode-detail-page .report-book-table .total-row :is(th, td) {
+  color: #ffd166 !important;
+  background: #1a1408 !important;
+}
+
+/* Stronger complete perimeter: visible on black without looking heavy. */
+html[data-theme='dark'] body app-report :is(
+  .report-book-section,
+  .daily-engine-grid > .report-book-table-wrap,
+  .pdf-mode-detail-grid > .report-book-table-wrap,
+  .daily-mode-table-wrap,
+  .hourly-table-wrap,
+  .daily-tracking-table-wrap,
+  .historical-daily-trend__table,
+  .report-table-frame
+) {
+  border-color: rgba(203, 213, 225, 0.24) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.015),
+    0 8px 24px rgba(0, 0, 0, 0.16) !important;
+}
+
+/* Ensure the far-right header/data edge is visually closed after horizontal
+   overflow calculations; wrapper owns the perimeter, cells own only the grid. */
+html[data-theme='dark'] body app-report :is(
+  .report-book-table,
+  .daily-mode-full-table,
+  .hourly-matrix,
+  .daily-tracking-table
+) :is(th, td):last-child {
+  padding-right: 12px;
+}
+
+/* Pure-black chart/report plot surfaces. */
+html[data-theme='dark'] body app-report :is(
+  .daily-hourly-sync,
+  .daily-axis-chart,
+  .daily-axis-chart__plot,
+  .daily-speed-axis-frame,
+  .daily-line-chart,
+  .daily-multi-bar-chart,
+  .daily-stacked-chart,
+  .daily-single-bar-chart,
+  .historical-daily-trend__axis-frame
+) {
+  background-color: #05070a !important;
+  border-color: rgba(203, 213, 225, 0.11) !important;
+}
+
+/* ========================================================================== */
+/* FLEET VISUAL FINAL V43 — REPORT BLUE TABLE HEADERS                          */
+/* 2026-10-06: presentation only. No historian/calculation logic is changed.   */
+/* ========================================================================== */
+
+html[data-theme='dark'] body app-report {
+  /* Table headers are navigation landmarks inside dense report pages. Keep
+     them visibly blue even though the rest of the dark theme is graphite. */
+  --thead-bg: #1d5fa8;
+  --thead-border: rgba(147, 197, 253, 0.30);
+  --report-sticky-head-bg: #1d5fa8;
+}
+
+/* Primary header row: strong Fleet Visual blue. */
+html[data-theme='dark'] body app-report .premium-daily-card .report-book-table thead tr:first-child > th,
+html[data-theme='dark'] body app-report .pdf-mode-detail-page .report-book-table thead tr:first-child > th,
+html[data-theme='dark'] body app-report .daily-tracking-table thead tr:first-child > th,
+html[data-theme='dark'] body app-report .hourly-matrix thead tr:first-child > th {
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #2469b8 0%, #174f91 100%) !important;
+  border-color: rgba(147, 197, 253, 0.28) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 0 rgba(56, 189, 248, 0.42) !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.20) !important;
+}
+
+/* Secondary/grouped header row (Value / % / Hrs / NM / LNM) must still read
+   as a table header, not as a black data row. */
+html[data-theme='dark'] body app-report .premium-daily-card .report-book-table thead tr:nth-child(n + 2) > th,
+html[data-theme='dark'] body app-report .pdf-mode-detail-page .report-book-table thead tr:nth-child(n + 2) > th,
+html[data-theme='dark'] body app-report .daily-mode-full-table thead tr:nth-child(2) > th {
+  color: #f8fbff !important;
+  background: linear-gradient(180deg, #1f5fa7 0%, #15477f 100%) !important;
+  border-color: rgba(147, 197, 253, 0.24) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(56, 189, 248, 0.34) !important;
+}
+
+/* Sticky table headers on iPad/mobile retain the same blue instead of falling
+   back to the graphite sticky-cell token. */
+html[data-theme='dark'] body app-report .report-book-table thead th:first-child,
+html[data-theme='dark'] body app-report .daily-mode-full-table thead th:first-child,
+html[data-theme='dark'] body app-report .daily-tracking-table thead th:first-child,
+html[data-theme='dark'] body app-report .hourly-matrix thead th:first-child {
+  background-color: #174f91 !important;
+  color: #ffffff !important;
+}
+
+/* ========================================================================== */
+/* FLEET VISUAL FINAL V45 — DARK MODE / MODE TABLE BLUE HEADER                */
+/* 2026-10-06: visual-only refinement based on the approved two-tier header.   */
+/* ========================================================================== */
+
+/* Keep the Mode table visually precise on the black report surface. The frame
+   carries the perimeter; the cells carry a restrained 1px engineering grid. */
+html[data-theme='dark'] body app-report .daily-mode-table-wrap {
+  border: 1px solid rgba(96, 165, 250, 0.34) !important;
+  background: #070a0f !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.018),
+    0 6px 18px rgba(0, 0, 0, 0.18) !important;
+}
+
+html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table {
+  border-collapse: collapse;
+  background: #070a0f !important;
+}
+
+/* Row 1: Mode | Fuel Consumption | Running Hours | Distance | LPH */
+html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table thead tr:first-child > th {
+  padding: 8px 10px !important;
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #2365b6 0%, #184d94 100%) !important;
+  border-top: 0 !important;
+  border-right: 1px solid rgba(125, 184, 242, 0.30) !important;
+  border-bottom: 1px solid rgba(125, 184, 242, 0.34) !important;
+  font-weight: 850 !important;
+  line-height: 1.18;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.22) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Row 2: Value / % / Hrs / NM / L/NM. Slightly darker so the hierarchy is
+   visible while still reading as one continuous blue table header. */
+html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table thead tr:nth-child(2) > th {
+  padding: 7px 10px !important;
+  color: #f8fbff !important;
+  background: linear-gradient(180deg, #1d5aa4 0%, #164785 100%) !important;
+  border-right: 1px solid rgba(125, 184, 242, 0.26) !important;
+  border-bottom: 1px solid rgba(125, 184, 242, 0.38) !important;
+  font-weight: 800 !important;
+  line-height: 1.16;
+  letter-spacing: 0.006em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045) !important;
+}
+
+/* Close the right edge cleanly; the wrapper owns the outer border. */
+html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table thead tr > th:last-child {
+  border-right: 0 !important;
+}
+
+/* Row-spanning Mode / LPH cells visually terminate at the same baseline as
+   the second header row. */
+html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table thead th[rowspan='2'] {
+  vertical-align: middle !important;
+  border-bottom: 1px solid rgba(125, 184, 242, 0.38) !important;
+}
+
+/* Crisp but quiet body grid: readable at 100%, 80%, 67% and browser zoom-out
+   without turning the table into a heavy spreadsheet. */
+html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table tbody > tr > :is(th, td) {
+  border-right: 1px solid rgba(148, 163, 184, 0.115) !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.115) !important;
+}
+
+html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table tbody > tr > :is(th, td):last-child {
+  border-right: 0 !important;
+}
+
+html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table tbody > tr:last-child > :is(th, td) {
+  border-bottom: 0 !important;
+}
+
+/* Group boundaries are only a touch brighter than the normal grid. */
+html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table tbody > tr > :is(th, td):nth-child(1),
+html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table tbody > tr > :is(th, td):nth-child(3),
+html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table tbody > tr > :is(th, td):nth-child(5),
+html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table tbody > tr > :is(th, td):nth-child(7) {
+  border-right-color: rgba(125, 184, 242, 0.18) !important;
+}
+
+/* Sticky Mode header/cells preserve the approved colours on tablet/mobile. */
+@container report-dashboard (max-width: 900px) {
+  html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table thead th:first-child {
+    background: linear-gradient(180deg, #2365b6 0%, #184d94 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 1px 0 0 rgba(125, 184, 242, 0.30) !important;
+  }
+
+  html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table tbody th:first-child {
+    background: #0b1421 !important;
+    box-shadow: 1px 0 0 rgba(125, 184, 242, 0.14), 7px 0 14px rgba(0, 0, 0, 0.20) !important;
+  }
 }

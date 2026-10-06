@@ -30,13 +30,17 @@
                 "glob": "**/*",
                 "input": "src/assets",
                 "output": "assets"
+              },
+              {
+                "glob": "pdf.worker.min.mjs",
+                "input": "node_modules/pdfjs-dist/legacy/build",
+                "output": "assets/pdfjs"
               }
             ],
             "styles": [
               "src/styles.scss",
               "src/styles/theme.scss",
               "node_modules/leaflet/dist/leaflet.css"
-
             ]
           },
           "configurations": {
@@ -73,7 +77,10 @@
               "buildTarget": "solaris-app:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options": {
+            "proxyConfig": "proxy.conf.json"
+          }
         },
         "extract-i18n": {
           "builder": "@angular/build:extract-i18n"
@@ -97,6 +104,11 @@
                 "glob": "**/*",
                 "input": "src/assets",
                 "output": "assets"
+              },
+              {
+                "glob": "pdf.worker.min.mjs",
+                "input": "node_modules/pdfjs-dist/legacy/build",
+                "output": "assets/pdfjs"
               }
             ],
             "styles": [
@@ -113,4 +125,3 @@
     "analytics": "105345f3-5af0-4f00-b4eb-e9fa3e12b850"
   }
 }
-

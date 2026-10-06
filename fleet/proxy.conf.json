@@ -1,0 +1,11 @@
+{
+  "/report-historian": {
+    "target": "http://192.168.14.41:8900",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "warn",
+    "pathRewrite": {
+      "^/report-historian": ""
+    }
+  }
+}

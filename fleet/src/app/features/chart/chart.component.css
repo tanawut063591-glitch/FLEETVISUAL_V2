@@ -1293,3 +1293,80 @@
 :host-context([data-theme='dark']) .side-panel {
     border-color: rgba(148, 163, 184, 0.28) !important;
 }
+
+/* ========================================================================== */
+/* CHART PRO V42 — premium pure-black controls                                */
+/* 2026-10-06: presentation-only. Chart data/options are untouched.           */
+/* ========================================================================== */
+:host-context([data-theme='dark']) .chart-page {
+    background: #000000 !important;
+}
+
+:host-context([data-theme='dark']) .chart-workspace,
+:host-context([data-theme='dark']) .chart-card,
+:host-context([data-theme='dark']) .state-card,
+:host-context([data-theme='dark']) .side-panel {
+    background: #080a0d !important;
+    border-color: rgba(203, 213, 225, 0.16) !important;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.30) !important;
+}
+
+:host-context([data-theme='dark']) .chart-toolbar,
+:host-context([data-theme='dark']) .chart-meta,
+:host-context([data-theme='dark']) .chart-card-head {
+    background: #080a0d !important;
+    border-color: rgba(203, 213, 225, 0.12) !important;
+}
+
+:host-context([data-theme='dark']) .chart-content,
+:host-context([data-theme='dark']) .chart-instance,
+:host-context([data-theme='dark']) .big-chart,
+:host-context([data-theme='dark']) .group-chart {
+    background: #05070a !important;
+}
+
+:host-context([data-theme='dark']) .chart-type-switch {
+    padding: 3px !important;
+    gap: 3px !important;
+    border: 1px solid rgba(203, 213, 225, 0.16) !important;
+    border-radius: 9px !important;
+    background: #05070a !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+:host-context([data-theme='dark']) .chart-type-switch button {
+    min-width: 84px;
+    border: 1px solid transparent !important;
+    border-radius: 6px !important;
+    background: transparent !important;
+    color: #aebdce !important;
+    box-shadow: none !important;
+}
+
+:host-context([data-theme='dark']) .chart-type-switch button i {
+    color: #6ea8ff !important;
+}
+
+:host-context([data-theme='dark']) .chart-type-switch button:hover:not(.active) {
+    border-color: rgba(96, 165, 250, 0.20) !important;
+    background: #0d1219 !important;
+    color: #f8fafc !important;
+}
+
+:host-context([data-theme='dark']) .chart-type-switch button.active {
+    border-color: rgba(96, 165, 250, 0.72) !important;
+    background: linear-gradient(180deg, #101b2d 0%, #0a1321 100%) !important;
+    color: #ffffff !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(59, 130, 246, 0.16),
+        0 6px 16px rgba(37, 99, 235, 0.15) !important;
+}
+
+:host-context([data-theme='dark']) .chart-type-switch button.active i {
+    color: #7db4ff !important;
+}
+
+:host-context([data-theme='dark']) ::ng-deep .highcharts-background,
+:host-context([data-theme='dark']) ::ng-deep .highcharts-plot-background {
+    fill: #05070a !important;
+}
