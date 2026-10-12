@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { catchError, map, shareReplay } from 'rxjs/operators';
+import { Observable, defer, of } from 'rxjs';
+import { catchError, finalize, map, shareReplay } from 'rxjs/operators';
 
 export type OfficialArchiveReportType = 'd' | 'm';
 
@@ -28,6 +28,9 @@ interface OfficialReportArchiveManifest {
 export class OfficialReportLibraryService {
   private readonly manifestUrl = 'official-reports/manifest.json';
   private readonly reports$: Observable<OfficialReportArchiveEntry[]>;
+  // The Mode and Engine summary can request the same packaged PDF simultaneously.
+  // Coalesce only overlapping reads; do not retain sensitive document blobs.
+  private readonly pdfInFlight = new Map<string, Observable<Blob>>();
 
   constructor(private readonly http: HttpClient) {
     this.reports$ = this.http.get<OfficialReportArchiveManifest>(this.manifestUrl).pipe(
@@ -87,7 +90,18 @@ export class OfficialReportLibraryService {
   }
 
   loadReport(entry: OfficialReportArchiveEntry): Observable<Blob> {
-    return this.http.get(entry.fileUrl, { responseType: 'blob' });
+    const key = entry.fileUrl;
+    const active = this.pdfInFlight.get(key);
+    if (active) return active;
+
+    const request$ = defer(() => this.http.get(key, { responseType: 'blob' })).pipe(
+      finalize(() => {
+        if (this.pdfInFlight.get(key) === request$) this.pdfInFlight.delete(key);
+      }),
+      shareReplay({ bufferSize: 1, refCount: true }),
+    );
+    this.pdfInFlight.set(key, request$);
+    return request$;
   }
 
   private matchesVessel(entry: OfficialReportArchiveEntry, normalizedVessel: string): boolean {

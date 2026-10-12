@@ -38,6 +38,8 @@ interface CacheEntry {
 export class ActivityLogsService {
   private readonly cache = new Map<string, CacheEntry>();
   private readonly inFlight = new Map<string, Observable<ActivityLogFetchResult>>();
+  // Telemetry caches must not be reused after a different user signs in.
+  private cacheAuthToken = '';
 
   constructor(
     private http: HttpClient,
@@ -48,6 +50,8 @@ export class ActivityLogsService {
   ) {}
 
   fetch(query: ActivityLogQuery, forceRefresh = false): Observable<ActivityLogFetchResult> {
+    this.ensureCacheAuth();
+    const tokenAtStart = this.cacheAuthToken;
     const normalizedQuery = this.normalizeQuery(query);
     const key = JSON.stringify(normalizedQuery);
 
@@ -89,16 +93,28 @@ export class ActivityLogsService {
         );
       }),
       tap(({ result, ttl }) => {
+        if (this.authService.getToken() !== tokenAtStart) return;
         this.cache.set(key, { expiresAt: Date.now() + ttl * 1000, value: result });
         this.pruneCache();
       }),
       map(({ result }) => result),
-      finalize(() => this.inFlight.delete(key)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      // Cancel pending HTTP work when its last screen unsubscribes.
+      finalize(() => {
+        if (this.inFlight.get(key) === request$) this.inFlight.delete(key);
+      }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.inFlight.set(key, request$);
     return request$;
+  }
+
+  private ensureCacheAuth(): void {
+    const currentToken = this.authService.getToken();
+    if (currentToken === this.cacheAuthToken) return;
+    this.cache.clear();
+    this.inFlight.clear();
+    this.cacheAuthToken = currentToken;
   }
 
   clearCache(): void {

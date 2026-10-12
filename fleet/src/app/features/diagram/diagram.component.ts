@@ -521,6 +521,9 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
 
       if (identity && identity !== this.activeVesselIdentity) {
         this.activeVesselIdentity = identity;
+        // Hide the previous vessel's status until the new telemetry is resolved.
+        this.currentValues = {};
+        this.lastUpdated = '-';
         this.fvRealtimeService.setActiveVessel(data);
       }
     });

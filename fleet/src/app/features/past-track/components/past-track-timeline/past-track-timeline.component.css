@@ -465,3 +465,10 @@
   border-color: var(--accent-border, #8bb8ff);
   background: var(--accent-soft, #eaf2ff);
 }
+
+/* Keep the virtual timeline navigable without hiding its column semantics. */
+.timeline-row:focus-visible {
+  outline: 2px solid var(--accent, #2563eb);
+  outline-offset: -3px;
+  z-index: 1;
+}

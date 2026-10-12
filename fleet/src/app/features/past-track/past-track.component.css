@@ -952,3 +952,16 @@
     height: 38px;
   }
 }
+
+/* 2026-10: Consistent page width, safe-area spacing and keyboard focus. */
+.past-track-page { width: 100%; min-width: 0; max-width: 100%; overflow-x: clip; }
+.past-track-page .page-header > *, .past-track-page .header-actions { min-width: 0; }
+.past-track-page :is(button, input, select):focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .past-track-page { padding-inline: clamp(9px, 3vw, 15px); padding-bottom: max(30px, env(safe-area-inset-bottom)); }
+  .past-track-page .breadcrumb { min-width: 0; max-width: 100%; height: auto; min-height: 40px; flex-wrap: wrap; }
+  .past-track-page .page-header { min-width: 0; }
+}
+

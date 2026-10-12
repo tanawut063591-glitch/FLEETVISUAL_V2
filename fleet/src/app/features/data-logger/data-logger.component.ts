@@ -5,10 +5,11 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   NgZone,
+  HostListener,
 } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { NewHttpClientService } from '../../shared/services/http-client1.service';
-import * as XLSX from 'xlsx';
+import { escapeSpreadsheetCsv } from '../../shared/utils/spreadsheet-csv.util';
 
 import {
   DataLoggerHeader,
@@ -63,11 +64,14 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
 
   private sortDesc: boolean = true;
   private requestSub: Subscription | null = null;
+  private exportSub: Subscription | null = null;
   private requestVersion = 0;
   private requestPending = false;
   private selectedEvent: any = null;
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private readonly refreshMs: number = 30000;
+  private lastVisibleRefreshAt = 0;
+  private hiddenSince = 0;
 
   sortColumnType: DataLoggerSortColumnType = 'time';
   sortHeaderIndex: number = -1;
@@ -91,9 +95,25 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
 
   ngOnInit() {}
 
+  @HostListener('document:visibilitychange')
+  onVisibilityChange(): void {
+    if (typeof document === 'undefined') return;
+    if (document.hidden) {
+      this.hiddenSince = Date.now();
+      return;
+    }
+    if ( !this.autoRefresh || !this.selectedEvent) return;
+    const now = Date.now();
+    if (!this.hiddenSince || now - this.hiddenSince < this.refreshMs || now - this.lastVisibleRefreshAt < 15_000 || this.requestPending || this.loading) return;
+    this.lastVisibleRefreshAt = now;
+    this.hiddenSince = 0;
+    this.refreshNow();
+  }
+
   ngOnDestroy(): void {
     this.clearRefreshTimer();
     this.requestSub?.unsubscribe();
+    this.exportSub?.unsubscribe();
     this.requestVersion += 1;
   }
 
@@ -105,6 +125,16 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
     if (!event || !event.start || !event.end || !event.tags || event.tags.length === 0) {
       if (!silent) {
         alert('Please select start date, end date and tags.');
+      }
+      return;
+    }
+
+    const inputStart = Number(event.start);
+    const inputEnd = Number(event.end);
+    if (!Number.isFinite(inputStart) || !Number.isFinite(inputEnd) || inputEnd < inputStart) {
+      if (!silent) {
+        this.errorMessage = 'Please select a valid date range (end must be after start).';
+        this.changeDetectorRef.markForCheck();
       }
       return;
     }
@@ -294,6 +324,8 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
     this.selectedEvent = null;
     this.requestSub?.unsubscribe();
     this.requestSub = null;
+    this.exportSub?.unsubscribe();
+    this.exportSub = null;
     this.requestPending = false;
     this.requestVersion += 1;
 
@@ -384,65 +416,64 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const startDate = new Date(event.start);
+    const endDate = new Date(event.end);
+    if (!Number.isFinite(startDate.getTime()) || !Number.isFinite(endDate.getTime()) ||
+        endDate.getTime() < startDate.getTime()) {
+      this.errorMessage = 'Select a valid export time range.';
+      return;
+    }
+
     this.loading = true;
     this.errorMessage = '';
     this.changeDetectorRef.detectChanges();
 
     const tags = event.tags;
     const headersDef = this.createHeaders(tags);
-
-    const startDate = new Date(event.start);
-    const endDate = new Date(event.end);
-
     startDate.setSeconds(0);
     startDate.setMilliseconds(0);
     endDate.setSeconds(0);
     endDate.setMilliseconds(0);
-
     const startStr = this.formatRequestTime(startDate);
     const endStr = this.formatRequestTime(endDate);
 
+    // CSV is a plain-text format. Avoid allocating an XLSX workbook, which
+    // previously made this lazy feature pull in a large spreadsheet library.
+    // Using the shared escape function also blocks formula injection in Excel.
+    this.exportSub?.unsubscribe();
     this.ngZone.runOutsideAngular(() => {
-      this.newHttp.getHistorianValues(startStr, endStr, tags).subscribe(
-        (res: any) => {
+      this.exportSub = this.newHttp.getHistorianValues(startStr, endStr, tags).subscribe({
+        next: (res: any) => {
           const rawData = this.extractResponseArray(res);
           const dictionary = this.buildDataDictionary(rawData);
-
           const stArr = this.parseDateValue(startStr).getTime();
           const enArr = this.parseDateValue(endStr).getTime();
-
           const reportValue = this.processTimeSeries(stArr, enArr, headersDef, dictionary);
-
-          const workbook = XLSX.utils.book_new();
-
           const headerNames = ['Time', ...headersDef.map((x: DataLoggerHeader) => x.name)];
-
-          const rows = reportValue.map((x: DataLoggerRow) => {
-            return [x.timestamp, ...x.values.map((v: any) => this.exportValue(v))];
-          });
-
-          const sheet = XLSX.utils.aoa_to_sheet([headerNames, ...rows]);
-
-          XLSX.utils.book_append_sheet(workbook, sheet, 'Data Logger');
-
-          const csvBuffer = XLSX.write(workbook, {
-            bookType: 'csv',
-            type: 'array',
-          });
+          const lines: string[] = new Array(reportValue.length + 1);
+          lines[0] = headerNames.map(escapeSpreadsheetCsv).join(',');
+          for (let index = 0; index < reportValue.length; index += 1) {
+            const row = reportValue[index];
+            lines[index + 1] = [
+              row.timestamp,
+              ...row.values.map((value: any) => this.exportValue(value)),
+            ].map(escapeSpreadsheetCsv).join(',');
+          }
+          const csv = lines.join('\r\n');
 
           this.ngZone.run(() => {
-            this.saveAsCsvFile(csvBuffer, 'data-logger');
+            this.saveAsCsvFile(`\uFEFF${csv}`, 'data-logger');
             this.finishLoading();
           });
         },
-        () => {
+        error: () => {
           this.ngZone.run(() => {
             this.errorMessage = 'Cannot load data from server.';
             alert(this.errorMessage);
             this.finishLoading();
           });
         },
-      );
+      });
     });
   }
 
@@ -1527,7 +1558,7 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
     this.changeDetectorRef.detectChanges();
   }
 
-  private saveAsCsvFile(buffer: any, fileName: string): void {
+  private saveAsCsvFile(buffer: string, fileName: string): void {
     const data = new Blob([buffer], {
       type: 'text/csv;charset=utf-8;',
     });
@@ -1537,10 +1568,12 @@ export class DataLoggerComponent implements OnInit, OnDestroy {
 
     link.href = url;
     link.download = fileName + '.csv';
+    document.body.appendChild(link);
     link.click();
+    link.remove();
 
     setTimeout(() => {
       window.URL.revokeObjectURL(url);
-    }, 100);
+    }, 1000);
   }
 }

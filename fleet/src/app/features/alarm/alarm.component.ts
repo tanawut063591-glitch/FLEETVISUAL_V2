@@ -1,4 +1,5 @@
-import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { escapeSpreadsheetCsv } from '../../shared/utils/spreadsheet-csv.util';
+import { Component, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subscription, timer } from 'rxjs';
 
@@ -61,6 +62,8 @@ export class AlarmComponent implements OnInit, OnDestroy {
   private noticeTimer?: ReturnType<typeof setTimeout>;
   private knownActiveAlertIds = new Set<string>();
   private hasLoadedOnce = false;
+  private lastVisibleRefreshAt = 0;
+  private hiddenSince = 0;
 
   private filteredCacheSource?: AlertRecord[];
   private filteredCacheKey = '';
@@ -87,6 +90,21 @@ export class AlarmComponent implements OnInit, OnDestroy {
     });
 
     this.loadAlerts();
+  }
+
+  @HostListener('document:visibilitychange')
+  onVisibilityChange(): void {
+    if (typeof document === 'undefined') return;
+    if (document.hidden) {
+      this.hiddenSince = Date.now();
+      return;
+    }
+    if ( !this.autoRefresh || !this.currentRange) return;
+    const now = Date.now();
+    if (!this.hiddenSince || now - this.hiddenSince < Math.min(60_000, this.refreshSeconds * 1_000) || now - this.lastVisibleRefreshAt < 15_000 || this.loading || this.refreshing) return;
+    this.lastVisibleRefreshAt = now;
+    this.hiddenSince = 0;
+    this.loadAlerts(true, false);
   }
 
   ngOnDestroy(): void {
@@ -676,7 +694,6 @@ export class AlarmComponent implements OnInit, OnDestroy {
   }
 
   private escapeCsv(value: unknown): string {
-    const text = String(value ?? '');
-    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    return escapeSpreadsheetCsv(value);
   }
 }

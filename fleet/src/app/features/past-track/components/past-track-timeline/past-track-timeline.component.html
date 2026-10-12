@@ -56,7 +56,11 @@
         [maxBufferPx]="648">
         <div *cdkVirtualFor="let point of trackPoints; let index = index; trackBy: trackPoint"
           class="timeline-grid timeline-row" role="row" [class.selected]="isSelected(point)"
-          [attr.aria-selected]="isSelected(point)" (click)="selectPoint(point)">
+          [attr.aria-selected]="isSelected(point)" tabindex="0"
+          [attr.aria-label]="'Select route point ' + point.no + ' at ' + point.time"
+          (click)="selectPoint(point)"
+          (keydown.enter)="selectPoint(point)"
+          (keydown.space)="$event.preventDefault(); selectPoint(point)">
 
           <div class="number-cell" role="cell">
             <span class="point-no" [ngClass]="getStatusClass(point)">{{ point.no }}</span>

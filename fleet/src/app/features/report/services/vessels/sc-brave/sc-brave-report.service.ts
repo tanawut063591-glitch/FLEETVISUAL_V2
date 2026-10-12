@@ -3,7 +3,7 @@ import { Observable, forkJoin, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
-import { setBoundedReportCache } from '../../common/report-cache.util';
+import { resetReportCacheForAuthChange, setBoundedReportCache } from '../../common/report-cache.util';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -245,6 +245,7 @@ export class ScBraveReportService implements VesselReportAdapter {
   private readonly detailedReportInFlight = new Map<string, Observable<ScBraveDailyUiReport>>();
   private readonly periodReportCache = new Map<string, { value: ScBravePeriodUiReport; expiresAt: number }>();
   private readonly periodReportInFlight = new Map<string, Observable<ScBravePeriodUiReport>>();
+  private readonly reportCacheSession = { token: null as string | null };
 
   constructor(
     private newHttp: NewHttpClientService,
@@ -360,6 +361,13 @@ export class ScBraveReportService implements VesselReportAdapter {
       ? `live-${start.getFullYear()}-${start.getMonth() + 1}-${start.getDate()}`
       : `${start.getTime()}-${end.getTime()}`;
     const now = Date.now();
+    resetReportCacheForAuthChange(
+      this.reportCacheSession,
+      this.detailedReportCache,
+      this.periodReportCache,
+      this.detailedReportInFlight,
+      this.periodReportInFlight,
+    );
     const cached = this.detailedReportCache.get(key);
 
     if (!force && cached && cached.expiresAt > now) {
@@ -415,13 +423,16 @@ export class ScBraveReportService implements VesselReportAdapter {
           : value,
       ),
       tap((value) => {
-        setBoundedReportCache(this.detailedReportCache, key, {
+        if (this.detailedReportInFlight.get(key) !== request$) return;
+          setBoundedReportCache(this.detailedReportCache, key, {
           value,
           expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
         });
       }),
       catchError((error) => throwError(() => error)),
-      finalize(() => this.detailedReportInFlight.delete(key)),
+      finalize(() => {
+          if (this.detailedReportInFlight.get(key) === request$) this.detailedReportInFlight.delete(key);
+        }),
       shareReplay({ bufferSize: 1, refCount: true }),
     );
 
@@ -449,6 +460,13 @@ export class ScBraveReportService implements VesselReportAdapter {
 
     const key = `${periodKind}|${start.getTime()}|${end.getTime()}`;
     const now = Date.now();
+    resetReportCacheForAuthChange(
+      this.reportCacheSession,
+      this.detailedReportCache,
+      this.periodReportCache,
+      this.detailedReportInFlight,
+      this.periodReportInFlight,
+    );
     const cached = this.periodReportCache.get(key);
     if (!force && cached && cached.expiresAt > now) {
       return of(cached.value);
@@ -477,12 +495,15 @@ export class ScBraveReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        setBoundedReportCache(this.periodReportCache, key, {
+        if (this.periodReportInFlight.get(key) !== request$) return;
+          setBoundedReportCache(this.periodReportCache, key, {
           value,
           expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
-      finalize(() => this.periodReportInFlight.delete(key)),
+      finalize(() => {
+          if (this.periodReportInFlight.get(key) === request$) this.periodReportInFlight.delete(key);
+        }),
       shareReplay({ bufferSize: 1, refCount: true }),
     );
 

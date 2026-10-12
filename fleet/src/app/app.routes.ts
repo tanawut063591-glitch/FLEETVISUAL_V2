@@ -12,6 +12,8 @@ import { PermissionGuard } from './core/guards/auth-guard';
 import { LoginGuard } from './core/guards/login-guard';
 import { SelectivePreloadingStrategy } from './core/strategies/selective-preloading.strategy';
 
+// Stagger idle-only preloads to protect the first view's CPU/network budget.
+// Explicit navigation still loads a feature immediately.
 export const routes: Routes = [
   {
     path: '',
@@ -94,7 +96,7 @@ export const routes: Routes = [
           depth: 5,
           title: 'DIAGRAM',
           preload: true,
-          preloadDelayMs: 1800,
+          preloadDelayMs: 12_000,
         },
       },
       {
@@ -105,7 +107,7 @@ export const routes: Routes = [
           depth: 6,
           title: 'REPORT',
           preload: true,
-          preloadDelayMs: 2200,
+          preloadDelayMs: 4_000,
         },
       },
       {
@@ -116,7 +118,7 @@ export const routes: Routes = [
           depth: 7,
           title: 'ALARM',
           preload: true,
-          preloadDelayMs: 900,
+          preloadDelayMs: 8_000,
         },
       },
       {
@@ -134,7 +136,7 @@ export const routes: Routes = [
           depth: 8,
           title: 'LOG',
           preload: true,
-          preloadDelayMs: 1200,
+          preloadDelayMs: 16_000,
         },
       },
       {
@@ -149,7 +151,7 @@ export const routes: Routes = [
 
 
           preload: true,
-          preloadDelayMs: 900,
+          preloadDelayMs: 20_000,
         },
       },
 
@@ -163,7 +165,7 @@ export const routes: Routes = [
           depth: 9,
           title: 'PAST TRACK',
           preload: true,
-          preloadDelayMs: 2600,
+          preloadDelayMs: 24_000,
         },
       },
       {

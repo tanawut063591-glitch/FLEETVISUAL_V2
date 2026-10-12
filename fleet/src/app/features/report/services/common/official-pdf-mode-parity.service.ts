@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { Observable, from, of, throwError } from 'rxjs';
-import { catchError, shareReplay, switchMap, timeout } from 'rxjs/operators';
+import { catchError, shareReplay, switchMap, tap, timeout } from 'rxjs/operators';
 
-import { HttpClientService } from '../../../../shared/services/http-client.service';
-import { NewHttpClientService } from '../../../../shared/services/http-client1.service';
+import { setBoundedReportCache } from './report-cache.util';
+import { OfficialPdfNetworkCoordinatorService } from './official-pdf-network-coordinator.service';
 import { OfficialReportLibraryService } from '../../../../shared/services/official-report-library.service';
 
 export interface OfficialPdfModeRow {
@@ -34,12 +34,14 @@ export interface OfficialPdfModeRow {
  */
 @Injectable({ providedIn: 'root' })
 export class OfficialPdfModeParityService {
-  private readonly cache = new Map<string, Observable<OfficialPdfModeRow[] | null>>();
+  private readonly cache = new Map<string, { value: Observable<OfficialPdfModeRow[] | null>; expiresAt: number }>();
+  private static readonly SUCCESS_TTL_MS = 6 * 60 * 60_000;
+  private static readonly FAILURE_RETRY_MS = 90_000;
+  private static readonly MAX_CACHED_DAYS = 48;
   private pdfJsConfigured = false;
 
   constructor(
-    private readonly directHttp: NewHttpClientService,
-    private readonly gatewayHttp: HttpClientService,
+    private readonly pdfRequests: OfficialPdfNetworkCoordinatorService,
     private readonly officialLibrary: OfficialReportLibraryService,
   ) {}
 
@@ -50,7 +52,8 @@ export class OfficialPdfModeParityService {
 
     const key = `${vessel.toLowerCase()}|${dateKey}`;
     const cached = this.cache.get(key);
-    if (cached) return cached;
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
+    if (cached) this.cache.delete(key);
 
     const timestamp = `${dateKey} 00:00:00`;
 
@@ -65,11 +68,11 @@ export class OfficialPdfModeParityService {
       );
 
     const gatewayPdf$ = parseSource(
-      this.gatewayHttp.getReport('d', timestamp, vessel).pipe(timeout(20_000)),
+      this.pdfRequests.getReport('gateway', 'd', timestamp, vessel).pipe(timeout(20_000)),
       'GATEWAY',
     );
     const directPdf$ = parseSource(
-      this.directHttp.getReport('d', timestamp, vessel).pipe(timeout(15_000)),
+      this.pdfRequests.getReport('direct', 'd', timestamp, vessel).pipe(timeout(15_000)),
       'DIRECT',
     ).pipe(
       catchError((directError) => {
@@ -113,12 +116,21 @@ export class OfficialPdfModeParityService {
         });
         return of(null);
       }),
+      tap((value) => {
+        const entry = this.cache.get(key);
+        if (entry?.value === request$) {
+          entry.expiresAt = Date.now() + (value ? OfficialPdfModeParityService.SUCCESS_TTL_MS : OfficialPdfModeParityService.FAILURE_RETRY_MS);
+        }
+      }),
       // refCount=true lets Angular HttpClient abort a stale PDF request when the operator
       // switches vessel/date before it completes. Successful completed requests are still replayed.
       shareReplay({ bufferSize: 1, refCount: true }),
     );
 
-    this.cache.set(key, request$);
+    setBoundedReportCache(this.cache, key, {
+      value: request$,
+      expiresAt: Date.now() + OfficialPdfModeParityService.FAILURE_RETRY_MS,
+    }, OfficialPdfModeParityService.MAX_CACHED_DAYS);
     return request$;
   }
 

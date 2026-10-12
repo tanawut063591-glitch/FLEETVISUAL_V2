@@ -801,4 +801,7 @@
   .aux-top-metric__copy small { font-size:6px; }
   .aux-footer { grid-template-columns:1fr auto; }
 }
-\n\n/* Status moved to the machinery card header. */\n.aux-footer { grid-template-columns: minmax(0, 1fr) !important; }\n
+
+
+/* Status moved to the machinery card header. */
+.aux-footer { grid-template-columns: minmax(0, 1fr) !important; }

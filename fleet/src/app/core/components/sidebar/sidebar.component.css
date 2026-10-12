@@ -878,3 +878,26 @@
   border-color: #0b1422;
   background: #2563eb;
 }
+
+/* 2026-10: Touch navigation and keyboard focus in vessel list. */
+.vessel-sidebar :is(button, a, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vessel-sidebar *, .vessel-sidebar *::before, .vessel-sidebar *::after {
+    scroll-behavior: auto;
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* Keyboard vessel navigation on all screen sizes; only one outlined vessel. */
+.vessel-card:focus-visible {
+  outline: 3px solid var(--accent, #2563eb);
+  outline-offset: -3px;
+  border-color: var(--accent, #2563eb);
+}
+@media (prefers-reduced-motion: reduce) {
+  .vessel-card, .main, .sidebar-backdrop { animation: none !important; transition: none !important; }
+}

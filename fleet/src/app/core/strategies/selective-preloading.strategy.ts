@@ -20,6 +20,17 @@ export class SelectivePreloadingStrategy implements PreloadingStrategy {
       return of(null);
     }
 
+    // Optional background bundle fetching must respect a metered/slow network;
+    // direct navigation will still download and display the requested module.
+    if (typeof navigator !== 'undefined') {
+      const connection = (navigator as Navigator & {
+        connection?: { saveData?: boolean; effectiveType?: string };
+      }).connection;
+      if (connection?.saveData || connection?.effectiveType === 'slow-2g' || connection?.effectiveType === '2g') {
+        return of(null);
+      }
+    }
+
     const routeDelayMs = Math.max(0, Number(route.data['preloadDelayMs']) || 0);
 
     return timer(this.authenticatedWarmupMs + routeDelayMs).pipe(

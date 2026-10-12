@@ -1,4 +1,5 @@
-import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { escapeSpreadsheetCsv } from '../../shared/utils/spreadsheet-csv.util';
+import { Component, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Subscription, timer } from 'rxjs';
 
 import { DateRangeToolbarComponent } from '../../shared/components/date-range-toolbar/date-range-toolbar.component';
@@ -39,6 +40,8 @@ export class ActivityLogsComponent implements OnInit, OnDestroy {
 
   private requestSub?: Subscription;
   private timerSub?: Subscription;
+  private lastVisibleRefreshAt = 0;
+  private hiddenSince = 0;
   private filteredCacheSource?: ActivityLogRecord[];
   private filteredCacheKey = '';
   private filteredCache: ActivityLogRecord[] = [];
@@ -52,6 +55,21 @@ export class ActivityLogsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.restartTimer();
+  }
+
+  @HostListener('document:visibilitychange')
+  onVisibilityChange(): void {
+    if (typeof document === 'undefined') return;
+    if (document.hidden) {
+      this.hiddenSince = Date.now();
+      return;
+    }
+    if ( !this.autoRefresh || !this.currentRange) return;
+    const now = Date.now();
+    if (!this.hiddenSince || now - this.hiddenSince < 60_000 || now - this.lastVisibleRefreshAt < 15_000 || this.loading || this.refreshing) return;
+    this.lastVisibleRefreshAt = now;
+    this.hiddenSince = 0;
+    this.loadLogs(true);
   }
 
   ngOnDestroy(): void {
@@ -351,7 +369,6 @@ export class ActivityLogsComponent implements OnInit, OnDestroy {
   }
 
   private escapeCsv(value: unknown): string {
-    const text = String(value ?? '').replace(/"/g, '""');
-    return `"${text}"`;
+    return escapeSpreadsheetCsv(value);
   }
 }

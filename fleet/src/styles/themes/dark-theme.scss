@@ -4212,7 +4212,7 @@ html[data-theme='dark'] app-report .report-full-daily .premium-daily-card .repor
 html[data-theme='dark'] app-report .premium-daily-card .hourly-matrix thead th {
   color: #ffffff !important;
   border-color: rgba(147, 197, 253, 0.16) !important;
-  background: linear-gradient(135deg, #174782 0%, #1f5fae 100%) !important;
+  background: var(--report-pro-header-primary) !important;
 }
 
 html[data-theme='dark'] app-report .report-book-table th,
@@ -4391,7 +4391,7 @@ html[data-theme='dark'] app-report .report-page:not(.report-page--official) .his
 html[data-theme='dark'] app-report .historical-daily-trend__table .report-book-table thead th {
   color: #ffffff !important;
   border-color: rgba(147, 197, 253, 0.16) !important;
-  background: linear-gradient(135deg, #174782 0%, #1f5fae 100%) !important;
+  background: var(--report-pro-header-primary) !important;
 }
 
 html[data-theme='dark'] app-report .historical-daily-trend__table .report-book-table tbody tr:nth-child(odd) th,
@@ -4613,7 +4613,7 @@ html[data-theme='dark'] body app-report .daily-pdf-table thead th,
 html[data-theme='dark'] body app-report .daily-tracking-table thead th {
   color: #e8edf4 !important;
   border-color: rgba(148, 163, 184, 0.16) !important;
-  background: linear-gradient(180deg, #161a20 0%, #101318 100%) !important;
+  background: var(--report-pro-header-primary) !important;
   box-shadow: inset 0 -2px 0 rgba(59, 130, 246, 0.44) !important;
 }
 
@@ -5637,11 +5637,11 @@ html[data-theme='dark'] app-report .premium-daily-card .report-book-table thead 
 html[data-theme='dark'] app-report .pdf-mode-detail-page .report-book-table thead th {
   border-color: rgba(255, 255, 255, .11) !important;
   color: #f8fbff !important;
-  background: linear-gradient(180deg, #245fae, #17477f) !important;
+  background: var(--report-pro-header-primary) !important;
 }
 
 html[data-theme='dark'] app-report .premium-daily-card .daily-mode-full-table thead tr:nth-child(2) th {
-  background: linear-gradient(180deg, #2a67b4, #1b4f8e) !important;
+  background: var(--report-pro-header-secondary) !important;
 }
 
 html[data-theme='dark'] app-report .premium-daily-card .report-book-table tbody tr:nth-child(odd):not(.section-row):not(.separator-row):not(.total-row) th,
@@ -6257,14 +6257,14 @@ html[data-theme='dark'] body app-report .daily-mode-full-table thead th,
 html[data-theme='dark'] body app-report .hourly-matrix thead th,
 html[data-theme='dark'] body app-report .daily-tracking-table thead th {
   color: #f8fafc !important;
-  background: linear-gradient(180deg, #151a22 0%, #0b0e13 100%) !important;
+  background: var(--report-pro-header-primary) !important;
   border-color: rgba(203, 213, 225, 0.15) !important;
   box-shadow: inset 0 -2px 0 rgba(59, 130, 246, 0.58);
   text-shadow: none !important;
 }
 
 html[data-theme='dark'] body app-report .premium-daily-card .daily-mode-full-table thead tr:nth-child(2) th {
-  background: linear-gradient(180deg, #11161d 0%, #090c10 100%) !important;
+  background: var(--report-pro-header-secondary) !important;
   box-shadow: inset 0 -1px 0 rgba(96, 165, 250, 0.38);
 }
 
@@ -6364,7 +6364,7 @@ html[data-theme='dark'] body app-report .pdf-mode-detail-page .report-book-table
 html[data-theme='dark'] body app-report .daily-tracking-table thead tr:first-child > th,
 html[data-theme='dark'] body app-report .hourly-matrix thead tr:first-child > th {
   color: #ffffff !important;
-  background: linear-gradient(180deg, #2469b8 0%, #174f91 100%) !important;
+  background: var(--report-pro-header-primary) !important;
   border-color: rgba(147, 197, 253, 0.28) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
@@ -6378,7 +6378,7 @@ html[data-theme='dark'] body app-report .premium-daily-card .report-book-table t
 html[data-theme='dark'] body app-report .pdf-mode-detail-page .report-book-table thead tr:nth-child(n + 2) > th,
 html[data-theme='dark'] body app-report .daily-mode-full-table thead tr:nth-child(2) > th {
   color: #f8fbff !important;
-  background: linear-gradient(180deg, #1f5fa7 0%, #15477f 100%) !important;
+  background: var(--report-pro-header-secondary) !important;
   border-color: rgba(147, 197, 253, 0.24) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
@@ -6391,13 +6391,13 @@ html[data-theme='dark'] body app-report .report-book-table thead th:first-child,
 html[data-theme='dark'] body app-report .daily-mode-full-table thead th:first-child,
 html[data-theme='dark'] body app-report .daily-tracking-table thead th:first-child,
 html[data-theme='dark'] body app-report .hourly-matrix thead th:first-child {
-  background-color: #174f91 !important;
+  background-color: #174f9b !important;
   color: #ffffff !important;
 }
 
 /* ========================================================================== */
-/* FLEET VISUAL FINAL V45 — DARK MODE / MODE TABLE BLUE HEADER                */
-/* 2026-10-06: visual-only refinement based on the approved two-tier header.   */
+/* FLEET VISUAL FINAL V45 — MODE TABLE SHARED PREMIUM BLUE HEADER                */
+/* 2026-10-12: dark uses the exact Light palette; body remains dark.        */
 /* ========================================================================== */
 
 /* Keep the Mode table visually precise on the black report surface. The frame
@@ -6417,31 +6417,32 @@ html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-
 
 /* Row 1: Mode | Fuel Consumption | Running Hours | Distance | LPH */
 html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table thead tr:first-child > th {
-  padding: 8px 10px !important;
-  color: #ffffff !important;
-  background: linear-gradient(180deg, #2365b6 0%, #184d94 100%) !important;
+  /* Reuse the same spacing and line-height as Light, including iPad/Mobile. */
+  padding: var(--report-ui-cell-y) var(--report-ui-cell-x) !important;
+  color: var(--report-pro-header-text) !important;
+  background: var(--report-pro-header-primary) !important;
   border-top: 0 !important;
-  border-right: 1px solid rgba(125, 184, 242, 0.30) !important;
-  border-bottom: 1px solid rgba(125, 184, 242, 0.34) !important;
-  font-weight: 850 !important;
-  line-height: 1.18;
-  letter-spacing: 0.01em;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.22) !important;
+  border-right: 1px solid var(--report-pro-header-border) !important;
+  border-bottom: 1px solid var(--report-pro-header-border) !important;
+  font-weight: 900 !important;
+  line-height: 1.25;
+  letter-spacing: normal;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.08) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
 }
 
-/* Row 2: Value / % / Hrs / NM / L/NM. Slightly darker so the hierarchy is
-   visible while still reading as one continuous blue table header. */
+/* Row 2: Value / % / Hrs / NM / L/NM. Use the exact Light secondary
+   gradient so switching themes never changes the approved table header. */
 html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table thead tr:nth-child(2) > th {
-  padding: 7px 10px !important;
-  color: #f8fbff !important;
-  background: linear-gradient(180deg, #1d5aa4 0%, #164785 100%) !important;
-  border-right: 1px solid rgba(125, 184, 242, 0.26) !important;
-  border-bottom: 1px solid rgba(125, 184, 242, 0.38) !important;
+  padding: var(--report-ui-cell-y) var(--report-ui-cell-x) !important;
+  color: var(--report-pro-header-text) !important;
+  background: var(--report-pro-header-secondary) !important;
+  border-right: 1px solid var(--report-pro-header-border) !important;
+  border-bottom: 1px solid var(--report-pro-header-border) !important;
   font-weight: 800 !important;
-  line-height: 1.16;
-  letter-spacing: 0.006em;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18) !important;
+  line-height: 1.25;
+  letter-spacing: normal;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.08) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045) !important;
 }
 
@@ -6480,12 +6481,19 @@ html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-
   border-right-color: rgba(125, 184, 242, 0.18) !important;
 }
 
-/* Sticky Mode header/cells preserve the approved colours on tablet/mobile. */
+/* Sticky Mode header/cells preserve the correct two-tier palette on iPad/mobile.
+   The first header cell in row 2 is "Value (L)", not "Mode": do not paint it
+   with the primary shade while horizontal-scrolling. */
 @container report-dashboard (max-width: 900px) {
-  html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table thead th:first-child {
-    background: linear-gradient(180deg, #2365b6 0%, #184d94 100%) !important;
+  html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table thead tr:first-child > th:first-child {
+    background: var(--report-pro-header-primary) !important;
     color: #ffffff !important;
-    box-shadow: 1px 0 0 rgba(125, 184, 242, 0.30) !important;
+    box-shadow: 1px 0 0 var(--report-pro-header-border) !important;
+  }
+  html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table thead tr:nth-child(2) > th:first-child {
+    background: var(--report-pro-header-secondary) !important;
+    color: #ffffff !important;
+    box-shadow: 1px 0 0 var(--report-pro-header-border) !important;
   }
 
   html[data-theme='dark'] body app-report .daily-mode-table-wrap .daily-mode-full-table tbody th:first-child {

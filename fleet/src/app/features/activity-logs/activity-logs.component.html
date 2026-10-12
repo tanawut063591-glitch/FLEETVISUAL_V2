@@ -30,7 +30,7 @@
       <span *ngIf="lastUpdatedAt">Updated {{ formatTime(lastUpdatedAt) }}</span>
       <button type="button" [class.active]="autoRefresh" (click)="toggleAutoRefresh()">
         <i class="fa" [class.fa-toggle-on]="autoRefresh" [class.fa-toggle-off]="!autoRefresh"></i>
-        Auto 20s
+        Auto 60s
       </button>
       <button type="button" (click)="loadLogs(true)" [disabled]="loading || refreshing" title="Refresh">
         <i class="fa fa-refresh" [class.fa-spin]="refreshing"></i>
@@ -141,7 +141,7 @@
     </div>
 
     <div class="activity-table-scroll" *ngIf="!loading && !errorMessage && filteredLogs.length" tabindex="0"
-      role="region" aria-label="Activity log table. Swipe or scroll horizontally to see all columns.">
+      role="region" aria-label="Activity log records. On compact screens, records are displayed as cards.">
       <div class="activity-table">
         <div class="table-head">
           <span>Timestamp</span>

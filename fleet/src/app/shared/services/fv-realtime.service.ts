@@ -16,6 +16,8 @@ export class FvRealtimeService {
   private realtimeRequestSubscription: Subscription | null = null;
 
   private readonly defaultInterval = 5000;
+  private readonly duplicateRefreshGuardMs = 1000;
+  private lastRequestStartedAt = 0;
   private activeInterval = 0;
 
   private realtimeTags: any[] = [];
@@ -42,7 +44,15 @@ export class FvRealtimeService {
     private http: HttpClientService,
     private newHttp: NewHttpClientService,
     private store: Store<any>,
-  ) {}
+  ) {
+    // Restore freshness immediately on tab return, without running timer-based
+    // network polling while the tab is hidden. The service is a root singleton.
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && this.isStarted) this.refreshActiveData(true);
+      });
+    }
+  }
 
   start(interval?: number): void {
     this.stopTimerOnly();
@@ -80,7 +90,8 @@ export class FvRealtimeService {
   }
 
   refreshNow(): void {
-    this.refreshActiveData();
+    // An explicit operator refresh should not be throttled.
+    this.refreshActiveData(true);
   }
 
   getActiveVesselSnapshot(): any {
@@ -198,7 +209,8 @@ export class FvRealtimeService {
 
     this.activePayload = payload;
     this.realtimePayloadSource.next(payload);
-    this.refreshActiveData();
+    // Vessel switches must fetch the new tags immediately.
+    this.refreshActiveData(true);
   }
 
   setDelay(offset: number, vessel: any): void {
@@ -221,7 +233,7 @@ export class FvRealtimeService {
     }, delay);
   }
 
-  private refreshActiveData(): void {
+  private refreshActiveData(force = false): void {
     if (typeof document !== 'undefined' && document.hidden) {
       return;
     }
@@ -242,6 +254,11 @@ export class FvRealtimeService {
       return;
     }
 
+    // startTimer(0) and setActiveVessel() can fire together, otherwise causing
+    // two identical backend reads within a fraction of a second.
+    const now = Date.now();
+    if (!force && now - this.lastRequestStartedAt < this.duplicateRefreshGuardMs) return;
+    this.lastRequestStartedAt = now;
     this.isRequesting = true;
     this.loadingSource.next(true);
 
@@ -493,6 +510,7 @@ export class FvRealtimeService {
     this.realtimeRequestSubscription = null;
     this.isLoadingTags = false;
     this.isRequesting = false;
+    this.lastRequestStartedAt = 0;
     this.loadingSource.next(false);
   }
 

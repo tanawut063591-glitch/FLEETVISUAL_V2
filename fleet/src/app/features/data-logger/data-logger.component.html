@@ -37,7 +37,7 @@
                     Clear Filter
                 </button>
 
-                <select class="interval-select" (change)="changeInterval($event)">
+                <select class="interval-select" aria-label="Data logger sampling interval" (change)="changeInterval($event)">
                     <option *ngFor="let item of intervalOptions" [value]="item.value"
                         [selected]="item.value == selectedIntervalMs">
                         {{ item.label }}
@@ -106,12 +106,12 @@
                     <tr class="filter-row">
 
                         <th class="time-col">
-                            <input type="text" class="column-filter" placeholder="Filter time..."
+                            <input type="text" class="column-filter" placeholder="Filter time..." aria-label="Filter by time"
                                 [(ngModel)]="timeFilter" (ngModelChange)="onFilterChange()">
                         </th>
 
                         <th *ngFor="let h of visibleHeaders; trackBy: trackByHeader">
-                            <input type="text" class="column-filter" placeholder="Filter..."
+                            <input type="text" class="column-filter" placeholder="Filter..." [attr.aria-label]="'Filter ' + h.label"
                                 [(ngModel)]="columnFilters[h.index]" (ngModelChange)="onFilterChange()">
                         </th>
 

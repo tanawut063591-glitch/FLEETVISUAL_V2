@@ -1733,7 +1733,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   setHistoricalUiPeriodMode(mode: HistoricalUiPeriodMode): void {
-    if (this.historicalUiPeriodMode === mode || this.scGlory1DailyLoading) {
+    if (this.historicalUiPeriodMode === mode) {
       return;
     }
     this.historicalUiPeriodMode = mode;
@@ -1777,7 +1777,9 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.historicalDate = this.dateFormat.formatDateInput(yesterday);
     this.historicalValidationError = '';
     this.persistHistoricalUiState();
+    this.resetScGlory1DailyReport();
     this.requestHistoricalAutoLoad();
+    this.changeDetector.markForCheck();
   }
 
   useHistoricalLast7Days(): void {
@@ -1788,7 +1790,9 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.historicalRangeEnd = this.dateFormat.formatDateInput(end);
     this.historicalValidationError = '';
     this.persistHistoricalUiState();
+    this.resetScGlory1DailyReport();
     this.requestHistoricalAutoLoad();
+    this.changeDetector.markForCheck();
   }
 
   useHistoricalCurrentMonth(): void {
@@ -1799,11 +1803,13 @@ export class ReportComponent implements OnInit, OnDestroy {
     );
     this.historicalValidationError = '';
     this.persistHistoricalUiState();
+    this.resetScGlory1DailyReport();
     this.requestHistoricalAutoLoad();
+    this.changeDetector.markForCheck();
   }
 
   refreshHistoricalUiReport(): void {
-    if (this.scGlory1DailyLoading || !this.selectedVesselName || !this.isHistoricalUiView) {
+    if (!this.selectedVesselName || !this.isHistoricalUiView) {
       return;
     }
 
@@ -1812,7 +1818,7 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   loadHistoricalUiReport(force = false): void {
     const dedicatedService = this.activeHistoricalReportService;
-    if (!dedicatedService || this.scGlory1DailyLoading) {
+    if (!dedicatedService || (this.scGlory1DailyLoading && !force)) {
       return;
     }
 
@@ -3188,12 +3194,11 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   private updateScGlory1DailyChartState(report: ScGlory1PeriodUiReport): void {
-    const reportEnd = new Date(report.periodEnd);
-    const endHour = Number.isFinite(reportEnd.getTime()) ? reportEnd.getHours() : 23;
-    // A one-day live report hides future hours. Multi-day and monthly reports
-    // aggregate by clock hour across all loaded days, so all 24 buckets remain useful.
-    this.dailyVisibleHourlyRows =
-      report.dayCount > 1 ? [...report.hourly] : report.hourly.filter((row) => row.hour <= endHour);
+    // Keep the full 00:00–23:00 clock-hour domain for every vessel and report
+    // period. Missing/future hours are identified by row.active and rendered as
+    // unavailable (never converted to synthetic fuel/distance measurements).
+    // This also keeps the SVG's 24 point centers aligned with all chart columns.
+    this.dailyVisibleHourlyRows = [...report.hourly].sort((a, b) => a.hour - b.hour);
 
     const active = report.hourly.filter((row) => row.active);
     const maxOf = (selector: (row: ScGlory1HourlyRow) => number | null): number =>

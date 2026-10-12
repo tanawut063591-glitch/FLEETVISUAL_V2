@@ -18,7 +18,8 @@
   (click)="closeMobileSidebar()"
 ></div>
 
-<div id="mobile-vessel-drawer" class="main" [class.is-open]="isShowMenu" [attr.aria-hidden]="isSm && !isShowMenu">
+<div id="mobile-vessel-drawer" class="main" [class.is-open]="isShowMenu"
+  [attr.aria-hidden]="isSm && !isShowMenu" [attr.inert]="isSm && !isShowMenu ? '' : null">
   <aside class="vessel-sidebar">
 
     <div class="sidebar-search-row">
@@ -63,7 +64,12 @@
         class="vessel-card"
         *ngFor="let vessel of visibleVessels; trackBy: trackByVessel"
         [class.active]="vessel.isActive"
+        role="button" tabindex="0"
+        [attr.aria-label]="'Select vessel ' + vessel.name"
+        [attr.aria-pressed]="vessel.isActive"
         (click)="selectVessel(vessel)"
+        (keydown.enter)="selectVessel(vessel)"
+        (keydown.space)="$event.preventDefault(); selectVessel(vessel)"
       >
         <div class="selected-line"></div>
 

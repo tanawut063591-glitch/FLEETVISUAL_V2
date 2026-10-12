@@ -940,6 +940,17 @@
                         </tr>
                       </tbody>
                     </table>
+                    <div class="hourly-mobile-records" aria-label="Hourly performance — all 24 hours">
+                      <article class="hourly-mobile-record" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow" [class.is-unavailable]="!row.active">
+                        <h3>Hour {{ row.hour < 10 ? '0' : '' }}{{ row.hour }}:00 <small *ngIf="!row.active">No data</small></h3>
+                        <dl>
+                          <div><dt>V.D.</dt><dd>{{ row.active ? formatDailyValue(row.distanceNm, 2) : '—' }}</dd></div>
+                          <div><dt>V.S.</dt><dd>{{ row.active ? formatDailyValue(row.speedKnots, 2) : '—' }}</dd></div>
+                          <div *ngIf="!usesNumberedAuxiliaryReport"><dt>ME..F.</dt><dd>{{ row.active ? formatDailyValue(row.mainFuel, 2) : '—' }}</dd></div>
+                          <div><dt>{{ isBahteraGeneratorReport ? 'DG..F.' : 'AE..F.' }}</dt><dd>{{ row.active ? formatDailyValue(row.auxFuel, 2) : '—' }}</dd></div>
+                        </dl>
+                      </article>
+                    </div>
                   </div>
                   <div class="report-abbreviation-note" aria-label="Hourly performance abbreviations">
                     <span class="report-abbreviation-note__title"><i class="fa fa-info-circle" aria-hidden="true"></i> Abbreviations</span>
@@ -1086,6 +1097,17 @@
                         </tr>
                       </tbody>
                     </table>
+                    <div class="hourly-mobile-records" aria-label="Main engine fuel — all 24 hours">
+                      <article class="hourly-mobile-record" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow" [class.is-unavailable]="!row.active">
+                        <h3>Hour {{ row.hour < 10 ? '0' : '' }}{{ row.hour }}:00 <small *ngIf="!row.active">No data</small></h3>
+                        <dl>
+                          <div *ngIf="!usesNumberedAuxiliaryReport"><dt>ME..F.</dt><dd>{{ row.active ? formatDailyValue(row.mainFuel, 2) : '—' }}</dd></div>
+                          <div><dt>PM..F.</dt><dd>{{ row.active ? formatDailyValue(row.portMainFuel, 2) : '—' }}</dd></div>
+                          <div><dt>SM..F.</dt><dd>{{ row.active ? formatDailyValue(row.starboardMainFuel, 2) : '—' }}</dd></div>
+                          <div *ngIf="dailyHasCenterMainEngine"><dt>CM..F.</dt><dd>{{ row.active ? formatDailyValue(row.centerMainFuel, 2) : '—' }}</dd></div>
+                        </dl>
+                      </article>
+                    </div>
                   </div>
                   <div class="report-abbreviation-note" aria-label="Main engine fuel abbreviations">
                     <span class="report-abbreviation-note__title"><i class="fa fa-info-circle" aria-hidden="true"></i> Abbreviations</span>
@@ -1206,6 +1228,18 @@
                         </tr>
                       </tbody>
                     </table>
+                    <div class="hourly-mobile-records" aria-label="Machinery hourly data — all 24 hours">
+                      <article class="hourly-mobile-record" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow" [class.is-unavailable]="!row.active">
+                        <h3>Hour {{ row.hour < 10 ? '0' : '' }}{{ row.hour }}:00 <small *ngIf="!row.active">No data</small></h3>
+                        <dl>
+                          <div *ngIf="!usesNumberedAuxiliaryReport"><dt>{{ machinery.codeFuel }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[machinery.fuel], 2) : '—' }}</dd></div>
+                          <div><dt>{{ machinery.codeMe }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[machinery.meRun], 2) : '—' }}</dd></div>
+                          <div *ngIf="!usesNumberedAuxiliaryReport"><dt>{{ machinery.codeShaftRun }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[machinery.shaftRun], 2) : '—' }}</dd></div>
+                          <div *ngIf="!usesNumberedAuxiliaryReport"><dt>{{ machinery.codeShaftRpm }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[machinery.shaftRpm], 2) : '—' }}</dd></div>
+                          <div *ngIf="hasEngineLoadReport && machinery.engineLoad && machinery.codeEngineLoad"><dt>{{ machinery.codeEngineLoad }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[machinery.engineLoad], 2) : '—' }}</dd></div>
+                        </dl>
+                      </article>
+                    </div>
                   </div>
                   <div class="report-abbreviation-note" aria-label="Machinery chart abbreviations">
                     <span class="report-abbreviation-note__title"><i class="fa fa-info-circle" aria-hidden="true"></i> Abbreviations</span>
@@ -1307,6 +1341,25 @@
                         </ng-template>
                       </tbody>
                     </table>
+                    <div class="hourly-mobile-records" aria-label="Auxiliary engine fuel — all 24 hours">
+                      <article class="hourly-mobile-record" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow" [class.is-unavailable]="!row.active">
+                        <h3>Hour {{ row.hour < 10 ? '0' : '' }}{{ row.hour }}:00 <small *ngIf="!row.active">No data</small></h3>
+                        <dl>
+                          <div><dt>{{ isBahteraGeneratorReport ? 'DG..F.' : 'AE..F.' }}</dt><dd>{{ row.active ? formatDailyValue(row.auxFuel, 2) : '—' }}</dd></div>
+                          <ng-container *ngIf="usesNumberedAuxiliaryReport; else standardAuxFuelMobileRows">
+                            <div><dt>{{ isBahteraGeneratorReport ? 'DG1..F.' : 'AE1..F.' }}</dt><dd>{{ row.active ? formatDailyValue(row.portAuxFuel, 2) : '—' }}</dd></div>
+                            <div><dt>{{ isBahteraGeneratorReport ? 'DG2..F.' : 'AE2..F.' }}</dt><dd>{{ row.active ? formatDailyValue($any(row).centerAuxFuel, 2) : '—' }}</dd></div>
+                            <div><dt>{{ isBahteraGeneratorReport ? 'DG3..F.' : 'AE3..F.' }}</dt><dd>{{ row.active ? formatDailyValue(row.starboardAuxFuel, 2) : '—' }}</dd></div>
+                            <div><dt>{{ isBahteraGeneratorReport ? 'EG..F.' : 'AE4..F.' }}</dt><dd>{{ row.active ? formatDailyValue($any(row).fourthAuxFuel, 2) : '—' }}</dd></div>
+                          </ng-container>
+                          <ng-template #standardAuxFuelMobileRows>
+                            <div><dt>PA..F.</dt><dd>{{ row.active ? formatDailyValue(row.portAuxFuel, 2) : '—' }}</dd></div>
+                            <div *ngIf="dailyHasCenterAuxiliary"><dt>CA..F.</dt><dd>{{ row.active ? formatDailyValue($any(row).centerAuxFuel, 2) : '—' }}</dd></div>
+                            <div><dt>SA..F.</dt><dd>{{ row.active ? formatDailyValue(row.starboardAuxFuel, 2) : '—' }}</dd></div>
+                          </ng-template>
+                        </dl>
+                      </article>
+                    </div>
                   </div>
                   <div class="report-abbreviation-note" aria-label="Auxiliary engine fuel abbreviations">
                     <span class="report-abbreviation-note__title"><i class="fa fa-info-circle" aria-hidden="true"></i> Abbreviations</span>
@@ -1405,6 +1458,15 @@
                         </tr>
                       </tbody>
                     </table>
+                    <div class="hourly-mobile-records" aria-label="Auxiliary machinery fuel and running hours — all 24 hours">
+                      <article class="hourly-mobile-record" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow" [class.is-unavailable]="!row.active">
+                        <h3>Hour {{ row.hour < 10 ? '0' : '' }}{{ row.hour }}:00 <small *ngIf="!row.active">No data</small></h3>
+                        <dl>
+                          <div><dt>{{ auxiliaryFuelCode(auxiliary) }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[auxiliary.fuel], 2) : '—' }}</dd></div>
+                          <div><dt>{{ auxiliaryRunCode(auxiliary) }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[auxiliary.run], 2) : '—' }}</dd></div>
+                        </dl>
+                      </article>
+                    </div>
                   </div>
                   <div class="report-abbreviation-note" aria-label="Auxiliary engine chart abbreviations">
                     <span class="report-abbreviation-note__title"><i class="fa fa-info-circle" aria-hidden="true"></i> Abbreviations</span>
@@ -1480,6 +1542,14 @@
                         </tr>
                       </tbody>
                     </table>
+                    <div class="hourly-mobile-records" aria-label="Total fuel used — all 24 hours">
+                      <article class="hourly-mobile-record" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow" [class.is-unavailable]="!row.active">
+                        <h3>Hour {{ row.hour < 10 ? '0' : '' }}{{ row.hour }}:00 <small *ngIf="!row.active">No data</small></h3>
+                        <dl>
+                          <div><dt>T.F.U.</dt><dd>{{ row.active ? formatDailyValue(row.totalFuel, 2) : '—' }}</dd></div>
+                        </dl>
+                      </article>
+                    </div>
                   </div>
                   <div class="report-abbreviation-note" aria-label="Total fuel abbreviation">
                     <span class="report-abbreviation-note__title"><i class="fa fa-info-circle" aria-hidden="true"></i> Abbreviations</span>

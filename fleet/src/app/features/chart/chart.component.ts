@@ -1,3 +1,4 @@
+import { escapeSpreadsheetCsv } from '../../shared/utils/spreadsheet-csv.util';
 import { Component, OnDestroy, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import type Highcharts from 'highcharts';
@@ -51,7 +52,6 @@ export class ChartComponent implements OnInit, OnDestroy {
     chartType: ChartDisplayType = 'line';
     autoRefresh: boolean = true;
     isRealtimeRange: boolean = false;
-    liveClockLabel: string = '';
 
     activeChartMenu: string | null = null;
     fullscreenTarget: string | null = null;
@@ -71,12 +71,12 @@ export class ChartComponent implements OnInit, OnDestroy {
     lastUpdatedLabel: string = '';
 
     private refreshTimer: ReturnType<typeof setInterval> | null = null;
-    private clockTimer: ReturnType<typeof setInterval> | null = null;
     private chartRebuildTimer: ReturnType<typeof setTimeout> | null = null;
     private chartRangeStart = 0;
     private chartRangeEnd = 0;
     private requestSub: Subscription | null = null;
     private requestVersion = 0;
+    private requestPending = false;
     private themeObserver: MutationObserver | null = null;
 
     private readonly refreshMs: number = 30000;
@@ -99,12 +99,8 @@ export class ChartComponent implements OnInit, OnDestroy {
     ) { }
 
     ngOnInit() {
-        this.updateLiveClock();
-        this.clockTimer = setInterval(() => {
-            this.updateLiveClock();
-            this.markView();
-        }, 1000);
-
+        // No visible widget consumes a per-second clock. Avoid triggering a full
+        // Highcharts/Angular change-detection walk every second while this page is open.
         if (typeof document !== 'undefined' && typeof MutationObserver !== 'undefined') {
             this.themeObserver = new MutationObserver(() => {
                 if (this.selectedSeries.length > 0) {
@@ -126,13 +122,10 @@ export class ChartComponent implements OnInit, OnDestroy {
             clearTimeout(this.chartRebuildTimer);
             this.chartRebuildTimer = null;
         }
-        if (this.clockTimer) {
-            clearInterval(this.clockTimer);
-            this.clockTimer = null;
-        }
         if (this.requestSub) {
             this.requestSub.unsubscribe();
         }
+        this.requestPending = false;
         this.requestVersion++;
         this.themeObserver?.disconnect();
         this.themeObserver = null;
@@ -155,7 +148,22 @@ export class ChartComponent implements OnInit, OnDestroy {
             return;
         }
 
+        const inputStart = Number(event.start);
+        const inputEnd = Number(event.end);
+        if (!Number.isFinite(inputStart) || !Number.isFinite(inputEnd) || inputEnd < inputStart) {
+            if (!silent) {
+                this.errorMessage = 'Please select a valid date range (end must be after start).';
+                this.markView();
+            }
+            return;
+        }
+
+        // A background refresh must not cancel an unfinished historian request.
+        if (silent && this.requestPending) {
+            return;
+        }
         var requestVersion = ++this.requestVersion;
+        this.requestPending = true;
 
         this.selectedEvent = {
             ...event,
@@ -194,6 +202,7 @@ export class ChartComponent implements OnInit, OnDestroy {
                     return;
                 }
 
+                this.requestPending = false;
                 var raw = this.extractSeriesEntries(res, this.selectedTags);
                 this.selectedSeries = this.buildSeries(raw, this.selectedTags);
                 this.rebuildCharts();
@@ -221,6 +230,7 @@ export class ChartComponent implements OnInit, OnDestroy {
                     return;
                 }
 
+                this.requestPending = false;
                 this.errorMessage = 'Cannot load chart data from server.';
                 this.selectedSeries = [];
                 this.mainChartOptions = null;
@@ -808,6 +818,12 @@ export class ChartComponent implements OnInit, OnDestroy {
     }
 
     clearChart() {
+        // Invalidate even late responses after Clear was clicked.
+        this.requestVersion++;
+        this.requestSub?.unsubscribe();
+        this.requestSub = null;
+        this.requestPending = false;
+        this.loading = false;
         this.clearRefreshTimer();
         this.autoRefresh = false;
         this.selectedEvent = null;
@@ -2587,7 +2603,7 @@ export class ChartComponent implements OnInit, OnDestroy {
                 return;
             }
 
-            if (this.autoRefresh && this.selectedEvent && !this.loading) {
+            if (this.autoRefresh && this.selectedEvent && !this.loading && !this.requestPending) {
                 this.loadChart(this.selectedEvent, true);
             }
         }, this.refreshMs);
@@ -2637,10 +2653,6 @@ export class ChartComponent implements OnInit, OnDestroy {
         return { ...event, start: nextStart, end: nextEnd, movingWindow: true };
     }
 
-    private updateLiveClock(): void {
-        this.liveClockLabel = this.toDisplayTimeWithSeconds(new Date());
-    }
-
     private toRequestTime(value: any): string {
         var date = new Date(value);
         return this.datePipe.transform(date, 'yyyy-MM-dd HH:mm:00') || '';
@@ -2671,12 +2683,8 @@ export class ChartComponent implements OnInit, OnDestroy {
         return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
     }
 
-    private csvEscape(value: string): string {
-        var text = value || '';
-        if (text.indexOf(',') >= 0 || text.indexOf('"') >= 0 || text.indexOf('\n') >= 0) {
-            return '"' + text.replace(/"/g, '""') + '"';
-        }
-        return text;
+    private csvEscape(value: unknown): string {
+      return escapeSpreadsheetCsv(value);
     }
 
     private downloadTextFile(content: string, filename: string, type: string) {

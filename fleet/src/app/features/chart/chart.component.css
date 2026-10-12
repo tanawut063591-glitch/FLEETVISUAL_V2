@@ -1370,3 +1370,17 @@
 :host-context([data-theme='dark']) ::ng-deep .highcharts-plot-background {
     fill: #05070a !important;
 }
+
+/* 2026-10: Tablet/mobile chart layout with no page-level horizontal overflow. */
+:host { min-width: 0; }
+.chart-page { width: 100%; min-width: 0; max-width: 100%; overflow-x: clip; }
+.chart-workspace, .chart-card, .chart-toolbar, .chart-instance { min-width: 0; max-width: 100%; }
+.chart-page :is(button, input, select):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 760px) {
+  .chart-page { padding: 9px 8px max(22px, env(safe-area-inset-bottom)); }
+  .chart-toolbar { height: auto; min-height: 64px; padding: 10px; flex-wrap: wrap; }
+  .chart-toolbar .toolbar-left, .chart-toolbar .toolbar-actions { width: 100%; min-width: 0; }
+  .chart-toolbar .toolbar-actions { justify-content: flex-start; }
+  .chart-card-head { min-width: 0; gap: 8px; flex-wrap: wrap; }
+}
+

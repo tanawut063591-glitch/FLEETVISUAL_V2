@@ -3598,3 +3598,16 @@
     min-height: 260px;
   }
 }
+
+/* 2026-10: Shared touch/keyboard polish; preserve vessel-specific machinery layouts. */
+.premium-dashboard { width: 100%; min-width: 0; max-width: 100%; overflow-x: clip; }
+.premium-dashboard :is(button, a, input, select):focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+@media (max-width: 720px) {
+  .premium-dashboard { padding-inline: clamp(8px, 2.5vw, 14px); padding-bottom: max(82px, env(safe-area-inset-bottom)); }
+  .premium-dashboard .dash-header,
+  .premium-dashboard .header-left,
+  .premium-dashboard .header-right { min-width: 0; max-width: 100%; }
+  .premium-dashboard .ship-info { min-width: 0; overflow-wrap: anywhere; }
+}

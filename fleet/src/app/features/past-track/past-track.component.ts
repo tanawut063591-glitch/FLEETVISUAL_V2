@@ -1,4 +1,5 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { escapeSpreadsheetCsv } from '../../shared/utils/spreadsheet-csv.util';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 
@@ -79,6 +80,13 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     });
   }
 
+  @HostListener('document:visibilitychange')
+  onDocumentVisibilityChange(): void {
+    if (typeof document !== 'undefined' && document.hidden && this.isPlaying) {
+      this.stopPlayback();
+    }
+  }
+
   ngOnDestroy(): void {
     this.stopPlayback();
     this.routeSub?.unsubscribe();
@@ -147,6 +155,9 @@ export class PastTrackComponent implements OnInit, OnDestroy {
   }
 
   loadPastTrack(): void {
+    this.loadSub?.unsubscribe();
+    this.loadSub = null;
+    this.stopPlayback();
     this.errorMessage = '';
 
     if (!this.validateDateRange()) {
@@ -166,9 +177,6 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     this.summary = null;
     this.trackPoints = [];
     this.selectedPoint = null;
-
-    this.stopPlayback();
-    this.loadSub?.unsubscribe();
 
     this.loadSub = this.pastTrackService
       .getPastTrack(this.vesselId, this.startDate, this.endDate, this.samplingIntervalMinutes)
@@ -357,7 +365,8 @@ export class PastTrackComponent implements OnInit, OnDestroy {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    window.URL.revokeObjectURL(url);
+    // Revoke after the browser has consumed the download URL.
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
   }
 
   async exportMapPng(): Promise<void> {
@@ -1344,13 +1353,7 @@ export class PastTrackComponent implements OnInit, OnDestroy {
   }
 
   private csvEscape(value: unknown): string {
-    const text = String(value ?? '');
-
-    if (text.includes(',') || text.includes('"') || text.includes('\n') || text.includes('\r')) {
-      return `"${text.replace(/"/g, '""')}"`;
-    }
-
-    return text;
+    return escapeSpreadsheetCsv(value);
   }
 
   private toSafeFileName(value: string): string {

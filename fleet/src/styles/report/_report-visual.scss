@@ -3792,6 +3792,14 @@ app-report {
   --report-v40-navy: #174f9b;
   --report-v40-navy-deep: #123f7f;
   --report-v40-blue: #2d6dc2;
+  /* Screenshot-matched Light header: diagonal navy-to-blue gradient.
+     Reuse EXACTLY the Light .report-full-daily header gradient in Dark, for
+     BOTH grouped rows (including Mode/LPH rowspan and sticky mobile cells).
+     Table body/surface colours can still adapt to Dark. */
+  --report-pro-header-primary: linear-gradient(135deg, #123f7b 0%, #2264bd 100%);
+  --report-pro-header-secondary: linear-gradient(135deg, #123f7b 0%, #2264bd 100%);
+  --report-pro-header-border: rgba(255, 255, 255, .18);
+  --report-pro-header-text: #ffffff;
   --report-v40-line: #d9e3ef;
   --report-v40-line-soft: #e8eef5;
   --report-v40-row: #f8fbff;
@@ -3845,11 +3853,11 @@ app-report .pdf-mode-detail-page .report-book-table thead th {
 }
 
 app-report .premium-daily-card .daily-mode-full-table thead tr:first-child th {
-  background: linear-gradient(180deg, #245fae, #174f9b);
+  background: var(--report-pro-header-primary);
 }
 
 app-report .premium-daily-card .daily-mode-full-table thead tr:nth-child(2) th {
-  background: linear-gradient(180deg, #2d70c5, #205da8);
+  background: var(--report-pro-header-secondary);
 }
 
 app-report .report-book-section__title {

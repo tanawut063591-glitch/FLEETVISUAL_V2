@@ -2226,3 +2226,15 @@
     outline-color: rgba(96, 165, 250, 0.28);
   }
 }
+
+/* 2026-10: Keyboard focus must remain visible in light/dark and at browser zoom. */
+.fleet-header :is(a, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fleet-header *, .fleet-header *::before, .fleet-header *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}

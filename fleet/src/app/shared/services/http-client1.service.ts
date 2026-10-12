@@ -4,6 +4,8 @@ import { Router } from '@angular/router';
 
 import {
   Observable,
+  Subscription,
+  defer,
   concat,
   defaultIfEmpty,
   filter,
@@ -13,7 +15,7 @@ import {
   take,
   throwError,
 } from 'rxjs';
-import { catchError, concatMap, map, mergeMap, tap, timeout, toArray } from 'rxjs/operators';
+import { catchError, concatMap, finalize, map, mergeMap, tap, timeout, toArray } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
 
@@ -48,6 +50,11 @@ export class NewHttpClientService {
   // report becomes noticeably faster than strict serial loading, while long range/
   // month views are limited to one day bundle at a time by the vessel services.
   private static readonly REPORT_TAG_CONCURRENCY = 2;
+  // Concurrency applies to the entire SPA, not to each individual report/day.
+  // Navigating between vessels while requests are in flight must not multiply
+  // the number of simultaneous historian single-tag POSTs.
+  private activeReportTagRequests = 0;
+  private readonly waitingReportTagRequests: Array<() => void> = [];
 
   public newVessel: string[] = ['SC_DUMMY', 'A02'];
 
@@ -110,7 +117,12 @@ export class NewHttpClientService {
                 .filter((x: any) => this.securityService.hasAccess(x.name))
                 .sort(this.compare);
 
-              return (accessible.length > 0 ? accessible : activeVessels).sort(this.compare);
+              // A legacy account with an explicit vessel allow-list must not
+              // see the entire roster merely because none of its vessels match
+              // the API response. Users not in the legacy list are governed by
+              // the current backend/user-access configuration as before.
+              const explicitLegacyList = this.securityService.getAccessibleVessels();
+              return (explicitLegacyList.length > 0 ? accessible : activeVessels).sort(this.compare);
             }),
             catchError((err) => {
               this.handleLoginRedirect(err);
@@ -459,44 +471,29 @@ export class NewHttpClientService {
     }
 
     return loadFrom('report').pipe(
-      // Some office proxy / logger failures return HTTP 200 with an empty payload
-      // instead of an error.  Treat an entirely empty report-source response as
-      // unavailable and restart the WHOLE request on API2.  This prevents a vessel
-      // page from silently showing blanks/0.00 while the same day still has data in
-      // the legacy PDF.  We intentionally do not mix sources tag-by-tag.
+      // Reject an HTTP-200 empty report source just like a network failure.
+      // The catchError below is upstream of the API2 fallback: a failing API2
+      // request must not trigger an expensive SECOND entire API2 bundle.
       mergeMap((series) => {
         const recordCount = series.reduce((sum, item: any) => {
           const records = Array.isArray(item?.Records) ? item.Records : [];
           return sum + records.length;
         }, 0);
-
-        if (recordCount > 0) {
-          this.reportHistorianState = 'available';
-          this.reportHistorianRetryAfter = 0;
-          console.info('[Historian][PDF parity] source=legacy-report-historian');
-          return of(series);
+        if (recordCount === 0) {
+          return throwError(() => new Error('REPORT_HISTORIAN_EMPTY'));
         }
-
-        this.reportHistorianState = 'unavailable';
-        this.reportHistorianRetryAfter =
-          Date.now() + NewHttpClientService.REPORT_HISTORIAN_COOLDOWN_MS;
-        console.warn(
-          '[Historian][PDF parity] legacy report source returned no records; using API2 fallback. ' +
-            'Mode values are not guaranteed to equal the historical PDF when the stores differ.',
-        );
-        return loadFrom('api2');
+        this.reportHistorianState = 'available';
+        this.reportHistorianRetryAfter = 0;
+        return of(series);
       }),
       catchError((error: any) => {
         this.reportHistorianState = 'unavailable';
         this.reportHistorianRetryAfter =
           Date.now() + NewHttpClientService.REPORT_HISTORIAN_COOLDOWN_MS;
         console.warn(
-          '[Historian][PDF parity] legacy report source failed; using API2 fallback. ' +
-            'Mode values are not guaranteed to equal the historical PDF when the stores differ.',
-          {
-            status: error?.status,
-            message: error?.message || error?.name,
-          },
+          '[Historian][PDF parity] legacy source unavailable; retrying the WHOLE request through API2 once. ' +
+            'Mode values may differ from the legacy PDF if historian stores disagree.',
+          { status: error?.status, message: error?.message || error?.name },
         );
         return loadFrom('api2');
       }),
@@ -522,7 +519,9 @@ export class NewHttpClientService {
     return from(indexedTags).pipe(
       mergeMap(
         ({ tagName, index }) =>
-          this.requestSingleLoggerFromSource(source, start, end, tagName).pipe(
+          this.queueReportTagRequest(() =>
+            this.requestSingleLoggerFromSource(source, start, end, tagName),
+          ).pipe(
             map((response) => ({
               index,
               series: this.normalizeSingleTagLoggerSeries(tagName, response),
@@ -537,6 +536,47 @@ export class NewHttpClientService {
           .map((item) => item.series),
       ),
     );
+  }
+
+  /**
+   * Global two-request limiter for PDF-parity historian POSTs. A per-report
+   * mergeMap(2) alone can send many simultaneous requests when multiple
+   * reports are mounted or a user navigates rapidly. Queued work is removed
+   * on unsubscribe; in-flight HTTP is cancelled and releases its slot.
+   */
+  private queueReportTagRequest(factory: () => Observable<any>): Observable<any> {
+    return new Observable<any>((observer) => {
+      let started = false;
+      let cancelled = false;
+      let requestSub: Subscription | null = null;
+      const begin = (): void => {
+        if (cancelled) return;
+        started = true;
+        this.activeReportTagRequests += 1;
+        requestSub = defer(factory).pipe(
+          finalize(() => {
+            this.activeReportTagRequests -= 1;
+            const next = this.waitingReportTagRequests.shift();
+            next?.();
+          }),
+        ).subscribe(observer);
+      };
+
+      if (this.activeReportTagRequests < NewHttpClientService.REPORT_TAG_CONCURRENCY) {
+        begin();
+      } else {
+        this.waitingReportTagRequests.push(begin);
+      }
+
+      return () => {
+        cancelled = true;
+        if (!started) {
+          const index = this.waitingReportTagRequests.indexOf(begin);
+          if (index !== -1) this.waitingReportTagRequests.splice(index, 1);
+        }
+        requestSub?.unsubscribe();
+      };
+    });
   }
 
   private requestSingleLoggerFromSource(

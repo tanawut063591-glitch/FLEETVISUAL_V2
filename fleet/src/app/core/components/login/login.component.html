@@ -1,6 +1,6 @@
 <div class="login-wrapper">
   <header class="top-header">
-    <button class="brand-left" type="button" aria-label="Fleet Visual brand">
+    <div class="brand-left">
       <div class="brand-logo">
         <img src="assets/images/login/logo.png" alt="Logo" />
       </div>
@@ -9,7 +9,7 @@
         <h2>FLEET VISUAL</h2>
         <p>Maritime Fleet Monitoring System</p>
       </div>
-    </button>
+    </div>
   </header>
 
   <section class="hero-text">
@@ -24,7 +24,7 @@
   </section>
 
   <main class="login-form-container">
-    <form class="glass-panel" [formGroup]="loginForm" (ngSubmit)="onSubmit()" autocomplete="off">
+    <form class="glass-panel" [formGroup]="loginForm" (ngSubmit)="onSubmit()" autocomplete="on">
       <div class="logo-circle">
         <img src="assets/images/login/logo.png" alt="Fleet Visual Logo" />
       </div>
@@ -38,7 +38,8 @@
             loginForm.get('username')?.invalid && loginForm.get('username')?.touched
           ">
           <i class="fa fa-user-o icon-left"></i>
-          <input type="text" formControlName="username" class="input-field" placeholder="Username"
+          <input type="text" formControlName="username" class="input-field" placeholder="Username" aria-label="Username" spellcheck="false" autocapitalize="none"
+            [attr.aria-invalid]="loginForm.get('username')?.invalid && loginForm.get('username')?.touched"
             autocomplete="username" (input)="loginChange()" />
         </div>
 
@@ -54,9 +55,11 @@
           ">
           <i class="fa fa-lock icon-left"></i>
           <input [type]="showPassword ? 'text' : 'password'" formControlName="password" class="input-field"
-            placeholder="Password" autocomplete="current-password" (input)="loginChange()" />
+            placeholder="Password" autocomplete="current-password" aria-label="Password"
+            [attr.aria-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched" (input)="loginChange()" />
 
-          <button type="button" class="password-toggle" aria-label="Toggle password visibility"
+          <button type="button" class="password-toggle" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            [attr.aria-pressed]="showPassword"
             (click)="togglePasswordVisibility()">
             <i class="fa" [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"></i>
           </button>

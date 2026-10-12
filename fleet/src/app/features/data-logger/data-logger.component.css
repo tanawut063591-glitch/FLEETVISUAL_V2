@@ -1184,3 +1184,19 @@
 :host-context([data-theme="dark"]) .data-table-card, :host-context([data-theme="dark"]) .empty-state, :host-context([data-theme="dark"]) .loading-box{
     border-color: rgba(148, 163, 184, 0.28) !important;
 }
+
+/* 2026-10: Preserve telemetry table widths while containing scroll to the table. */
+.data-logger-page { width: 100%; min-width: 0; max-width: 100%; overflow-x: clip; }
+.data-logger-page .data-table-card { min-width: 0; max-width: 100%; }
+.data-logger-page .table-actions { min-width: 0; flex-wrap: wrap; }
+.data-logger-page .table-scroll { max-width: 100%; }
+.data-logger-page :is(button, input, select):focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .data-logger-page { padding-inline: 8px; }
+  .data-logger-page .table-topbar { height: auto; min-height: 64px; flex-wrap: wrap; gap: 12px; padding: 12px; }
+  .data-logger-page .table-actions { width: 100%; justify-content: flex-start; }
+  .data-logger-page .table-scroll { min-height: 0; height: clamp(380px, 56dvh, 690px) !important; }
+}
+

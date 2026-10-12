@@ -75,6 +75,7 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
 
   private breakpointSub: Subscription | null = null;
   private realtimeTimer: ReturnType<typeof setInterval> | null = null;
+  private scrollIntoViewTimer: ReturnType<typeof setTimeout> | null = null;
   private lastAutoScrolledVesselKey = '';
   private sidebarScrollRestored = false;
   private readonly sidebarScrollStorageKey = 'fleet.sidebar.scrollTop';
@@ -125,6 +126,10 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
     if (this.realtimeTimer) {
       clearInterval(this.realtimeTimer);
       this.realtimeTimer = null;
+    }
+    if (this.scrollIntoViewTimer !== null) {
+      clearTimeout(this.scrollIntoViewTimer);
+      this.scrollIntoViewTimer = null;
     }
   }
 
@@ -402,7 +407,9 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
 
     this.lastAutoScrolledVesselKey = vesselKey;
 
-    setTimeout(() => {
+    if (this.scrollIntoViewTimer !== null) clearTimeout(this.scrollIntoViewTimer);
+    this.scrollIntoViewTimer = setTimeout(() => {
+      this.scrollIntoViewTimer = null;
       const list = this.vesselListElement?.nativeElement;
 
       if (!this.sidebarScrollRestored && list && !this.keyword.trim()) {

@@ -23,6 +23,7 @@ import { getThresholdFromTag } from '../../features/data-logger/data-logger-thre
 import { AlertFetchResult, AlertQuery, AlertRecord, AlertSeverity } from '../models/alert.model';
 import { HttpClientService } from './http-client.service';
 import { NewHttpClientService } from './http-client1.service';
+import { AuthService } from './auth.service';
 
 interface TelemetryTagDefinition {
   name: string;
@@ -53,6 +54,7 @@ export class TelemetryAlertsService {
     'fleet-date-range:activity-logs',
   ];
   private snapshot$?: Observable<TelemetrySnapshot>;
+  private snapshotAuthToken = '';
   private snapshotExpiresAt = 0;
   private snapshotLoading = false;
   private readonly tagConfig$: Observable<Record<string, unknown>>;
@@ -64,6 +66,7 @@ export class TelemetryAlertsService {
     private http: HttpClient,
     private backend: HttpClientService,
     private directBackend: NewHttpClientService,
+    private authService: AuthService,
   ) {
     this.clearLegacyBrowserData();
     this.tagConfig$ = this.http
@@ -90,6 +93,15 @@ export class TelemetryAlertsService {
   }
 
   private getSnapshot(forceRefresh: boolean): Observable<TelemetrySnapshot> {
+    // A cached live telemetry snapshot belongs to the token that fetched it.
+    // Never display a previous operator's alerts after logging into another account.
+    const token = this.authService.getToken();
+    if (this.snapshotAuthToken !== token) {
+      this.snapshotAuthToken = token;
+      this.snapshot$ = undefined;
+      this.snapshotExpiresAt = 0;
+      this.snapshotLoading = false;
+    }
     const now = Date.now();
     if (
       this.snapshot$ &&
@@ -137,14 +149,23 @@ export class TelemetryAlertsService {
           })),
         );
       }),
-      tap(() => (this.snapshotExpiresAt = Date.now() + this.cacheDurationMs)),
+      tap(() => {
+        if (this.authService.getToken() === token) {
+          this.snapshotExpiresAt = Date.now() + this.cacheDurationMs;
+        }
+      }),
       catchError((error) => {
-        this.snapshotExpiresAt = 0;
-        this.snapshot$ = undefined;
+        if (this.snapshot$ === request$) {
+          this.snapshotExpiresAt = 0;
+          this.snapshot$ = undefined;
+        }
         return throwError(() => error);
       }),
-      finalize(() => (this.snapshotLoading = false)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      // Do not keep fetching many vessels/tags if Alarm and Log close mid-load.
+      finalize(() => {
+        if (this.snapshot$ === request$) this.snapshotLoading = false;
+      }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.snapshot$ = request$;

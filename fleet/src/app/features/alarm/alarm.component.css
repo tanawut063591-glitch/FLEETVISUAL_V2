@@ -1417,3 +1417,16 @@ tr[data-severity='unknown'] .row-dot {
 .open-realtime-btn {
   border-radius: var(--alarm-radius-lg);
 }
+
+/* 2026-10: Ensure drawers, filters, and focus remain usable on touch screens. */
+.alarm-page { min-width: 0; overflow-wrap: anywhere; }
+.alarm-page :is(button, input, select):focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .alarm-page { padding-inline: clamp(9px, 3vw, 15px); padding-bottom: max(32px, env(safe-area-inset-bottom)); }
+  .alarm-page .alert-detail-drawer { max-width: 100vw; width: min(100vw, 480px); }
+  .alarm-page .toolbar-actions, .alarm-page .filter-panel { min-width: 0; }
+  .alarm-page .feed-footer { overflow-wrap: anywhere; }
+}
+

@@ -122,3 +122,11 @@
     opacity: 0;
   }
 }
+/* 2026-10: Map page must stay clipped while map popups retain own scroll. */
+.overview-page, .overview-map-area { min-width: 0; max-width: 100%; }
+.overview-page .fv-loading { background: var(--page-bg); color: var(--primary-txt); }
+.overview-page .loading-text { color: var(--muted-txt); }
+@media (prefers-reduced-motion: reduce) {
+  .overview-page .sk-folding-cube *::before { animation: none !important; }
+}
+

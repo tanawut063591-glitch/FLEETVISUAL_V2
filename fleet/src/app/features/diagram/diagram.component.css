@@ -939,3 +939,14 @@
         font-size: 17px;
     }
 }
+
+/* 2026-10: Limit overflow to interactive diagram viewport, not the entire page. */
+.diagram-page { min-width: 0; max-width: 100%; }
+.diagram-header { min-width: 0; }
+.diagram-header > *, .diagram-title-block { min-width: 0; }
+.diagram-page :is(button, select):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 760px) {
+  .diagram-header { margin-inline: 9px; padding: 11px; gap: 10px; }
+  .diagram-stats { min-width: 0; max-width: 100%; }
+}
+

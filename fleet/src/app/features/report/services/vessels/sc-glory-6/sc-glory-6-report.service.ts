@@ -3,8 +3,12 @@ import { Observable, forkJoin, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
-import { setBoundedReportCache } from '../../common/report-cache.util';
+import { resetReportCacheForAuthChange, setBoundedReportCache } from '../../common/report-cache.util';
 import { OfficialPdfModeParityService } from '../../common/official-pdf-mode-parity.service';
+import {
+  OfficialPdfEngineFuelSummary,
+  OfficialPdfEngineSummaryParityService,
+} from '../../common/official-pdf-engine-summary-parity.service';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -250,10 +254,12 @@ export class ScGlory6ReportService implements VesselReportAdapter {
   private readonly detailedReportInFlight = new Map<string, Observable<ScGlory6DailyUiReport>>();
   private readonly periodReportCache = new Map<string, { value: ScGlory6PeriodUiReport; expiresAt: number }>();
   private readonly periodReportInFlight = new Map<string, Observable<ScGlory6PeriodUiReport>>();
+  private readonly reportCacheSession = { token: null as string | null };
 
   constructor(
     private newHttp: NewHttpClientService,
     private officialPdfMode: OfficialPdfModeParityService,
+    private officialPdfEngineSummary: OfficialPdfEngineSummaryParityService,
   ) {}
 
   supports(vessel: any): boolean {
@@ -362,6 +368,13 @@ export class ScGlory6ReportService implements VesselReportAdapter {
       ? `live-${start.getFullYear()}-${start.getMonth() + 1}-${start.getDate()}`
       : `${start.getTime()}-${end.getTime()}`;
     const now = Date.now();
+    resetReportCacheForAuthChange(
+      this.reportCacheSession,
+      this.detailedReportCache,
+      this.periodReportCache,
+      this.detailedReportInFlight,
+      this.periodReportInFlight,
+    );
     const cached = this.detailedReportCache.get(key);
 
     if (!force && cached && cached.expiresAt > now) {
@@ -403,27 +416,36 @@ export class ScGlory6ReportService implements VesselReportAdapter {
     const officialModeRows$ = completedDaily
       ? this.officialPdfMode.getDailyModeRows('SC GLORY 6', start)
       : of(null);
+    const officialEngineFuel$ = completedDaily
+      ? this.officialPdfEngineSummary.getDailyFuelSummary('SC GLORY 6', start)
+      : of(null);
 
     const request$ = forkJoin({
       value: calculatedReport$,
       officialRows: officialModeRows$,
+      officialEngineFuel: officialEngineFuel$,
     }).pipe(
-      map(({ value, officialRows }) =>
-        completedDaily
-          ? {
-              ...value,
-              modeSummary: this.officialPdfMode.overlayModeRows(value.modeSummary, officialRows),
-            }
-          : value,
-      ),
+      map(({ value, officialRows, officialEngineFuel }) => {
+        if (!completedDaily) return value;
+
+        const withOfficialMode: ScGlory6DailyUiReport = {
+          ...value,
+          modeSummary: this.officialPdfMode.overlayModeRows(value.modeSummary, officialRows),
+        };
+
+        return this.overlayOfficialEngineFuelSummary(withOfficialMode, officialEngineFuel);
+      }),
       tap((value) => {
-        setBoundedReportCache(this.detailedReportCache, key, {
+        if (this.detailedReportInFlight.get(key) !== request$) return;
+          setBoundedReportCache(this.detailedReportCache, key, {
           value,
           expiresAt: Date.now() + (completedDaily ? COMPLETED_REPORT_CACHE_TTL_MS : LIVE_REPORT_CACHE_TTL_MS),
         });
       }),
       catchError((error) => throwError(() => error)),
-      finalize(() => this.detailedReportInFlight.delete(key)),
+      finalize(() => {
+          if (this.detailedReportInFlight.get(key) === request$) this.detailedReportInFlight.delete(key);
+        }),
       shareReplay({ bufferSize: 1, refCount: true }),
     );
 
@@ -451,6 +473,13 @@ export class ScGlory6ReportService implements VesselReportAdapter {
 
     const key = `${periodKind}|${start.getTime()}|${end.getTime()}`;
     const now = Date.now();
+    resetReportCacheForAuthChange(
+      this.reportCacheSession,
+      this.detailedReportCache,
+      this.periodReportCache,
+      this.detailedReportInFlight,
+      this.periodReportInFlight,
+    );
     const cached = this.periodReportCache.get(key);
     if (!force && cached && cached.expiresAt > now) {
       return of(cached.value);
@@ -479,12 +508,15 @@ export class ScGlory6ReportService implements VesselReportAdapter {
         ),
       ),
       tap((value) => {
-        setBoundedReportCache(this.periodReportCache, key, {
+        if (this.periodReportInFlight.get(key) !== request$) return;
+          setBoundedReportCache(this.periodReportCache, key, {
           value,
           expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
         });
       }),
-      finalize(() => this.periodReportInFlight.delete(key)),
+      finalize(() => {
+          if (this.periodReportInFlight.get(key) === request$) this.periodReportInFlight.delete(key);
+        }),
       shareReplay({ bufferSize: 1, refCount: true }),
     );
 
@@ -1520,6 +1552,44 @@ export class ScGlory6ReportService implements VesselReportAdapter {
       tracking,
       hourly,
       speedSeries,
+    };
+  }
+
+  /**
+   * Page 1 of the official SC GLORY 6 Daily PDF is the final source of truth for
+   * whole-day Engine Summary fuel. The legacy report can legitimately show 0.00
+   * in its hourly fuel pages while page 1 and the Mode table contain the correct
+   * daily totals, so do not reconstruct these summary values from hourly rows.
+   */
+  private overlayOfficialEngineFuelSummary(
+    report: ScGlory6DailyUiReport,
+    official: OfficialPdfEngineFuelSummary | null,
+  ): ScGlory6DailyUiReport {
+    if (!official) return report;
+
+    const engineFuelByKey: Record<ScGlory6EngineSummaryRow['key'], number> = {
+      port: official.portMain,
+      center: official.centerMain,
+      starboard: official.starboardMain,
+    };
+    const auxFuelByKey: Partial<Record<ScGlory6AuxSummaryRow['key'], number>> = {
+      port: official.portAux,
+      starboard: official.starboardAux,
+    };
+
+    return {
+      ...report,
+      engineSummary: report.engineSummary.map((row) => ({
+        ...row,
+        fuelUsed: engineFuelByKey[row.key],
+      })),
+      auxSummary: report.auxSummary.map((row) => ({
+        ...row,
+        fuelUsed: auxFuelByKey[row.key] ?? row.fuelUsed,
+      })),
+      mainEngineFuelTotal: official.mainEngineFuelTotal,
+      auxiliaryFuelTotal: official.auxiliaryFuelTotal,
+      totalFuelUsed: official.totalFuelUsed,
     };
   }
 

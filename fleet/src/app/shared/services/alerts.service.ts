@@ -36,6 +36,8 @@ interface CacheEntry {
 export class AlertsService {
   private readonly cache = new Map<string, CacheEntry>();
   private readonly inFlight = new Map<string, Observable<AlertFetchResult>>();
+  // Telemetry caches must not be reused after a different user signs in.
+  private cacheAuthToken = '';
   private readonly runtimeConfig$: Observable<AlertsRuntimeConfig>;
 
   constructor(
@@ -51,6 +53,8 @@ export class AlertsService {
   }
 
   fetchAlerts(query: AlertQuery, forceRefresh = false): Observable<AlertFetchResult> {
+    this.ensureCacheAuth();
+    const tokenAtStart = this.cacheAuthToken;
     const normalizedQuery = this.normalizeQuery(query);
     const key = this.queryKey(normalizedQuery);
 
@@ -96,12 +100,16 @@ export class AlertsService {
         );
       }),
       tap(({ result, ttl }) => {
+        if (this.authService.getToken() !== tokenAtStart) return;
         this.cache.set(key, { expiresAt: Date.now() + ttl * 1000, value: result });
         this.pruneCache();
       }),
       map(({ result }) => result),
-      finalize(() => this.inFlight.delete(key)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      // Cancel pending HTTP work when its last screen unsubscribes.
+      finalize(() => {
+        if (this.inFlight.get(key) === request$) this.inFlight.delete(key);
+      }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
     this.inFlight.set(key, request$);
@@ -117,6 +125,14 @@ export class AlertsService {
         return Number.isFinite(seconds) ? Math.min(300, Math.max(60, seconds)) : 60;
       }),
     );
+  }
+
+  private ensureCacheAuth(): void {
+    const currentToken = this.authService.getToken();
+    if (currentToken === this.cacheAuthToken) return;
+    this.cache.clear();
+    this.inFlight.clear();
+    this.cacheAuthToken = currentToken;
   }
 
   clearCache(): void {

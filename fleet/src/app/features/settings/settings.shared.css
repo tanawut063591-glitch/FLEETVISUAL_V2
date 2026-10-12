@@ -7585,3 +7585,14 @@ select {
     max-height: 140px;
   }
 }
+
+/* 2026-10: Focus, tablet and mobile UI consistent with app navigation. */
+.settings-page { min-width: 0; max-width: 100%; overflow-x: clip; }
+.settings-page :is(button, input, select, textarea, a):focus-visible {
+  outline: 2px solid var(--set-primary); outline-offset: 2px;
+}
+@media (max-width: 820px) {
+  .settings-page { padding-inline: clamp(9px, 2.5vw, 16px); }
+  .settings-page .settings-header { min-width: 0; flex-wrap: wrap; }
+}
+

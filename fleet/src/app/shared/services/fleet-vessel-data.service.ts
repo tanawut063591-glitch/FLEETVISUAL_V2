@@ -5,6 +5,7 @@ import { catchError, exhaustMap, shareReplay } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 import { NewHttpClientService } from './http-client1.service';
+import { AuthService } from './auth.service';
 import { UserAccessControlService } from './user-access-control.service';
 
 export interface OverviewPayloadRow {
@@ -22,21 +23,33 @@ export class FleetVesselDataService {
   private readonly overviewTagPath = '/assets/tags/overview.tag.json';
   private overviewStream$?: Observable<OverviewPayloadRow[]>;
   private sidebarStream$?: Observable<OverviewPayloadRow[]>;
-  private lastRows: OverviewPayloadRow[] = [];
+  // Sidebar rows carry only a location tag; Overview rows carry the full tag set.
+  // Never overwrite a rich Overview snapshot with a sidebar-only refresh.
+  private lastSidebarRows: OverviewPayloadRow[] = [];
+  private lastOverviewRows: OverviewPayloadRow[] = [];
+  private cachedAuthToken: string | null = null;
+  // The sidebar and Overview can mount together. Share only overlapping vessel
+  // discovery calls (not a persistent vessel roster; access may change).
+  private vesselsInFlight: Promise<any[]> | null = null;
+  // Asset tags are immutable within a deployed SPA version. Avoid re-downloading
+  // this configuration on every 15-30 second Overview refresh.
+  private overviewTagsPromise: Promise<any[]> | null = null;
 
   constructor(
     private newHttp: NewHttpClientService,
     private userAccess: UserAccessControlService,
+    private authService: AuthService,
   ) {}
 
   getSidebarVessels(refreshMs = 60_000): Observable<OverviewPayloadRow[]> {
+    this.ensureCurrentAuth();
     const safeRefreshMs = Math.max(30_000, Number(refreshMs) || 60_000);
 
     if (!this.sidebarStream$) {
       this.sidebarStream$ = timer(0, safeRefreshMs).pipe(
         exhaustMap(() => {
-          if (typeof document !== 'undefined' && document.hidden && this.lastRows.length > 0) {
-            return of(this.lastRows);
+          if (typeof document !== 'undefined' && document.hidden && this.lastSidebarRows.length > 0) {
+            return of(this.lastSidebarRows);
           }
           return this.loadSidebarRowsSafe();
         }),
@@ -48,11 +61,17 @@ export class FleetVesselDataService {
   }
 
   getOverviewVessels(refreshMs = 30_000): Observable<OverviewPayloadRow[]> {
+    this.ensureCurrentAuth();
     const safeRefreshMs = Math.max(15_000, Number(refreshMs) || 30_000);
 
     if (!this.overviewStream$) {
       this.overviewStream$ = timer(0, safeRefreshMs).pipe(
-        exhaustMap(() => this.loadOverviewRowsSafe()),
+        exhaustMap(() => {
+          if (typeof document !== 'undefined' && document.hidden && this.lastOverviewRows.length > 0) {
+            return of(this.lastOverviewRows);
+          }
+          return this.loadOverviewRowsSafe();
+        }),
         shareReplay({ bufferSize: 1, refCount: true }),
       );
     }
@@ -61,27 +80,32 @@ export class FleetVesselDataService {
   }
 
   getSnapshot(): OverviewPayloadRow[] {
-    return this.lastRows;
+    this.ensureCurrentAuth();
+    return this.lastOverviewRows.length > 0 ? this.lastOverviewRows : this.lastSidebarRows;
   }
 
   refreshNow(): Observable<OverviewPayloadRow[]> {
+    this.ensureCurrentAuth();
     return this.loadOverviewRowsSafe();
   }
 
   private async loadSidebarRowsSafe(): Promise<OverviewPayloadRow[]> {
+    const token = this.ensureCurrentAuth();
     try {
       const vessels = await this.loadVessels();
       const rows = this.buildSidebarRows(vessels);
 
       await this.attachCurrentValues(rows);
 
-      this.lastRows = rows;
+      if (token !== this.authService.getToken()) return [];
+      this.lastSidebarRows = rows;
       return rows;
     } catch (error) {
       console.warn('[FleetVesselDataService] sidebar stream fallback:', error);
       const fallback = this.buildSidebarRows(this.getSafeFallbackVessels());
       await this.attachCurrentValues(fallback);
-      this.lastRows = fallback;
+      if (token !== this.authService.getToken()) return [];
+      this.lastSidebarRows = fallback;
       return fallback;
     }
   }
@@ -111,7 +135,20 @@ export class FleetVesselDataService {
       });
   }
 
-  async loadVessels(): Promise<any[]> {
+  loadVessels(): Promise<any[]> {
+    this.ensureCurrentAuth();
+    if (this.vesselsInFlight) return this.vesselsInFlight;
+
+    const request = this.loadVesselsUncached();
+    this.vesselsInFlight = request;
+    void request.then(
+      () => { if (this.vesselsInFlight === request) this.vesselsInFlight = null; },
+      () => { if (this.vesselsInFlight === request) this.vesselsInFlight = null; },
+    );
+    return request;
+  }
+
+  private async loadVesselsUncached(): Promise<any[]> {
     try {
       const vessels = await this.newHttp.getVesselInfo2();
       const normalized = this.extractArray(vessels)
@@ -129,6 +166,7 @@ export class FleetVesselDataService {
   }
 
   async loadOverviewRows(vessels?: any[]): Promise<OverviewPayloadRow[]> {
+    const token = this.ensureCurrentAuth();
     const sourceVessels =
       Array.isArray(vessels) && vessels.length > 0
         ? vessels.map((item: any) => this.normalizeVessel(item)).filter((item: any) => !!item.name)
@@ -146,30 +184,42 @@ export class FleetVesselDataService {
 
     payloadRows.forEach((row) => this.seedDirectValues(row, row.fv));
 
-    this.lastRows = payloadRows;
+    if (token !== this.authService.getToken()) return [];
+    this.lastOverviewRows = payloadRows;
     return payloadRows;
   }
 
   private loadOverviewRowsSafe(): Observable<OverviewPayloadRow[]> {
+    const token = this.ensureCurrentAuth();
     return new Observable<OverviewPayloadRow[]>((observer) => {
       this.loadOverviewRows()
         .then((rows) => {
+          if (token !== this.authService.getToken()) {
+            observer.next([]);
+            observer.complete();
+            return;
+          }
           const safeRows =
             rows && rows.length > 0
               ? rows
               : this.buildPayloadRows(this.getSafeFallbackVessels(), this.getDefaultOverviewTags());
 
-          this.lastRows = safeRows;
+          this.lastOverviewRows = safeRows;
           observer.next(safeRows);
           observer.complete();
         })
         .catch((error) => {
+          if (token !== this.authService.getToken()) {
+            observer.next([]);
+            observer.complete();
+            return;
+          }
           console.warn('[FleetVesselDataService] overview stream fallback:', error);
           const fallback = this.buildPayloadRows(
             this.getSafeFallbackVessels(),
             this.getDefaultOverviewTags(),
           );
-          this.lastRows = fallback;
+          this.lastOverviewRows = fallback;
           observer.next(fallback);
           observer.complete();
         });
@@ -180,13 +230,33 @@ export class FleetVesselDataService {
           this.getSafeFallbackVessels(),
           this.getDefaultOverviewTags(),
         );
-        this.lastRows = fallback;
+        this.lastOverviewRows = fallback;
         return of(fallback);
       }),
     );
   }
 
-  private async loadOverviewTags(): Promise<any[]> {
+  /** Separate transient snapshots and active streams for each login session. */
+  private ensureCurrentAuth(): string {
+    const token = this.authService.getToken();
+    if (this.cachedAuthToken === token) return token;
+    this.cachedAuthToken = token;
+    this.lastSidebarRows = [];
+    this.lastOverviewRows = [];
+    this.vesselsInFlight = null;
+    this.sidebarStream$ = undefined;
+    this.overviewStream$ = undefined;
+    return token;
+  }
+
+  private loadOverviewTags(): Promise<any[]> {
+    if (!this.overviewTagsPromise) {
+      this.overviewTagsPromise = this.loadOverviewTagsFromAsset();
+    }
+    return this.overviewTagsPromise;
+  }
+
+  private async loadOverviewTagsFromAsset(): Promise<any[]> {
     try {
       const res: any = await firstValueFrom(this.newHttp.getJsonFile(this.overviewTagPath));
       const tags = this.extractTagsFromConfig(res);
@@ -260,6 +330,15 @@ export class FleetVesselDataService {
       return;
     }
 
+    // Index each incoming tag exactly once rather than scanning every vessel's
+    // tags for each backend sample (O(tags + values) vs O(tags × values)).
+    const rowByTag = new Map<string, OverviewPayloadRow>();
+    for (const row of rows) {
+      for (const tag of row.tags || []) {
+        if (tag?.tagName && !rowByTag.has(tag.tagName)) rowByTag.set(tag.tagName, row);
+      }
+    }
+
     try {
       const response: any = await firstValueFrom(
         this.newHttp.getOverviewCurrentsValues({ Name: tagNames }),
@@ -269,18 +348,10 @@ export class FleetVesselDataService {
 
       values.forEach((item: any) => {
         const fullName = this.getFullTagName(item);
+        if (!fullName) return;
 
-        if (!fullName) {
-          return;
-        }
-
-        const row = rows.find((payload) =>
-          (payload.tags || []).some((tag: any) => tag.tagName === fullName),
-        );
-
-        if (!row) {
-          return;
-        }
+        const row = rowByTag.get(fullName);
+        if (!row) return;
 
         const shortName = this.toShortTagName(fullName, row.fv?.prefix || row.fv?.name || '');
         const value =

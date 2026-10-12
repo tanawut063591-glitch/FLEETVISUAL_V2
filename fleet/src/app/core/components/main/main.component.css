@@ -155,3 +155,10 @@
 :host-context([data-theme='dark']) .grid-content.is-overview {
   background: #05070b;
 }
+/* 2026-10: Prevent accidental horizontal scroll after route/zoom changes. */
+.main, .grid-content { max-width: 100%; }
+.grid-content { overflow-x: clip; }
+@media (prefers-reduced-motion: reduce) {
+  .main, .grid-content { scroll-behavior: auto; }
+}
+

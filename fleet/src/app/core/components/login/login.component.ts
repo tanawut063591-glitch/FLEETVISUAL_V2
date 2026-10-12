@@ -111,6 +111,8 @@ export class LoginComponent implements OnInit {
 
         if (navigated) {
           this.settleAuthenticatedLayout();
+        } else {
+          this.showLoginError('Sign-in succeeded, but the requested page could not be opened. Please try again.');
         }
       } else {
         this.showLoginError('The username or password is incorrect.');

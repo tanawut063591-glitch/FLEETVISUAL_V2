@@ -995,4 +995,7 @@
 }
 
 .engine-footer { grid-template-columns: 1fr !important; }
-\n\n/* Status moved to the machinery card header. */\n.engine-footer:empty { display: none; }\n
+
+
+/* Status moved to the machinery card header. */
+.engine-footer:empty { display: none; }

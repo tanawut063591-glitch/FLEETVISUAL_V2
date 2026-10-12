@@ -8,6 +8,7 @@
 @use './report/report-visual';
 @use './themes/light-theme' as light;
 @use './themes/dark-theme' as dark;
+@use './report/report-hourly-responsive';
 
 html,
 body {
@@ -153,4 +154,14 @@ app-report .pdf-mode-detail-page .report-book-table thead th {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   text-shadow: none !important;
+}
+
+/* Respect platform accessibility settings even during manual light/dark toggle. */
+@media (prefers-reduced-motion: reduce) {
+  html.theme-changing, html.theme-changing body,
+  html.theme-changing [class*='card'], html.theme-changing [class*='panel'],
+  html.theme-changing input, html.theme-changing select,
+  html.theme-changing textarea, html.theme-changing button {
+    transition: none !important;
+  }
 }

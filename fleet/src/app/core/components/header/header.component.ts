@@ -151,7 +151,6 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
   private readonly alarmBadgeWindowMs = 24 * 60 * 60 * 1000;
   private settingsFeatureWarmup?: Promise<unknown>;
-  private settingsWarmupTimer: ReturnType<typeof setTimeout> | null = null;
   private mobileStateFrame: number | null = null;
   settingsNavigationPending = false;
 
@@ -176,11 +175,10 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.startAlertMonitor();
 
-    this.settingsWarmupTimer = setTimeout(() => {
-      this.settingsWarmupTimer = null;
-      void this.warmSettingsFeature();
-    }, 1200);
 
+    // Settings is a large lazy feature. Do not prefetch it on every login;
+    // warm it only when the operator opens Settings. Idle route preloading
+    // (where enabled) remains controlled by SelectivePreloadingStrategy.
     this.router.events.pipe(takeUntil(this.destroy$)).subscribe((event) => {
       if (event instanceof NavigationStart) {
         this.closeMobileMenu(false);
@@ -255,10 +253,6 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.mobileStateFrame !== null && typeof window !== 'undefined') {
       window.cancelAnimationFrame(this.mobileStateFrame);
       this.mobileStateFrame = null;
-    }
-    if (this.settingsWarmupTimer !== null) {
-      clearTimeout(this.settingsWarmupTimer);
-      this.settingsWarmupTimer = null;
     }
     this.destroy$.next();
     this.destroy$.complete();
