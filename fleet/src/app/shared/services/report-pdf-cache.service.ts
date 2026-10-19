@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { AuthService } from './auth.service';
 
 import { OfficialReportArchiveEntry } from './official-report-library.service';
 
@@ -22,8 +23,20 @@ export class ReportPdfCacheService {
   private readonly maxCacheBlobBytes = 25 * 1024 * 1024;
   private readonly maxTotalCacheBytes = 32 * 1024 * 1024;
   private readonly entries = new Map<string, ReportPdfCacheEntry>();
+  private lastAuthToken = '';
+
+  constructor(private readonly authService: AuthService) {}
+
+  /** Never reuse a downloaded vessel PDF across different signed-in users. */
+  private assertCurrentSession(): void {
+    const token = this.authService.getToken();
+    if (token === this.lastAuthToken) return;
+    this.entries.clear();
+    this.lastAuthToken = token;
+  }
 
   get(key: string): ReportPdfCacheValue | null {
+    this.assertCurrentSession();
     const normalizedKey = this.normalizeKey(key);
     const entry = this.entries.get(normalizedKey);
 
@@ -48,6 +61,7 @@ export class ReportPdfCacheService {
   }
 
   set(key: string, value: ReportPdfCacheValue): void {
+    this.assertCurrentSession();
     const normalizedKey = this.normalizeKey(key);
     const blob = value?.blob;
 

@@ -4,6 +4,7 @@ import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from '
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
 import { resetReportCacheForAuthChange, setBoundedReportCache } from '../../common/report-cache.util';
+import { reportDayConcurrency } from '../../common/report-load-policy';
 import { OfficialPdfModeParityService } from '../../common/official-pdf-mode-parity.service';
 import {
   LiveReportProfileDocument,
@@ -397,6 +398,7 @@ export class ScGlory7ReportService implements VesselReportAdapter {
           requestStartText,
           requestEndText,
           requestTags,
+          force,
         )
       : this.newHttp.getHistorianValues(requestStartText, requestEndText, requestTags);
     // Start the official PDF lookup in parallel with the historian bundle.
@@ -477,13 +479,13 @@ export class ScGlory7ReportService implements VesselReportAdapter {
       if (inFlight) return inFlight;
     }
 
+    // Overlap up to two daily bundles; NewHttpClientService enforces the global
+    // two-active-request limit for individual logger tags, including on PDF fallback.
+    // Keep each day intact: no aggregation or source mixing before it is complete.
     const request$ = from(chunks).pipe(
-      // Long range/month reports are intentionally limited to one day bundle at a time.
-      // Each bundle already reads at most two historian tags concurrently, so the
-      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        1,
+        reportDayConcurrency(chunks.length),
       ),
       toArray(),
       map((reports) =>

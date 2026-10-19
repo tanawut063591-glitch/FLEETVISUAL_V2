@@ -4081,7 +4081,7 @@ html[data-theme='dark'] app-report .pro-mode-segments article {
 /* ========================================================================== */
 /* REPORT PRO V24 — Historical Report dark-theme polish                       */
 /* Source of truth for the current Historical/Daily/Monthly Report dark UI.    */
-/* Layout lives in styles/report/_report-layout.scss; theme/contrast stays here. */
+/* Layout lives in app/features/report/styles/_report-layout.scss; theme/contrast stays here. */
 /* ========================================================================== */
 
 html[data-theme='dark'] app-report {
@@ -5865,18 +5865,30 @@ html[data-theme='dark'] body app-chart :is(.chart-content, .chart-instance, .gro
   border-color: var(--soft-border) !important;
 }
 
-/* Diagram — same frame/card palette as Chart and Realtime. */
+/* Diagram — one flat canvas across the viewport, stage and SVG board.
+   Formerly: scroll had a blue gradient, stage used --primary-bg and board
+   used --card-bg, leaving visibly different rectangles around the network.
+   Keep status/connector colors; change only neutral surface colors. */
 html[data-theme='dark'] body app-diagram :is(
-  .diagram-header, .diagram-board, .device-card, .stat-card, .group-box,
-  .diagram-mobile-tools, .diagram-pan-hint, .diagram-empty
+  .diagram-header, .diagram-scroll, .diagram-mobile-tools, .diagram-empty
 ) {
   background: var(--card-bg) !important;
   border-color: var(--border-color) !important;
   color: var(--primary-txt) !important;
 }
 
-html[data-theme='dark'] body app-diagram .diagram-stage {
-  background: var(--primary-bg) !important;
+/* Give device/status cards a slight contrast without a different hue. */
+html[data-theme='dark'] body app-diagram :is(.device-card, .stat-card) {
+  background: var(--surface-bg-2) !important;
+  border-color: var(--border-color) !important;
+  color: var(--primary-txt) !important;
+}
+
+/* The stage and board must not paint over their parent scroll surface. */
+html[data-theme='dark'] body app-diagram :is(
+  .diagram-stage, .diagram-board, .diagram-lines
+) {
+  background: transparent !important;
 }
 
 /* Report — retain chart/status series colors, normalize only neutral surfaces. */

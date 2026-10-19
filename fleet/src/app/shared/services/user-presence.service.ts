@@ -1,6 +1,6 @@
 import { HttpClient, HttpContext, HttpHeaders } from '@angular/common/http';
 import { Injectable, OnDestroy } from '@angular/core';
-import { Subscription, catchError, of, take, timer } from 'rxjs';
+import { Subscription, catchError, exhaustMap, of, take, timeout, timer } from 'rxjs';
 
 import { SKIP_AUTH_REDIRECT } from '../../core/interceptors/http-context.tokens';
 import { AuthService } from './auth.service';
@@ -30,11 +30,13 @@ export class UserPresenceService implements OnDestroy {
     this.attachActivityListeners();
 
     this.databaseConfig.config$.pipe(take(1)).subscribe((config) => {
-      if (!config.userSessions.enabled) return;
+      if (!this.started || !this.auth.isLoggedIn() || !config.userSessions.enabled) return;
       this.endpoint = String(config.userSessions.url || '').replace(/\/+$/, '');
       if (!this.endpoint) return;
 
-      this.heartbeatSub = timer(0, 60_000).subscribe(() => this.sendHeartbeat());
+      this.heartbeatSub = timer(0, 60_000).pipe(
+        exhaustMap(() => this.sendHeartbeat()),
+      ).subscribe();
     });
   }
 
@@ -67,20 +69,20 @@ export class UserPresenceService implements OnDestroy {
     this.stop();
   }
 
-  private sendHeartbeat(): void {
-    if (!this.endpoint || !this.auth.isLoggedIn()) return;
+  private sendHeartbeat() {
+    if (!this.started || !this.endpoint || !this.auth.isLoggedIn()) return of(null);
     const context = new HttpContext().set(SKIP_AUTH_REDIRECT, true);
     const payload = this.sessionPayload();
-    this.http
+    return this.http
       .post(`${this.endpoint}/heartbeat`, payload, {
         context,
         headers: this.authHeaders(),
       })
       .pipe(
+        timeout(8_000),
         catchError(() => of(null)),
         take(1),
-      )
-      .subscribe();
+      );
   }
 
   private sessionPayload(): Record<string, unknown> {

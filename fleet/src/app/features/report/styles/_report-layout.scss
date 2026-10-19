@@ -1,6 +1,6 @@
 /* Fleet Visual Report — global feature layout/responsive rules. Theme colors live in styles/themes/light-theme.scss and styles/themes/dark-theme.scss. */
 
-/* Layout-only stylesheet. Report colors/appearance are centralized in src/styles/report/_report-visual.scss and src/styles/themes/. */
+/* Layout-only stylesheet. Report colors/appearance are centralized in src/app/features/report/styles/_report-visual.scss and src/styles/themes/. */
 
 app-report {
 display: block;
@@ -11558,9 +11558,9 @@ html[data-theme='dark'] app-report .daily-tracking-table-wrap {
 
 /* A single geometry system keeps every vessel report visually consistent. */
 app-report .report-dashboard--daily {
-  --report-ui-radius-lg: 14px;
-  --report-ui-radius-md: 10px;
-  --report-ui-radius-sm: 7px;
+  --report-ui-radius-lg: 8px;
+  --report-ui-radius-md: 6px;
+  --report-ui-radius-sm: 4px;
   --report-ui-section-gap: 12px;
   --report-ui-cell-x: 10px;
   --report-ui-cell-y: 8px;

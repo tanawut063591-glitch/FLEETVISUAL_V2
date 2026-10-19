@@ -17,6 +17,15 @@ export interface OfficialPdfEngineFuelSummary {
   totalFuelUsed: number;
 }
 
+/** Four A/E generators shown on the left side of SC WINTER's Daily PDF page 1. */
+export interface OfficialPdfNumberedAuxFuelSummary {
+  ae1: number;
+  ae2: number;
+  ae3: number;
+  ae4: number;
+  totalFuelUsed: number;
+}
+
 /**
  * Reads the page-1 Engine Summary fuel values from the official Daily PDF.
  *
@@ -31,6 +40,7 @@ export interface OfficialPdfEngineFuelSummary {
 @Injectable({ providedIn: 'root' })
 export class OfficialPdfEngineSummaryParityService {
   private readonly cache = new Map<string, { value: Observable<OfficialPdfEngineFuelSummary | null>; expiresAt: number }>();
+  private readonly numberedAuxCache = new Map<string, { value: Observable<OfficialPdfNumberedAuxFuelSummary | null>; expiresAt: number }>();
   private static readonly SUCCESS_TTL_MS = 6 * 60 * 60_000;
   private static readonly FAILURE_RETRY_MS = 90_000;
   private static readonly MAX_CACHED_DAYS = 48;
@@ -128,8 +138,130 @@ export class OfficialPdfEngineSummaryParityService {
     return request$;
   }
 
+  /**
+   * Completed-day SC WINTER totals must match the generated official Daily PDF.
+   * This path only reads and validates the printed A/E1..A/E4 + Total, rather
+   * than silently replacing an anomalous totalizer with a guessed figure.
+   */
+  getDailyNumberedAuxFuelSummary(
+    vesselName: string,
+    day: Date,
+  ): Observable<OfficialPdfNumberedAuxFuelSummary | null> {
+    const dateKey = this.formatDate(day);
+    const vessel = String(vesselName || '').trim();
+    if (!vessel || !dateKey) return of(null);
+
+    const key = `${vessel.toLowerCase()}|${dateKey}`;
+    const cached = this.numberedAuxCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
+    if (cached) this.numberedAuxCache.delete(key);
+
+    const timestamp = `${dateKey} 00:00:00`;
+    const parseSource = (source$: Observable<Blob>, sourceName: string) =>
+      source$.pipe(
+        switchMap((blob) => from(this.parseDailyNumberedAuxPage(blob, vessel, dateKey))),
+        switchMap((summary) =>
+          summary
+            ? of(summary)
+            : throwError(() => new Error(`INVALID_NUMBERED_AUX_PDF_${sourceName}`)),
+        ),
+      );
+
+    const gatewayPdf$ = parseSource(
+      this.pdfRequests.getReport('gateway', 'd', timestamp, vessel).pipe(timeout(20_000)),
+      'GATEWAY',
+    );
+    const directPdf$ = parseSource(
+      this.pdfRequests.getReport('direct', 'd', timestamp, vessel).pipe(timeout(15_000)),
+      'DIRECT',
+    ).pipe(catchError(() => gatewayPdf$));
+
+    const request$ = this.officialLibrary.findReport('d', dateKey, vessel).pipe(
+      switchMap((entry) =>
+        entry
+          ? parseSource(
+              this.officialLibrary.loadReport(entry).pipe(timeout(8_000)),
+              'LOCAL_ARCHIVE',
+            ).pipe(catchError(() => directPdf$))
+          : directPdf$,
+      ),
+      catchError((error) => {
+        console.warn('[SC WINTER] Official Daily PDF fuel verification unavailable.', {
+          vessel, date: dateKey, message: (error as any)?.message || String(error),
+        });
+        return of(null);
+      }),
+      tap((value) => {
+        const entry = this.numberedAuxCache.get(key);
+        if (entry?.value === request$) {
+          entry.expiresAt = Date.now() + (value
+            ? OfficialPdfEngineSummaryParityService.SUCCESS_TTL_MS
+            : OfficialPdfEngineSummaryParityService.FAILURE_RETRY_MS);
+        }
+      }),
+      shareReplay({ bufferSize: 1, refCount: true }),
+    );
+
+    setBoundedReportCache(this.numberedAuxCache, key, {
+      value: request$,
+      expiresAt: Date.now() + OfficialPdfEngineSummaryParityService.FAILURE_RETRY_MS,
+    }, OfficialPdfEngineSummaryParityService.MAX_CACHED_DAYS);
+    return request$;
+  }
+
+  private async parseDailyNumberedAuxPage(
+    blob: Blob,
+    vesselName: string,
+    dateKey: string,
+  ): Promise<OfficialPdfNumberedAuxFuelSummary | null> {
+    const text = await this.readDailyPageOneText(blob);
+    if (text === null) return null;
+    const summary = this.parseNumberedAuxFuelSummary(text);
+    if (summary) {
+      console.info('[SC WINTER] Official PDF page-1 A/E fuel totals verified.', {
+        vessel: vesselName, date: dateKey, totalFuelUsed: summary.totalFuelUsed,
+      });
+    }
+    return summary;
+  }
+
+  private parseNumberedAuxFuelSummary(text: string): OfficialPdfNumberedAuxFuelSummary | null {
+    const numberToken = '[-+]?\\d[\\d,]*(?:\\.\\d+)?';
+    const numbers: number[] = [];
+    for (let engine = 1; engine <= 4; engine++) {
+      const pattern = new RegExp(`\\bA\\/E\\s*${engine}\\s+Total Fuel Used\\s*\\(L\\)\\s+(${numberToken})`, 'i');
+      const matched = pattern.exec(text);
+      if (!matched) return null;
+      numbers.push(this.parsePdfNumber(matched[1]));
+    }
+
+    // Page 1 also contains A/E1..4 labels ending in "Total Fuel Used (L)".
+    // Ignore those, and only accept the unqualified grand-total label.
+    const totalPattern = new RegExp(`Total Fuel Used\\s*\\(L\\)\\s+(${numberToken})`, 'gi');
+    let match: RegExpExecArray | null;
+    let grandTotal: number | null = null;
+    while ((match = totalPattern.exec(text)) !== null) {
+      const prefix = text.slice(Math.max(0, match.index - 20), match.index).trimEnd();
+      if (/A\/E\s*[1-4]\s*$/i.test(prefix)) continue;
+      grandTotal = this.parsePdfNumber(match[1]);
+    }
+
+    const total = numbers.reduce((sum, value) => sum + value, 0);
+    if (grandTotal === null ||
+        ![...numbers, grandTotal].every((value) => Number.isFinite(value) && value >= 0) ||
+        Math.abs(total - grandTotal) > 0.11) {
+      return null;
+    }
+
+    return {
+      ae1: numbers[0], ae2: numbers[1], ae3: numbers[2], ae4: numbers[3],
+      totalFuelUsed: grandTotal,
+    };
+  }
+
   clear(): void {
     this.cache.clear();
+    this.numberedAuxCache.clear();
   }
 
   private async parseDailyEnginePage(
@@ -137,8 +269,18 @@ export class OfficialPdfEngineSummaryParityService {
     vesselName: string,
     dateKey: string,
   ): Promise<OfficialPdfEngineFuelSummary | null> {
-    if (!(blob instanceof Blob) || blob.size < 100) return null;
+    const text = await this.readDailyPageOneText(blob);
+    if (text === null) return null;
+    const summary = this.parseEngineFuelSummary(text);
+    if (!summary) throw new Error('ENGINE_FUEL_SUMMARY_NOT_FOUND');
+    console.info('[Engine PDF parity] official Daily PDF page-1 fuel summary applied.', {
+      vessel: vesselName, date: dateKey, totalFuelUsed: summary.totalFuelUsed,
+    });
+    return summary;
+  }
 
+  private async readDailyPageOneText(blob: Blob): Promise<string | null> {
+    if (!(blob instanceof Blob) || blob.size < 100) return null;
     const arrayBuffer = await blob.arrayBuffer();
     const header = new TextDecoder('ascii').decode(new Uint8Array(arrayBuffer.slice(0, 5)));
     if (header !== '%PDF-') return null;
@@ -148,31 +290,15 @@ export class OfficialPdfEngineSummaryParityService {
       pdfjs.GlobalWorkerOptions.workerSrc = 'assets/pdfjs/pdf.worker.min.mjs';
       this.pdfJsConfigured = true;
     }
-
     const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) });
     const document = await loadingTask.promise;
     try {
       if (!document || document.numPages < 1) return null;
       const page = await document.getPage(1);
       const textContent = await page.getTextContent();
-      const text = this.buildPageText(textContent?.items || []);
-      const summary = this.parseEngineFuelSummary(text);
-      if (!summary) {
-        throw new Error('ENGINE_FUEL_SUMMARY_NOT_FOUND');
-      }
-
-      console.info('[Engine PDF parity] official Daily PDF page-1 fuel summary applied.', {
-        vessel: vesselName,
-        date: dateKey,
-        totalFuelUsed: summary.totalFuelUsed,
-      });
-      return summary;
+      return this.buildPageText(textContent?.items || []);
     } finally {
-      try {
-        await loadingTask.destroy();
-      } catch {
-        // Parsed values are already detached; cleanup failure is non-fatal.
-      }
+      try { await loadingTask.destroy(); } catch { /* best-effort cleanup */ }
     }
   }
 

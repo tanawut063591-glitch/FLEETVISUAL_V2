@@ -236,7 +236,7 @@ html[data-theme='light'] body app-report .daily-hourly-sync .hourly-matrix thead
    REPORT LIGHT OVERRIDES — merged here so Light mode has one source of truth.
    ========================================================================== */
 /* Fleet Visual Report — centralized Light-mode overrides. */
-/* Theme-specific color belongs here; layout stays in styles/report/_report-layout.scss. */
+/* Theme-specific color belongs here; layout stays in app/features/report/styles/_report-layout.scss. */
 
 html[data-theme='light'] app-report {
   --report-mode-detail-surface: #ffffff;

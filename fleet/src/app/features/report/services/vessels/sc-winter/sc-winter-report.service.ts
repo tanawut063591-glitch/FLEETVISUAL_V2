@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Observable, from, of, throwError } from 'rxjs';
+import { Observable, forkJoin, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
 import { resetReportCacheForAuthChange, setBoundedReportCache } from '../../common/report-cache.util';
+import { reportDayConcurrency } from '../../common/report-load-policy';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -18,6 +19,10 @@ import {
   isCompletedDailyWindow,
 } from '../../common/pdf-mode-parity';
 import { calculateLegacyDailyFuelTotal, exactMinutePoints } from '../../common/legacy-daily-fuel';
+import {
+  OfficialPdfEngineSummaryParityService,
+  OfficialPdfNumberedAuxFuelSummary,
+} from '../../common/official-pdf-engine-summary-parity.service';
 import {
   SC_WINTER_MODE_HISTORIAN_TAG,
   SC_WINTER_REPORT_PROFILE,
@@ -274,7 +279,10 @@ export class ScWinterReportService implements VesselReportAdapter {
   private readonly periodReportInFlight = new Map<string, Observable<ScWinterPeriodUiReport>>();
   private readonly reportCacheSession = { token: null as string | null };
 
-  constructor(private newHttp: NewHttpClientService) {}
+  constructor(
+    private newHttp: NewHttpClientService,
+    private readonly officialPdfFuel: OfficialPdfEngineSummaryParityService,
+  ) {}
 
   supports(vessel: any): boolean {
     const info = vessel?.fvInfo || vessel?.fv || vessel || {};
@@ -428,6 +436,7 @@ export class ScWinterReportService implements VesselReportAdapter {
             requestStartText,
             requestEndText,
             requestTags,
+            force,
           )
           .pipe(
             map((response) => ({
@@ -436,15 +445,20 @@ export class ScWinterReportService implements VesselReportAdapter {
             })),
             catchError((error: any) => {
               const reason = String(error?.message || error?.name || error || 'unknown error');
-              console.warn(
-                '[SC WINTER] verified reporting historian unavailable; restarting the complete request via source-consistent API2 logger.',
-                error,
-              );
+              // The cooldown is expected after a confirmed unreachable host;
+              // avoid 31 identical console warnings while monthly days are loaded.
+              if (reason !== 'REPORT_HISTORIAN_COOLDOWN') {
+                console.warn(
+                  '[SC WINTER] verified reporting historian unavailable; restarting the complete request via source-consistent API2 logger.',
+                  error,
+                );
+              }
               return this.newHttp
                 .getConsistentPdfParityHistorianValues(
                   requestStartText,
                   requestEndText,
                   requestTags,
+                  force,
                 )
                 .pipe(
                   map((response) => ({
@@ -461,8 +475,17 @@ export class ScWinterReportService implements VesselReportAdapter {
           })),
         );
 
-    const request$ = historianRequest$.pipe(
-        map(({ response, context }) => this.buildDetailedDailyReport(response, start, end, context)),
+    // Run the authoritative page-1 PDF check concurrently with historian loading.
+    // Never hard-code individual vessel/day values and never silently treat an
+    // unverified historian-derived fuel total as identical to the official PDF.
+    const officialFuel$ = completedDaily
+      ? this.officialPdfFuel.getDailyNumberedAuxFuelSummary('SC WINTER', start)
+      : of(null);
+    const request$ = forkJoin({ historian: historianRequest$, officialFuel: officialFuel$ }).pipe(
+        map(({ historian: { response, context }, officialFuel }) => {
+          const report = this.buildDetailedDailyReport(response, start, end, context);
+          return completedDaily ? this.overlayOfficialDailyFuel(report, officialFuel) : report;
+        }),
         tap((value) => {
           if (this.detailedReportInFlight.get(key) !== request$) return;
           setBoundedReportCache(this.detailedReportCache, key, {
@@ -518,15 +541,13 @@ export class ScWinterReportService implements VesselReportAdapter {
       if (inFlight) return inFlight;
     }
 
+    // Overlap up to two daily bundles; NewHttpClientService enforces the global
+    // two-active-request limit for individual logger tags, including on PDF fallback.
+    // Keep each day intact: no aggregation or source mixing before it is complete.
     const request$ = from(chunks).pipe(
-      // Two concurrent day-sized historian requests keep monthly views responsive
-      // without asking the backend for a very large multi-tag, 31-day payload at once.
-      // Long range/month reports are intentionally limited to one day bundle at a time.
-      // Each bundle already reads at most two historian tags concurrently, so the
-      // total browser pressure stays capped at two historian requests.
       mergeMap(
         (chunk) => this.loadDetailedDailyReport(chunk.start, chunk.end, force),
-        1,
+        reportDayConcurrency(chunks.length),
       ),
       toArray(),
       map((reports) =>
@@ -2334,6 +2355,60 @@ export class ScWinterReportService implements VesselReportAdapter {
    * gaps (the official SC WINTER PDF can have zero hourly fuel during a gap while
    * its Page-1 daily total still includes the fuel consumed across that gap).
    */
+  /**
+   * Reconcile SC WINTER's 4 A/E totals against the *same day* official PDF.
+   * Preserve RPM/hourly/mode calculations: those are separate legacy report
+   * tables, and their totals must not be blindly rescaled to the page-1 fuel.
+   */
+  private overlayOfficialDailyFuel(
+    report: ScWinterDailyUiReport,
+    official: OfficialPdfNumberedAuxFuelSummary | null,
+  ): ScWinterDailyUiReport {
+    if (!official) {
+      return {
+        ...report,
+        quality: {
+          ...report.quality,
+          pdfParityVerified: false,
+          warnings: Array.from(new Set([
+            ...report.quality.warnings,
+            'Official SC WINTER Daily PDF page-1 fuel totals could not be checked. Fuel values are unverified historian calculations.',
+          ])),
+        },
+      };
+    }
+    const byKey: Record<ScWinterAuxSummaryRow['key'], number> = {
+      port: official.ae1,
+      center: official.ae2,
+      starboard: official.ae3,
+      fourth: official.ae4,
+    };
+    const mismatchedRows = report.auxSummary
+      .filter((row) => Math.abs(row.fuelUsed - byKey[row.key]) > 0.11)
+      .map((row) => `${row.label}: historian ${this.formatDiagnosticNumber(row.fuelUsed)} L vs PDF ${this.formatDiagnosticNumber(byKey[row.key])} L`);
+    if (mismatchedRows.length > 0) {
+      console.warn('[SC WINTER] Page-1 Daily PDF vs historian fuel mismatch:', mismatchedRows);
+    }
+
+    return {
+      ...report,
+      auxSummary: report.auxSummary.map((row) => ({ ...row, fuelUsed: byKey[row.key] })),
+      mainEngineFuelTotal: 0,
+      auxiliaryFuelTotal: official.totalFuelUsed,
+      totalFuelUsed: official.totalFuelUsed,
+      quality: {
+        ...report.quality,
+        pdfParityVerified: report.quality.pdfParityVerified && mismatchedRows.length === 0,
+        warnings: Array.from(new Set([
+          ...report.quality.warnings,
+          ...(mismatchedRows.length > 0 ? [
+            `Daily PDF page-1 fuel totals replaced inconsistent historian values: ${mismatchedRows.join('; ')}.`,
+          ] : []),
+        ])),
+      },
+    };
+  }
+
   private resolveScWinterDailyFuel(
     legacyTotal: number,
     inputPoints: readonly NumericPoint[],

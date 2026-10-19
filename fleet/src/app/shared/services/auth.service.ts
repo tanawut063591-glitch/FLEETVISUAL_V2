@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { firstValueFrom, TimeoutError, timeout } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { bearerAuthorization } from './auth-header.util';
 
 export type LoginFailureReason =
   | 'invalid_credentials'
@@ -265,6 +266,7 @@ export class AuthService {
     localStorage.removeItem(OLD_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(SITES_KEY);
+    localStorage.removeItem(USERNAME_KEY);
   }
 
   getToken(): string {
@@ -350,9 +352,7 @@ export class AuthService {
   getAuthHeaders(): HttpHeaders {
     const token = this.getToken();
 
-    return new HttpHeaders({
-      Authorization: `Bearer ${token}`,
-    });
+    return token ? new HttpHeaders({ Authorization: bearerAuthorization(token) }) : new HttpHeaders();
   }
 
   logout(): void {

@@ -1,14 +1,15 @@
 /* Fleet Visual global theme entry.
-   - report/_report-layout.scss : Report layout + responsive rules only
-   - report/_report-visual.scss : Shared Report visuals (theme-neutral)
+   - app/features/report/styles/_report-layout.scss : Report layout + responsive rules only
+   - app/features/report/styles/_report-visual.scss : Shared Report visuals (theme-neutral)
    - themes/light-theme.scss    : All Light colors
    - themes/dark-theme.scss     : All Dark colors across every page
 */
-@use './report/report-layout';
-@use './report/report-visual';
+@use '../app/features/report/styles/report-layout';
+@use '../app/features/report/styles/report-visual';
 @use './themes/light-theme' as light;
 @use './themes/dark-theme' as dark;
-@use './report/report-hourly-responsive';
+@use '../app/features/report/styles/report-hourly-responsive';
+@use './fleet-ui-geometry';
 
 html,
 body {

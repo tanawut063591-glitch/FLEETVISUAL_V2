@@ -5,7 +5,7 @@
 
 /*
  * PDF Mode Detail layout/theme is centralized in:
- *   src/styles/report/_report-layout.scss
+ *   src/app/features/report/styles/_report-layout.scss
  *   src/styles/themes/light-theme.scss
  *   src/styles/themes/dark-theme.scss
  *

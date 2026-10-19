@@ -1,0 +1,179 @@
+/* Fleet Visual · restrained industrial UI geometry
+   Shared, theme-neutral radii. No sizing, graph, metric or scroll behaviour changes.
+   Keep true circles (avatars, gauges, round status indicators), chart markers,
+   switch thumbs and map controls untouched. Update values here for all themes. */
+:root {
+  --fleet-radius-surface: 8px;
+  --fleet-radius-card: 6px;
+  --fleet-radius-field: 4px;
+}
+
+/* Global shell: primary navigation, vessel selector and account menu. */
+.fleet-header :is(
+  .settings-action-btn,
+  .settings-dropdown,
+  .dropdown-item,
+  .dropdown-icon,
+  .mobile-toggler,
+  .nav-item,
+  .nav-icon,
+  .dark-mode-pill,
+  .user-profile-pill,
+  .logout-item
+) {
+  border-radius: var(--fleet-radius-card) !important;
+}
+
+.vessel-sidebar :is(
+  .search-box,
+  .close-btn,
+  .vessel-card,
+  .vessel-image,
+  .empty-state,
+  .empty-icon
+),
+.sidebar-toggle-btn {
+  border-radius: var(--fleet-radius-card) !important;
+}
+
+/* Login: structured card and understated rectangular fields/buttons. */
+.login-wrapper .glass-panel {
+  border-radius: var(--fleet-radius-surface) !important;
+}
+.login-wrapper :is(.input-field, .input-group, .login_submit) {
+  border-radius: var(--fleet-radius-field) !important;
+}
+
+/* Report: maintain a clean table-first appearance in desktop and mobile.
+   The scrolling hourly chart + matrix share their original scroll container. */
+app-report :is(
+  .report-dashboard,
+  .pro-report-shell,
+  .pro-report-topbar,
+  .historical-ui-toolbar,
+  .premium-daily-card,
+  .premium-chart-section,
+  .daily-overview-card,
+  .daily-map-card,
+  .daily-google-map-card,
+  .official-pdf-card,
+  .daily-report-section,
+  .report-table-panel,
+  .report-table-frame,
+  .report-book-section,
+  .report-book-table-wrap,
+  .daily-mode-table-wrap,
+  .daily-tracking-table-wrap,
+  .daily-chart-card,
+  .daily-mode-visuals,
+  .report-metric-card,
+  .report-summary-card,
+  .hourly-table-wrap,
+  .report-chart-card,
+  .pdf-panel
+) {
+  border-radius: var(--fleet-radius-surface) !important;
+}
+app-report :is(
+  .pro-action-button,
+  .historical-ui-load,
+  .historical-report-type__select,
+  .report-date-picker,
+  .report-date-picker input,
+  .daily-chart-header-stat,
+  .report-table-panel__meta,
+  .report-book-table,
+  .hourly-matrix
+) {
+  border-radius: var(--fleet-radius-field) !important;
+}
+/* The existing report chart renderer owns square bar geometry and 24-hour alignment. */
+
+/* Overview map overlays (not Leaflet's intentionally round map control icons). */
+.overview-page :is(.summary-panel, .fleet-summary-card, .overview-card) {
+  border-radius: var(--fleet-radius-card) !important;
+}
+
+/* Realtime machinery and status surfaces; gauges remain circular. */
+.premium-dashboard :is(
+  .dash-header,
+  .kpi-card,
+  .premium-card,
+  .live-status-card,
+  .today-summary-card,
+  .dg-card,
+  .ship-photo,
+  .realtime-vessel-header,
+  .today-summary-pro__hero,
+  .today-summary-pro__mini-card,
+  .today-summary-pro__fuel,
+  .today-summary-pro__fuel-primary,
+  .today-summary-pro__fuel-mini
+) {
+  border-radius: var(--fleet-radius-card) !important;
+}
+app-main-engine :is(.fuel-panel, .powertrain, .machine-node, .footer-stat, .load-panel),
+app-aux-engine :is(.fuel-panel, .aux-powertrain, .aux-machine, .speed-card, .footer-stat),
+app-diesel-generator :is(.fuel-block, .fuel-circuit__node, .dg-load, .dg-output) {
+  border-radius: var(--fleet-radius-card) !important;
+}
+
+/* Data logger, historian table and chart workspace. */
+.data-logger-page :is(.data-table-card, .empty-state, .loading-box, .historian-message) {
+  border-radius: var(--fleet-radius-surface) !important;
+}
+.data-logger-page :is(.interval-select, .logger-setting-btn, .logger-auto-btn, .logger-icon-btn, .column-filter, .rows-select, .page-arrow, .page-number) {
+  border-radius: var(--fleet-radius-field) !important;
+}
+.chart-page :is(
+  .chart-workspace,
+  .chart-card,
+  .state-card,
+  .side-panel,
+  .chart-meta > .meta-card,
+  .chart-action-menu,
+  .side-item,
+  .side-empty
+) {
+  border-radius: var(--fleet-radius-surface) !important;
+}
+.chart-page :is(
+  .selected-pill,
+  .mode-switch,
+  .auto-btn,
+  .icon-btn,
+  .chart-type-switch,
+  .chart-type-switch button,
+  .card-tool-btn
+) {
+  border-radius: var(--fleet-radius-field) !important;
+}
+
+/* Other operational pages share the same sober panel / control rhythm. */
+.diagram-page :is(.diagram-header, .diagram-scroll, .stat-card, .device-card) {
+  border-radius: var(--fleet-radius-card) !important;
+}
+.alarm-page :is(.summary-card, .filter-panel, .alerts-feed-card, .detail-list, .raw-payload, .new-alert-toast) {
+  border-radius: var(--fleet-radius-surface) !important;
+}
+.alarm-page :is(.top-search, .toolbar-btn, .auto-refresh-toggle, .refresh-bt, .feed-search, .reset-btn, .open-realtime-btn) {
+  border-radius: var(--fleet-radius-field) !important;
+}
+.settings-page :is(.users-panel, .groups-panel, .vessel-panel, .preference-card, .user-card, .group-readonly-card, .integration-note) {
+  border-radius: var(--fleet-radius-card) !important;
+}
+.settings-page :is(.settings-tabs, .primary-btn, .ghost-btn, .cancel-btn, .table-search, .vessel-table-wrap) {
+  border-radius: var(--fleet-radius-field) !important;
+}
+/* Both class names are used across past-track variants. */
+.past-track-page :is(.range-toolbar, .route-info-bar, .state-box, .heading-block, .map-panel, .timeline-panel, .playback-panel),
+app-past-track :is(.range-toolbar, .route-info-bar, .state-box, .heading-block, .map-panel, .timeline-panel, .playback-panel) {
+  border-radius: var(--fleet-radius-card) !important;
+}
+app-past-track :is(.range-preset, .range-display, .inline-custom-range) {
+  border-radius: var(--fleet-radius-field) !important;
+}
+app-activity-logs :is(.system-map-card, .metric-grid, .feed-card, .status-card),
+.activity-logs-page :is(.system-map-card, .metric-grid, .feed-card, .status-card) {
+  border-radius: var(--fleet-radius-card) !important;
+}

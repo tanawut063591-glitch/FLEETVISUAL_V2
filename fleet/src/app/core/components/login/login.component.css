@@ -12,7 +12,8 @@
   position: relative;
   width: 100vw;
   height: 100vh;
-  background-image: url("/assets/images/login/background.webp");
+  /* This optimized asset is packaged under src/assets via angular.json. */
+  background-image: url('/assets/images/login/background.webp');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -498,7 +499,8 @@
 .glass-panel { min-width: 0; }
 :host-context([data-theme='dark']) .login-wrapper {
   background-color: #080f1e;
-  background-image: linear-gradient(120deg, rgba(2, 6, 23, .85), rgba(4, 17, 42, .75)), url('/assets/images/login/background_Black.webp');
+  /* Keep the night-time vessel scene visible while maintaining text contrast. */
+  background-image: linear-gradient(120deg, rgba(2, 6, 23, .29), rgba(4, 17, 42, .39)), url('/assets/images/login/background_Black.webp');
 }
 :host-context([data-theme='dark']) .brand-text h2,
 :host-context([data-theme='dark']) .hero-text h1 { color: #f8fafc; text-shadow: none; }
@@ -571,4 +573,39 @@
 }
 .login-form-container .glass-panel {
   max-width: 100%;
+}
+
+/* Preserve the vessel photograph on narrow viewports; no raster duplication. */
+@media (max-width: 1100px) {
+  .login-wrapper { background-position: 34% center; }
+}
+@media (max-width: 600px) {
+  .login-wrapper { background-position: 31% center; }
+}
+/* Asset contrast: the night image is dark, while the brand mark is navy.
+   A small frosted disk keeps it recognizable without altering its artwork. */
+:host-context([data-theme='dark']) .brand-logo,
+:host-context([data-theme='dark']) .logo-circle {
+  background: rgba(239, 246, 255, 0.96);
+  border-radius: 50%;
+  padding: 7px;
+  box-shadow: 0 2px 14px rgba(2, 6, 23, 0.20);
+}
+
+/* The light photograph has a dark-blue sky on narrow screens. */
+@media (max-width: 1100px) {
+  .brand-text h2 {
+    color: #f8fafc;
+    text-shadow: 0 2px 10px rgba(2, 6, 23, 0.65);
+  }
+  .brand-text p {
+    color: #e2e8f0;
+    text-shadow: 0 2px 8px rgba(2, 6, 23, 0.65);
+  }
+  .brand-logo {
+    background: rgba(239, 246, 255, 0.96);
+    border-radius: 50%;
+    padding: 5px;
+    box-shadow: 0 2px 14px rgba(2, 6, 23, 0.20);
+  }
 }

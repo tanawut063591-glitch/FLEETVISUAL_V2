@@ -1,0 +1,15 @@
+<aside class="report-fuel-quality" [class.report-fuel-quality--ok]="notice.severity === 'ok'"
+     [class.report-fuel-quality--error]="notice.severity === 'error'"
+     [attr.role]="notice.severity === 'error' ? 'alert' : 'status'"
+     aria-label="Fuel data quality and provenance">
+  <div class="report-fuel-quality__heading">
+    <i class="fa" [class.fa-check-circle]="notice.severity === 'ok'"
+       [class.fa-exclamation-triangle]="notice.severity !== 'ok'" aria-hidden="true"></i>
+    <strong>{{ notice.headline }}</strong>
+    <span class="report-fuel-quality__source">Source: {{ notice.source }}</span>
+  </div>
+  <details *ngIf="notice.details.length" class="report-fuel-quality__details">
+    <summary>Data checks and provenance ({{ notice.details.length }})</summary>
+    <ul><li *ngFor="let detail of notice.details">{{ detail }}</li></ul>
+  </details>
+</aside>

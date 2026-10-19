@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { bearerAuthorization } from './auth-header.util';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 
@@ -274,7 +275,7 @@ export class HttpClientService {
     const token = this.authService.getToken();
 
     return new HttpHeaders({
-      Authorization: `Bearer ${token}`,
+      Authorization: bearerAuthorization(token),
     });
   }
 

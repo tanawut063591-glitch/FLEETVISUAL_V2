@@ -1385,13 +1385,20 @@ export class ChartComponent implements OnInit, OnDestroy {
     private createChartOptions(_title: string, seriesItems: ChartSeriesItem[], _height: number, target: string): Highcharts.Options {
         var highSeries: any[] = [];
         var darkTheme = this.isDarkTheme();
-        var chartBackground = darkTheme ? '#05080d' : '#ffffff';
-        var axisColor = darkTheme ? '#334155' : '#cbd5e1';
-        var gridColor = darkTheme ? '#1f2937' : '#e5e7eb';
-        var mutedText = darkTheme ? '#a7b4c7' : '#475569';
-        var primaryText = darkTheme ? '#f8fafc' : '#0f172a';
-        var tooltipBackground = darkTheme ? '#121925' : '#ffffff';
-        var tooltipBorder = darkTheme ? '#60a5fa' : '#60a5fa';
+        // Reuse CSS design tokens so Highcharts has the exact same dark
+        // surface as the surrounding component (no visible color seam).
+        var darkCss = darkTheme && typeof document !== 'undefined'
+            ? getComputedStyle(document.documentElement)
+            : null;
+        var darkColor = (name: string, fallback: string): string =>
+            darkCss?.getPropertyValue(name).trim() || fallback;
+        var chartBackground = darkTheme ? darkColor('--fv-dark-plot', '#1a1c20') : '#ffffff';
+        var axisColor = darkTheme ? darkColor('--fv-dark-border', '#343942') : '#cbd5e1';
+        var gridColor = darkTheme ? darkColor('--fv-dark-divider', '#2d3138') : '#e5e7eb';
+        var mutedText = darkTheme ? darkColor('--fv-dark-muted', '#adb5c1') : '#475569';
+        var primaryText = darkTheme ? darkColor('--fv-dark-text', '#f0f2f6') : '#0f172a';
+        var tooltipBackground = darkTheme ? darkColor('--fv-dark-inset', '#22262c') : '#ffffff';
+        var tooltipBorder = darkTheme ? darkColor('--fv-dark-border', '#343942') : '#60a5fa';
         var hoverMarkerSymbols: string[] = [
             'circle', 'square', 'diamond', 'triangle', 'triangle-down'
         ];
@@ -2007,7 +2014,7 @@ export class ChartComponent implements OnInit, OnDestroy {
                     maxPointWidth: seriesItems.length > 4 ? 14 : 24,
                     minPointLength: 1,
                     borderWidth: 0,
-                    borderRadius: 2,
+                    borderRadius: 0, // Rectangular Highcharts columns (no rounded tops).
                     shadow: false
                 }
             },

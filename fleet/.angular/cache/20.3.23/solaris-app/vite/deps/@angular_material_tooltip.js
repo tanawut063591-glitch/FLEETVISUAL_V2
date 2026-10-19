@@ -11,14 +11,14 @@ import {
   coerceElement,
   coerceNumberProperty,
   supportsScrollBehavior
-} from "./chunk-SYQWI3FU.js";
-import {
-  Platform
-} from "./chunk-KLEZ3HFY.js";
+} from "./chunk-2E3J7LSB.js";
 import {
   BidiModule,
   Directionality
 } from "./chunk-YRZJHCMS.js";
+import {
+  Platform
+} from "./chunk-KLEZ3HFY.js";
 import {
   Location,
   NgClass
@@ -80,10 +80,10 @@ import {
   ɵɵtextInterpolate,
   ɵɵviewQuery
 } from "./chunk-M2DAZTYR.js";
+import "./chunk-JRFR6BLO.js";
 import {
   isObservable
 } from "./chunk-HWYXSU2G.js";
-import "./chunk-JRFR6BLO.js";
 import {
   BehaviorSubject,
   Observable,

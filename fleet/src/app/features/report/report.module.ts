@@ -9,6 +9,7 @@ import { PremiumPieChartComponent } from './components/premium-pie-chart/premium
 import { ReportDatePickerComponent } from './components/report-date-picker/report-date-picker.component';
 import { ReportMessageAlertComponent } from './components/report-message-alert/report-message-alert.component';
 import { ReportModeDetailCardComponent } from './components/report-mode-detail-card/report-mode-detail-card.component';
+import { ReportFuelQualityComponent } from './components/report-fuel-quality/report-fuel-quality.component';
 import { ReportPdfViewerComponent } from './components/report-pdf-viewer/report-pdf-viewer.component';
 import { ReportComponent } from './report.component';
 
@@ -22,6 +23,7 @@ const routes: Routes = [{ path: '', component: ReportComponent }];
     ReportMessageAlertComponent,
     ReportModeDetailCardComponent,
     ReportPdfViewerComponent,
+    ReportFuelQualityComponent,
   ],
   imports: [
     CommonModule,

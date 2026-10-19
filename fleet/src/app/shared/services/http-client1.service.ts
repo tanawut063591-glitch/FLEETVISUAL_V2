@@ -15,9 +15,17 @@ import {
   take,
   throwError,
 } from 'rxjs';
-import { catchError, concatMap, finalize, map, mergeMap, tap, timeout, toArray } from 'rxjs/operators';
+import { catchError, concatMap, finalize, map, mergeMap, shareReplay, tap, timeout, toArray } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
+import { shouldSkipFailedReportHost } from '../utils/historian-availability';
+import { setBoundedReportCache } from '../utils/bounded-cache.util';
+import {
+  COMPLETED_TAG_EMPTY_TTL_MS,
+  COMPLETED_TAG_MAX_ENTRIES,
+  COMPLETED_TAG_SUCCESS_TTL_MS,
+  isCompletedHistorianWindow,
+} from '../utils/report-historian-cache-policy';
 
 import { SecurityService } from './security.service';
 import { AuthService } from './auth.service';
@@ -46,15 +54,22 @@ export class NewHttpClientService {
   private static readonly REPORT_HISTORIAN_PROBE_TIMEOUT_MS = 8000;
   private static readonly REPORT_HISTORIAN_REQUEST_TIMEOUT_MS = 15_000;
   private static readonly REPORT_HISTORIAN_COOLDOWN_MS = 2 * 60_000;
-  // Two tag requests at a time is a deliberate safety ceiling. A completed Daily
-  // report becomes noticeably faster than strict serial loading, while long range/
-  // month views are limited to one day bundle at a time by the vessel services.
+  // Two tag requests at a time is a deliberate GLOBAL safety ceiling. Period
+  // reports can overlap two day bundles, but share these same two slots.
   private static readonly REPORT_TAG_CONCURRENCY = 2;
   // Concurrency applies to the entire SPA, not to each individual report/day.
   // Navigating between vessels while requests are in flight must not multiply
   // the number of simultaneous historian single-tag POSTs.
   private activeReportTagRequests = 0;
   private readonly waitingReportTagRequests: Array<() => void> = [];
+  // Deduplicate identical single-tag reads across report services/period requests.
+  // Only completed windows are cached; live telemetry bypasses the value cache.
+  // Both maps are cleared when the authenticated operator changes.
+  private readonly reportTagCache = new Map<string, { value: any; expiresAt: number }>();
+  private readonly reportTagInFlight = new Map<string, Observable<any>>();
+  private reportTagSessionToken: string | null = null;
+  private reportTagSessionVersion = 0;
+
 
   public newVessel: string[] = ['SC_DUMMY', 'A02'];
 
@@ -386,6 +401,7 @@ export class NewHttpClientService {
     start: string,
     end: string,
     tags: any[],
+    bypassTagCache = false,
   ): Observable<any[]> {
     const tagNames = this.mapTagNames(tags);
     if (!start || !end || tagNames.length === 0) return of([]);
@@ -396,7 +412,17 @@ export class NewHttpClientService {
       return throwError(() => new Error('REPORT_HISTORIAN_NOT_CONFIGURED'));
     }
 
-    return this.loadConsistentLoggerSeries('report', start, end, tagNames).pipe(
+    // SC WINTER / BAHTERA ZAMRUD use the strict path. Without this guard, the
+    // strict path repeatedly waits for the SAME already-unreachable office host
+    // on every date. Fail fast into the vessel's whole-bundle API2 fallback.
+    // This never labels API2 values as verified reporting-historian/PDF data.
+    if (shouldSkipFailedReportHost(
+      this.reportHistorianState, this.reportHistorianRetryAfter, Date.now(),
+    )) {
+      return throwError(() => new Error('REPORT_HISTORIAN_COOLDOWN'));
+    }
+
+    return this.loadConsistentLoggerSeries('report', start, end, tagNames, bypassTagCache).pipe(
       mergeMap((series) => {
         const recordCount = series.reduce((sum, item: any) => {
           const records = Array.isArray(item?.Records) ? item.Records : [];
@@ -443,12 +469,13 @@ export class NewHttpClientService {
     start: string,
     end: string,
     tags: any[],
+    bypassTagCache = false,
   ): Observable<any[]> {
     const tagNames = this.mapTagNames(tags);
     if (!start || !end || tagNames.length === 0) return of([]);
 
     const loadFrom = (source: 'report' | 'api2'): Observable<any[]> =>
-      this.loadConsistentLoggerSeries(source, start, end, tagNames);
+      this.loadConsistentLoggerSeries(source, start, end, tagNames, bypassTagCache);
 
     const preferredBase = this.normalizeBaseUrl(REPORT_URL);
     const api2Base = this.normalizeBaseUrl(URL2);
@@ -460,8 +487,9 @@ export class NewHttpClientService {
     // skip the office-only source for a short cooldown instead of waiting again
     // on every vessel/date selection.
     if (
-      this.reportHistorianState === 'unavailable' &&
-      Date.now() < this.reportHistorianRetryAfter
+      shouldSkipFailedReportHost(
+        this.reportHistorianState, this.reportHistorianRetryAfter, Date.now(),
+      )
     ) {
       return loadFrom('api2');
     }
@@ -513,19 +541,15 @@ export class NewHttpClientService {
     start: string,
     end: string,
     tagNames: readonly string[],
+    bypassTagCache = false,
   ): Observable<any[]> {
     const indexedTags = tagNames.map((tagName, index) => ({ tagName, index }));
 
     return from(indexedTags).pipe(
       mergeMap(
         ({ tagName, index }) =>
-          this.queueReportTagRequest(() =>
-            this.requestSingleLoggerFromSource(source, start, end, tagName),
-          ).pipe(
-            map((response) => ({
-              index,
-              series: this.normalizeSingleTagLoggerSeries(tagName, response),
-            })),
+          this.getSharedReportTagSeries(source, start, end, tagName, bypassTagCache).pipe(
+            map((series) => ({ index, series })),
           ),
         NewHttpClientService.REPORT_TAG_CONCURRENCY,
       ),
@@ -536,6 +560,83 @@ export class NewHttpClientService {
           .map((item) => item.series),
       ),
     );
+  }
+
+  /**
+   * Single-flight, session-scoped cache for the source-consistent legacy logger.
+   * The cache sits BEFORE the global two-request queue, so duplicate consumers
+   * don't consume a second historian slot. Source is part of the key: reporting
+   * historian data is never substituted for API2 (or vice versa).
+   *
+   * A completed window may be reused briefly. Force refresh bypasses the stored
+   * values and uses its own in-flight key, then refreshes the completed-day cache.
+   * In all cases the official PDF remains the final parity check.
+   */
+  private getSharedReportTagSeries(
+    source: 'report' | 'api2', start: string, end: string, tagName: string,
+    bypassTagCache = false,
+  ): Observable<any> {
+    this.syncReportTagCacheSession();
+    const version = this.reportTagSessionVersion;
+    const cacheKey = JSON.stringify([source, start, end, tagName]);
+    const inFlightKey = bypassTagCache ? `${cacheKey}|refresh` : cacheKey;
+    // Do not persist report rows even in memory without an identifiable session.
+    // The in-flight coalescer remains active, but retained values require auth.
+    const completed = !!this.reportTagSessionToken && isCompletedHistorianWindow(start, end);
+
+    if (completed && !bypassTagCache) {
+      const cached = this.reportTagCache.get(cacheKey);
+      if (cached) {
+        if (cached.expiresAt > Date.now()) {
+          // Refresh LRU order on a hit without extending the original expiry.
+          this.reportTagCache.delete(cacheKey);
+          this.reportTagCache.set(cacheKey, cached);
+          return of(cached.value);
+        }
+        this.reportTagCache.delete(cacheKey);
+      }
+    }
+
+    const existing = this.reportTagInFlight.get(inFlightKey);
+    if (existing) return existing;
+
+    const request$ = this.queueReportTagRequest(() =>
+      this.requestSingleLoggerFromSource(source, start, end, tagName),
+    ).pipe(
+      map((response) => this.normalizeSingleTagLoggerSeries(tagName, response)),
+      tap((series) => {
+        if (!completed || this.reportTagSessionVersion !== version ||
+            this.reportTagInFlight.get(inFlightKey) !== request$) return;
+        const hasRecords = Array.isArray(series?.Records) && series.Records.length > 0;
+        setBoundedReportCache(this.reportTagCache, cacheKey, {
+          value: series,
+          expiresAt: Date.now() + (hasRecords
+            ? COMPLETED_TAG_SUCCESS_TTL_MS : COMPLETED_TAG_EMPTY_TTL_MS),
+        }, COMPLETED_TAG_MAX_ENTRIES);
+      }),
+      finalize(() => {
+        if (this.reportTagInFlight.get(inFlightKey) === request$) this.reportTagInFlight.delete(inFlightKey);
+      }),
+      shareReplay({ bufferSize: 1, refCount: true }),
+    );
+    this.reportTagInFlight.set(inFlightKey, request$);
+    return request$;
+  }
+
+  private syncReportTagCacheSession(): void {
+    let token = '';
+    try {
+      if (typeof localStorage !== 'undefined') {
+        token = localStorage.getItem('vesselToken2') || localStorage.getItem('vesselToken') || '';
+      }
+    } catch {
+      token = '';
+    }
+    if (this.reportTagSessionToken === token) return;
+    this.reportTagSessionToken = token;
+    this.reportTagSessionVersion += 1;
+    this.reportTagCache.clear();
+    this.reportTagInFlight.clear();
   }
 
   /**

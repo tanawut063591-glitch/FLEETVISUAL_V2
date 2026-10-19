@@ -1,6 +1,6 @@
 /* Report component stylesheet intentionally minimal.
-   Layout: src/styles/report/_report-layout.scss
-   Theme/appearance: src/styles/report/_report-visual.scss + src/styles/themes/{light,dark}-theme.scss
+   Layout: src/app/features/report/styles/_report-layout.scss
+   Theme/appearance: src/app/features/report/styles/_report-visual.scss + src/styles/themes/{light,dark}-theme.scss
 */
 
 /* Official PDF mode-detail pages. Keep this block visually consistent with the
@@ -19,4 +19,15 @@
 
 .daily-report-section--all-modes .report-table-panel__header {
   border-bottom: 1px solid rgba(38, 92, 165, 0.12);
+}
+
+/* Large historian reports contain many SVG/table sections. Let Chromium/WebKit
+   skip paint/layout for sections far below the viewport; Angular still retains
+   the entire report and no data is omitted. The first visible summary and the
+   hourly chart/table scroll container are intentionally left structurally intact. */
+@supports (content-visibility: auto) {
+  .report-full-daily .daily-report-section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 460px;
+  }
 }

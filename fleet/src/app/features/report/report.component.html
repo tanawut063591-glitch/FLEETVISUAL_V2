@@ -111,6 +111,9 @@
         </div>
       </section>
 
+      <app-report-fuel-quality *ngIf="dailyFuelQualityNotice as notice"
+        [notice]="notice"></app-report-fuel-quality>
+
       <section class="report-full-daily" *ngIf="dedicatedReportServiceActive"
           [class.report-full-daily--no-data]="!!scGlory1DailyReport && !detailedReportHasHistorianData(scGlory1DailyReport)"
           [attr.aria-label]="(selectedVesselName || 'Dedicated vessel') + ' complete historical report UI'">
@@ -861,7 +864,7 @@
                 <i class="fa fa-info-circle" aria-hidden="true"></i>
                 <div><strong>Multi-day hourly view</strong><span>Each column combines the same clock hour across {{ detailed.dayCount }} days. Use Daily Trend above for day-by-day totals.</span></div>
               </div>
-              <div class="daily-hourly-sync" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
+              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Hourly chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
                 <div class="daily-hourly-sync__content">
                   <div class="daily-axis-chart daily-axis-chart--combo">
                     <div class="daily-chart-y-axis" aria-hidden="true">
@@ -905,6 +908,7 @@
                     <span *ngIf="!usesNumberedAuxiliaryReport" class="main"><b>ME..F.</b><strong>Main Engine Fuel</strong><em>LINE</em><small>0–{{ formatChartAxisValue(hourlyAxes['mainFuel'].max) }} L</small></span>
                     <span class="aux"><b>AE..F.</b><strong>Auxiliary Engine Fuel</strong><em>LINE</em><small>0–{{ formatChartAxisValue(hourlyAxes['auxFuel'].max) }} L</small></span>
                   </div>
+                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — hours stay aligned</p>
                   <div class="report-book-table-wrap hourly-table-wrap">
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
@@ -940,17 +944,6 @@
                         </tr>
                       </tbody>
                     </table>
-                    <div class="hourly-mobile-records" aria-label="Hourly performance — all 24 hours">
-                      <article class="hourly-mobile-record" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow" [class.is-unavailable]="!row.active">
-                        <h3>Hour {{ row.hour < 10 ? '0' : '' }}{{ row.hour }}:00 <small *ngIf="!row.active">No data</small></h3>
-                        <dl>
-                          <div><dt>V.D.</dt><dd>{{ row.active ? formatDailyValue(row.distanceNm, 2) : '—' }}</dd></div>
-                          <div><dt>V.S.</dt><dd>{{ row.active ? formatDailyValue(row.speedKnots, 2) : '—' }}</dd></div>
-                          <div *ngIf="!usesNumberedAuxiliaryReport"><dt>ME..F.</dt><dd>{{ row.active ? formatDailyValue(row.mainFuel, 2) : '—' }}</dd></div>
-                          <div><dt>{{ isBahteraGeneratorReport ? 'DG..F.' : 'AE..F.' }}</dt><dd>{{ row.active ? formatDailyValue(row.auxFuel, 2) : '—' }}</dd></div>
-                        </dl>
-                      </article>
-                    </div>
                   </div>
                   <div class="report-abbreviation-note" aria-label="Hourly performance abbreviations">
                     <span class="report-abbreviation-note__title"><i class="fa fa-info-circle" aria-hidden="true"></i> Abbreviations</span>
@@ -1022,7 +1015,7 @@
                 <div><h2>Main Engine Fuel Consumption</h2>
                 </div>
               </header>
-              <div class="daily-hourly-sync" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
+              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Hourly chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
                 <div class="daily-hourly-sync__content">
                   <div class="daily-axis-chart">
                     <div class="daily-chart-y-axis" aria-hidden="true">
@@ -1062,6 +1055,7 @@
                   </div>
                   <div class="daily-chart-legend daily-chart-legend--engineering-lines"><span class="port">PM..F.</span><span class="starboard">SM..F.</span><span *ngIf="dailyHasCenterMainEngine"
                       class="center">CM..F.</span><span class="ref-max">MAX {{ formatDailyValue(hourlyReferenceStats['mainFuel']?.max, 1) }} L</span><span class="ref-avg">AVG {{ formatDailyValue(hourlyReferenceStats['mainFuel']?.avg, 1) }} L</span><span class="ref-min">MIN {{ formatDailyValue(hourlyReferenceStats['mainFuel']?.min, 1) }} L</span></div>
+                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — hours stay aligned</p>
                   <div class="report-book-table-wrap hourly-table-wrap">
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
@@ -1097,17 +1091,6 @@
                         </tr>
                       </tbody>
                     </table>
-                    <div class="hourly-mobile-records" aria-label="Main engine fuel — all 24 hours">
-                      <article class="hourly-mobile-record" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow" [class.is-unavailable]="!row.active">
-                        <h3>Hour {{ row.hour < 10 ? '0' : '' }}{{ row.hour }}:00 <small *ngIf="!row.active">No data</small></h3>
-                        <dl>
-                          <div *ngIf="!usesNumberedAuxiliaryReport"><dt>ME..F.</dt><dd>{{ row.active ? formatDailyValue(row.mainFuel, 2) : '—' }}</dd></div>
-                          <div><dt>PM..F.</dt><dd>{{ row.active ? formatDailyValue(row.portMainFuel, 2) : '—' }}</dd></div>
-                          <div><dt>SM..F.</dt><dd>{{ row.active ? formatDailyValue(row.starboardMainFuel, 2) : '—' }}</dd></div>
-                          <div *ngIf="dailyHasCenterMainEngine"><dt>CM..F.</dt><dd>{{ row.active ? formatDailyValue(row.centerMainFuel, 2) : '—' }}</dd></div>
-                        </dl>
-                      </article>
-                    </div>
                   </div>
                   <div class="report-abbreviation-note" aria-label="Main engine fuel abbreviations">
                     <span class="report-abbreviation-note__title"><i class="fa fa-info-circle" aria-hidden="true"></i> Abbreviations</span>
@@ -1133,7 +1116,7 @@
                 <div><h2>{{ machineryChartTitle(machinery) }}</h2>
                 </div>
               </header>
-              <div class="daily-hourly-sync" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
+              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Hourly chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
                 <div class="daily-hourly-sync__content">
                   <div class="daily-axis-chart">
                     <div class="daily-chart-y-axis" aria-hidden="true">
@@ -1188,6 +1171,7 @@
                     <span *ngIf="!usesNumberedAuxiliaryReport" class="ref-avg">AVG {{ formatDailyValue(hourlyReferenceStats[machinery.fuel]?.avg, 1) }} L</span>
                     <span *ngIf="!usesNumberedAuxiliaryReport" class="ref-min">MIN {{ formatDailyValue(hourlyReferenceStats[machinery.fuel]?.min, 1) }} L</span>
                   </div>
+                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — hours stay aligned</p>
                   <div class="report-book-table-wrap hourly-table-wrap">
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
@@ -1228,18 +1212,6 @@
                         </tr>
                       </tbody>
                     </table>
-                    <div class="hourly-mobile-records" aria-label="Machinery hourly data — all 24 hours">
-                      <article class="hourly-mobile-record" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow" [class.is-unavailable]="!row.active">
-                        <h3>Hour {{ row.hour < 10 ? '0' : '' }}{{ row.hour }}:00 <small *ngIf="!row.active">No data</small></h3>
-                        <dl>
-                          <div *ngIf="!usesNumberedAuxiliaryReport"><dt>{{ machinery.codeFuel }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[machinery.fuel], 2) : '—' }}</dd></div>
-                          <div><dt>{{ machinery.codeMe }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[machinery.meRun], 2) : '—' }}</dd></div>
-                          <div *ngIf="!usesNumberedAuxiliaryReport"><dt>{{ machinery.codeShaftRun }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[machinery.shaftRun], 2) : '—' }}</dd></div>
-                          <div *ngIf="!usesNumberedAuxiliaryReport"><dt>{{ machinery.codeShaftRpm }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[machinery.shaftRpm], 2) : '—' }}</dd></div>
-                          <div *ngIf="hasEngineLoadReport && machinery.engineLoad && machinery.codeEngineLoad"><dt>{{ machinery.codeEngineLoad }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[machinery.engineLoad], 2) : '—' }}</dd></div>
-                        </dl>
-                      </article>
-                    </div>
                   </div>
                   <div class="report-abbreviation-note" aria-label="Machinery chart abbreviations">
                     <span class="report-abbreviation-note__title"><i class="fa fa-info-circle" aria-hidden="true"></i> Abbreviations</span>
@@ -1264,7 +1236,7 @@
                 <div><h2>{{ isBahteraGeneratorReport ? 'DG/EG Fuel Consumption' : 'Auxiliary Engine Fuel Consumption' }}</h2>
                 </div>
               </header>
-              <div class="daily-hourly-sync" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
+              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Hourly chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
                 <div class="daily-hourly-sync__content">
                   <div class="daily-axis-chart">
                     <div class="daily-chart-y-axis" aria-hidden="true">
@@ -1308,6 +1280,7 @@
                     <span class="ref-avg">AVG {{ formatDailyValue(hourlyReferenceStats['auxFuel']?.avg, 1) }} L</span>
                     <span class="ref-min">MIN {{ formatDailyValue(hourlyReferenceStats['auxFuel']?.min, 1) }} L</span>
                   </div>
+                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — hours stay aligned</p>
                   <div class="report-book-table-wrap hourly-table-wrap">
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
@@ -1341,25 +1314,6 @@
                         </ng-template>
                       </tbody>
                     </table>
-                    <div class="hourly-mobile-records" aria-label="Auxiliary engine fuel — all 24 hours">
-                      <article class="hourly-mobile-record" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow" [class.is-unavailable]="!row.active">
-                        <h3>Hour {{ row.hour < 10 ? '0' : '' }}{{ row.hour }}:00 <small *ngIf="!row.active">No data</small></h3>
-                        <dl>
-                          <div><dt>{{ isBahteraGeneratorReport ? 'DG..F.' : 'AE..F.' }}</dt><dd>{{ row.active ? formatDailyValue(row.auxFuel, 2) : '—' }}</dd></div>
-                          <ng-container *ngIf="usesNumberedAuxiliaryReport; else standardAuxFuelMobileRows">
-                            <div><dt>{{ isBahteraGeneratorReport ? 'DG1..F.' : 'AE1..F.' }}</dt><dd>{{ row.active ? formatDailyValue(row.portAuxFuel, 2) : '—' }}</dd></div>
-                            <div><dt>{{ isBahteraGeneratorReport ? 'DG2..F.' : 'AE2..F.' }}</dt><dd>{{ row.active ? formatDailyValue($any(row).centerAuxFuel, 2) : '—' }}</dd></div>
-                            <div><dt>{{ isBahteraGeneratorReport ? 'DG3..F.' : 'AE3..F.' }}</dt><dd>{{ row.active ? formatDailyValue(row.starboardAuxFuel, 2) : '—' }}</dd></div>
-                            <div><dt>{{ isBahteraGeneratorReport ? 'EG..F.' : 'AE4..F.' }}</dt><dd>{{ row.active ? formatDailyValue($any(row).fourthAuxFuel, 2) : '—' }}</dd></div>
-                          </ng-container>
-                          <ng-template #standardAuxFuelMobileRows>
-                            <div><dt>PA..F.</dt><dd>{{ row.active ? formatDailyValue(row.portAuxFuel, 2) : '—' }}</dd></div>
-                            <div *ngIf="dailyHasCenterAuxiliary"><dt>CA..F.</dt><dd>{{ row.active ? formatDailyValue($any(row).centerAuxFuel, 2) : '—' }}</dd></div>
-                            <div><dt>SA..F.</dt><dd>{{ row.active ? formatDailyValue(row.starboardAuxFuel, 2) : '—' }}</dd></div>
-                          </ng-template>
-                        </dl>
-                      </article>
-                    </div>
                   </div>
                   <div class="report-abbreviation-note" aria-label="Auxiliary engine fuel abbreviations">
                     <span class="report-abbreviation-note__title"><i class="fa fa-info-circle" aria-hidden="true"></i> Abbreviations</span>
@@ -1390,7 +1344,7 @@
                 <div><h2>{{ auxiliaryChartTitle(auxiliary) }}</h2>
                 </div>
               </header>
-              <div class="daily-hourly-sync" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
+              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Hourly chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
                 <div class="daily-hourly-sync__content">
                   <div class="daily-axis-chart">
                     <div class="daily-chart-y-axis" aria-hidden="true">
@@ -1433,6 +1387,7 @@
                     <span class="ref-avg">AVG {{ formatDailyValue(hourlyReferenceStats[auxiliary.fuel]?.avg, 1) }} L</span>
                     <span class="ref-min">MIN {{ formatDailyValue(hourlyReferenceStats[auxiliary.fuel]?.min, 1) }} L</span>
                   </div>
+                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — hours stay aligned</p>
                   <div class="report-book-table-wrap hourly-table-wrap">
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
@@ -1458,15 +1413,6 @@
                         </tr>
                       </tbody>
                     </table>
-                    <div class="hourly-mobile-records" aria-label="Auxiliary machinery fuel and running hours — all 24 hours">
-                      <article class="hourly-mobile-record" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow" [class.is-unavailable]="!row.active">
-                        <h3>Hour {{ row.hour < 10 ? '0' : '' }}{{ row.hour }}:00 <small *ngIf="!row.active">No data</small></h3>
-                        <dl>
-                          <div><dt>{{ auxiliaryFuelCode(auxiliary) }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[auxiliary.fuel], 2) : '—' }}</dd></div>
-                          <div><dt>{{ auxiliaryRunCode(auxiliary) }}</dt><dd>{{ row.active ? formatDailyValue($any(row)[auxiliary.run], 2) : '—' }}</dd></div>
-                        </dl>
-                      </article>
-                    </div>
                   </div>
                   <div class="report-abbreviation-note" aria-label="Auxiliary engine chart abbreviations">
                     <span class="report-abbreviation-note__title"><i class="fa fa-info-circle" aria-hidden="true"></i> Abbreviations</span>
@@ -1486,7 +1432,7 @@
                 <div><h2>Total Fuel Used</h2>
                 </div>
               </header>
-              <div class="daily-hourly-sync" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
+              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Hourly chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
                 <div class="daily-hourly-sync__content">
                   <div class="daily-axis-chart">
                     <div class="daily-chart-y-axis" aria-hidden="true">
@@ -1522,6 +1468,7 @@
                     <span class="ref-avg">AVG {{ formatDailyValue(hourlyReferenceStats['totalFuel']?.avg, 1) }} L</span>
                     <span class="ref-min">MIN {{ formatDailyValue(hourlyReferenceStats['totalFuel']?.min, 1) }} L</span>
                   </div>
+                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — hours stay aligned</p>
                   <div class="report-book-table-wrap hourly-table-wrap">
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
@@ -1542,14 +1489,6 @@
                         </tr>
                       </tbody>
                     </table>
-                    <div class="hourly-mobile-records" aria-label="Total fuel used — all 24 hours">
-                      <article class="hourly-mobile-record" *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow" [class.is-unavailable]="!row.active">
-                        <h3>Hour {{ row.hour < 10 ? '0' : '' }}{{ row.hour }}:00 <small *ngIf="!row.active">No data</small></h3>
-                        <dl>
-                          <div><dt>T.F.U.</dt><dd>{{ row.active ? formatDailyValue(row.totalFuel, 2) : '—' }}</dd></div>
-                        </dl>
-                      </article>
-                    </div>
                   </div>
                   <div class="report-abbreviation-note" aria-label="Total fuel abbreviation">
                     <span class="report-abbreviation-note__title"><i class="fa fa-info-circle" aria-hidden="true"></i> Abbreviations</span>

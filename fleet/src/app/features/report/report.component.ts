@@ -58,6 +58,9 @@ import {
   VesselReportAdapter,
 } from './services/common/vessel-report-adapter';
 import { ReportVesselServiceResolver } from './services/report-vessel-service-resolver.service';
+import { buildReportChartAxis, chartBarPercent, hourlyPolyline, maxActiveValue, summarizeHourlyValues, ReportChartAxis } from './services/common/report-chart-math';
+import { MachineryChartConfig, AuxiliaryChartConfig, MACHINERY_CHART_CONFIGS, AUXILIARY_CHART_CONFIGS, NUMBERED_AUXILIARY_CHART_CONFIGS } from './config/report-chart.config';
+import { buildFuelQualityNotice, FuelQualitySnapshot, ReportFuelQualityNotice } from './services/common/report-fuel-quality';
 import { getVesselPdfLayout, VesselPdfLayoutSpec } from './services/common/pdf-report-layout.registry';
 import { PremiumPieChartPoint } from './components/premium-pie-chart/premium-pie-chart.component';
 import {
@@ -131,40 +134,9 @@ interface ReportRouteChartPoint {
   heading: number | null;
 }
 
-interface ReportChartAxis {
-  max: number;
-  ticks: number[];
-}
-
 interface ReportAxisLabel {
   label: string;
   position: number;
-}
-
-interface MachineryChartConfig {
-  key: 'port' | 'starboard' | 'center';
-  title: string;
-  page: string;
-  fuel: string;
-  meRun: string;
-  shaftRun: string;
-  shaftRpm: string;
-  engineLoad?: string;
-  codeFuel: string;
-  codeMe: string;
-  codeShaftRun: string;
-  codeShaftRpm: string;
-  codeEngineLoad?: string;
-}
-
-interface AuxiliaryChartConfig {
-  key: 'port' | 'starboard' | 'center' | 'fourth';
-  title: string;
-  page: string;
-  fuel: string;
-  run: string;
-  codeFuel: string;
-  codeRun: string;
 }
 
 interface FuelBreakdownItem {
@@ -278,25 +250,9 @@ export class ReportComponent implements OnInit, OnDestroy {
     },
   ];
 
-  readonly machineryChartConfigs: readonly MachineryChartConfig[] = [
-    { key: 'port', title: 'Port M/E & Shaft Performance', page: '8', fuel: 'portMainFuel', meRun: 'portMainRunningHours', shaftRun: 'portShaftRunningHours', shaftRpm: 'portShaftRpm', engineLoad: 'portMainEngineLoad', codeFuel: 'PM..F.', codeMe: 'PM..RH', codeShaftRun: 'PS..RH', codeShaftRpm: 'PS..ES', codeEngineLoad: 'PM..EL' },
-    { key: 'starboard', title: 'Starboard M/E & Shaft Performance', page: '9', fuel: 'starboardMainFuel', meRun: 'starboardMainRunningHours', shaftRun: 'starboardShaftRunningHours', shaftRpm: 'starboardShaftRpm', engineLoad: 'starboardMainEngineLoad', codeFuel: 'SM..F.', codeMe: 'SM..RH', codeShaftRun: 'SS..RH', codeShaftRpm: 'SS..ES', codeEngineLoad: 'SM..EL' },
-    { key: 'center', title: 'Center M/E & Shaft Performance', page: '10', fuel: 'centerMainFuel', meRun: 'centerMainRunningHours', shaftRun: 'centerShaftRunningHours', shaftRpm: 'centerShaftRpm', engineLoad: 'centerMainEngineLoad', codeFuel: 'CM..F.', codeMe: 'CM..RH', codeShaftRun: 'CS..RH', codeShaftRpm: 'CS..ES', codeEngineLoad: 'CM..EL' },
-  ];
-
-  readonly auxiliaryChartConfigs: readonly AuxiliaryChartConfig[] = [
-    { key: 'port', title: 'Port A/E Fuel & Running Hours', page: '12', fuel: 'portAuxFuel', run: 'portAuxRunningHours', codeFuel: 'PA..F.', codeRun: 'PA..RH' },
-    { key: 'starboard', title: 'Starboard A/E Fuel & Running Hours', page: '13', fuel: 'starboardAuxFuel', run: 'starboardAuxRunningHours', codeFuel: 'SA..F.', codeRun: 'SA..RH' },
-    { key: 'center', title: '', page: 'AE-3', fuel: 'centerAuxFuel', run: 'centerAuxRunningHours', codeFuel: 'CA..F.', codeRun: 'CA..RH' },
-    { key: 'fourth', title: 'A/E4 Fuel & Running Hours', page: 'AE-4', fuel: 'fourthAuxFuel', run: 'fourthAuxRunningHours', codeFuel: 'AE4..F.', codeRun: 'AE4..RH' },
-  ];
-
-  readonly numberedAuxiliaryChartConfigs: readonly AuxiliaryChartConfig[] = [
-    this.auxiliaryChartConfigs[0],
-    this.auxiliaryChartConfigs[2],
-    this.auxiliaryChartConfigs[1],
-    this.auxiliaryChartConfigs[3],
-  ];
+  readonly machineryChartConfigs = MACHINERY_CHART_CONFIGS;
+  readonly auxiliaryChartConfigs = AUXILIARY_CHART_CONFIGS;
+  readonly numberedAuxiliaryChartConfigs = NUMBERED_AUXILIARY_CHART_CONFIGS;
 
   readonly liveRefreshSeconds = 60;
 
@@ -478,6 +434,8 @@ export class ReportComponent implements OnInit, OnDestroy {
   dailyMapReady = false;
   dailyMapError = '';
   dailyVisibleHourlyRows: ScGlory1HourlyRow[] = [];
+  /** QA is evaluated when a report arrives; the template does no repeated math. */
+  dailyFuelQualityNotice: ReportFuelQualityNotice | null = null;
 
   private dailyGoogleMap: any = null;
   private dailyGoogleRoute: any = null;
@@ -563,7 +521,9 @@ export class ReportComponent implements OnInit, OnDestroy {
     // Historical UI and official PDF loading are isolated from live telemetry to reduce server load.
     this.watchLocalArchiveAvailability();
     this.syncRealtimePolling();
-    this.refreshLocalArchiveAvailability();
+    // Do not query the official-PDF archive on Web Report startup.
+    // The Historian report uses a separate data path; archive discovery is
+    // deferred until the operator actually opens the Original PDF workspace.
 
     // Report behaves like Realtime on entry/refresh: restore the last vessel and render
     // the completed web report automatically. The debounce below coalesces startup/store
@@ -2328,10 +2288,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   hourlyBarPercent(value: number | null | undefined, maxValue: number): number {
-    if (value === null || value === undefined || !Number.isFinite(value) || maxValue <= 0) {
-      return 0;
-    }
-    return Math.max(0, Math.min(100, (value / maxValue) * 100));
+    return chartBarPercent(value, maxValue);
   }
 
   get hourlyComboViewBoxWidth(): number {
@@ -2342,13 +2299,7 @@ export class ReportComponent implements OnInit, OnDestroy {
     selector: (row: ScGlory1HourlyRow) => number | null | undefined,
     maxValue: number,
   ): string {
-    return this.dailyVisibleHourlyRows
-      .map((row, index) => {
-        const x = index * 100 + 50;
-        const y = 100 - this.hourlyBarPercent(selector(row), maxValue);
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(' ');
+    return hourlyPolyline(this.dailyVisibleHourlyRows, selector, maxValue);
   }
 
   get historicalDailyTrendMaxFuel(): number {
@@ -2744,6 +2695,14 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   private refreshLocalArchiveAvailability(autoLoad = false): void {
+    // An archive lookup is unnecessary on the default Web Report. This is
+    // often a remote operation and was running in parallel with every vessel's
+    // initial historian load, adding avoidable backend traffic and contention.
+    if (!this.isOfficialPdfView) {
+      this.localArchiveEntry = null;
+      this.changeDetector.markForCheck();
+      return;
+    }
     const period = this.selectedPeriodLabel;
     const vessel = this.selectedVesselName.trim();
 
@@ -3190,6 +3149,7 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.dailyHasPassageActivity = false;
     this.dailyDominantModeLabel = '—';
     this.dailyVisibleHourlyRows = [];
+    this.dailyFuelQualityNotice = null;
     this.clearDailyGoogleMap();
   }
 
@@ -3199,10 +3159,15 @@ export class ReportComponent implements OnInit, OnDestroy {
     // unavailable (never converted to synthetic fuel/distance measurements).
     // This also keeps the SVG's 24 point centers aligned with all chart columns.
     this.dailyVisibleHourlyRows = [...report.hourly].sort((a, b) => a.hour - b.hour);
+    const isScWinter = /\bSC\s+WINTER\b/i.test(this.selectedVesselName);
+    this.dailyFuelQualityNotice = buildFuelQualityNotice(
+      report as ScGlory1PeriodUiReport & FuelQualitySnapshot,
+      isScWinter,
+    );
 
     const active = report.hourly.filter((row) => row.active);
-    const maxOf = (selector: (row: ScGlory1HourlyRow) => number | null): number =>
-      Math.max(1, ...active.map((row) => selector(row) || 0));
+    const maxOf = (selector: (row: ScGlory1HourlyRow) => number | null | undefined): number =>
+      maxActiveValue(active, selector);
 
     this.hourlyMaxTotalFuel = maxOf((row) => row.totalFuel);
     this.hourlyMaxMainFuel = maxOf((row) => row.mainFuel);
@@ -3259,22 +3224,17 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.hourlyMainFuelPolyline = this.buildHourlyComboPolyline((row) => row.mainFuel, this.hourlyMaxMainFuel);
     this.hourlyAuxFuelPolyline = this.buildHourlyComboPolyline((row) => row.auxFuel, this.hourlyMaxAuxFuel);
 
-    const fieldMaximum = (field: string): number =>
-      Math.max(1, ...active.map((row) => Math.max(0, Number((row as any)[field]) || 0)));
-    const fieldPolyline = (field: string, maximum: number): string =>
-      this.buildHourlyComboPolyline((row) => Number((row as any)[field]) || 0, maximum);
-    const buildStats = (field: string): { max: number; avg: number; min: number } => {
-      const values = active
-        .map((row) => Number((row as any)[field]))
-        .filter((value) => Number.isFinite(value))
-        .map((value) => Math.max(0, value));
-      if (values.length === 0) return { max: 0, avg: 0, min: 0 };
-      return {
-        max: Math.max(...values),
-        avg: values.reduce((sum, value) => sum + value, 0) / values.length,
-        min: Math.min(...values),
-      };
+    const fieldValue = (row: ScGlory1HourlyRow, field: string): number | null => {
+      const raw = (row as any)[field];
+      if (raw === null || raw === undefined || raw === '') return null;
+      const value = Number(raw);
+      return Number.isFinite(value) ? value : null;
     };
+    const fieldMaximum = (field: string): number => maxOf((row) => fieldValue(row, field));
+    const fieldPolyline = (field: string, maximum: number): string =>
+      this.buildHourlyComboPolyline((row) => fieldValue(row, field), maximum);
+    const buildStats = (field: string): { max: number; avg: number; min: number } =>
+      summarizeHourlyValues(active, (row) => fieldValue(row, field));
 
     const machineryFields = {
       port: { meRun: 'portMainRunningHours', shaftRun: 'portShaftRunningHours', shaftRpm: 'portShaftRpm', engineLoad: 'portMainEngineLoad' },
@@ -3824,19 +3784,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   private buildChartAxis(maxValue: number, tickCount = 4): ReportChartAxis {
-    const safeMax = Number.isFinite(maxValue) && maxValue > 0 ? maxValue : 1;
-    const rawStep = safeMax / Math.max(1, tickCount);
-    const exponent = Math.floor(Math.log10(rawStep));
-    const magnitude = Math.pow(10, exponent);
-    const fraction = rawStep / magnitude;
-    const niceFraction =
-      fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 2.5 ? 2.5 : fraction <= 5 ? 5 : 10;
-    const step = niceFraction * magnitude;
-    const axisMax = Math.max(step * tickCount, Math.ceil(safeMax / step) * step);
-    const ticks = Array.from({ length: tickCount + 1 }, (_, index) =>
-      Math.max(0, axisMax - index * (axisMax / tickCount)),
-    );
-    return { max: axisMax, ticks };
+    return buildReportChartAxis(maxValue, tickCount);
   }
 
   private buildSpeedAxisLabels(report: ScGlory1PeriodUiReport, count: number): ReportAxisLabel[] {

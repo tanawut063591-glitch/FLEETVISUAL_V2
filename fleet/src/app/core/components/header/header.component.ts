@@ -15,6 +15,7 @@ import { AlertsService } from '../../../shared/services/alerts.service';
 import { UserPresenceService } from '../../../shared/services/user-presence.service';
 import { FleetModuleKey } from '../../../shared/models/settings.model';
 import { UserAccessControlService } from '../../../shared/services/user-access-control.service';
+import { AuthService } from '../../../shared/services/auth.service';
 
 interface HeaderMenuItem {
   label: string;
@@ -161,6 +162,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     private alertsService: AlertsService,
     private userPresence: UserPresenceService,
     private userAccess: UserAccessControlService,
+    private authService: AuthService,
     private changeDetectorRef: ChangeDetectorRef,
   ) {}
 
@@ -408,13 +410,8 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   logout(): void {
-    const themeMode = this.themeModeService.getMode();
     this.userPresence.signOut();
-
-    localStorage.clear();
-    sessionStorage.clear();
-
-    this.themeModeService.setMode(themeMode);
+    this.authService.logout();
 
     this.closeSettingsMenu();
     this.closeMobileMenu();
