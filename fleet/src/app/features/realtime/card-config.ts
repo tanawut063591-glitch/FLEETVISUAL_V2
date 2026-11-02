@@ -29,7 +29,6 @@ export class CardConfiguration{
             this.BB_KAIMOOK,
             this.BB_INTAN,
             this.BB_LIBERTY233,
-            this.BB_TONGKAM,
             this.BB_LAZURIT,
             this.BB_TIARA,
             this.BB_PHET,
@@ -314,24 +313,6 @@ export class CardConfiguration{
             { row: 1, col: 2 , title: "DIESEL GENERATOR 2", type: "DG_NO_RPM" },
             { row: 1, col: 3 , title: "DIESEL GENERATOR 3", type: "DG_NO_RPM" },
             { row: 2, col: 1 , title: "DIESEL GENERATOR 4", type: "DG_NO_RPM" },
-            { row: 2, col: 2 , title: "", type: "" },
-            { row: 2, col: 3 , title: "", type: "" }
-        ]
-    };
-
-    BB_TONGKAM = {
-        prefix: 'BB_TONGKAM',
-        details:  [
-
-
-
-
-
-
-            { row: 1, col: 1 , title: 'DIESEL GENERATOR 1', type: 'DG_NO_RPM' },
-            { row: 1, col: 2 , title: "DIESEL GENERATOR 2", type: "DG_NO_RPM" },
-            { row: 1, col: 3 , title: "DIESEL GENERATOR 3", type: "DG_NO_RPM" },
-            { row: 2, col: 1 , title: "DIESEL GENERATOR 4", type: "DG_NO_RPM_VTOTAL" },
             { row: 2, col: 2 , title: "", type: "" },
             { row: 2, col: 3 , title: "", type: "" }
         ]

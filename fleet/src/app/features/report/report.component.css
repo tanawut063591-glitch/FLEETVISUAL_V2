@@ -31,3 +31,23 @@
     contain-intrinsic-size: auto 460px;
   }
 }
+
+/* Monthly benchmark status - intentionally inherits original report theme. */
+.monthly-reference-notice { display:flex; align-items:flex-start; gap:12px; padding:12px 16px; margin:12px 0; border:1px solid var(--fv-border, rgba(125,150,170,.25)); border-radius:12px; background:var(--fv-surface, rgba(125,150,170,.07)); font-size:12px; }
+.monthly-reference-notice > i { font-size:17px; margin-top:2px; opacity:.85; }
+.monthly-reference-notice div { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.monthly-reference-notice strong { font-size:12px; font-weight:700; }
+.monthly-reference-notice span { opacity:.75; line-height:1.55; overflow-wrap:anywhere; }
+
+/* Daily and monthly executive KPI cards share the same ring-based layout.
+   Do not override the global light/dark semantic ring colors here. */
+.daily-overview-card--quality .daily-quality-layout {
+  min-width: 0;
+}
+.daily-overview-card--quality .daily-quality-list {
+  min-width: 0;
+}
+.daily-overview-card--quality .daily-quality-list strong {
+  overflow-wrap: anywhere;
+}
+

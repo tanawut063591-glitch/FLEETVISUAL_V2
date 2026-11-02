@@ -13,6 +13,7 @@ import {
 } from '../models/settings.model';
 import { AuthService } from './auth.service';
 import { DatabaseApiConfigService } from './database-api-config.service';
+import { SecurityService } from './security.service';
 
 @Injectable({ providedIn: 'root' })
 export class UserAccessControlService {
@@ -24,6 +25,7 @@ export class UserAccessControlService {
     private http: HttpClient,
     private authService: AuthService,
     private databaseConfig: DatabaseApiConfigService,
+    private securityService: SecurityService,
   ) {
     this.currentAccessSource.next(this.readCurrentAccessFromBrowser());
   }
@@ -129,9 +131,13 @@ export class UserAccessControlService {
 
   filterVessels<T>(rows: T[]): T[] {
     if (!Array.isArray(rows) || rows.length === 0) return [];
+    const activeRows = rows.filter((row: any) =>
+      ![row, row?.fv, row?.fvInfo, row?.vessel].some((source: any) =>
+        source && [source.name, source.Name, source.prefix, source.id, source.vesselName]
+          .some((value) => value && this.securityService.isExcludedVessel(String(value)))));
     const record = this.getCurrentAccess();
-    if (!record) return this.isAccessControlConfigured() ? [] : rows;
-    if (record.role === 'administrator' || record.accessScope === 'all') return rows;
+    if (!record) return this.isAccessControlConfigured() ? [] : activeRows;
+    if (record.role === 'administrator' || record.accessScope === 'all') return activeRows;
     if (record.status !== 'active') return [];
 
     const allowed = new Set<string>();
@@ -150,7 +156,7 @@ export class UserAccessControlService {
     record.additionalVesselIds.forEach((id) => allowed.add(this.normalize(id)));
     record.excludedVesselIds.forEach((id) => allowed.delete(this.normalize(id)));
 
-    return rows.filter((row) => this.vesselKeys(row).some((key) => allowed.has(key)));
+    return activeRows.filter((row) => this.vesselKeys(row).some((key) => allowed.has(key)));
   }
 
   notifyRecordsChanged(): void {

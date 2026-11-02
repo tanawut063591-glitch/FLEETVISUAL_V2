@@ -705,7 +705,7 @@ export class FleetVesselDataService {
     if (normalized.includes('lazurit')) return 'assets/images/vessel/bb_mulia.jpg';
     if (normalized.includes('zamrud')) return 'assets/images/vessel/bb_zamrud.jpg';
     if (normalized.includes('liberty')) return 'assets/images/vessel/bb_liberty209.jpg';
-    if (normalized.includes('tongkam')) return 'assets/images/vessel/bb_tongkam.jpg';
+
     if (normalized.includes('gemia')) return 'assets/images/vessel/mv_gemia.jpg';
     if (normalized.includes('bongkot')) return 'assets/images/vessel/sc_bongkot.jpg';
     if (normalized.includes('brave')) return 'assets/images/vessel/sc_brave.jpg';
@@ -814,20 +814,6 @@ export class FleetVesselDataService {
         29.4,
         'online',
         minutesAgo(1),
-      ),
-      this.demo(
-        'BB_TONGKAM',
-        'BB TONGKAM',
-        'assets/images/vessel/bb_tongkam.jpg',
-        7.20297,
-        100.58679,
-        0,
-        90,
-        0,
-        0,
-        0,
-        'offline',
-        daysAgo(60),
       ),
       this.demo(
         'MV_GEMIA',

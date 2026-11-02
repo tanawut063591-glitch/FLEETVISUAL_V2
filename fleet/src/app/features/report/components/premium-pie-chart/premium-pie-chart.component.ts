@@ -188,7 +188,7 @@ export class PremiumPieChartComponent implements OnInit, OnChanges, OnDestroy {
               minimumFractionDigits: decimals,
               maximumFractionDigits: decimals,
             })}${unitSuffix}</div>`,
-            `<div style="font-weight:900;margin-top:2px">${percentage.toFixed(2)}%</div>`,
+            `<div style="font-weight:900;margin-top:2px">${percentage.toFixed(decimals)}%</div>`,
             `</div>`,
           ].join('');
         },
@@ -229,7 +229,7 @@ export class PremiumPieChartComponent implements OnInit, OnChanges, OnDestroy {
               // Dense 12-16 mode reports keep tiny slices available via tooltip,
               // but do not print every sub-2% label on top of neighbouring labels.
               if (denseChart && percentage < 2) return '';
-              return `${point.name}: ${percentage.toFixed(2)}%`;
+              return `${point.name}: ${percentage.toFixed(decimals)}%`;
             },
           },
           states: {

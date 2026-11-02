@@ -732,9 +732,6 @@ export class SidebarComponent implements OnInit, OnDestroy, OnChanges {
       return 'assets/images/vessel/bb_liberty209.jpg';
     }
 
-    if (normalized.includes('tongkam')) {
-      return 'assets/images/vessel/bb_tongkam.jpg';
-    }
 
     if (normalized.includes('gemia')) {
       return 'assets/images/vessel/mv_gemia.jpg';

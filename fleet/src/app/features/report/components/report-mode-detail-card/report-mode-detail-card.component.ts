@@ -60,7 +60,9 @@ export class ReportModeDetailCardComponent {
   format(value: unknown, decimals = 2): string {
     // Preserve literal legacy calculation outputs when the vessel service marks
     // them intentionally (e.g. SC RAJA shaft Average = NaN, SC EMERALD LPH = ∞).
-    // Null/undefined still mean a structural blank and render as PDF-style zero.
+    // In archived PDF pages null is a genuine missing source measurement,
+    // not a measured zero; maintain legacy daily formatting elsewhere.
+    if ((value === null || value === undefined) && Array.isArray(this.detail?.officialMetrics)) return '—';
     if (typeof value === 'number' && Number.isNaN(value)) return 'NaN';
     if (value === Number.POSITIVE_INFINITY) return '∞';
     if (value === Number.NEGATIVE_INFINITY) return '-∞';
@@ -72,17 +74,26 @@ export class ReportModeDetailCardComponent {
     });
   }
 
+  get officialHasEngineUtilization(): boolean {
+    const keys = this.detail?.officialMetrics as string[] | undefined;
+    return !keys || keys.includes('M/E Engine Utilized (%)');
+  }
+
   engineUtilization(row: any): number {
+    if (typeof row?.utilizationPercent === 'number') return row.utilizationPercent;
     const hours = Number(row?.runningHours);
     return Number.isFinite(hours) && hours > 0 ? (hours / 24) * 100 : 0;
   }
 
   shaftUtilization(row: any): number {
+    if (typeof row?.utilizationPercent === 'number') return row.utilizationPercent;
     const hours = Number(row?.runningHours);
     return Number.isFinite(hours) && hours > 0 ? (hours / 24) * 100 : 0;
   }
 
   shaftPerEngine(index: number): number {
+    const official = this.shafts[index]?.perMainUtilizationPercent;
+    if (typeof official === 'number') return official;
     const engineHours = Number(this.mainEngines[index]?.runningHours);
     const shaftHours = Number(this.shafts[index]?.runningHours);
     if (!Number.isFinite(engineHours) || !Number.isFinite(shaftHours) || engineHours <= 0) return 0;
@@ -90,6 +101,9 @@ export class ReportModeDetailCardComponent {
   }
 
   generatorUtilization(row: any): number {
+    // A genuine PDF NaN must stay NaN; never turn missing reference data into
+    // 0% by reading the absent monthly per-mode running hour as zero.
+    if (typeof row?.utilizationPercent === 'number') return row.utilizationPercent;
     const explicit = Number(row?.utilizationPercent);
     if (Number.isFinite(explicit)) return explicit;
     const hours = Number(row?.runningHours);

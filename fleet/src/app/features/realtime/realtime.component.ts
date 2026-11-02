@@ -1156,9 +1156,6 @@ export class RealtimeComponent implements OnInit, OnDestroy {
       return 'assets/images/vessel/bb_zamrud.jpg';
     }
 
-    if (normalized.includes('tongkam')) {
-      return 'assets/images/vessel/bb_tongkam.jpg';
-    }
 
     if (normalized.includes('gemia')) {
       return 'assets/images/vessel/mv_gemia.jpg';

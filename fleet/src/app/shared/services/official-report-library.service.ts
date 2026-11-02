@@ -143,6 +143,8 @@ export class OfficialReportLibraryService {
     return String(value || '')
       .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9]/g, '');
+      .replace(/[^a-z0-9]/g, '')
+      // C# PDFs label this vessel SC CHOLRUEDEE while the UI/profile uses SC CHOLUEDEE.
+      .replace(/^sccholruedee$/, 'sccholuedee');
   }
 }

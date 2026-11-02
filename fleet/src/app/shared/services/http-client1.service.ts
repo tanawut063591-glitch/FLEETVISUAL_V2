@@ -15,11 +15,12 @@ import {
   take,
   throwError,
 } from 'rxjs';
-import { catchError, concatMap, finalize, map, mergeMap, shareReplay, tap, timeout, toArray } from 'rxjs/operators';
+import { catchError, concatMap, finalize, map, mergeMap, shareReplay, switchMap, tap, timeout, toArray } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
 import { shouldSkipFailedReportHost } from '../utils/historian-availability';
 import { setBoundedReportCache } from '../utils/bounded-cache.util';
+import { historianMonthEndRecovery, isExcludedMonthEndBoundary, shouldRecoverHistorianMonthEnd } from '../utils/historian-month-end-recovery';
 import {
   COMPLETED_TAG_EMPTY_TTL_MS,
   COMPLETED_TAG_MAX_ENTRIES,
@@ -700,14 +701,84 @@ export class NewHttpClientService {
         ? NewHttpClientService.REPORT_HISTORIAN_PROBE_TIMEOUT_MS
         : NewHttpClientService.REPORT_HISTORIAN_REQUEST_TIMEOUT_MS;
 
-    return this.http
-      .post(`${String(base).replace(/\/+$/, '')}/loggergethistorianvalues`, body, {
-        headers: this.getAuthHeaders(),
-      })
+    const url = `${String(base).replace(/\/+$/, '')}/loggergethistorianvalues`;
+    const recovery = historianMonthEndRecovery(start, end);
+    const read = (endTime: string): Observable<any> => this.http
+      .post(url, { ...body, EndTime: endTime }, { headers: this.getAuthHeaders() })
       .pipe(
         timeout(requestTimeout),
         map((response: any) => this.parseJsonResponse(response)),
       );
+
+    // At a month boundary, never replace valid legacy/PDF data. Only retry a
+    // missing or boundary-only tag using the alternate inclusive/exclusive end.
+    // Both calls use the SAME historian source and pass through the global
+    // two-tag concurrency limiter. A recovered 23:59-only PDF must not gain a
+    // real next-day 00:00 sample (the C# report intentionally omits that row).
+    if (!recovery) return read(end);
+
+    const recover = (primary: any): Observable<any> => {
+      const original = this.normalizeSingleTagLoggerSeries(tagName, primary);
+      if (!shouldRecoverHistorianMonthEnd(original.Records, start)) return of(primary);
+
+      return read(recovery.alternateEnd).pipe(
+        map((alternate: any) => {
+          const fallback = this.normalizeSingleTagLoggerSeries(tagName, alternate);
+          const recoveredRecords = recovery.excludeNextMidnight
+            ? fallback.Records.filter((record: any) =>
+                !isExcludedMonthEndBoundary(record.TimeStamp, recovery.nextMidnight))
+            : fallback.Records;
+          if (recoveredRecords.length === 0) return primary;
+
+          const unique = new Map<string, any>();
+          for (const row of original.Records) {
+            if (!recovery.excludeNextMidnight ||
+                !isExcludedMonthEndBoundary(row.TimeStamp, recovery.nextMidnight)) {
+              unique.set(String(row.TimeStamp), row);
+            }
+          }
+          for (const row of recoveredRecords) unique.set(String(row.TimeStamp), row);
+          console.warn('[Historian] Recovered end-of-month daily samples with the alternate end boundary.', {
+            source, tagName, start, end, recovered: recoveredRecords.length,
+          });
+          return {
+            TagName: tagName,
+            Records: [...unique.values()].sort((a, b) =>
+              new Date(a.TimeStamp).getTime() - new Date(b.TimeStamp).getTime()),
+          };
+        }),
+        // A failed optional recovery must not discard an otherwise usable
+        // original response or hide a real source failure from its caller.
+        catchError((error) => {
+          if (original.Records.length > 0) return of(primary);
+          return throwError(() => error);
+        }),
+      );
+    };
+
+    return read(end).pipe(
+      // Only a failed PRIMARY request switches to the alternate. An optional
+      // recovery failure must not accidentally retry the same alternate twice.
+      map((response) => ({ response, usedAlternate: false })),
+      catchError((primaryError) =>
+        read(recovery.alternateEnd).pipe(
+          map((response) => ({ response, usedAlternate: true })),
+          catchError(() => throwError(() => primaryError)),
+        ),
+      ),
+      switchMap(({ response, usedAlternate }) => {
+        if (!usedAlternate) return recover(response);
+        // The primary request failed, so this is the only usable source. In
+        // the 23:59 PDF case, remove the alternate's next-day midnight row.
+        if (!recovery.excludeNextMidnight) return of(response);
+        const series = this.normalizeSingleTagLoggerSeries(tagName, response);
+        return of({
+          TagName: tagName,
+          Records: series.Records.filter((record: any) =>
+            !isExcludedMonthEndBoundary(record.TimeStamp, recovery.nextMidnight)),
+        });
+      }),
+    );
   }
 
   private normalizeSingleTagLoggerSeries(tagName: string, response: any): any {

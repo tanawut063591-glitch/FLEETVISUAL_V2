@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { SecurityService } from './security.service';
 
 @Injectable({
   providedIn: 'root',
@@ -14,8 +15,10 @@ export class VesselStorageService {
     'activeVessel',
   ];
 
+  constructor(private securityService: SecurityService) {}
+
   setSelectedVessel(vessel: any, key = 'selectedVessel'): void {
-    if (!vessel) {
+    if (!vessel || this.isExcludedVessel(vessel)) {
       return;
     }
 
@@ -28,7 +31,7 @@ export class VesselStorageService {
     for (const key of this.storageKeys) {
       const vessel = this.getVesselByKey(key);
 
-      if (vessel) {
+      if (vessel && !this.isExcludedVessel(vessel)) {
         return vessel;
       }
     }
@@ -58,6 +61,13 @@ export class VesselStorageService {
         vessel?.Id ||
         '',
     ).trim();
+  }
+
+  private isExcludedVessel(vessel: any): boolean {
+    const sources = [vessel, vessel?.fv, vessel?.fvInfo, vessel?.vessel];
+    return sources.some((source) => source &&
+      [source.name, source.Name, source.prefix, source.id, source.vesselName]
+        .some((value) => value && this.securityService.isExcludedVessel(String(value))));
   }
 
   private getVesselByKey(key: string): any | null {

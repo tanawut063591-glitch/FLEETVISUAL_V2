@@ -11,7 +11,11 @@ interface Security {
 export class SecurityService {
   repo: Security[] = [];
 
-  private readonly excludedVesselKeys = new Set<string>(['BAHTERA MAKMUR', 'BB MAKMUR']);
+  // Retired vessels are filtered even if the backend continues returning them.
+  private readonly excludedVesselKeys = new Set<string>([
+    'BAHTERA MAKMUR', 'BB MAKMUR',
+    'BB TONGKAM', 'BBTONGKAM', 'BOURBON TONGKAM', 'BOURBONTONGKAM',
+  ]);
 
   test: string[] = [];
 
@@ -19,7 +23,6 @@ export class SecurityService {
 
   bb_ptt: string[] = [
     'BAHTERA INTAN',
-    'BB TONGKAM',
     'BAHTERA ZAMRUD',
     'BAHTERA LAZURIT',
     'BB LIBERTY 233',
@@ -94,7 +97,7 @@ export class SecurityService {
   }
 
   private clearExcludedStoredSelections(): void {
-    const storageKeys = ['selectedVessel', 'realtimeVessel', 'pastTrackVessel'];
+    const storageKeys = ['selectedVessel', 'realtimeVessel', 'pastTrackVessel', 'reportVessel', 'activeVessel'];
 
     storageKeys.forEach((key) => {
       try {
@@ -106,6 +109,9 @@ export class SecurityService {
           stored?.name,
           stored?.prefix,
           stored?.id,
+          stored?.Name,
+          stored?.vesselName,
+          stored?.shipName,
           stored?.fv?.name,
           stored?.fv?.prefix,
           stored?.fv?.id,
@@ -128,9 +134,13 @@ export class SecurityService {
       .trim()
       .toUpperCase()
       .replace(/[_-]+/g, ' ')
-      .replace(/\s+/g, ' ');
+      .replace(/\s+/g, ' ')
+      .trim();
 
-    return this.excludedVesselKeys.has(normalized);
+    // Historical API aliases and prefixed vessel IDs can contain suffixes.
+    return this.excludedVesselKeys.has(normalized) ||
+      normalized === 'TONGKAM' || normalized.startsWith('BB TONGKAM ') ||
+      normalized.startsWith('BOURBON TONGKAM ');
   }
 
   hasAccess(vesselName: string): boolean {

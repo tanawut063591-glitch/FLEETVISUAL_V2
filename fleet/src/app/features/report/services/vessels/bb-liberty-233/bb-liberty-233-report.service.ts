@@ -1,10 +1,12 @@
+import { aggregateGeneratorModeDetails } from '../../common/aggregate-generator-mode-details';
+import { buildMonthlyDailySlots } from '../../common/monthly-day-slots';
 import { Injectable } from '@angular/core';
 import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, switchMap, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
 import { resetReportCacheForAuthChange, setBoundedReportCache } from '../../common/report-cache.util';
-import { reportDayConcurrency } from '../../common/report-load-policy';
+import { reportDayConcurrency, reportPeriodCacheTtlMs } from '../../common/report-load-policy';
 import {
   LiveReportProfileDocument,
   LiveReportSnapshot,
@@ -221,7 +223,6 @@ interface HourAccumulator {
 const MINUTE_MS = 60_000;
 const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
 const LIVE_REPORT_CACHE_TTL_MS = 30_000;
-const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -506,7 +507,7 @@ export class BbLiberty233ReportService implements VesselReportAdapter {
         if (this.periodReportInFlight.get(key) !== request$) return;
           setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
+          expiresAt: Date.now() + reportPeriodCacheTtlMs(start, end, periodKind),
         });
       }),
       finalize(() => {
@@ -947,6 +948,20 @@ export class BbLiberty233ReportService implements VesselReportAdapter {
       modeRunningHours: report.modeSummary.reduce((sum, row) => sum + row.runningHours, 0),
     }));
 
+    // The PDF has a separate machinery table for EACH of the 16 operating modes.
+    // Monthly aggregation must retain those details rather than rendering one
+    // arbitrary dominant-mode table from the daily fallback.
+    const modeDetails = aggregateGeneratorModeDetails<BbLiberty233ModeDetail>(
+      BB_LIBERTY_233_REPORT_PROFILE.modes,
+      reports,
+      totalElapsedHours,
+    );
+    const dominantMonthlyMode = pdfParityModeSummary.reduce<BbLiberty233ModeSummaryRow | null>(
+      (best, row) => !best || Math.abs(row.fuelUsed) > Math.abs(best.fuelUsed) ? row : best,
+      null,
+    );
+    const monthlyModePassage = modeDetails.find((detail) => detail.key === dominantMonthlyMode?.key)?.summary;
+
     return {
       periodKind,
       dayCount: reports.length,
@@ -966,9 +981,10 @@ export class BbLiberty233ReportService implements VesselReportAdapter {
       auxiliaryFuelTotal,
       totalFuelUsed,
       modeSummary: pdfParityModeSummary,
-      passageSummary,
+      passageSummary: monthlyModePassage || passageSummary,
+      modeDetails,
       tracking,
-      hourly,
+      hourly: periodKind === 'month' ? buildMonthlyDailySlots(reports, periodStart) : hourly,
       speedSeries,
     };
   }

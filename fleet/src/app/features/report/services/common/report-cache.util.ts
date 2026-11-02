@@ -1,13 +1,48 @@
+import { setBoundedReportCache as setSharedBoundedReportCache } from '../../../../shared/utils/bounded-cache.util';
+
 /**
- * Small bounded in-memory cache helper for Report services.
+ * Keep normally completed reports fast. A genuinely blank month-end day must not
+ * remain frozen for an hour if the historian finishes indexing late or a
+ * rollover-window request recovers after the initial attempt.
  *
- * Historical daily reports can be expensive (many historian tags), so keeping the
- * most recently viewed days makes back/forward navigation instant.  At the same
- * time, an unbounded Map would retain large report objects for the life of the SPA.
- * This helper removes expired entries and evicts the oldest entries once the cap
- * is reached.  It never persists telemetry to disk/browser storage.
+ * This applies ONLY to a completed, single-calendar-day, last-of-month report
+ * with no data evidence. It does not change any measurement, PDF calculation,
+ * successful report TTL, or monthly aggregation logic.
  */
-export { setBoundedReportCache } from '../../../../shared/utils/bounded-cache.util';
+export function setBoundedReportCache<K, V extends { expiresAt: number }>(
+  cache: Map<K, V>, key: K, entry: V, maxEntries = 16,
+): void {
+  const payload = (entry as { value?: unknown }).value;
+  const report = payload as {
+    periodStart?: unknown;
+    periodEnd?: unknown;
+    coveragePercent?: unknown;
+    totalFuelUsed?: unknown;
+    tracking?: { begin?: unknown; end?: unknown };
+    hourly?: Array<{ active?: boolean }>;
+  } | null;
+  let expiry = entry.expiresAt;
+
+  if (report && report.periodStart instanceof Date && report.periodEnd instanceof Date &&
+      Array.isArray(report.hourly) && report.hourly.length > 0) {
+    const first = report.periodStart;
+    const last = report.periodEnd;
+    const isMonthEndDay = first.getDate() ===
+      new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+    const singleDay = first.getFullYear() === last.getFullYear() &&
+      first.getMonth() === last.getMonth() && first.getDate() === last.getDate();
+    const hasNoData = !(Number(report.coveragePercent) > 0) &&
+      !(Number(report.totalFuelUsed) > 0) &&
+      !report.tracking?.begin && !report.tracking?.end &&
+      !report.hourly.some((row) => !!row.active);
+    if (isMonthEndDay && singleDay && hasNoData) {
+      expiry = Math.min(expiry, Date.now() + 2 * 60_000);
+    }
+  }
+
+  setSharedBoundedReportCache(cache, key,
+    expiry === entry.expiresAt ? entry : { ...entry, expiresAt: expiry }, maxEntries);
+}
 
 /**
  * A service may live longer than a login session. Invalidate expensive in-memory

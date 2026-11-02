@@ -25,7 +25,7 @@ interface DiagramDevice {
   mode: 'alive' | 'alive-any' | 'gateway';
 }
 
-type DiagramProfileKey = 'default' | 'intan' | 'lazurit' | 'zamrud' | 'liberty233' | 'tongkam';
+type DiagramProfileKey = 'default' | 'intan' | 'lazurit' | 'zamrud' | 'liberty233';
 
 interface DiagramProfile {
   key: DiagramProfileKey;
@@ -294,21 +294,6 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
         'M289.219 442V478H498V535',
         'M289.219 478H671V535',
       ],
-    },
-    tongkam: {
-      key: 'tongkam',
-      height: 755,
-      deviceIds: [
-        'rut', 'hmi', 'hub', 'mini-pc', 'gps', 'plc', 'dcp-gateway', 'mtr-switch',
-        'atop1', 'atop2', 'et2251', 'gen1', 'gen2', 'gen3',
-      ],
-      groupPaths: [this.commonTopGroup, this.commonLowerGroup],
-      bluePaths: [
-        ...this.commonTopPaths,
-        ...this.commonLowerPaths,
-        'M114.5 502H159.5V382.359',
-      ],
-      greenPaths: this.fullGeneratorPaths.slice(0, 3),
     },
   };
 
@@ -617,10 +602,6 @@ export class DiagramComponent implements OnInit, AfterViewInit, OnDestroy {
 
     if (identity.includes('liberty 233') || identity.includes('liberty233')) {
       return 'liberty233';
-    }
-
-    if (identity.includes('tongkam')) {
-      return 'tongkam';
     }
 
     if (identity.includes('lazurit')) {

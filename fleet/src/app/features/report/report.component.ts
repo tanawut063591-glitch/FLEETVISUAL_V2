@@ -61,6 +61,8 @@ import { ReportVesselServiceResolver } from './services/report-vessel-service-re
 import { buildReportChartAxis, chartBarPercent, hourlyPolyline, maxActiveValue, summarizeHourlyValues, ReportChartAxis } from './services/common/report-chart-math';
 import { MachineryChartConfig, AuxiliaryChartConfig, MACHINERY_CHART_CONFIGS, AUXILIARY_CHART_CONFIGS, NUMBERED_AUXILIARY_CHART_CONFIGS } from './config/report-chart.config';
 import { buildFuelQualityNotice, FuelQualitySnapshot, ReportFuelQualityNotice } from './services/common/report-fuel-quality';
+import { MonthlyPdfReferenceService } from './services/common/monthly-pdf-reference.service';
+import { MonthlyAutoSnapshotCacheService } from './services/common/monthly-auto-snapshot-cache.service';
 import { getVesselPdfLayout, VesselPdfLayoutSpec } from './services/common/pdf-report-layout.registry';
 import { PremiumPieChartPoint } from './components/premium-pie-chart/premium-pie-chart.component';
 import {
@@ -89,7 +91,6 @@ import { BahteraIntanReportService } from './services/vessels/bahtera-intan/baht
 import { BahteraLazuritReportService } from './services/vessels/bahtera-lazurit/bahtera-lazurit-report.service';
 import { BahteraZamrudReportService } from './services/vessels/bahtera-zamrud/bahtera-zamrud-report.service';
 import { BbLiberty233ReportService } from './services/vessels/bb-liberty-233/bb-liberty-233-report.service';
-import { BbTongkamReportService } from './services/vessels/bb-tongkam/bb-tongkam-report.service';
 
 declare const google: any;
 
@@ -335,6 +336,9 @@ export class ReportComponent implements OnInit, OnDestroy {
   historicalRangeStart = '';
   historicalRangeEnd = '';
   historicalMonth = '';
+  monthlyOfficialSource: string | null = null;
+  monthlyAlignedFields = 0;
+  /** BAHTERA INTAN month: show all 16 PDF modes by default, optionally focus one. */
   historicalValidationError = '';
   historicalPdfDownloading = false;
   speedPerformancePolyline = '';
@@ -374,7 +378,6 @@ export class ReportComponent implements OnInit, OnDestroy {
     centerAuxFuel: { max: 1, ticks: [1, 0.75, 0.5, 0.25, 0] },
     starboardAuxFuel: { max: 1, ticks: [1, 0.75, 0.5, 0.25, 0] },
     speed: { max: 1, ticks: [1, 0.75, 0.5, 0.25, 0] },
-    dailyTrend: { max: 1, ticks: [1, 0.75, 0.5, 0.25, 0] },
   };
   speedAxisLabels: ReportAxisLabel[] = [];
   machineryLinePolylines: Record<string, { meRun: string; shaftRun: string; shaftRpm: string; engineLoad: string }> = {};
@@ -498,7 +501,8 @@ export class ReportComponent implements OnInit, OnDestroy {
     private bahteraLazuritReportService: BahteraLazuritReportService,
     private bahteraZamrudReportService: BahteraZamrudReportService,
     private bbLiberty233ReportService: BbLiberty233ReportService,
-    private bbTongkamReportService: BbTongkamReportService,
+    private monthlyPdfReference: MonthlyPdfReferenceService,
+    private monthlyAutoCache: MonthlyAutoSnapshotCacheService,
     private changeDetector: ChangeDetectorRef,
   ) {
     const now = new Date();
@@ -1007,10 +1011,6 @@ export class ReportComponent implements OnInit, OnDestroy {
     return this.activeVesselReportAdapter?.id === 'bb-liberty-233';
   }
 
-  get isBbTongkamReport(): boolean {
-    return this.activeVesselReportAdapter?.id === 'bb-tongkam';
-  }
-
   get currentPdfLayout(): VesselPdfLayoutSpec | null {
     return getVesselPdfLayout(this.activeVesselReportAdapter?.id);
   }
@@ -1020,12 +1020,12 @@ export class ReportComponent implements OnInit, OnDestroy {
    * PDF contract.  Monthly/multi-day views may still show web-only analytics.
    */
   get strictPdfParityUi(): boolean {
-    return this.isHistoricalUiView && this.historicalUiPeriodMode === 'day' && !!this.currentPdfLayout;
+    return this.isHistoricalUiView && (this.historicalUiPeriodMode === 'day' || !!this.monthlyOfficialSource) && !!this.currentPdfLayout;
   }
 
   get isBahteraGeneratorReport(): boolean {
     return this.currentPdfLayout?.generatorOnly ??
-      (this.isBahteraIntanReport || this.isBahteraLazuritReport || this.isBahteraZamrudReport || this.isBbLiberty233Report || this.isBbTongkamReport);
+      (this.isBahteraIntanReport || this.isBahteraLazuritReport || this.isBahteraZamrudReport || this.isBbLiberty233Report);
   }
 
   get usesNumberedAuxiliaryReport(): boolean {
@@ -1084,7 +1084,7 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   get dailyPassageSummaryDescription(): string {
     if (this.hasDirectOperatingModeReport) {
-      const vesselLabel = this.isMvGemiaReport ? 'MV GEMIA' : this.isScEmeraldReport ? 'SC EMERALD' : this.isBahteraIntanReport ? 'BAHTERA INTAN' : this.isBahteraLazuritReport ? 'BAHTERA LAZURIT' : this.isBahteraZamrudReport ? 'BAHTERA ZAMRUD' : this.isBbLiberty233Report ? 'BB LIBERTY 233' : this.isBbTongkamReport ? 'BB TONGKAM' : this.isScBongkotReport ? 'SC BONGKOT' : this.isScSultanReport ? 'SC SULTAN' : 'SC RAJA';
+      const vesselLabel = this.isMvGemiaReport ? 'MV GEMIA' : this.isScEmeraldReport ? 'SC EMERALD' : this.isBahteraIntanReport ? 'BAHTERA INTAN' : this.isBahteraLazuritReport ? 'BAHTERA LAZURIT' : this.isBahteraZamrudReport ? 'BAHTERA ZAMRUD' : this.isBbLiberty233Report ? 'BB LIBERTY 233' : this.isScBongkotReport ? 'SC BONGKOT' : this.isScSultanReport ? 'SC SULTAN' : 'SC RAJA';
       return `Machinery and navigation values filtered to the dominant ${vesselLabel} operating mode for the selected period.`;
     }
     return this.isScEmeraldReport
@@ -1096,8 +1096,7 @@ export class ReportComponent implements OnInit, OnDestroy {
     const registeredPage = this.currentPdfLayout?.pages?.[sectionKey];
     if (registeredPage) return registeredPage;
 
-    // Compatibility fallback for vessels that are supported by the application
-    // but were not part of the supplied PDF/C# parity audit set (for example BB TONGKAM).
+    // Compatibility fallback for generator-only vessels without an audited layout.
     if (this.isBahteraGeneratorReport) {
       const pages: Record<string, string> = {
         tracking: '19',
@@ -1254,8 +1253,6 @@ export class ReportComponent implements OnInit, OnDestroy {
         return this.bahteraZamrudReportService;
       case 'bb-liberty-233':
         return this.bbLiberty233ReportService;
-      case 'bb-tongkam':
-        return this.bbTongkamReportService;
       default:
         return null;
     }
@@ -1792,16 +1789,61 @@ export class ReportComponent implements OnInit, OnDestroy {
     const requestPeriodKey = this.buildHistoricalPeriodKey(period.start, period.end, period.kind);
 
     this.scGlory1DailySubscription?.unsubscribe();
+    this.scGlory1DailyReport = null; // do not show stale vessel data during a new request
     this.scGlory1DailyLoading = true;
+    this.monthlyOfficialSource = null;
+    this.monthlyAlignedFields = 0;
     this.scGlory1DailyError = '';
     this.historicalValidationError = '';
     this.changeDetector.markForCheck();
 
-    this.scGlory1DailySubscription = dedicatedService
-      .loadPeriodReport(period.start, period.end, period.kind, force)
+    // UNIFORM MONTHLY SOURCE POLICY (all vessels, all months, all years):
+    // 1. Fetch the completed report from the same Historian adapter used for
+    //    September, including October. No special bundled PDF replacement.
+    // 2. Optionally align against the official monthly PDF served by the same
+    //    report backend. If it is missing/unreachable, keep Historian values.
+    // 3. Reuse the *completed* 31-slot UI result in the session-level cache.
+    // A PDF bundled into public/assets is reference material only, never the
+    // runtime data source. This policy intentionally also removes the special
+    // September SC GLORY 1 snapshot path, so both months behave identically.
+    const sourceMonthKey = `${period.start.getFullYear()}-${String(period.start.getMonth() + 1).padStart(2, '0')}`;
+    const report$ = dedicatedService.loadPeriodReport(period.start, period.end, period.kind, force).pipe(
+      take(1),
+      timeout(period.kind === 'day' ? 120000 : 300000),
+      switchMap((report) => {
+        if (!report) return of(null);
+        if (period.kind !== 'month') return of({ report, sourceFile: null, alignedFields: 0 });
+        return this.monthlyPdfReference.apply(this.selectedVesselName, sourceMonthKey, report)
+          .pipe(
+            timeout(45000),
+            catchError((error) => {
+              console.warn('[Report] PDF alignment unavailable; retaining Historian values.', error);
+              return of({ report, sourceFile: null, alignedFields: 0 });
+            }),
+          );
+      }),
+    );
+
+    // Same Historian -> optional backend PDF alignment -> 31-slot Auto Cache
+    // for September, October, November, December and subsequent years.
+    // Refresh invalidates the client cache and reloads the source.
+    const autoMonthlyReport$ = period.kind === 'month'
+      ? this.monthlyAutoCache.getOrLoad(
+          requestVesselIdentity,
+          period.start,
+          period.end,
+          report$,
+          force,
+          (loaded: unknown) => {
+            if (!loaded || typeof loaded !== 'object' || !('report' in loaded)) return false;
+            const result = (loaded as { report?: ScGlory1PeriodUiReport | null }).report;
+            return !!result && Array.isArray(result.hourly) && result.hourly.length === 31;
+          },
+        )
+      : report$;
+
+    this.scGlory1DailySubscription = autoMonthlyReport$
       .pipe(
-        take(1),
-        timeout(period.kind === 'day' ? 120000 : 300000),
         catchError((error: unknown) => {
           console.warn(`[Report] Unable to load ${this.selectedVesselName || 'dedicated vessel'} historical UI report.`, error);
           const text = String((error as any)?.message || error || '');
@@ -1816,26 +1858,20 @@ export class ReportComponent implements OnInit, OnDestroy {
         }),
         takeUntil(this.destroy$),
       )
-      .subscribe((report) => {
-        if (!report || !this.isHistoricalUiView) return;
-
+      .subscribe((result) => {
+        if (!result?.report || !this.isHistoricalUiView) return;
         const currentPeriod = this.resolveHistoricalUiPeriod();
         const currentPeriodKey = currentPeriod
           ? this.buildHistoricalPeriodKey(currentPeriod.start, currentPeriod.end, currentPeriod.kind)
           : '';
-
-        // Ignore late responses from a vessel/date that is no longer selected.
-        // This is especially important when operators click through the sidebar quickly.
-        if (
-          requestVesselIdentity !== this.getVesselIdentity(this.selectedVessel) ||
-          requestPeriodKey !== currentPeriodKey
-        ) {
-          return;
-        }
-
-        this.scGlory1DailyReport = report;
-        this.scGlory1DailySyncedAt = report.loadedAt;
-        this.updateScGlory1DailyChartState(report);
+        // Ignore late responses if the selected vessel/month changed.
+        if (requestVesselIdentity !== this.getVesselIdentity(this.selectedVessel) ||
+            requestPeriodKey !== currentPeriodKey) return;
+        this.scGlory1DailyReport = result.report;
+        this.scGlory1DailySyncedAt = result.report.loadedAt;
+        this.monthlyOfficialSource = result.sourceFile;
+        this.monthlyAlignedFields = result.alignedFields;
+        this.updateScGlory1DailyChartState(result.report);
         this.changeDetector.markForCheck();
       });
   }
@@ -1906,29 +1942,19 @@ export class ReportComponent implements OnInit, OnDestroy {
     ]);
   }
 
-  showDailyTrendTooltip(event: MouseEvent, row: ScGlory1PeriodUiReport['dailyTrend'][number]): void {
-    this.openChartTooltip(event, this.formatChartDate(row.date), [
-      `M/E Fuel: ${this.formatDailyValue(row.mainEngineFuelTotal, 2)} L`,
-      `A/E Fuel: ${this.formatDailyValue(row.auxiliaryFuelTotal, 2)} L`,
-      `Total Fuel: ${this.formatDailyValue(row.totalFuelUsed, 2)} L`,
-      `Distance: ${this.formatDailyValue(row.distanceNm, 2)} NM`,
-      `Coverage: ${this.formatDailyValue(row.coveragePercent, 0)}%`,
-    ]);
-  }
-
   showHourlyPerformanceTooltip(event: MouseEvent, row: ScGlory1HourlyRow): void {
     if (!row.active) {
-      this.openChartTooltip(event, `${this.padHour(row.hour)}:00`, ['No historian data for this hour']);
+      this.openChartTooltip(event, this.chartTimeLabel(row), [this.monthlyPdfDaySeriesActive ? 'No PDF chart value for this day' : 'No historian data for this hour']);
       return;
     }
     const lines = [
-      `Distance: ${this.formatDailyValue(row.distanceNm, 2)} NM`,
-      `Speed: ${this.formatDailyValue(row.speedKnots, 2)} kn`,
+      `Distance: ${this.formatDailyValue(row.distanceNm, 1)} NM`,
+      `Speed: ${this.formatDailyValue(row.speedKnots, 1)} kn`,
     ];
-    if (!this.usesNumberedAuxiliaryReport) lines.push(`M/E Fuel: ${this.formatDailyValue(row.mainFuel, 2)} L`);
-    lines.push(`A/E Fuel: ${this.formatDailyValue(row.auxFuel, 2)} L`);
-    lines.push(`Total Fuel: ${this.formatDailyValue(row.totalFuel, 2)} L`);
-    this.openChartTooltip(event, `${this.padHour(row.hour)}:00`, lines);
+    if (!this.usesNumberedAuxiliaryReport) lines.push(`M/E Fuel: ${this.formatDailyValue(row.mainFuel, 1)} L`);
+    lines.push(`A/E Fuel: ${this.formatDailyValue(row.auxFuel, 1)} L`);
+    lines.push(`Total Fuel: ${this.formatDailyValue(row.totalFuel, 1)} L`);
+    this.openChartTooltip(event, this.chartTimeLabel(row), lines);
   }
 
   showMainFuelTooltip(event: MouseEvent, row: ScGlory1HourlyRow): void {
@@ -1949,28 +1975,31 @@ export class ReportComponent implements OnInit, OnDestroy {
     const shaftRun = Number((row as any)[machinery.shaftRun]);
     const shaftRpm = Number((row as any)[machinery.shaftRpm]);
     const lines = this.usesNumberedAuxiliaryReport
-      ? [`M/E Running: ${this.formatDailyValue(Number.isFinite(meRun) ? meRun : null, 2)} h`]
+      ? [`M/E Running: ${this.formatDailyValue(Number.isFinite(meRun) ? meRun : null, 1)} h`]
       : [
-          `Fuel: ${this.formatDailyValue(Number.isFinite(fuel) ? fuel : null, 2)} L`,
-          `M/E Running: ${this.formatDailyValue(Number.isFinite(meRun) ? meRun : null, 2)} h`,
-          `Shaft Running: ${this.formatDailyValue(Number.isFinite(shaftRun) ? shaftRun : null, 2)} h`,
-          `Shaft RPM: ${this.formatDailyValue(Number.isFinite(shaftRpm) ? shaftRpm : null, 2)}`,
+          `Fuel: ${this.formatDailyValue(Number.isFinite(fuel) ? fuel : null, 1)} L`,
+          `M/E Running: ${this.formatDailyValue(Number.isFinite(meRun) ? meRun : null, 1)} h`,
+          `Shaft Running: ${this.formatDailyValue(Number.isFinite(shaftRun) ? shaftRun : null, 1)} h`,
+          `Shaft RPM: ${this.formatDailyValue(Number.isFinite(shaftRpm) ? shaftRpm : null, 1)}`,
         ];
     if (this.hasEngineLoadReport && machinery.engineLoad) {
       const engineLoad = Number((row as any)[machinery.engineLoad]);
-      lines.push(`M/E Load: ${this.formatDailyValue(Number.isFinite(engineLoad) ? engineLoad : null, 2)}%`);
+      lines.push(`M/E Load: ${this.formatDailyValue(Number.isFinite(engineLoad) ? engineLoad : null, 1)}%`);
     }
-    this.openChartTooltip(event, `${this.machineryChartTitle(machinery)} · ${this.padHour(row.hour)}:00`, row.active ? lines : ['No historian data for this hour']);
+    this.openChartTooltip(event, `${this.machineryChartTitle(machinery)} · ${this.chartTimeLabel(row)}`, row.active ? lines : [this.monthlyPdfDaySeriesActive ? 'No PDF chart value for this day' : 'No historian data for this hour']);
   }
 
   showAuxFuelTooltip(event: MouseEvent, row: ScGlory1HourlyRow): void {
     if (this.usesNumberedAuxiliaryReport) {
+      const labels = this.isBahteraGeneratorReport
+        ? ['DG1', 'DG2', 'DG3', 'EG', 'DG/EG Total']
+        : ['A/E1', 'A/E2', 'A/E3', 'A/E4', 'Total A/E'];
       this.openHourlyFuelTooltip(event, row, [
-        ['A/E1', row.portAuxFuel],
-        ['A/E2', (row as any).centerAuxFuel ?? null],
-        ['A/E3', row.starboardAuxFuel],
-        ['A/E4', (row as any).fourthAuxFuel ?? null],
-        ['Total A/E', row.auxFuel],
+        [labels[0], row.portAuxFuel],
+        [labels[1], (row as any).centerAuxFuel ?? null],
+        [labels[2], row.starboardAuxFuel],
+        [labels[3], (row as any).fourthAuxFuel ?? null],
+        [labels[4], row.auxFuel],
       ]);
       return;
     }
@@ -1986,23 +2015,23 @@ export class ReportComponent implements OnInit, OnDestroy {
     const fuel = Number((row as any)[auxiliary.fuel]);
     const running = Number((row as any)[auxiliary.run]);
     this.openChartTooltip(event, `${auxiliary.title} · ${this.padHour(row.hour)}:00`, row.active ? [
-      `Fuel: ${this.formatDailyValue(Number.isFinite(fuel) ? fuel : null, 2)} L`,
-      `Running Hours: ${this.formatDailyValue(Number.isFinite(running) ? running : null, 2)} h`,
-    ] : ['No historian data for this hour']);
+      `Fuel: ${this.formatDailyValue(Number.isFinite(fuel) ? fuel : null, 1)} L`,
+      `Running Hours: ${this.formatDailyValue(Number.isFinite(running) ? running : null, 1)} h`,
+    ] : [this.monthlyPdfDaySeriesActive ? 'No PDF chart value for this day' : 'No historian data for this hour']);
   }
 
   showTotalFuelTooltip(event: MouseEvent, row: ScGlory1HourlyRow): void {
     const lines = this.usesNumberedAuxiliaryReport
       ? [
-          `A/E Fuel: ${this.formatDailyValue(row.auxFuel, 2)} L`,
-          `Total Fuel: ${this.formatDailyValue(row.totalFuel, 2)} L`,
+          `A/E Fuel: ${this.formatDailyValue(row.auxFuel, 1)} L`,
+          `Total Fuel: ${this.formatDailyValue(row.totalFuel, 1)} L`,
         ]
       : [
-          `M/E Fuel: ${this.formatDailyValue(row.mainFuel, 2)} L`,
-          `A/E Fuel: ${this.formatDailyValue(row.auxFuel, 2)} L`,
-          `Total Fuel: ${this.formatDailyValue(row.totalFuel, 2)} L`,
+          `M/E Fuel: ${this.formatDailyValue(row.mainFuel, 1)} L`,
+          `A/E Fuel: ${this.formatDailyValue(row.auxFuel, 1)} L`,
+          `Total Fuel: ${this.formatDailyValue(row.totalFuel, 1)} L`,
         ];
-    this.openChartTooltip(event, `Total Fuel · ${this.padHour(row.hour)}:00`, row.active ? lines : ['No historian data for this hour']);
+    this.openChartTooltip(event, `Total Fuel · ${this.chartTimeLabel(row)}`, row.active ? lines : [this.monthlyPdfDaySeriesActive ? 'No PDF chart value for this day' : 'No historian data for this hour']);
   }
 
   /**
@@ -2043,7 +2072,7 @@ export class ReportComponent implements OnInit, OnDestroy {
     if (this.speedHoverPoint !== point || !this.chartTooltipVisible) {
       this.speedHoverPoint = point;
       this.chartTooltipTitle = this.formatChartDateTime(point.timestamp);
-      this.chartTooltipLines = [`Speed: ${this.formatDailyValue(point.speed, 2)} kn`];
+      this.chartTooltipLines = [`Speed: ${this.formatDailyValue(point.speed, 1)} kn`];
       this.chartTooltipVisible = true;
     }
 
@@ -2082,7 +2111,7 @@ export class ReportComponent implements OnInit, OnDestroy {
       `Longitude: ${this.formatDailyCoordinate(point.longitude, false)}`,
     ];
     if (point.speed !== null && Number.isFinite(point.speed)) {
-      lines.push(`Speed: ${this.formatDailyValue(point.speed, 2)} kn`);
+      lines.push(`Speed: ${this.formatDailyValue(point.speed, 1)} kn`);
     }
     if (point.heading !== null && Number.isFinite(point.heading)) {
       lines.push(`Heading: ${this.formatDailyValue(point.heading, 0)}°`);
@@ -2105,9 +2134,9 @@ export class ReportComponent implements OnInit, OnDestroy {
     values: ReadonlyArray<readonly [string, number | null]>,
   ): void {
     const lines = row.active
-      ? values.map(([label, value]) => `${label}: ${this.formatDailyValue(value, 2)} L`)
-      : ['No historian data for this hour'];
-    this.openChartTooltip(event, `${this.padHour(row.hour)}:00`, lines);
+      ? values.map(([label, value]) => `${label}: ${this.formatDailyValue(value, 1)} L`)
+      : [this.monthlyPdfDaySeriesActive ? 'No PDF chart value for this day' : 'No historian data for this hour'];
+    this.openChartTooltip(event, this.chartTimeLabel(row), lines);
   }
 
   private openChartTooltip(event: MouseEvent, title: string, lines: string[]): void {
@@ -2128,10 +2157,6 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   private padHour(hour: number): string {
     return Math.max(0, Math.min(23, Math.floor(hour))).toString().padStart(2, '0');
-  }
-
-  private formatChartDate(value: Date): string {
-    return value.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
   private formatChartDateTime(value: Date): string {
@@ -2256,6 +2281,9 @@ export class ReportComponent implements OnInit, OnDestroy {
     if (value === Number.POSITIVE_INFINITY) return '∞';
     if (value === Number.NEGATIVE_INFINITY) return '-∞';
     if (Number.isNaN(value)) return 'NaN';
+    // A missing field in an archived PDF is not a measured zero. Preserve the
+    // legacy daily PDF's structural-zero formatting outside official snapshots.
+    if ((value === null || value === undefined) && this.monthlyDaySeriesActive) return '—';
     const numeric = value === null || value === undefined ? 0 : value;
     return numeric.toLocaleString('en-US', {
       minimumFractionDigits: digits,
@@ -2264,16 +2292,8 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   formatChartAxisValue(value: number | null | undefined): string {
-    if (value === null || value === undefined || !Number.isFinite(value)) {
-      return '—';
-    }
-
-    const absolute = Math.abs(value);
-    const digits = absolute >= 100 ? 0 : absolute >= 10 ? 1 : 2;
-    return value.toLocaleString('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: digits,
-    });
+    // Chart-only precision: the underlying Historian/PDF reading remains intact.
+    return this.formatDailyValue(value, 1);
   }
 
   formatDailyCoordinate(value: number | null | undefined, isLatitude: boolean): string {
@@ -2285,6 +2305,132 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   formatDailyTime(value: Date | null | undefined): string {
     return value ? this.formatTime(value, false) : '—';
+  }
+
+
+
+  // The expandable "Source Tables" banner was intentionally removed from the
+  // main report UI. Keep source data available internally for QA warnings.
+  private get officialMonthlySourceTables(): {
+    sourceFile: string; period: string; sourceRevisionNote?: string | null;
+    chartRows?: Array<{code: string; values: Array<number | null>}>;
+    trackingReference?: { distanceNm: number | null } | null;
+    overviewMetrics: Array<{label: string; values: Array<number | null>}>;
+    modeRows: Array<{label: string; fuelUsed: number | null; fuelPercent: number | null;
+      runningHours: number | null; runningPercent: number | null; distanceNm: number | null;
+      litresPerNm: number | null; litresPerHour: number | null}>;
+  } | null {
+    return (this.scGlory1DailyReport as any)?.officialPdfRaw || null;
+  }
+
+  /** Source-only QA findings: NEVER adjust archived measurements to hide them. */
+  get monthlyPdfSourceWarnings(): string[] {
+    const source = this.officialMonthlySourceTables;
+    if (!source) {
+      // These vessels have complete C# mode catalogs but no supplied audited
+      // October PDF snapshot.  Historian-derived monthly values are NOT
+      // represented as verified against a PDF that was never provided.
+      return this.monthlyDaySeriesActive && (this.isBahteraZamrudReport || this.isBbLiberty233Report)
+        ? ['Monthly operating-mode values are calculated from Historian day reports, not yet certified against an official monthly PDF for this vessel. All 16 mode tables are available when the daily source readings load.']
+        : [];
+    }
+    const warnings: string[] = [];
+    if (source.sourceRevisionNote) {
+      warnings.push(`${this.selectedVesselName || 'This vessel'}: page-1 fuel totals and Mode values were updated from newer PDF screenshots. The 31-day charts, tracking and any mode-detail pages still use the earlier supplied PDF until the complete revised PDF is available. These sections are NOT confirmed against the newer revision.`);
+    }
+    const total = source.overviewMetrics.find((row) => row.label === 'Total Fuel Used (L)')?.values[0];
+    const fuelValues = source.modeRows.map((row) => row.fuelUsed);
+    if (fuelValues.some((n) => n === null || !Number.isFinite(n))) {
+      warnings.push('Some original PDF mode fuel values are NaN. They are displayed as NaN, not estimated or converted to zero.');
+    } else if (typeof total === 'number' && Number.isFinite(total)) {
+      const modeSum = fuelValues.reduce<number>((sum, n) => sum + (n as number), 0);
+      if (Math.abs(modeSum - total) > 0.1) {
+        warnings.push(`The original PDF disagrees: Engine Summary total ${total.toFixed(2)} L versus mode rows ${modeSum.toFixed(2)} L. Both original figures are retained.`);
+      }
+    }
+    return warnings;
+  }
+
+  /** Every monthly chart is 1..31 days, regardless of PDF archive availability. */
+  get monthlyDaySeriesActive(): boolean {
+    return this.historicalUiPeriodMode === 'month' && this.scGlory1DailyReport?.periodKind === 'month';
+  }
+
+  /** Only true when the day values came from the official PDF chart table. */
+  get monthlyPdfDaySeriesActive(): boolean {
+    return this.monthlyDaySeriesActive && !!(this.scGlory1DailyReport as any)?.officialPdfChartDays;
+  }
+
+  /** Re-use the existing dashboard and bar chart for PDF-backed SC GLORY 1. */
+  get isScGlory1OfficialPdfSnapshot(): boolean {
+    return this.monthlyPdfDaySeriesActive && (this.scGlory1DailyReport as any)?.officialPdfSnapshot === true;
+  }
+
+  get officialGlory1PeakDailySpeed(): number | null {
+    if (!this.isScGlory1OfficialPdfSnapshot) return null;
+    const values = (this.scGlory1DailyReport?.hourly || [])
+      .filter((row) => row.hour <= (this.scGlory1DailyReport?.dayCount || 31))
+      .map((row) => row.speedKnots)
+      .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+    return values.length ? Math.max(...values) : null;
+  }
+
+  get officialGlory1AvailableFuelDays(): number {
+    if (!this.isScGlory1OfficialPdfSnapshot) return 0;
+    return (this.scGlory1DailyReport?.dailyTrend || []).filter((row) =>
+      Number.isFinite(row.totalFuelUsed)).length;
+  }
+
+  /** Completeness of the PDF's daily fuel chart, NOT historian uptime. */
+  get officialMonthlyFuelChartDays(): number {
+    if (!this.monthlyPdfDaySeriesActive) return 0;
+    const dayCount = this.scGlory1DailyReport?.dayCount || 0;
+    return (this.scGlory1DailyReport?.hourly || []).filter((row) =>
+      row.hour >= 1 && row.hour <= dayCount &&
+      typeof row.totalFuel === 'number' && Number.isFinite(row.totalFuel)
+    ).length;
+  }
+
+  get officialMonthlyChartCoveragePercent(): number {
+    const dayCount = this.scGlory1DailyReport?.dayCount || 0;
+    return dayCount > 0
+      ? Math.min(100, Math.max(0, (this.officialMonthlyFuelChartDays / dayCount) * 100)) : 0;
+  }
+
+  get officialMonthlyChartCoverageBackground(): string {
+    const percent = this.officialMonthlyChartCoveragePercent;
+    return `conic-gradient(var(--report-ring-quality) 0% ${percent}%, var(--report-ring-track) ${percent}% 100%)`;
+  }
+
+  trackByMonthlyModeDetail(_index: number, detail: { key?: string; label: string }): string {
+    return detail.key || detail.label;
+  }
+
+  modeSummaryForDetail(detail: { key?: string; label: string }): any {
+    return this.scGlory1DailyReport?.modeSummary?.find((row) =>
+      (detail.key && row.key === detail.key) || row.label === detail.label) || null;
+  }
+
+  hasOfficialChartSeries(code: string): boolean {
+    const codes = (this.scGlory1DailyReport as any)?.officialPdfChartCodes as string[] | undefined;
+    return !this.monthlyPdfDaySeriesActive || !!codes?.includes(code);
+  }
+
+  get chartTimeUnit(): string {
+    return this.monthlyDaySeriesActive ? 'Day' : 'Hour';
+  }
+
+  get officialMonthlyTracking(): any | null {
+    if (!this.monthlyPdfDaySeriesActive) return null;
+    return (this.scGlory1DailyReport as any)?.officialTracking || null;
+  }
+
+  chartCell(value: number | null | undefined): string {
+    return this.formatDailyValue(value, 1);
+  }
+
+  private chartTimeLabel(row: ScGlory1HourlyRow): string {
+    return this.monthlyDaySeriesActive ? `Day ${row.hour}` : `${this.padHour(row.hour)}:00`;
   }
 
   hourlyBarPercent(value: number | null | undefined, maxValue: number): number {
@@ -2300,27 +2446,6 @@ export class ReportComponent implements OnInit, OnDestroy {
     maxValue: number,
   ): string {
     return hourlyPolyline(this.dailyVisibleHourlyRows, selector, maxValue);
-  }
-
-  get historicalDailyTrendMaxFuel(): number {
-    return Math.max(
-      1,
-      ...(this.scGlory1DailyReport?.dailyTrend || []).map((row) => Number(row.totalFuelUsed) || 0),
-    );
-  }
-
-  dailyTrendBarPercent(value: number | null | undefined): number {
-    return this.hourlyBarPercent(value, this.historicalDailyTrendMaxFuel);
-  }
-
-  trackByDailyTrend(_index: number, row: { date: Date }): number {
-    return row.date.getTime();
-  }
-
-  get scGlory1DetailedPeriodLabel(): string {
-    const report = this.scGlory1DailyReport;
-    if (!report) return this.livePeriodLabel;
-    return `${this.formatDateTime(report.periodStart)} → ${this.formatDateTime(report.periodEnd)}`;
   }
 
   get scGlory1DetailedSyncedLabel(): string {
@@ -3122,7 +3247,6 @@ export class ReportComponent implements OnInit, OnDestroy {
       centerAuxFuel: this.buildChartAxis(1),
       starboardAuxFuel: this.buildChartAxis(1),
       speed: this.buildChartAxis(1),
-      dailyTrend: this.buildChartAxis(1),
     };
     this.speedAxisLabels = [];
     this.machineryLinePolylines = {};
@@ -3154,10 +3278,10 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   private updateScGlory1DailyChartState(report: ScGlory1PeriodUiReport): void {
-    // Keep the full 00:00–23:00 clock-hour domain for every vessel and report
-    // period. Missing/future hours are identified by row.active and rendered as
-    // unavailable (never converted to synthetic fuel/distance measurements).
-    // This also keeps the SVG's 24 point centers aligned with all chart columns.
+    // Daily and range reports retain their original clock-hour domain.
+    // Monthly reports always use the 31 calendar-DAY slots built by each
+    // vessel service or read directly from the authoritative monthly PDF.
+    // Missing values remain inactive; the SVG and table share the same domain.
     this.dailyVisibleHourlyRows = [...report.hourly].sort((a, b) => a.hour - b.hour);
     const isScWinter = /\bSC\s+WINTER\b/i.test(this.selectedVesselName);
     this.dailyFuelQualityNotice = buildFuelQualityNotice(
@@ -3194,10 +3318,6 @@ export class ReportComponent implements OnInit, OnDestroy {
       1,
       ...speedChartSeries.map((point) => Math.max(0, Number(point.speed) || 0)),
     );
-    const dailyTrendMaximum = Math.max(
-      1,
-      ...report.dailyTrend.map((row) => Number(row.totalFuelUsed) || 0),
-    );
 
     this.hourlyAxes = {
       distance: this.buildChartAxis(this.hourlyMaxDistance),
@@ -3217,7 +3337,6 @@ export class ReportComponent implements OnInit, OnDestroy {
       speed: report.dayCount === 1
         ? this.buildLegacyPdfSpeedAxis(maximumSpeed)
         : this.buildChartAxis(maximumSpeed),
-      dailyTrend: this.buildChartAxis(dailyTrendMaximum),
     };
 
     this.hourlySpeedPolyline = this.buildHourlyComboPolyline((row) => row.speedKnots, this.hourlyMaxSpeed);
@@ -3233,8 +3352,28 @@ export class ReportComponent implements OnInit, OnDestroy {
     const fieldMaximum = (field: string): number => maxOf((row) => fieldValue(row, field));
     const fieldPolyline = (field: string, maximum: number): string =>
       this.buildHourlyComboPolyline((row) => fieldValue(row, field), maximum);
-    const buildStats = (field: string): { max: number; avg: number; min: number } =>
-      summarizeHourlyValues(active, (row) => fieldValue(row, field));
+    const buildStats = (field: string): { max: number; avg: number; min: number } => {
+      const stats = summarizeHourlyValues(active, (row) => fieldValue(row, field));
+      if (this.monthlyPdfDaySeriesActive) {
+        // DevExpress monthly charts reserve a 31st zero-valued slot in
+        // September, but their AVG divisor is the actual 30-day month.
+        const calendarDays = active.filter((row) => row.hour <= report.dayCount);
+        const values = calendarDays.map((row) => fieldValue(row, field))
+          .filter((value): value is number => value !== null && Number.isFinite(value));
+        // C# chart tables may contain genuine signed daily totalizer deltas
+        // (SC GLORY 1 has AE..F. = -63.1 on 02-Sep-26). The generic web
+        // histogram clamps negative values to zero, which changes the PDF's
+        // minimum and average. Preserve signed source values for PDF stats.
+        if ((report as any).officialPdfChartDays === true || (report as any).officialPdfSnapshot === true) {
+          // This pilot is deliberately SC GLORY 1 only; all other vessels
+          // retain their existing chart min/max behavior.
+          stats.max = values.length ? Math.max(0, ...values) : 0;
+          stats.min = values.length ? Math.min(0, ...values) : 0;
+        }
+        stats.avg = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+      }
+      return stats;
+    };
 
     const machineryFields = {
       port: { meRun: 'portMainRunningHours', shaftRun: 'portShaftRunningHours', shaftRpm: 'portShaftRpm', engineLoad: 'portMainEngineLoad' },
@@ -4647,7 +4786,7 @@ export class ReportComponent implements OnInit, OnDestroy {
     if (normalized.includes('lazurit')) return 'assets/images/vessel/bb_mulia.jpg';
     if (normalized.includes('zamrud')) return 'assets/images/vessel/bb_zamrud.jpg';
     if (normalized.includes('liberty')) return 'assets/images/vessel/bb_liberty209.jpg';
-    if (normalized.includes('tongkam')) return 'assets/images/vessel/bb_tongkam.jpg';
+
     if (normalized.includes('gemia')) return 'assets/images/vessel/mv_gemia.jpg';
     if (normalized.includes('bongkot')) return 'assets/images/vessel/sc_bongkot.jpg';
 

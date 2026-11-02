@@ -19,12 +19,11 @@ import { BahteraIntanReportService } from './vessels/bahtera-intan/bahtera-intan
 import { BahteraLazuritReportService } from './vessels/bahtera-lazurit/bahtera-lazurit-report.service';
 import { BahteraZamrudReportService } from './vessels/bahtera-zamrud/bahtera-zamrud-report.service';
 import { BbLiberty233ReportService } from './vessels/bb-liberty-233/bb-liberty-233-report.service';
-import { BbTongkamReportService } from './vessels/bb-tongkam/bb-tongkam-report.service';
 
 /**
  * Central resolver for vessel-specific report services.
  *
- * SC GLORY 1, SC GLORY 2, SC GLORY 3, SC GLORY 6, SC GLORY 7, SC EMERALD, MV GEMIA, SC CHOLUEDEE, SC BRAVE, SC PAILIN, SC RAJA, SC SULTAN, SC WINTER, SC BONGKOT, BAHTERA INTAN, BAHTERA LAZURIT, BAHTERA ZAMRUD, BB LIBERTY 233, and BB TONGKAM use dedicated historian/report adapters. Other
+ * SC GLORY 1, SC GLORY 2, SC GLORY 3, SC GLORY 6, SC GLORY 7, SC EMERALD, MV GEMIA, SC CHOLUEDEE, SC BRAVE, SC PAILIN, SC RAJA, SC SULTAN, SC WINTER, SC BONGKOT, BAHTERA INTAN, BAHTERA LAZURIT, BAHTERA ZAMRUD, and BB LIBERTY 233 use dedicated historian/report adapters. Other
  * vessels continue to use the existing generic LiveReportService unchanged.
  */
 @Injectable({ providedIn: 'root' })
@@ -50,7 +49,6 @@ export class ReportVesselServiceResolver {
     bahteraLazuritReportService: BahteraLazuritReportService,
     bahteraZamrudReportService: BahteraZamrudReportService,
     bbLiberty233ReportService: BbLiberty233ReportService,
-    bbTongkamReportService: BbTongkamReportService,
   ) {
     this.adapters = [
       scGlory1ReportService,
@@ -71,7 +69,6 @@ export class ReportVesselServiceResolver {
       bahteraLazuritReportService,
       bahteraZamrudReportService,
       bbLiberty233ReportService,
-      bbTongkamReportService,
     ];
   }
 

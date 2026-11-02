@@ -12296,3 +12296,93 @@ app-report .report-table-frame {
     display: none;
   }
 }
+
+/* ========================================================================== */
+/* REPORT MONTHLY UX — 2026-10-20: 30/31 visible days, without a 30-row card. */
+/* The underlying *ngFor already renders EVERY day. Only presentation changes.*/
+/* ========================================================================== */
+app-report .historical-daily-trend__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 12px 0 8px;
+  min-width: 0;
+}
+app-report .historical-daily-trend__table-caption,
+app-report .historical-daily-trend__table-actions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+app-report .historical-daily-trend__table-caption strong {
+  font-size: 12px;
+  font-weight: 800;
+}
+app-report .historical-daily-trend__table-caption span,
+app-report .historical-daily-trend__scroll-hint {
+  font-size: 11px;
+  opacity: .75;
+}
+app-report .historical-daily-trend__expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 6px 11px;
+  border: 1px solid var(--fv-border, #c8d9eb);
+  border-radius: 7px;
+  color: inherit;
+  background: var(--fv-surface, transparent);
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+app-report .historical-daily-trend__expand:hover,
+app-report .historical-daily-trend__expand:focus-visible {
+  outline-offset: 2px;
+  border-color: var(--fv-primary, #2b85d7);
+}
+/* Roughly 9-10 body rows plus the fixed header at common desktop font sizes. */
+app-report .historical-daily-trend__table:not(.is-expanded) {
+  height: auto;
+  max-height: 410px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+app-report .historical-daily-trend__table.is-expanded {
+  max-height: none;
+  height: auto;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+app-report .historical-daily-trend__table:not(.is-expanded) .report-book-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+}
+app-report .historical-daily-trend__table:not(.is-expanded) .report-book-table thead th:first-child {
+  z-index: 6;
+}
+app-report .historical-daily-trend__table .report-book-table tbody th:first-child {
+  z-index: 2;
+}
+app-report .historical-daily-trend__source-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: .76;
+  margin: 9px 2px 0;
+}
+@container report-dashboard (max-width: 760px) {
+  app-report .historical-daily-trend__table:not(.is-expanded) { max-height: 350px; }
+  app-report .historical-daily-trend__table-caption,
+  app-report .historical-daily-trend__table-actions { width: 100%; }
+}

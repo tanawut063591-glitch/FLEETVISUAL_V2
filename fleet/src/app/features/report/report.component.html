@@ -111,16 +111,12 @@
         </div>
       </section>
 
-      <app-report-fuel-quality *ngIf="dailyFuelQualityNotice as notice"
-        [notice]="notice"></app-report-fuel-quality>
-
       <section class="report-full-daily" *ngIf="dedicatedReportServiceActive"
           [class.report-full-daily--no-data]="!!scGlory1DailyReport && !detailedReportHasHistorianData(scGlory1DailyReport)"
           [attr.aria-label]="(selectedVesselName || 'Dedicated vessel') + ' complete historical report UI'">
           <div class="daily-ui-loading" *ngIf="scGlory1DailyLoading && !scGlory1DailyReport">
             <i class="fa fa-circle-o-notch fa-spin" aria-hidden="true"></i>
-            <div><strong>Loading historian web report…</strong><span>Fuel, machinery, shaft, navigation and hourly
-                series are loaded from the dedicated historian service for {{ selectedVesselName || 'the selected vessel' }}. Multi-day periods are split into safe daily requests.</span></div>
+            <div><strong>Loading historian web report…</strong><span>Monthly reports use the same Historian and optional official PDF alignment for every month. Data is cached in this session after successful loading.</span></div>
           </div>
 
           <div class="daily-ui-error" *ngIf="scGlory1DailyError">
@@ -135,17 +131,21 @@
             <div>
               <strong>No historian data for this report period</strong>
               <span>No usable fuel, mode, navigation or machinery samples were returned for {{ historicalPeriodLabel }}.
-                If the vessel has been offline for a long period, choose a date before its last known transmission.</span>
+                At a month boundary, the app also checks an alternate historian end-time before showing this message.
+                Use Refresh to retry, and check the original official PDF / data source before treating blank values as zero.</span>
             </div>
           </div>
 
           <ng-container *ngIf="scGlory1DailyReport as detailed">
-            <section class="daily-executive-overview" aria-label="Daily report visual overview">
+            <!-- Keep one executive-dashboard design for daily AND monthly reports.
+                 Only the metric source/period labels differ; PDF chart coverage
+                 is never presented as raw historian telemetry coverage. -->
+            <section class="daily-executive-overview" aria-label="Report period visual overview">
               <article class="daily-overview-card daily-overview-card--fuel">
                 <header class="daily-overview-card__header">
                   <span class="daily-overview-icon"><i class="fa fa-tint" aria-hidden="true"></i></span>
                   <div><small>FUEL DISTRIBUTION</small>
-                    <h3>{{ detailed.dayCount > 1 ? 'Period Fuel Mix' : 'Daily Fuel Mix' }}</h3>
+                    <h3>{{ detailed.dayCount > 1 ? (historicalUiPeriodMode === 'month' ? 'Monthly Fuel Mix' : 'Period Fuel Mix') : 'Daily Fuel Mix' }}</h3>
                   </div>
                   <em>{{ detailed.dayCount > 1 ? (detailed.dayCount + ' days') : historicalPeriodLabel }}</em>
                 </header>
@@ -200,8 +200,15 @@
                   <div><small>VOYAGE PERFORMANCE</small>
                     <h3>Navigation Summary</h3>
                   </div>
-                  <em>Historian</em>
+                  <em>{{ isScGlory1OfficialPdfSnapshot ? 'Official PDF' : (monthlyPdfDaySeriesActive || monthlyAlignedFields > 0 ? 'Historian + PDF' : 'Historian') }}</em>
                 </header>
+                <div *ngIf="isScGlory1OfficialPdfSnapshot; else liveMonthlyVoyageMetrics" class="daily-overview-metric-grid">
+                  <div><small>PDF distance</small><strong>{{ formatDailyValue(detailed.tracking.distanceNm, 2) }}</strong><span>NM</span></div>
+                  <div><small>Highest plotted day speed</small><strong>{{ formatDailyValue(officialGlory1PeakDailySpeed, 1) }}</strong><span>kn · day chart</span></div>
+                  <div><small>Daily chart coverage</small><strong>{{ officialGlory1AvailableFuelDays }}/{{ detailed.dayCount }}</strong><span>PDF date slots</span></div>
+                  <div><small>Peak daily fuel</small><strong>{{ formatDailyValue(dailyPeakFuelValue, 1) }}</strong><span>L · day {{ dailyPeakFuelHour }}</span></div>
+                </div>
+                <ng-template #liveMonthlyVoyageMetrics>
                 <div class="daily-overview-metric-grid">
                   <div><small>Distance</small><strong>{{ formatDailyValue(detailed.tracking.distanceNm, 2)
                       }}</strong><span>NM</span></div>
@@ -212,16 +219,31 @@
                   <div><small>Peak fuel</small><strong>{{ formatDailyValue(dailyPeakFuelValue, 1) }}</strong><span>L @
                       {{ dailyPeakFuelHour >= 0 ? (dailyPeakFuelHour + ':00') : '—' }}</span></div>
                 </div>
+                </ng-template>
               </article>
 
               <article class="daily-overview-card daily-overview-card--quality">
                 <header class="daily-overview-card__header">
                   <span class="daily-overview-icon"><i class="fa fa-shield" aria-hidden="true"></i></span>
                   <div><small>REPORT QUALITY</small>
-                    <h3>Historian Coverage</h3>
+                    <h3>{{ monthlyPdfDaySeriesActive ? 'PDF Chart Coverage' : 'Historian Coverage' }}</h3>
                   </div>
                   <em>{{ isHistoricalUiView ? (detailed.dayCount + ' day' + (detailed.dayCount === 1 ? '' : 's')) : telemetryAgeLabel }}</em>
                 </header>
+                <!-- Match the DAILY report's ring + three aligned KPI rows.
+                     A PDF's plotted date slots are NOT historian coverage. -->
+                <div class="daily-quality-layout" *ngIf="monthlyPdfDaySeriesActive; else liveHistorianCoverage">
+                  <div class="daily-quality-ring" [style.background]="officialMonthlyChartCoverageBackground"
+                    [attr.aria-label]="officialMonthlyFuelChartDays + ' of ' + detailed.dayCount + ' PDF daily chart slots available'">
+                    <div><strong>{{ officialMonthlyChartCoveragePercent | number:'1.0-0' }}%</strong><span>PDF days</span></div>
+                  </div>
+                  <div class="daily-quality-list">
+                    <div><span>Chart date slots</span><strong>{{ officialMonthlyFuelChartDays }}/{{ detailed.dayCount }}</strong></div>
+                    <div><span>Source</span><strong>{{ isScGlory1OfficialPdfSnapshot ? 'Official PDF' : 'PDF chart' }}</strong></div>
+                    <div><span>Historian coverage</span><strong>Not in PDF</strong></div>
+                  </div>
+                </div>
+                <ng-template #liveHistorianCoverage>
                 <div class="daily-quality-layout">
                   <div class="daily-quality-ring chart-hover-source"
                     [style.background]="'conic-gradient(var(--report-ring-quality) 0% ' + detailed.coveragePercent + '%, var(--report-ring-track) ' + detailed.coveragePercent + '% 100%)'"
@@ -236,61 +258,9 @@
                     <div><span>Last sync</span><strong>{{ scGlory1DetailedSyncedLabel }}</strong></div>
                   </div>
                 </div>
+                </ng-template>
               </article>
             </section>
-
-            <section class="historical-daily-trend" *ngIf="detailed.dayCount > 1" aria-label="Daily period trend">
-              <header>
-                <div>
-                  <span>PERIOD OVERVIEW</span>
-                  <h3>Daily Trend</h3>
-                  <p>{{ detailed.dayCount }} loaded days · fuel, distance and historian coverage by date.</p>
-                </div>
-                <strong>{{ scGlory1DetailedPeriodLabel }}</strong>
-              </header>
-              <div class="historical-daily-trend__axis-frame">
-                <div class="daily-chart-y-axis daily-chart-y-axis--trend" aria-hidden="true">
-                  <b>Total Fuel (L)</b>
-                  <div>
-                    <span *ngFor="let tick of hourlyAxes['dailyTrend'].ticks">{{ formatChartAxisValue(tick) }}</span>
-                  </div>
-                </div>
-                <div class="historical-daily-trend__plot-scroll">
-                  <div class="historical-daily-trend__plot">
-                    <div class="historical-daily-trend__chart">
-                      <div class="historical-daily-trend__bar chart-hover-source"
-                        *ngFor="let row of detailed.dailyTrend; trackBy: trackByDailyTrend"
-                        (mouseenter)="showDailyTrendTooltip($event, row)" (mousemove)="moveChartTooltip($event)"
-                        (mouseleave)="hideChartTooltip()">
-                        <div class="historical-daily-trend__column"><i
-                          [style.height.%]="hourlyBarPercent(row.totalFuelUsed, hourlyAxes['dailyTrend'].max)"></i></div>
-                        <small>{{ row.date | date:'dd' }}</small>
-                      </div>
-                    </div>
-                    <div class="daily-chart-x-title">Day</div>
-                  </div>
-                </div>
-              </div>
-              <div class="report-book-table-wrap historical-daily-trend__table">
-                <table class="report-book-table">
-                  <thead>
-                    <tr><th>Date</th><th class="num">M/E Fuel (L)</th><th class="num">A/E Fuel (L)</th><th class="num">Total Fuel (L)</th><th class="num">Distance (NM)</th><th class="num">Coverage</th></tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let row of detailed.dailyTrend; trackBy: trackByDailyTrend">
-                      <th>{{ row.date | date:'dd MMM yyyy' }}</th>
-                      <td class="num">{{ formatDailyValue(row.mainEngineFuelTotal, 2) }}</td>
-                      <td class="num">{{ formatDailyValue(row.auxiliaryFuelTotal, 2) }}</td>
-                      <td class="num"><strong>{{ formatDailyValue(row.totalFuelUsed, 2) }}</strong></td>
-                      <td class="num">{{ formatDailyValue(row.distanceNm, 2) }}</td>
-                      <td class="num">{{ formatDailyValue(row.coveragePercent, 0) }}%</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-
 
             <article id="daily-page-1"
               class="report-table-panel daily-report-section daily-report-section--page1 premium-daily-card">
@@ -488,12 +458,12 @@
 
               <div class="daily-mode-visuals daily-mode-visuals--interactive" aria-label="Interactive mode pie charts">
                 <app-premium-pie-chart eyebrow="FUEL DISTRIBUTION" title="Fuel Consumption (% By Mode)" unit="L"
-                  [data]="modeFuelPieData" [height]="320" [decimalPlaces]="2"
+                  [data]="modeFuelPieData" [height]="320" [decimalPlaces]="1"
                   emptyText="Fuel consumption by mode is not available for the current historian period.">
                 </app-premium-pie-chart>
 
                 <app-premium-pie-chart eyebrow="RUNNING PROFILE" title="Running Hours (% By Mode)" unit="hrs"
-                  [data]="modeRunningPieData" [height]="320" [decimalPlaces]="2"
+                  [data]="modeRunningPieData" [height]="320" [decimalPlaces]="1"
                   emptyText="Running-hour distribution by mode is not available for the current historian period.">
                 </app-premium-pie-chart>
               </div>
@@ -555,15 +525,18 @@
                   <p>Machinery, fuel, load, utilization, speed and distance values for every operating mode, arranged in the same field structure as the official Daily PDF. Zero-value modes remain visible.</p>
                 </div>
               </header>
+              <!-- Render every source PDF operating-mode card in its original
+                   order, including zero-value modes. No redundant mode picker. -->
               <div class="daily-all-mode-details">
-                <app-report-mode-detail-card
-                  *ngFor="let detail of $any(detailed).modeDetails; let modeIndex = index"
-                  [detail]="detail"
-                  [modeRow]="detailed.modeSummary[modeIndex]"
-                  [generatorLayout]="isBahteraGeneratorReport"
-                  [numberedAuxiliaryLayout]="usesNumberedAuxiliaryReport && !isBahteraGeneratorReport"
-                  [showEngineLoad]="hasEngineLoadReport">
-                </app-report-mode-detail-card>
+                <ng-container *ngFor="let detail of $any(detailed).modeDetails; trackBy: trackByMonthlyModeDetail">
+                  <app-report-mode-detail-card
+                    [detail]="detail"
+                    [modeRow]="modeSummaryForDetail(detail)"
+                    [generatorLayout]="isBahteraGeneratorReport"
+                    [numberedAuxiliaryLayout]="usesNumberedAuxiliaryReport && !isBahteraGeneratorReport"
+                    [showEngineLoad]="hasEngineLoadReport">
+                  </app-report-mode-detail-card>
+                </ng-container>
               </div>
             </article>
 
@@ -779,18 +752,16 @@
                   </thead>
                   <tbody>
                     <tr>
-                      <th>Begin Position [{{ formatDailyTime(detailed.tracking.begin?.timestamp) }}]</th>
-                      <td>{{ formatDailyCoordinate(detailed.tracking.begin?.latitude, true) }}, {{
-                        formatDailyCoordinate(detailed.tracking.begin?.longitude, false) }}</td>
-                      <td class="num">{{ formatDailyValue(detailed.tracking.begin?.speed, 3) }}</td>
-                      <td class="num">{{ formatDailyValue(detailed.tracking.begin?.heading, 2) }}</td>
+                      <th>Begin Position [{{ officialMonthlyTracking?.begin?.timestamp || formatDailyTime(detailed.tracking.begin?.timestamp) }}]</th>
+                      <td>{{ officialMonthlyTracking?.begin?.position || (formatDailyCoordinate(detailed.tracking.begin?.latitude, true) + ', ' + formatDailyCoordinate(detailed.tracking.begin?.longitude, false)) }}</td>
+                      <td class="num">{{ formatDailyValue(officialMonthlyTracking?.begin?.speed ?? detailed.tracking.begin?.speed, 3) }}</td>
+                      <td class="num">{{ formatDailyValue(officialMonthlyTracking?.begin?.heading ?? detailed.tracking.begin?.heading, 2) }}</td>
                     </tr>
                     <tr>
-                      <th>End Position [{{ formatDailyTime(detailed.tracking.end?.timestamp) }}]</th>
-                      <td>{{ formatDailyCoordinate(detailed.tracking.end?.latitude, true) }}, {{
-                        formatDailyCoordinate(detailed.tracking.end?.longitude, false) }}</td>
-                      <td class="num">{{ formatDailyValue(detailed.tracking.end?.speed, 3) }}</td>
-                      <td class="num">{{ formatDailyValue(detailed.tracking.end?.heading, 2) }}</td>
+                      <th>End Position [{{ officialMonthlyTracking?.end?.timestamp || formatDailyTime(detailed.tracking.end?.timestamp) }}]</th>
+                      <td>{{ officialMonthlyTracking?.end?.position || (formatDailyCoordinate(detailed.tracking.end?.latitude, true) + ', ' + formatDailyCoordinate(detailed.tracking.end?.longitude, false)) }}</td>
+                      <td class="num">{{ formatDailyValue(officialMonthlyTracking?.end?.speed ?? detailed.tracking.end?.speed, 3) }}</td>
+                      <td class="num">{{ formatDailyValue(officialMonthlyTracking?.end?.heading ?? detailed.tracking.end?.heading, 2) }}</td>
                     </tr>
                     <tr class="total-row">
                       <th>Total Distance (NM)</th>
@@ -799,7 +770,7 @@
                   </tbody>
                 </table>
               </div>
-              <div class="daily-tracking-visual-grid">
+              <div class="daily-tracking-visual-grid" *ngIf="!monthlyPdfDaySeriesActive">
                 <section class="daily-map-card">
                   <div class="daily-map-card__title"><strong>Daily Route Track</strong><span>Historian GPS path</span>
                   </div>
@@ -853,18 +824,18 @@
             <article id="daily-page-5"
               class="report-table-panel daily-report-section premium-daily-card premium-chart-section">
               <header class="report-table-panel__header report-table-panel__header--compact">
-                <div><h2>Hourly Performance · Independent Scales</h2>
-                  <p>{{ detailed.dayCount > 1 ? 'Clock-hour aggregation across the selected period. Each series uses its own scale; fuel, distance and running hours are summed while speed/RPM are averaged.' : 'Hourly comparison from midnight to the latest historian sample. Each series uses its own scale.' }}</p>
+                <div><h2>{{ monthlyPdfDaySeriesActive ? 'Vessel Navigation & Fuel · Daily PDF Chart' : (monthlyDaySeriesActive ? 'Monthly Performance · Daily Values (1–31)' : 'Hourly Performance · Independent Scales') }}</h2>
+                  <p>{{ monthlyPdfDaySeriesActive ? 'Daily values from the official C# monthly report, days 1–31.' : monthlyDaySeriesActive ? 'Day 1–31 from existing daily historian measurements. Missing or non-existent calendar days are shown as unavailable, never estimated.' : detailed.dayCount > 1 ? 'Clock-hour aggregation across the selected period. Each series uses its own scale.' : 'Hourly comparison from midnight to the latest historian sample.' }}</p>
                 </div>
-                <div class="daily-chart-header-stat"><small>PEAK FUEL HOUR</small><strong>{{ dailyPeakFuelHour >= 0 ?
-                    (dailyPeakFuelHour + ':00') : '—' }}</strong><em>{{ formatDailyValue(dailyPeakFuelValue, 1) }}
+                <div class="daily-chart-header-stat"><small>{{ monthlyDaySeriesActive ? 'PEAK FUEL DAY' : 'PEAK FUEL HOUR' }}</small><strong>{{ dailyPeakFuelHour >= 0 ?
+                    (monthlyDaySeriesActive ? ('Day ' + dailyPeakFuelHour) : (dailyPeakFuelHour + ':00')) : '—' }}</strong><em>{{ formatDailyValue(dailyPeakFuelValue, 1) }}
                     L</em></div>
               </header>
-              <div class="period-aggregation-note" *ngIf="detailed.dayCount > 1">
+              <div class="period-aggregation-note" *ngIf="detailed.dayCount > 1 && !monthlyDaySeriesActive">
                 <i class="fa fa-info-circle" aria-hidden="true"></i>
-                <div><strong>Multi-day hourly view</strong><span>Each column combines the same clock hour across {{ detailed.dayCount }} days. Use Daily Trend above for day-by-day totals.</span></div>
+                <div><strong>Multi-day hourly view</strong><span>Each column combines the same clock hour across {{ detailed.dayCount }} days.</span></div>
               </div>
-              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Hourly chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
+              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
                 <div class="daily-hourly-sync__content">
                   <div class="daily-axis-chart daily-axis-chart--combo">
                     <div class="daily-chart-y-axis" aria-hidden="true">
@@ -899,16 +870,16 @@
                           </ng-container>
                         </svg>
                       </div>
-                      <div class="daily-chart-x-title">Hour</div>
+                      <div class="daily-chart-x-title">{{ chartTimeUnit }}</div>
                     </div>
                   </div>
                   <div class="daily-chart-legend daily-chart-legend--combo daily-chart-legend--engineering" aria-label="Combination chart legend and independent series scales">
                     <span class="distance"><b>V.D.</b><strong>Distance</strong><em>BAR</em><small>0–{{ formatChartAxisValue(hourlyAxes['distance'].max) }} NM</small></span>
                     <span class="speed"><b>V.S.</b><strong>Speed</strong><em>LINE</em><small>0–{{ formatChartAxisValue(hourlyAxes['speed'].max) }} kn</small></span>
                     <span *ngIf="!usesNumberedAuxiliaryReport" class="main"><b>ME..F.</b><strong>Main Engine Fuel</strong><em>LINE</em><small>0–{{ formatChartAxisValue(hourlyAxes['mainFuel'].max) }} L</small></span>
-                    <span class="aux"><b>AE..F.</b><strong>Auxiliary Engine Fuel</strong><em>LINE</em><small>0–{{ formatChartAxisValue(hourlyAxes['auxFuel'].max) }} L</small></span>
+                    <span class="aux"><b>{{ isBahteraGeneratorReport ? 'DG..F.' : 'AE..F.' }}</b><strong>{{ isBahteraGeneratorReport ? 'DG/EG Fuel' : 'Auxiliary Engine Fuel' }}</strong><em>LINE</em><small>0–{{ formatChartAxisValue(hourlyAxes['auxFuel'].max) }} L</small></span>
                   </div>
-                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — hours stay aligned</p>
+                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — {{ monthlyDaySeriesActive ? 'days' : 'hours' }} stay aligned</p>
                   <div class="report-book-table-wrap hourly-table-wrap">
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
@@ -917,29 +888,29 @@
                       </colgroup>
                       <thead>
                         <tr>
-                          <th>Hour</th>
+                          <th>{{ chartTimeUnit }}</th>
                           <th *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.hour }}</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr class="metric-row metric-row--distance">
                           <th>V.D.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.distanceNm, 2) : '—'
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.distanceNm) : '—'
                             }}</td>
                         </tr>
                         <tr class="metric-row metric-row--speed">
                           <th>V.S.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.speedKnots, 2) : '—'
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.speedKnots) : '—'
                             }}</td>
                         </tr>
                         <tr *ngIf="!usesNumberedAuxiliaryReport" class="metric-row metric-row--main">
                           <th>ME..F.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.mainFuel, 2) : '—' }}
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.mainFuel) : '—' }}
                           </td>
                         </tr>
                         <tr class="metric-row metric-row--aux">
                           <th>{{ isBahteraGeneratorReport ? 'DG..F.' : 'AE..F.' }}</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.auxFuel, 2) : '—' }}
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.auxFuel) : '—' }}
                           </td>
                         </tr>
                       </tbody>
@@ -959,6 +930,7 @@
             </article>
 
             <article id="daily-page-6"
+              *ngIf="!monthlyPdfDaySeriesActive"
               class="report-table-panel daily-report-section premium-daily-card premium-chart-section">
               <header class="report-table-panel__header report-table-panel__header--compact">
                 <div><h2>Speed Performance</h2>
@@ -1015,7 +987,7 @@
                 <div><h2>Main Engine Fuel Consumption</h2>
                 </div>
               </header>
-              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Hourly chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
+              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
                 <div class="daily-hourly-sync__content">
                   <div class="daily-axis-chart">
                     <div class="daily-chart-y-axis" aria-hidden="true">
@@ -1050,12 +1022,12 @@
                           [attr.y1]="100 - hourlyBarPercent(hourlyReferenceStats['mainFuel']?.min, hourlyAxes['mainFuel'].max)"
                           [attr.y2]="100 - hourlyBarPercent(hourlyReferenceStats['mainFuel']?.min, hourlyAxes['mainFuel'].max)"></line>
                       </svg>
-                      <div class="daily-chart-x-title">Hour</div>
+                      <div class="daily-chart-x-title">{{ chartTimeUnit }}</div>
                     </div>
                   </div>
                   <div class="daily-chart-legend daily-chart-legend--engineering-lines"><span class="port">PM..F.</span><span class="starboard">SM..F.</span><span *ngIf="dailyHasCenterMainEngine"
                       class="center">CM..F.</span><span class="ref-max">MAX {{ formatDailyValue(hourlyReferenceStats['mainFuel']?.max, 1) }} L</span><span class="ref-avg">AVG {{ formatDailyValue(hourlyReferenceStats['mainFuel']?.avg, 1) }} L</span><span class="ref-min">MIN {{ formatDailyValue(hourlyReferenceStats['mainFuel']?.min, 1) }} L</span></div>
-                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — hours stay aligned</p>
+                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — {{ monthlyDaySeriesActive ? 'days' : 'hours' }} stay aligned</p>
                   <div class="report-book-table-wrap hourly-table-wrap">
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
@@ -1064,29 +1036,29 @@
                       </colgroup>
                       <thead>
                         <tr>
-                          <th>Hour</th>
+                          <th>{{ chartTimeUnit }}</th>
                           <th *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.hour }}</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr *ngIf="!usesNumberedAuxiliaryReport">
                           <th>ME..F.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.mainFuel, 2) : '—' }}
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.mainFuel) : '—' }}
                           </td>
                         </tr>
                         <tr>
                           <th>PM..F.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.portMainFuel, 2) :
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.portMainFuel) :
                             '—' }}</td>
                         </tr>
                         <tr>
                           <th>SM..F.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.starboardMainFuel, 2)
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.starboardMainFuel)
                             : '—' }}</td>
                         </tr>
                         <tr *ngIf="dailyHasCenterMainEngine">
                           <th>CM..F.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.centerMainFuel, 2) :
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.centerMainFuel) :
                             '—' }}</td>
                         </tr>
                       </tbody>
@@ -1116,7 +1088,7 @@
                 <div><h2>{{ machineryChartTitle(machinery) }}</h2>
                 </div>
               </header>
-              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Hourly chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
+              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
                 <div class="daily-hourly-sync__content">
                   <div class="daily-axis-chart">
                     <div class="daily-chart-y-axis" aria-hidden="true">
@@ -1158,7 +1130,7 @@
                             [attr.cy]="100 - hourlyBarPercent($any(row)[machinery.engineLoad], machineryLineMaxima[machinery.key]?.engineLoad || 100)" r="1.5"></circle>
                         </ng-container>
                       </svg>
-                      <div class="daily-chart-x-title">Hour</div>
+                      <div class="daily-chart-x-title">{{ chartTimeUnit }}</div>
                     </div>
                   </div>
                   <div class="daily-chart-legend daily-chart-legend--machinery">
@@ -1171,7 +1143,7 @@
                     <span *ngIf="!usesNumberedAuxiliaryReport" class="ref-avg">AVG {{ formatDailyValue(hourlyReferenceStats[machinery.fuel]?.avg, 1) }} L</span>
                     <span *ngIf="!usesNumberedAuxiliaryReport" class="ref-min">MIN {{ formatDailyValue(hourlyReferenceStats[machinery.fuel]?.min, 1) }} L</span>
                   </div>
-                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — hours stay aligned</p>
+                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — {{ monthlyDaySeriesActive ? 'days' : 'hours' }} stay aligned</p>
                   <div class="report-book-table-wrap hourly-table-wrap">
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
@@ -1180,7 +1152,7 @@
                       </colgroup>
                       <thead>
                         <tr>
-                          <th>Hour</th>
+                          <th>{{ chartTimeUnit }}</th>
                           <th *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.hour }}</th>
                         </tr>
                       </thead>
@@ -1188,27 +1160,27 @@
                         <tr *ngIf="!usesNumberedAuxiliaryReport">
                           <th>{{ machinery.codeFuel }}</th>
                           <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ?
-                            formatDailyValue($any(row)[machinery.fuel], 2) : '—' }}</td>
+                            formatDailyValue($any(row)[machinery.fuel], 1) : '—' }}</td>
                         </tr>
                         <tr>
                           <th>{{ machinery.codeMe }}</th>
                           <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ?
-                            formatDailyValue($any(row)[machinery.meRun], 2) : '—' }}</td>
+                            formatDailyValue($any(row)[machinery.meRun], 1) : '—' }}</td>
                         </tr>
                         <tr *ngIf="!usesNumberedAuxiliaryReport">
                           <th>{{ machinery.codeShaftRun }}</th>
                           <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ?
-                            formatDailyValue($any(row)[machinery.shaftRun], 2) : '—' }}</td>
+                            formatDailyValue($any(row)[machinery.shaftRun], 1) : '—' }}</td>
                         </tr>
                         <tr *ngIf="!usesNumberedAuxiliaryReport">
                           <th>{{ machinery.codeShaftRpm }}</th>
                           <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ?
-                            formatDailyValue($any(row)[machinery.shaftRpm], 2) : '—' }}</td>
+                            formatDailyValue($any(row)[machinery.shaftRpm], 1) : '—' }}</td>
                         </tr>
                         <tr *ngIf="hasEngineLoadReport && machinery.engineLoad && machinery.codeEngineLoad">
                           <th>{{ machinery.codeEngineLoad }}</th>
                           <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ?
-                            formatDailyValue($any(row)[machinery.engineLoad], 2) : '—' }}</td>
+                            formatDailyValue($any(row)[machinery.engineLoad], 1) : '—' }}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1236,7 +1208,7 @@
                 <div><h2>{{ isBahteraGeneratorReport ? 'DG/EG Fuel Consumption' : 'Auxiliary Engine Fuel Consumption' }}</h2>
                 </div>
               </header>
-              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Hourly chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
+              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
                 <div class="daily-hourly-sync__content">
                   <div class="daily-axis-chart">
                     <div class="daily-chart-y-axis" aria-hidden="true">
@@ -1272,7 +1244,7 @@
                           [attr.y1]="100 - hourlyBarPercent(hourlyReferenceStats['auxFuel']?.min, hourlyAxes['auxFuel'].max)"
                           [attr.y2]="100 - hourlyBarPercent(hourlyReferenceStats['auxFuel']?.min, hourlyAxes['auxFuel'].max)"></line>
                       </svg>
-                      <div class="daily-chart-x-title">Hour</div>
+                      <div class="daily-chart-x-title">{{ chartTimeUnit }}</div>
                     </div>
                   </div>
                   <div class="daily-chart-legend daily-chart-legend--reference">
@@ -1280,7 +1252,7 @@
                     <span class="ref-avg">AVG {{ formatDailyValue(hourlyReferenceStats['auxFuel']?.avg, 1) }} L</span>
                     <span class="ref-min">MIN {{ formatDailyValue(hourlyReferenceStats['auxFuel']?.min, 1) }} L</span>
                   </div>
-                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — hours stay aligned</p>
+                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — {{ monthlyDaySeriesActive ? 'days' : 'hours' }} stay aligned</p>
                   <div class="report-book-table-wrap hourly-table-wrap">
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
@@ -1289,28 +1261,28 @@
                       </colgroup>
                       <thead>
                         <tr>
-                          <th>Hour</th>
+                          <th>{{ chartTimeUnit }}</th>
                           <th *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.hour }}</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
                           <th>{{ isBahteraGeneratorReport ? 'DG..F.' : 'AE..F.' }}</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.auxFuel, 2) : '—' }}
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.auxFuel) : '—' }}
                           </td>
                         </tr>
                         <ng-container *ngIf="usesNumberedAuxiliaryReport; else standardAuxFuelRows">
-                          <tr><th>{{ isBahteraGeneratorReport ? 'DG1..F.' : 'AE1..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.portAuxFuel, 2) : '—' }}</td></tr>
-                          <tr><th>{{ isBahteraGeneratorReport ? 'DG2..F.' : 'AE2..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue($any(row).centerAuxFuel, 2) : '—' }}</td></tr>
-                          <tr><th>{{ isBahteraGeneratorReport ? 'DG3..F.' : 'AE3..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.starboardAuxFuel, 2) : '—' }}</td></tr>
-                          <tr><th>{{ isBahteraGeneratorReport ? 'EG..F.' : 'AE4..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue($any(row).fourthAuxFuel, 2) : '—' }}</td></tr>
+                          <tr><th>{{ isBahteraGeneratorReport ? 'DG1..F.' : 'AE1..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.portAuxFuel) : '—' }}</td></tr>
+                          <tr><th>{{ isBahteraGeneratorReport ? 'DG2..F.' : 'AE2..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell($any(row).centerAuxFuel) : '—' }}</td></tr>
+                          <tr><th>{{ isBahteraGeneratorReport ? 'DG3..F.' : 'AE3..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.starboardAuxFuel) : '—' }}</td></tr>
+                          <tr><th>{{ isBahteraGeneratorReport ? 'EG..F.' : 'AE4..F.' }}</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell($any(row).fourthAuxFuel) : '—' }}</td></tr>
                         </ng-container>
                         <ng-template #standardAuxFuelRows>
-                          <tr><th>PA..F.</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.portAuxFuel, 2) : '—' }}</td></tr>
+                          <tr><th>PA..F.</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.portAuxFuel) : '—' }}</td></tr>
                           <ng-container *ngIf="dailyHasCenterAuxiliary">
-                            <tr><th>CA..F.</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue($any(row).centerAuxFuel, 2) : '—' }}</td></tr>
+                            <tr><th>CA..F.</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell($any(row).centerAuxFuel) : '—' }}</td></tr>
                           </ng-container>
-                          <tr><th>SA..F.</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.starboardAuxFuel, 2) : '—' }}</td></tr>
+                          <tr><th>SA..F.</th><td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.starboardAuxFuel) : '—' }}</td></tr>
                         </ng-template>
                       </tbody>
                     </table>
@@ -1344,7 +1316,7 @@
                 <div><h2>{{ auxiliaryChartTitle(auxiliary) }}</h2>
                 </div>
               </header>
-              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Hourly chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
+              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
                 <div class="daily-hourly-sync__content">
                   <div class="daily-axis-chart">
                     <div class="daily-chart-y-axis" aria-hidden="true">
@@ -1377,7 +1349,7 @@
                             [attr.cy]="100 - hourlyBarPercent($any(row)[auxiliary.run], auxiliaryRunMaxima[auxiliary.key] || 1)" r="1.55"></circle>
                         </ng-container>
                       </svg>
-                      <div class="daily-chart-x-title">Hour</div>
+                      <div class="daily-chart-x-title">{{ chartTimeUnit }}</div>
                     </div>
                   </div>
                   <div class="daily-chart-legend daily-chart-legend--auxiliary">
@@ -1387,7 +1359,7 @@
                     <span class="ref-avg">AVG {{ formatDailyValue(hourlyReferenceStats[auxiliary.fuel]?.avg, 1) }} L</span>
                     <span class="ref-min">MIN {{ formatDailyValue(hourlyReferenceStats[auxiliary.fuel]?.min, 1) }} L</span>
                   </div>
-                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — hours stay aligned</p>
+                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — {{ monthlyDaySeriesActive ? 'days' : 'hours' }} stay aligned</p>
                   <div class="report-book-table-wrap hourly-table-wrap">
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
@@ -1396,7 +1368,7 @@
                       </colgroup>
                       <thead>
                         <tr>
-                          <th>Hour</th>
+                          <th>{{ chartTimeUnit }}</th>
                           <th *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.hour }}</th>
                         </tr>
                       </thead>
@@ -1404,12 +1376,11 @@
                         <tr>
                           <th>{{ auxiliaryFuelCode(auxiliary) }}</th>
                           <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ?
-                            formatDailyValue($any(row)[auxiliary.fuel], 2) : '—' }}</td>
+                            chartCell($any(row)[auxiliary.fuel]) : '—' }}</td>
                         </tr>
                         <tr>
                           <th>{{ auxiliaryRunCode(auxiliary) }}</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue($any(row)[auxiliary.run],
-                            2) : '—' }}</td>
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell($any(row)[auxiliary.run]) : '—' }}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1426,13 +1397,13 @@
             </article>
             </ng-container>
 
-            <article id="daily-page-14"
+            <article id="daily-page-14" *ngIf="!monthlyPdfDaySeriesActive || hasOfficialChartSeries('T.F.U.')"
               class="report-table-panel daily-report-section premium-daily-card premium-chart-section">
               <header class="report-table-panel__header report-table-panel__header--compact">
                 <div><h2>Total Fuel Used</h2>
                 </div>
               </header>
-              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Hourly chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
+              <div class="daily-hourly-sync" role="region" tabindex="0" aria-label="Chart and table, scroll both together horizontally" [style.--report-visible-hour-count]="dailyVisibleHourlyRows.length">
                 <div class="daily-hourly-sync__content">
                   <div class="daily-axis-chart">
                     <div class="daily-chart-y-axis" aria-hidden="true">
@@ -1460,7 +1431,7 @@
                           [attr.y1]="100 - hourlyBarPercent(hourlyReferenceStats['totalFuel']?.min, hourlyAxes['totalFuel'].max)"
                           [attr.y2]="100 - hourlyBarPercent(hourlyReferenceStats['totalFuel']?.min, hourlyAxes['totalFuel'].max)"></line>
                       </svg>
-                      <div class="daily-chart-x-title">Hour</div>
+                      <div class="daily-chart-x-title">{{ chartTimeUnit }}</div>
                     </div>
                   </div>
                   <div class="daily-chart-legend daily-chart-legend--reference">
@@ -1468,7 +1439,7 @@
                     <span class="ref-avg">AVG {{ formatDailyValue(hourlyReferenceStats['totalFuel']?.avg, 1) }} L</span>
                     <span class="ref-min">MIN {{ formatDailyValue(hourlyReferenceStats['totalFuel']?.min, 1) }} L</span>
                   </div>
-                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — hours stay aligned</p>
+                  <p class="hourly-table-hint"><i class="fa fa-arrows-h" aria-hidden="true"></i> Swipe chart or table sideways — {{ monthlyDaySeriesActive ? 'days' : 'hours' }} stay aligned</p>
                   <div class="report-book-table-wrap hourly-table-wrap">
                     <table class="report-book-table hourly-matrix">
                       <colgroup>
@@ -1477,14 +1448,14 @@
                       </colgroup>
                       <thead>
                         <tr>
-                          <th>Hour</th>
+                          <th>{{ chartTimeUnit }}</th>
                           <th *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.hour }}</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
                           <th>T.F.U.</th>
-                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? formatDailyValue(row.totalFuel, 2) : '—'
+                          <td *ngFor="let row of dailyVisibleHourlyRows; trackBy: trackByHourlyRow">{{ row.active ? chartCell(row.totalFuel) : '—'
                             }}</td>
                         </tr>
                       </tbody>

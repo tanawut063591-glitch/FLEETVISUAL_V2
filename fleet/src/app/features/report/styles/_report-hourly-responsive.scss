@@ -1,4 +1,4 @@
-/* Fleet Report — 24-hour fluid chart system (all vessel adapters).
+/* Fleet Report — shared 24-hour / 31-day fluid chart system (all vessel adapters).
    Scoped to the shared report UI. Presentation only: no fuel, RPM, mode,
    historian, aggregation, or vessel profile calculations are modified.
    Keep this partial loaded AFTER report-layout, report-visual and both themes.

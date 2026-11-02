@@ -1,0 +1,1559 @@
+{
+  "sourceFile": "BAHTERA-ZAMRUD-Monthly-Report-2026-09.pdf",
+  "period": "2026-09",
+  "metrics": {
+    "DG1 Total Fuel Used (L)": [
+      33341.0
+    ],
+    "DG1 Running Hour (Hour)": [
+      209.47
+    ],
+    "DG2 Total Fuel Used (L)": [
+      49699.0
+    ],
+    "DG2 Running Hour (Hour)": [
+      279.1
+    ],
+    "DG3 Total Fuel Used (L)": [
+      70604.0
+    ],
+    "DG3 Running Hour (Hour)": [
+      319.37
+    ],
+    "EG Total Fuel Used (L)": [
+      3.1
+    ],
+    "EG Running Hour (Hour)": [
+      0.05
+    ],
+    "DG1 Engine Load (kW)": [
+      272.13
+    ],
+    "DG2 Engine Load (kW)": [
+      304.5
+    ],
+    "DG3 Engine Load (kW)": [
+      294.08
+    ],
+    "Total Fuel Used (L)": [
+      153647.1
+    ],
+    "EG Engine Load (kW)": [
+      0.0
+    ],
+    "DG/EG Engine Utilized (%)": [
+      29.1,
+      38.8,
+      44.4,
+      0.0
+    ]
+  },
+  "modeRows": [
+    {
+      "label": "Underway (ECO Speed)",
+      "fuelUsed": 79400.04,
+      "fuelPercent": 51.68,
+      "runningHours": 289.79,
+      "runningPercent": 40.25,
+      "distanceNm": 1683.85,
+      "litresPerNm": 47.15,
+      "litresPerHour": 273.99
+    },
+    {
+      "label": "Underway (Full Speed)",
+      "fuelUsed": 0.0,
+      "fuelPercent": 0.0,
+      "runningHours": 0.0,
+      "runningPercent": 0.0,
+      "distanceNm": 0.0,
+      "litresPerNm": 0.0,
+      "litresPerHour": 0.0
+    },
+    {
+      "label": "Alongside Jack up Rig (BDB)",
+      "fuelUsed": 0.0,
+      "fuelPercent": 0.0,
+      "runningHours": 0.0,
+      "runningPercent": 0.0,
+      "distanceNm": 0.0,
+      "litresPerNm": 0.0,
+      "litresPerHour": 0.0
+    },
+    {
+      "label": "Alongside Tender Rig",
+      "fuelUsed": 454.25,
+      "fuelPercent": 0.3,
+      "runningHours": 3.02,
+      "runningPercent": 0.42,
+      "distanceNm": 0.57,
+      "litresPerNm": 796.93,
+      "litresPerHour": 150.41
+    },
+    {
+      "label": "Alongside FSO",
+      "fuelUsed": 0.0,
+      "fuelPercent": 0.0,
+      "runningHours": 0.0,
+      "runningPercent": 0.0,
+      "distanceNm": 0.0,
+      "litresPerNm": 0.0,
+      "litresPerHour": 0.0
+    },
+    {
+      "label": "Snatching for Cargo operation",
+      "fuelUsed": 12896.59,
+      "fuelPercent": 8.39,
+      "runningHours": 61.24,
+      "runningPercent": 8.51,
+      "distanceNm": 49.09,
+      "litresPerNm": 262.71,
+      "litresPerHour": 210.59
+    },
+    {
+      "label": "Berth at Jetty (Cargo/Bunker/Maintenance)",
+      "fuelUsed": 10290.66,
+      "fuelPercent": 6.7,
+      "runningHours": 93.92,
+      "runningPercent": 13.04,
+      "distanceNm": 1.93,
+      "litresPerNm": 5331.95,
+      "litresPerHour": 109.57
+    },
+    {
+      "label": "Moored with another Vessel for transferring",
+      "fuelUsed": 0.0,
+      "fuelPercent": 0.0,
+      "runningHours": 0.0,
+      "runningPercent": 0.0,
+      "distanceNm": 0.0,
+      "litresPerNm": 0.0,
+      "litresPerHour": 0.0
+    },
+    {
+      "label": "Dynamic Positioning (DP)",
+      "fuelUsed": 0.0,
+      "fuelPercent": 0.0,
+      "runningHours": 0.0,
+      "runningPercent": 0.0,
+      "distanceNm": 0.0,
+      "litresPerNm": null,
+      "litresPerHour": 0.0
+    },
+    {
+      "label": "Standby (Idling) outside 500 meter zone",
+      "fuelUsed": 36.97,
+      "fuelPercent": 0.02,
+      "runningHours": 0.28,
+      "runningPercent": 0.04,
+      "distanceNm": 0.69,
+      "litresPerNm": 53.58,
+      "litresPerHour": 132.03
+    },
+    {
+      "label": "Standby (Idling) inside 500 meter zone",
+      "fuelUsed": 0.0,
+      "fuelPercent": 0.0,
+      "runningHours": 0.0,
+      "runningPercent": 0.0,
+      "distanceNm": 0.0,
+      "litresPerNm": 0.0,
+      "litresPerHour": 0.0
+    },
+    {
+      "label": "Standby at mooring buoy",
+      "fuelUsed": 16220.81,
+      "fuelPercent": 10.56,
+      "runningHours": 128.85,
+      "runningPercent": 17.9,
+      "distanceNm": 44.21,
+      "litresPerNm": 366.9,
+      "litresPerHour": 125.89
+    },
+    {
+      "label": "Port Movements",
+      "fuelUsed": 934.14,
+      "fuelPercent": 0.61,
+      "runningHours": 6.36,
+      "runningPercent": 0.88,
+      "distanceNm": 8.78,
+      "litresPerNm": 106.39,
+      "litresPerHour": 146.88
+    },
+    {
+      "label": "Towing operation",
+      "fuelUsed": 27383.42,
+      "fuelPercent": 17.82,
+      "runningHours": 72.51,
+      "runningPercent": 10.07,
+      "distanceNm": 22.8,
+      "litresPerNm": 1201.03,
+      "litresPerHour": 377.65
+    },
+    {
+      "label": "Anchor Handling operation",
+      "fuelUsed": 3461.34,
+      "fuelPercent": 2.25,
+      "runningHours": 37.09,
+      "runningPercent": 5.15,
+      "distanceNm": 1.94,
+      "litresPerNm": 1784.2,
+      "litresPerHour": 93.32
+    },
+    {
+      "label": "Other",
+      "fuelUsed": 2568.87,
+      "fuelPercent": 1.67,
+      "runningHours": 26.95,
+      "runningPercent": 3.74,
+      "distanceNm": 2.97,
+      "litresPerNm": 864.94,
+      "litresPerHour": 95.32
+    }
+  ],
+  "pages": 26,
+  "chartSeries": {
+    "V.D.": [
+      41.9,
+      10.6,
+      5.4,
+      21.1,
+      59.0,
+      100.2,
+      156.4,
+      31.7,
+      71.0,
+      75.5,
+      82.2,
+      89.3,
+      141.9,
+      101.9,
+      130.4,
+      0.3,
+      0.4,
+      12.8,
+      25.6,
+      128.6,
+      36.7,
+      51.7,
+      17.6,
+      14.3,
+      76.0,
+      63.1,
+      0.3,
+      56.1,
+      116.2,
+      99.3,
+      0.0
+    ],
+    "V.S.": [
+      1.7,
+      0.4,
+      0.2,
+      0.9,
+      2.8,
+      4.2,
+      6.5,
+      1.3,
+      3.0,
+      3.2,
+      3.4,
+      3.7,
+      5.9,
+      4.2,
+      5.5,
+      0.0,
+      0.0,
+      0.5,
+      1.1,
+      5.4,
+      1.5,
+      2.2,
+      0.7,
+      0.6,
+      3.2,
+      2.6,
+      0.0,
+      2.3,
+      4.9,
+      4.1,
+      0.0
+    ],
+    "DG..F.": [
+      3835.0,
+      4102.0,
+      8423.0,
+      7664.0,
+      6433.0,
+      6336.0,
+      6293.0,
+      3812.0,
+      5103.0,
+      5183.0,
+      5439.0,
+      4887.0,
+      7100.0,
+      6070.0,
+      6271.0,
+      1846.0,
+      2253.0,
+      2589.0,
+      3144.0,
+      6456.0,
+      4387.0,
+      5196.0,
+      2666.1,
+      8122.0,
+      8092.0,
+      3899.0,
+      2537.0,
+      3717.0,
+      6105.0,
+      5687.0,
+      0.0
+    ],
+    "DG1..F.": [
+      0.0,
+      165.0,
+      0.0,
+      0.0,
+      2780.0,
+      3438.0,
+      5327.0,
+      416.0,
+      416.0,
+      229.0,
+      326.0,
+      1329.0,
+      7100.0,
+      1731.0,
+      615.0,
+      763.0,
+      0.0,
+      136.0,
+      148.0,
+      197.0,
+      486.0,
+      385.0,
+      0.0,
+      2369.0,
+      1570.0,
+      2435.0,
+      0.0,
+      980.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "DG2..F.": [
+      2922.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      898.0,
+      3396.0,
+      4687.0,
+      4954.0,
+      5113.0,
+      3558.0,
+      0.0,
+      0.0,
+      0.0,
+      1083.0,
+      2253.0,
+      2453.0,
+      2153.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      2531.0,
+      651.0,
+      0.0,
+      2076.0,
+      5597.0,
+      5374.0,
+      0.0
+    ],
+    "DG3..F.": [
+      913.0,
+      3937.0,
+      8423.0,
+      7664.0,
+      3653.0,
+      2898.0,
+      68.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      4339.0,
+      5656.0,
+      0.0,
+      0.0,
+      0.0,
+      843.0,
+      6259.0,
+      3901.0,
+      4811.0,
+      2663.0,
+      5753.0,
+      3991.0,
+      813.0,
+      2537.0,
+      661.0,
+      508.0,
+      313.0,
+      0.0
+    ],
+    "EG..F.": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      3.1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "DG1..RH": [
+      0.0,
+      1.8,
+      0.0,
+      0.0,
+      14.8,
+      24.0,
+      21.6,
+      5.2,
+      5.4,
+      2.7,
+      3.6,
+      11.8,
+      24.0,
+      9.7,
+      5.7,
+      11.1,
+      0.0,
+      1.1,
+      1.1,
+      3.0,
+      5.5,
+      5.2,
+      0.0,
+      16.7,
+      11.1,
+      14.8,
+      0.0,
+      9.9,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "DG1..EL": [
+      0.0,
+      258.8,
+      0.0,
+      0.0,
+      443.1,
+      422.3,
+      864.0,
+      218.9,
+      197.7,
+      258.8,
+      212.2,
+      216.7,
+      808.9,
+      598.0,
+      283.6,
+      145.5,
+      0.0,
+      535.8,
+      588.1,
+      229.4,
+      188.4,
+      207.4,
+      0.0,
+      380.4,
+      407.9,
+      500.6,
+      0.0,
+      197.4,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "DG2..RH": [
+      21.6,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      2.6,
+      23.7,
+      23.2,
+      23.7,
+      23.5,
+      12.4,
+      0.0,
+      0.0,
+      0.0,
+      13.1,
+      23.9,
+      24.0,
+      21.1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      9.1,
+      2.7,
+      0.0,
+      7.1,
+      23.8,
+      23.7,
+      0.0
+    ],
+    "DG2..EL": [
+      354.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      966.2,
+      315.9,
+      527.5,
+      571.6,
+      549.2,
+      952.0,
+      0.0,
+      0.0,
+      0.0,
+      139.0,
+      141.6,
+      195.2,
+      205.7,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      957.8,
+      924.5,
+      0.0,
+      964.8,
+      715.2,
+      654.9,
+      0.0
+    ],
+    "DG3..RH": [
+      6.6,
+      23.3,
+      21.4,
+      22.1,
+      18.0,
+      16.8,
+      0.6,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      13.8,
+      18.5,
+      0.0,
+      0.0,
+      0.0,
+      2.9,
+      23.8,
+      23.5,
+      23.3,
+      23.8,
+      22.4,
+      13.9,
+      6.6,
+      23.6,
+      7.7,
+      4.4,
+      2.5,
+      0.0
+    ],
+    "DG3..EL": [
+      236.8,
+      260.7,
+      562.5,
+      597.1,
+      374.6,
+      534.2,
+      433.1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      657.6,
+      961.8,
+      0.0,
+      0.0,
+      0.0,
+      905.1,
+      729.1,
+      333.9,
+      415.1,
+      222.4,
+      345.3,
+      452.7,
+      94.0,
+      123.0,
+      167.1,
+      218.4,
+      197.8,
+      0.0
+    ],
+    "DG4..F.": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      3.1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "DG4..RH": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "DG4..EL": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "T.F.U.": [
+      3835.0,
+      4102.0,
+      8423.0,
+      7664.0,
+      6433.0,
+      6336.0,
+      6293.0,
+      3812.0,
+      5103.0,
+      5183.0,
+      5439.0,
+      4887.0,
+      7100.0,
+      6070.0,
+      6271.0,
+      1846.0,
+      2253.0,
+      2589.0,
+      3144.0,
+      6456.0,
+      4387.0,
+      5196.0,
+      2666.1,
+      8122.0,
+      8092.0,
+      3899.0,
+      2537.0,
+      3717.0,
+      6105.0,
+      5687.0,
+      0.0
+    ]
+  },
+  "modeDetails": [
+    {
+      "label": "Underway (ECO Speed)",
+      "page": 3,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          22468.91
+        ],
+        "DG1 Engine Load (kW)": [
+          511.26
+        ],
+        "DG2 Total Fuel Used (L)": [
+          28010.78
+        ],
+        "DG2 Engine Load (kW)": [
+          814.01
+        ],
+        "DG3 Total Fuel Used (L)": [
+          28932.36
+        ],
+        "DG3 Engine Load (kW)": [
+          590.51
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          5.81
+        ],
+        "Total Fuel Used (L)": [
+          79412.05
+        ],
+        "Travel Distance (NM)": [
+          1683.85
+        ],
+        "DG/EG Engine Utilized (%)": [
+          14.0,
+          16.4,
+          15.6,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Underway (Full Speed)",
+      "page": 4,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG1 Engine Load (kW)": [
+          null
+        ],
+        "DG2 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG2 Engine Load (kW)": [
+          null
+        ],
+        "DG3 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG3 Engine Load (kW)": [
+          null
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          null
+        ],
+        "Total Fuel Used (L)": [
+          0.0
+        ],
+        "Travel Distance (NM)": [
+          0.0
+        ],
+        "DG/EG Engine Utilized (%)": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Alongside Jack up Rig (BDB)",
+      "page": 5,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG1 Engine Load (kW)": [
+          null
+        ],
+        "DG2 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG2 Engine Load (kW)": [
+          null
+        ],
+        "DG3 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG3 Engine Load (kW)": [
+          null
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          null
+        ],
+        "Total Fuel Used (L)": [
+          0.0
+        ],
+        "Travel Distance (NM)": [
+          0.0
+        ],
+        "DG/EG Engine Utilized (%)": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Alongside Tender Rig",
+      "page": 6,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          38.56
+        ],
+        "DG1 Engine Load (kW)": [
+          185.14
+        ],
+        "DG2 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG2 Engine Load (kW)": [
+          null
+        ],
+        "DG3 Total Fuel Used (L)": [
+          415.69
+        ],
+        "DG3 Engine Load (kW)": [
+          271.24
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          0.19
+        ],
+        "Total Fuel Used (L)": [
+          454.25
+        ],
+        "Travel Distance (NM)": [
+          0.57
+        ],
+        "DG/EG Engine Utilized (%)": [
+          0.0,
+          0.0,
+          0.4,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Alongside FSO",
+      "page": 7,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG1 Engine Load (kW)": [
+          null
+        ],
+        "DG2 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG2 Engine Load (kW)": [
+          null
+        ],
+        "DG3 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG3 Engine Load (kW)": [
+          null
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          null
+        ],
+        "Total Fuel Used (L)": [
+          0.0
+        ],
+        "Travel Distance (NM)": [
+          0.0
+        ],
+        "DG/EG Engine Utilized (%)": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Snatching for Cargo operation",
+      "page": 8,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          2648.84
+        ],
+        "DG1 Engine Load (kW)": [
+          271.88
+        ],
+        "DG2 Total Fuel Used (L)": [
+          4345.83
+        ],
+        "DG2 Engine Load (kW)": [
+          339.87
+        ],
+        "DG3 Total Fuel Used (L)": [
+          5901.92
+        ],
+        "DG3 Engine Load (kW)": [
+          335.67
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          0.8
+        ],
+        "Total Fuel Used (L)": [
+          12896.59
+        ],
+        "Travel Distance (NM)": [
+          49.09
+        ],
+        "DG/EG Engine Utilized (%)": [
+          3.6,
+          3.5,
+          4.9,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Berth at Jetty (Cargo/Bunker/Maintenance)",
+      "page": 9,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          5062.19
+        ],
+        "DG1 Engine Load (kW)": [
+          154.91
+        ],
+        "DG2 Total Fuel Used (L)": [
+          4864.5
+        ],
+        "DG2 Engine Load (kW)": [
+          159.46
+        ],
+        "DG3 Total Fuel Used (L)": [
+          363.97
+        ],
+        "DG3 Engine Load (kW)": [
+          171.53
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          0.02
+        ],
+        "Total Fuel Used (L)": [
+          10290.66
+        ],
+        "Travel Distance (NM)": [
+          1.93
+        ],
+        "DG/EG Engine Utilized (%)": [
+          5.5,
+          7.3,
+          0.5,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Moored with another Vessel for transferring operation",
+      "page": 10,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG1 Engine Load (kW)": [
+          null
+        ],
+        "DG2 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG2 Engine Load (kW)": [
+          null
+        ],
+        "DG3 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG3 Engine Load (kW)": [
+          null
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          null
+        ],
+        "Total Fuel Used (L)": [
+          0.0
+        ],
+        "Travel Distance (NM)": [
+          0.0
+        ],
+        "DG/EG Engine Utilized (%)": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Dynamic Positioning",
+      "page": 11,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG1 Engine Load (kW)": [
+          null
+        ],
+        "DG2 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG2 Engine Load (kW)": [
+          null
+        ],
+        "DG3 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG3 Engine Load (kW)": [
+          null
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          null
+        ],
+        "Total Fuel Used (L)": [
+          0.0
+        ],
+        "Travel Distance (NM)": [
+          0.0
+        ],
+        "DG/EG Engine Utilized (%)": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Standby (Idling) outside 500 meter zone",
+      "page": 12,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          36.97
+        ],
+        "DG1 Engine Load (kW)": [
+          385.88
+        ],
+        "DG2 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG2 Engine Load (kW)": [
+          null
+        ],
+        "DG3 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG3 Engine Load (kW)": [
+          null
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          2.46
+        ],
+        "Total Fuel Used (L)": [
+          36.97
+        ],
+        "Travel Distance (NM)": [
+          0.69
+        ],
+        "DG/EG Engine Utilized (%)": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Standby (Idling) inside 500 meter zone",
+      "page": 13,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG1 Engine Load (kW)": [
+          null
+        ],
+        "DG2 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG2 Engine Load (kW)": [
+          null
+        ],
+        "DG3 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG3 Engine Load (kW)": [
+          null
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          null
+        ],
+        "Total Fuel Used (L)": [
+          0.0
+        ],
+        "Travel Distance (NM)": [
+          0.0
+        ],
+        "DG/EG Engine Utilized (%)": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Standby at mooring buoy",
+      "page": 14,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          3354.82
+        ],
+        "DG1 Engine Load (kW)": [
+          294.49
+        ],
+        "DG2 Total Fuel Used (L)": [
+          5537.8
+        ],
+        "DG2 Engine Load (kW)": [
+          210.36
+        ],
+        "DG3 Total Fuel Used (L)": [
+          7337.36
+        ],
+        "DG3 Engine Load (kW)": [
+          220.86
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          0.34
+        ],
+        "Total Fuel Used (L)": [
+          16229.98
+        ],
+        "Travel Distance (NM)": [
+          44.21
+        ],
+        "DG/EG Engine Utilized (%)": [
+          1.7,
+          7.2,
+          8.7,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Port Movements",
+      "page": 15,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          341.97
+        ],
+        "DG1 Engine Load (kW)": [
+          377.63
+        ],
+        "DG2 Total Fuel Used (L)": [
+          569.12
+        ],
+        "DG2 Engine Load (kW)": [
+          291.47
+        ],
+        "DG3 Total Fuel Used (L)": [
+          23.05
+        ],
+        "DG3 Engine Load (kW)": [
+          248.85
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          1.38
+        ],
+        "Total Fuel Used (L)": [
+          934.14
+        ],
+        "Travel Distance (NM)": [
+          8.78
+        ],
+        "DG/EG Engine Utilized (%)": [
+          0.5,
+          0.6,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Towing operation",
+      "page": 16,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          3737.38
+        ],
+        "DG1 Engine Load (kW)": [
+          396.58
+        ],
+        "DG2 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG2 Engine Load (kW)": [
+          null
+        ],
+        "DG3 Total Fuel Used (L)": [
+          23646.04
+        ],
+        "DG3 Engine Load (kW)": [
+          504.26
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          0.31
+        ],
+        "Total Fuel Used (L)": [
+          27383.42
+        ],
+        "Travel Distance (NM)": [
+          22.8
+        ],
+        "DG/EG Engine Utilized (%)": [
+          3.5,
+          0.0,
+          9.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Anchor Handling operation",
+      "page": 17,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG1 Engine Load (kW)": [
+          null
+        ],
+        "DG2 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG2 Engine Load (kW)": [
+          null
+        ],
+        "DG3 Total Fuel Used (L)": [
+          3461.34
+        ],
+        "DG3 Engine Load (kW)": [
+          182.85
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          0.05
+        ],
+        "Total Fuel Used (L)": [
+          3461.34
+        ],
+        "Travel Distance (NM)": [
+          1.94
+        ],
+        "DG/EG Engine Utilized (%)": [
+          0.0,
+          0.0,
+          5.1,
+          0.0
+        ]
+      }
+    },
+    {
+      "label": "Other",
+      "page": 18,
+      "metrics": {
+        "DG1 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG1 Engine Load (kW)": [
+          null
+        ],
+        "DG2 Total Fuel Used (L)": [
+          2584.95
+        ],
+        "DG2 Engine Load (kW)": [
+          172.02
+        ],
+        "DG3 Total Fuel Used (L)": [
+          0.0
+        ],
+        "DG3 Engine Load (kW)": [
+          null
+        ],
+        "EG Total Fuel Used (L)": [
+          0.0
+        ],
+        "EG Engine Load (kW)": [
+          null
+        ],
+        "Average Speed (Knots)": [
+          0.11
+        ],
+        "Total Fuel Used (L)": [
+          2584.95
+        ],
+        "Travel Distance (NM)": [
+          2.97
+        ],
+        "DG/EG Engine Utilized (%)": [
+          0.0,
+          3.7,
+          0.0,
+          0.0
+        ]
+      }
+    }
+  ],
+  "trackingReference": {
+    "page": 19,
+    "distanceNm": 1816.83,
+    "begin": {
+      "timestamp": "01-Sep-26 00:00",
+      "position": "9° 16' 59.9358'' N, 101° 25' 24.8688'' E",
+      "speed": 0.583,
+      "heading": 58.3
+    },
+    "end": {
+      "timestamp": "29-Sep-26 23:59",
+      "position": "9° 15' 53.7552'' N, 101° 24' 17.8716'' E",
+      "speed": 6.851,
+      "heading": 30.71
+    }
+  },
+  "chartPages": [
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26
+  ],
+  "chartAxis": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31
+  ],
+  "chartPeriodDays": 30,
+  "extractor": "PDF display text by page; no synthetic recalculation"
+}

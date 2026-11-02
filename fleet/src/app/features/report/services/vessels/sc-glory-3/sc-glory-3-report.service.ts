@@ -1,10 +1,11 @@
+import { buildMonthlyDailySlots } from '../../common/monthly-day-slots';
 import { Injectable } from '@angular/core';
 import { Observable, forkJoin, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, mergeMap, shareReplay, tap, toArray } from 'rxjs/operators';
 
 import { NewHttpClientService } from '../../../../../shared/services/http-client1.service';
 import { resetReportCacheForAuthChange, setBoundedReportCache } from '../../common/report-cache.util';
-import { reportDayConcurrency } from '../../common/report-load-policy';
+import { reportDayConcurrency, reportPeriodCacheTtlMs } from '../../common/report-load-policy';
 import { OfficialPdfModeParityService } from '../../common/official-pdf-mode-parity.service';
 import {
   LiveReportProfileDocument,
@@ -208,7 +209,6 @@ interface HourAccumulator {
 const MINUTE_MS = 60_000;
 const COMPLETED_REPORT_CACHE_TTL_MS = 6 * 60 * 60_000;
 const LIVE_REPORT_CACHE_TTL_MS = 30_000;
-const PERIOD_REPORT_CACHE_TTL_MS = 60 * 60_000;
 const MAX_INTERPOLATION_GAP_MINUTES = 5;
 const MAX_PERIOD_DAYS = 31;
 
@@ -501,7 +501,7 @@ export class ScGlory3ReportService implements VesselReportAdapter {
         if (this.periodReportInFlight.get(key) !== request$) return;
           setBoundedReportCache(this.periodReportCache, key, {
           value,
-          expiresAt: Date.now() + PERIOD_REPORT_CACHE_TTL_MS,
+          expiresAt: Date.now() + reportPeriodCacheTtlMs(start, end, periodKind),
         });
       }),
       finalize(() => {
@@ -966,7 +966,7 @@ export class ScGlory3ReportService implements VesselReportAdapter {
       modeSummary,
       passageSummary,
       tracking,
-      hourly,
+      hourly: periodKind === 'month' ? buildMonthlyDailySlots(reports, periodStart) : hourly,
       speedSeries,
     };
   }
